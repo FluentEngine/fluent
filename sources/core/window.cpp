@@ -40,4 +40,5 @@ void destroy_window(Window& window)
     assert(window.m_handle && "Window is nullptr");
     SDL_DestroyWindow(( SDL_Window* ) window.m_handle);
 }
+
 } // namespace fluent

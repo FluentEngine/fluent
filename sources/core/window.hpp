@@ -4,6 +4,7 @@
 
 namespace fluent
 {
+
 struct WindowDescription
 {
     const char* title = nullptr;
