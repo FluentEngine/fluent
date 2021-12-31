@@ -21,7 +21,10 @@ set(common_sources
 	${src_dir}/core/application.cpp
 	)
 
-set(sources ${common_sources})
+set(renderer_sources
+	${src_dir}/renderer/renderer.cpp)
+
+set(sources ${common_sources} ${renderer_sources})
 set(includes ${CMAKE_CURRENT_SOURCE_DIR}/sources)
 set(libs spdlog volk SDL2)
 
