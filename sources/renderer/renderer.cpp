@@ -20,7 +20,6 @@
 
 namespace fluent
 {
-
 static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
