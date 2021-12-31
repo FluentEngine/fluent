@@ -1,40 +1,42 @@
 #include <iostream>
 
 #include "fluent/fluent.hpp"
-#include <SDL.h>
 
 using namespace fluent;
 
+void on_load(u32 width, u32 height)
+{
+}
+
+void on_update(f64 deltaTime)
+{
+    FT_INFO("Delta time {}", deltaTime);
+}
+
+void on_render()
+{
+}
+
+void on_unload()
+{
+}
+
 int main()
 {
-    fluent::os_init();
+    ApplicationConfig config;
+    config.title = "TestApp";
+    config.x = 0;
+    config.y = 0;
+    config.width = 800;
+    config.height = 600;
+    config.on_load = on_load;
+    config.on_update = on_update;
+    config.on_render = on_render;
+    config.on_unload = on_unload;
 
-    WindowDescription desc{};
-    desc.title = "fluent-engine";
-    desc.x = 0;
-    desc.y = 0;
-    desc.width = 800;
-    desc.height = 600;
-
-    auto window = fluent::create_window(desc);
-
-    SDL_Event e;
-    bool quit = false;
-
-    // main loop
-    while (!quit)
-    {
-        // Handle events on queue
-        while (SDL_PollEvent(&e) != 0)
-        {
-            // close the window when user clicks the X button or alt-f4s
-            if (e.type == SDL_QUIT)
-                quit = true;
-        }
-    }
-
-    fluent::destroy_window(window);
-    fluent::os_shutdown();
+    application_init(&config);
+    application_run();
+    application_shutdown();
 
     return 0;
 }

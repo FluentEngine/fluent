@@ -17,8 +17,9 @@ project(${target} CXX)
 set(src_dir ${CMAKE_CURRENT_SOURCE_DIR}/sources)
 
 set(common_sources 
-	${src_dir}/core/os.cpp
-    ${src_dir}/core/window.cpp)
+    ${src_dir}/core/window.cpp
+	${src_dir}/core/application.cpp
+	)
 
 set(sources ${common_sources})
 set(includes ${CMAKE_CURRENT_SOURCE_DIR}/sources)

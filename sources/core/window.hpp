@@ -5,24 +5,22 @@
 namespace fluent
 {
 
-struct WindowDescription
+enum WindowParams : u8
 {
-    const char* title = nullptr;
-    u32 x;
-    u32 y;
-    u32 width;
-    u32 height;
+    ePositionX = 0,
+    ePositionY = 1,
+    eWidth = 2,
+    eHeight = 3,
+    eLast = 4
 };
 
 struct Window
 {
     void* m_handle;
-    u32 m_data[ 4 ];
-
-    u32 get_width() const;
-    u32 get_height() const;
+    u32 m_data[ static_cast<int>(WindowParams::eLast) ];
 };
 
-Window create_window(const WindowDescription& description);
+Window create_window(const char* title, u32 x, u32 y, u32 width, u32 height);
 void destroy_window(Window& window);
+
 } // namespace fluent

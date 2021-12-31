@@ -1,3 +1,5 @@
 #include "core/base.hpp"
-#include "core/os.hpp"
+#include "core/log.hpp"
+#include "core/assert.hpp"
 #include "core/window.hpp"
+#include "core/application.hpp"
