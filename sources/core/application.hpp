@@ -21,6 +21,7 @@ struct ApplicationConfig
     u32 y;
     u32 width;
     u32 height;
+    LogLevel log_level;
     InitCallback on_init;
     UpdateCallback on_update;
     RenderCallback on_render;

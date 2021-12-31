@@ -16,6 +16,7 @@ struct Renderer
     VkAllocationCallbacks* m_vulkan_allocator;
     VkInstance m_instance;
     VkDebugUtilsMessengerEXT m_debug_messenger;
+    VkPhysicalDevice m_physical_device;
 };
 
 Renderer create_renderer(const RendererDescription& description);

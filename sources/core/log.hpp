@@ -13,3 +13,19 @@
 #define FT_WARN(...)
 #define FT_ERROR(...)
 #endif
+
+namespace fluent
+{
+enum class LogLevel
+{
+    eOff,
+    eTrace,
+    eDebug,
+    eInfo,
+    eWarn,
+    eError
+};
+
+spdlog::level::level_enum util_to_spdlog_level(LogLevel log_level);
+
+}

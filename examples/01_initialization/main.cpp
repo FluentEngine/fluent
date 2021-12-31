@@ -42,6 +42,7 @@ int main()
     config.y = 0;
     config.width = 800;
     config.height = 600;
+    config.log_level = LogLevel::eTrace;
     config.on_init = on_init;
     config.on_load = on_load;
     config.on_update = on_update;

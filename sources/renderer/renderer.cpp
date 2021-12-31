@@ -25,7 +25,23 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 {
-    FT_ERROR("[ vulkan validation ] {}", pCallbackData->pMessage);
+    if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
+    {
+        FT_TRACE("[ vulkan validation layer ] {}", pCallbackData->pMessage);
+    }
+    else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
+    {
+        FT_INFO("[ vulkan validation layer ] {}", pCallbackData->pMessage);
+    }
+    else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+    {
+        FT_WARN("[ vulkan validation layer ] {}", pCallbackData->pMessage);
+    }
+    else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+    {
+        FT_ERROR("[ vulkan validation layer ] {}", pCallbackData->pMessage);
+    }
+
     return VK_FALSE;
 }
 
@@ -33,9 +49,9 @@ void create_debug_messenger(Renderer* renderer)
 {
     VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info{};
     debug_messenger_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    debug_messenger_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-                                                  VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                                                  VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    debug_messenger_create_info.messageSeverity =
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
     debug_messenger_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
                                               VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                                               VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
@@ -131,6 +147,31 @@ Renderer create_renderer(const RendererDescription& description)
 #ifdef FLUENT_DEBUG
     create_debug_messenger(&renderer);
 #endif
+
+    // pick physical device
+    renderer.m_physical_device = VK_NULL_HANDLE;
+    u32 device_count = 0;
+    vkEnumeratePhysicalDevices(renderer.m_instance, &device_count, nullptr);
+    FT_ASSERT(device_count != 0);
+    VkPhysicalDevice physical_devices[ device_count ];
+    vkEnumeratePhysicalDevices(renderer.m_instance, &device_count, physical_devices);
+
+    renderer.m_physical_device = physical_devices[ 0 ];
+
+    // select best physical device
+    for (u32 i = 0; i < device_count; ++i)
+    {
+        VkPhysicalDeviceProperties deviceProperties;
+        VkPhysicalDeviceFeatures deviceFeatures;
+        vkGetPhysicalDeviceProperties(physical_devices[ i ], &deviceProperties);
+        vkGetPhysicalDeviceFeatures(physical_devices[ i ], &deviceFeatures);
+
+        if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+        {
+            renderer.m_physical_device = physical_devices[ i ];
+            break;
+        }
+    }
 
     return renderer;
 }

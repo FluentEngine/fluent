@@ -44,6 +44,8 @@ void application_init(const ApplicationConfig* config)
     app_state.on_render = config->on_render;
     app_state.on_unload = config->on_unload;
     app_state.on_shutdown = config->on_shutdown;
+
+    spdlog::set_level(util_to_spdlog_level(config->log_level));
 }
 
 void application_run()
