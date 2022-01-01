@@ -5,12 +5,21 @@
 using namespace fluent;
 
 Renderer g_renderer;
+Device g_device;
+Queue g_queue;
 
 void on_init()
 {
-    RendererDescription rendererDescription{};
-    rendererDescription.vulkan_allocator = nullptr;
-    g_renderer = create_renderer(rendererDescription);
+    RendererDescription renderer_description{};
+    renderer_description.vulkan_allocator = nullptr;
+    g_renderer = create_renderer(renderer_description);
+
+    DeviceDescription device_description{};
+    g_device = create_device(g_renderer, device_description);
+
+    QueueDescription queue_description{};
+    queue_description.queue_type = QueueType::eGraphics;
+    g_queue = get_queue(g_renderer, g_device, queue_description);
 }
 
 void on_load(u32 width, u32 height)
@@ -31,6 +40,7 @@ void on_unload()
 
 void on_shutdown()
 {
+    destroy_device(g_renderer, g_device);
     destroy_renderer(g_renderer);
 }
 

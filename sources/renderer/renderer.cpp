@@ -20,6 +20,21 @@
 
 namespace fluent
 {
+static inline VkQueueFlagBits util_to_vk_queue_type(QueueType type)
+{
+    switch (type)
+    {
+    case QueueType::eGraphics:
+        return VK_QUEUE_GRAPHICS_BIT;
+    case QueueType::eCompute:
+        return VK_QUEUE_COMPUTE_BIT;
+    case QueueType::eTransfer:
+        return VK_QUEUE_TRANSFER_BIT;
+    default:
+        return VkQueueFlagBits(-1);
+    }
+}
+
 static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
@@ -103,6 +118,33 @@ static inline void get_instance_layers(u32& layers_count, const char** layer_nam
     }
 }
 
+static inline u32 find_queue_family_index(VkPhysicalDevice physical_device, QueueType queue_type)
+{
+    u32 index = std::numeric_limits<u32>::max();
+
+    u32 queue_family_count = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
+    VkQueueFamilyProperties queue_families[ queue_family_count ];
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families);
+
+    VkQueueFlagBits target_queue_type = util_to_vk_queue_type(queue_type);
+
+    // TODO: Find dedicated queue first
+    for (u32 i = 0; i < queue_family_count; ++i)
+    {
+        if (queue_families[ i ].queueFlags & target_queue_type)
+        {
+            index = i;
+            break;
+        }
+    }
+
+    // TODO: Rewrite more elegant way
+    FT_ASSERT(index != std::numeric_limits<u32>::max());
+
+    return index;
+}
+
 Renderer create_renderer(const RendererDescription& description)
 {
     Renderer renderer{};
@@ -181,6 +223,62 @@ void destroy_renderer(Renderer& renderer)
     vkDestroyDebugUtilsMessengerEXT(renderer.m_instance, renderer.m_debug_messenger, renderer.m_vulkan_allocator);
 #endif
     vkDestroyInstance(renderer.m_instance, renderer.m_vulkan_allocator);
+}
+
+Device create_device(const Renderer& renderer, const DeviceDescription& description)
+{
+    Device device{};
+
+    u32 queue_family_count = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(renderer.m_physical_device, &queue_family_count, nullptr);
+    VkQueueFamilyProperties queue_families[ queue_family_count ];
+    vkGetPhysicalDeviceQueueFamilyProperties(renderer.m_physical_device, &queue_family_count, queue_families);
+
+    VkDeviceQueueCreateInfo queue_create_infos[ queue_family_count ];
+    f32 queue_priority = 1.0f;
+
+    for (u32 i = 0; i < queue_family_count; ++i)
+    {
+        queue_create_infos[ i ] = {};
+        queue_create_infos[ i ].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queue_create_infos[ i ].pNext = nullptr;
+        queue_create_infos[ i ].flags = 0;
+        queue_create_infos[ i ].queueCount = 1;
+        queue_create_infos[ i ].pQueuePriorities = &queue_priority;
+        queue_create_infos[ i ].queueFamilyIndex = i;
+    }
+
+    VkDeviceCreateInfo device_create_info{};
+    device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_create_info.pNext = nullptr;
+    device_create_info.flags = 0;
+    device_create_info.queueCreateInfoCount = queue_family_count;
+    device_create_info.pQueueCreateInfos = queue_create_infos;
+    device_create_info.enabledLayerCount = 0;
+    device_create_info.ppEnabledLayerNames = nullptr;
+    device_create_info.enabledExtensionCount = 0;
+    device_create_info.ppEnabledExtensionNames = nullptr;
+    device_create_info.pEnabledFeatures = nullptr;
+
+    VK_ASSERT(vkCreateDevice(
+        renderer.m_physical_device, &device_create_info, renderer.m_vulkan_allocator, &device.m_logical_device));
+
+    return device;
+}
+
+void destroy_device(const Renderer& renderer, Device& device)
+{
+    vkDestroyDevice(device.m_logical_device, renderer.m_vulkan_allocator);
+}
+
+Queue get_queue(const Renderer& renderer, const Device& device, const QueueDescription& description)
+{
+    Queue queue{};
+    u32 index = find_queue_family_index(renderer.m_physical_device, description.queue_type);
+
+    vkGetDeviceQueue(device.m_logical_device, index, 0, &queue.m_queue);
+
+    return queue;
 }
 
 } // namespace fluent
