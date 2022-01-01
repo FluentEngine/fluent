@@ -54,6 +54,9 @@ void application_run()
 
     app_state.is_running = true;
 
+    app_state.on_load(
+        app_state.window.m_data[ WindowParams::eWidth ], app_state.window.m_data[ WindowParams::eHeight ]);
+
     SDL_Event e;
 
     f64 lastTick = SDL_GetTicks64();

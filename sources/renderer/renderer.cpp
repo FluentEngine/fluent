@@ -274,7 +274,13 @@ Device create_device(const Renderer& renderer, const DeviceDescription& descript
 
 void destroy_device(Device& device)
 {
+    FT_ASSERT(device.m_logical_device);
     vkDestroyDevice(device.m_logical_device, device.m_vulkan_allocator);
+}
+
+void device_wait_idle(const Device& device)
+{
+    vkDeviceWaitIdle(device.m_logical_device);
 }
 
 Queue get_queue(const Device& device, const QueueDescription& description)
@@ -286,6 +292,32 @@ Queue get_queue(const Device& device, const QueueDescription& description)
     vkGetDeviceQueue(device.m_logical_device, index, 0, &queue.m_queue);
 
     return queue;
+}
+
+void queue_wait_idle(const Queue& queue)
+{
+    vkQueueWaitIdle(queue.m_queue);
+}
+
+Semaphore create_semaphore(const Device& device)
+{
+    Semaphore semaphore{};
+
+    VkSemaphoreCreateInfo semaphore_create_info{};
+    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    semaphore_create_info.pNext = nullptr;
+    semaphore_create_info.flags = 0;
+
+    VK_ASSERT(vkCreateSemaphore(
+        device.m_logical_device, &semaphore_create_info, device.m_vulkan_allocator, &semaphore.m_semaphore));
+
+    return semaphore;
+}
+
+void destroy_semaphore(const Device& device, Semaphore& semaphore)
+{
+    FT_ASSERT(semaphore.m_semaphore);
+    vkDestroySemaphore(device.m_logical_device, semaphore.m_semaphore, device.m_vulkan_allocator);
 }
 
 Swapchain create_swapchain(const Renderer& renderer, const Device& device, const SwapchainDescription& description)
@@ -375,6 +407,7 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
     VK_ASSERT(vkCreateSwapchainKHR(
         device.m_logical_device, &swapchain_create_info, device.m_vulkan_allocator, &swapchain.m_swapchain));
 
+    vkGetSwapchainImagesKHR(device.m_logical_device, swapchain.m_swapchain, &swapchain.m_image_count, nullptr);
     VkImage swapchain_images[ swapchain.m_image_count ];
     vkGetSwapchainImagesKHR(device.m_logical_device, swapchain.m_swapchain, &swapchain.m_image_count, swapchain_images);
 
@@ -413,11 +446,14 @@ void destroy_swapchain(const Device& device, Swapchain& swapchain)
 {
     for (u32 i = 0; i < swapchain.m_image_count; ++i)
     {
+        FT_ASSERT(swapchain.m_images[ i ].m_image_view);
         vkDestroyImageView(device.m_logical_device, swapchain.m_images[ i ].m_image_view, device.m_vulkan_allocator);
     }
 
     delete[] swapchain.m_images;
+    FT_ASSERT(swapchain.m_swapchain);
     vkDestroySwapchainKHR(device.m_logical_device, swapchain.m_swapchain, device.m_vulkan_allocator);
+    FT_ASSERT(swapchain.m_surface);
     vkDestroySurfaceKHR(device.m_instance, swapchain.m_surface, device.m_vulkan_allocator);
 }
 
@@ -439,6 +475,7 @@ CommandPool create_command_pool(const Device& device, const CommandPoolDescripti
 
 void destroy_command_pool(const Device& device, CommandPool& command_pool)
 {
+    FT_ASSERT(command_pool.m_command_pool);
     vkDestroyCommandPool(device.m_logical_device, command_pool.m_command_pool, device.m_vulkan_allocator);
 }
 

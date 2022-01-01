@@ -50,6 +50,11 @@ struct Queue
     VkQueue m_queue;
 };
 
+struct Semaphore
+{
+    VkSemaphore m_semaphore;
+};
+
 struct SwapchainDescription
 {
     Queue* queue;
@@ -74,6 +79,7 @@ struct Swapchain
     VkSwapchainKHR m_swapchain;
     VkFormat m_format;
     Image* m_images;
+    u32 m_current_image_index;
 };
 
 struct CommandPoolDescription
@@ -96,8 +102,13 @@ void destroy_renderer(Renderer& renderer);
 
 Device create_device(const Renderer& renderer, const DeviceDescription& description);
 void destroy_device(Device& device);
+void device_wait_idle(const Device& device);
 
 Queue get_queue(const Device& device, const QueueDescription& description);
+void queue_wait_idle(const Queue& queue);
+
+Semaphore create_semaphore(const Device& device);
+void destroy_semaphore(const Device& device, Semaphore& semaphore);
 
 Swapchain create_swapchain(const Renderer& renderer, const Device& device, const SwapchainDescription& description);
 void destroy_swapchain(const Device& device, Swapchain& swapchain);
