@@ -43,7 +43,27 @@ struct QueueDescription
 
 struct Queue
 {
+    u32 m_family_index;
     VkQueue m_queue;
+};
+
+struct SwapchainDescription
+{
+    Queue* queue;
+    u32 width;
+    u32 height;
+    u32 image_count;
+};
+
+struct Swapchain
+{
+    VkPresentModeKHR m_present_mode;
+    u32 m_image_count;
+    u32 m_width;
+    u32 m_height;
+    VkSurfaceKHR m_surface;
+    VkSwapchainKHR m_swapchain;
+    VkFormat m_format;
 };
 
 Renderer create_renderer(const RendererDescription& description);
@@ -53,5 +73,8 @@ Device create_device(const Renderer& renderer, const DeviceDescription& descript
 void destroy_device(const Renderer& renderer, Device& device);
 
 Queue get_queue(const Renderer& renderer, const Device& device, const QueueDescription& description);
+
+Swapchain create_swapchain(const Renderer& renderer, const Device& device, const SwapchainDescription& description);
+void destroy_swapchain(const Renderer& renderer, const Device& device, Swapchain& swapchain);
 
 } // namespace fluent

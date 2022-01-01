@@ -248,6 +248,9 @@ Device create_device(const Renderer& renderer, const DeviceDescription& descript
         queue_create_infos[ i ].queueFamilyIndex = i;
     }
 
+    u32 device_extension_count = 1;
+    const char* device_extensions[ device_extension_count ] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
     VkDeviceCreateInfo device_create_info{};
     device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_create_info.pNext = nullptr;
@@ -256,8 +259,8 @@ Device create_device(const Renderer& renderer, const DeviceDescription& descript
     device_create_info.pQueueCreateInfos = queue_create_infos;
     device_create_info.enabledLayerCount = 0;
     device_create_info.ppEnabledLayerNames = nullptr;
-    device_create_info.enabledExtensionCount = 0;
-    device_create_info.ppEnabledExtensionNames = nullptr;
+    device_create_info.enabledExtensionCount = device_extension_count;
+    device_create_info.ppEnabledExtensionNames = device_extensions;
     device_create_info.pEnabledFeatures = nullptr;
 
     VK_ASSERT(vkCreateDevice(
@@ -276,9 +279,107 @@ Queue get_queue(const Renderer& renderer, const Device& device, const QueueDescr
     Queue queue{};
     u32 index = find_queue_family_index(renderer.m_physical_device, description.queue_type);
 
+    queue.m_family_index = index;
     vkGetDeviceQueue(device.m_logical_device, index, 0, &queue.m_queue);
 
     return queue;
+}
+
+Swapchain create_swapchain(const Renderer& renderer, const Device& device, const SwapchainDescription& description)
+{
+    Swapchain swapchain{};
+    swapchain.m_width = description.width;
+    swapchain.m_height = description.height;
+
+    SDL_Vulkan_CreateSurface(( SDL_Window* ) get_app_window()->m_handle, renderer.m_instance, &swapchain.m_surface);
+
+    // find best present mode
+    uint32_t present_mode_count = 0;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(
+        renderer.m_physical_device, swapchain.m_surface, &present_mode_count, nullptr);
+    VkPresentModeKHR present_modes[ present_mode_count ];
+    vkGetPhysicalDeviceSurfacePresentModesKHR(
+        renderer.m_physical_device, swapchain.m_surface, &present_mode_count, present_modes);
+
+    swapchain.m_present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+
+    for (u32 i = 0; i < present_mode_count; ++i)
+    {
+        if (present_modes[ i ] == VK_PRESENT_MODE_MAILBOX_KHR)
+        {
+            swapchain.m_present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
+            break;
+        }
+    }
+
+    // determine present image count
+    VkSurfaceCapabilitiesKHR surface_capabilities{};
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(renderer.m_physical_device, swapchain.m_surface, &surface_capabilities);
+
+    swapchain.m_image_count =
+        std::clamp(description.image_count, surface_capabilities.minImageCount, surface_capabilities.maxImageCount);
+
+    /// find best surface format
+    u32 surface_format_count = 0;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(
+        renderer.m_physical_device, swapchain.m_surface, &surface_format_count, nullptr);
+    VkSurfaceFormatKHR surface_formats[ surface_format_count ];
+    vkGetPhysicalDeviceSurfaceFormatsKHR(
+        renderer.m_physical_device, swapchain.m_surface, &surface_format_count, surface_formats);
+
+    VkSurfaceFormatKHR surface_format = surface_formats[ 0 ];
+    for (u32 i = 0; i < surface_format_count; ++i)
+    {
+        if (surface_formats[ i ].format == VK_FORMAT_R8G8B8A8_UNORM ||
+            surface_formats[ i ].format == VK_FORMAT_B8G8R8A8_UNORM)
+            surface_format = surface_formats[ i ];
+    }
+
+    swapchain.m_format = surface_format.format;
+
+    /// fins swapchain pretransform
+    VkSurfaceTransformFlagBitsKHR pre_transform;
+    if (surface_capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
+    {
+        pre_transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    }
+    else
+    {
+        pre_transform = surface_capabilities.currentTransform;
+    }
+
+    VkSwapchainCreateInfoKHR swapchain_create_info{};
+    swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapchain_create_info.pNext = nullptr;
+    swapchain_create_info.flags = 0;
+    swapchain_create_info.surface = swapchain.m_surface;
+    swapchain_create_info.minImageCount = swapchain.m_image_count;
+    swapchain_create_info.imageFormat = surface_format.format;
+    swapchain_create_info.imageColorSpace = surface_format.colorSpace;
+    swapchain_create_info.imageExtent.width = swapchain.m_width;
+    swapchain_create_info.imageExtent.height = swapchain.m_height;
+    swapchain_create_info.imageArrayLayers = 1;
+    swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swapchain_create_info.queueFamilyIndexCount = 1;
+    swapchain_create_info.pQueueFamilyIndices = &description.queue->m_family_index;
+    swapchain_create_info.preTransform = pre_transform;
+    // TODO: choose composite alpha according to caps
+    swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapchain_create_info.presentMode = swapchain.m_present_mode;
+    swapchain_create_info.clipped = true;
+    swapchain_create_info.oldSwapchain = nullptr;
+
+    VK_ASSERT(vkCreateSwapchainKHR(
+        device.m_logical_device, &swapchain_create_info, renderer.m_vulkan_allocator, &swapchain.m_swapchain));
+
+    return swapchain;
+}
+
+void destroy_swapchain(const Renderer& renderer, const Device& device, Swapchain& swapchain)
+{
+    vkDestroySwapchainKHR(device.m_logical_device, swapchain.m_swapchain, renderer.m_vulkan_allocator);
+    vkDestroySurfaceKHR(renderer.m_instance, swapchain.m_surface, renderer.m_vulkan_allocator);
 }
 
 } // namespace fluent

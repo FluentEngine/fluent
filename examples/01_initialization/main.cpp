@@ -7,6 +7,7 @@ using namespace fluent;
 Renderer g_renderer;
 Device g_device;
 Queue g_queue;
+Swapchain g_swapchain;
 
 void on_init()
 {
@@ -24,6 +25,13 @@ void on_init()
 
 void on_load(u32 width, u32 height)
 {
+    SwapchainDescription swapchain_description{};
+    swapchain_description.width = width;
+    swapchain_description.height = height;
+    swapchain_description.queue = &g_queue;
+    swapchain_description.image_count = 2;
+
+    g_swapchain = create_swapchain(g_renderer, g_device, swapchain_description);
 }
 
 void on_update(f64 deltaTime)
@@ -36,6 +44,7 @@ void on_render()
 
 void on_unload()
 {
+    destroy_swapchain(g_renderer, g_device, g_swapchain);
 }
 
 void on_shutdown()
