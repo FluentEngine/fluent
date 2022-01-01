@@ -373,11 +373,48 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
     VK_ASSERT(vkCreateSwapchainKHR(
         device.m_logical_device, &swapchain_create_info, renderer.m_vulkan_allocator, &swapchain.m_swapchain));
 
+    VkImage swapchain_images[ swapchain.m_image_count ];
+    vkGetSwapchainImagesKHR(device.m_logical_device, swapchain.m_swapchain, &swapchain.m_image_count, swapchain_images);
+
+    VkImageViewCreateInfo image_view_create_info{};
+    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_create_info.pNext = nullptr;
+    image_view_create_info.flags = 0;
+    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    image_view_create_info.format = swapchain.m_format;
+    image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_view_create_info.subresourceRange.baseMipLevel = 0;
+    image_view_create_info.subresourceRange.levelCount = 1;
+    image_view_create_info.subresourceRange.baseArrayLayer = 0;
+    image_view_create_info.subresourceRange.layerCount = 1;
+
+    swapchain.m_images = new Image[ swapchain.m_image_count ];
+    for (u32 i = 0; i < swapchain.m_image_count; ++i)
+    {
+        image_view_create_info.image = swapchain_images[ i ];
+
+        swapchain.m_images[ i ] = {};
+        swapchain.m_images[ i ].m_image = swapchain_images[ i ];
+        VK_ASSERT(vkCreateImageView(
+            device.m_logical_device, &image_view_create_info, renderer.m_vulkan_allocator,
+            &swapchain.m_images[ i ].m_image_view));
+    }
+
     return swapchain;
 }
 
 void destroy_swapchain(const Renderer& renderer, const Device& device, Swapchain& swapchain)
 {
+    for (u32 i = 0; i < swapchain.m_image_count; ++i)
+    {
+        vkDestroyImageView(device.m_logical_device, swapchain.m_images[ i ].m_image_view, renderer.m_vulkan_allocator);
+    }
+
+    delete[] swapchain.m_images;
     vkDestroySwapchainKHR(device.m_logical_device, swapchain.m_swapchain, renderer.m_vulkan_allocator);
     vkDestroySurfaceKHR(renderer.m_instance, swapchain.m_surface, renderer.m_vulkan_allocator);
 }

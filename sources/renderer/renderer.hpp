@@ -55,6 +55,12 @@ struct SwapchainDescription
     u32 image_count;
 };
 
+struct Image
+{
+    VkImage m_image;
+    VkImageView m_image_view;
+};
+
 struct Swapchain
 {
     VkPresentModeKHR m_present_mode;
@@ -64,6 +70,7 @@ struct Swapchain
     VkSurfaceKHR m_surface;
     VkSwapchainKHR m_swapchain;
     VkFormat m_format;
+    Image* m_images;
 };
 
 Renderer create_renderer(const RendererDescription& description);
