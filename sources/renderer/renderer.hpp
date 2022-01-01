@@ -33,6 +33,9 @@ struct DeviceDescription
 
 struct Device
 {
+    VkAllocationCallbacks* m_vulkan_allocator;
+    VkInstance m_instance;
+    VkPhysicalDevice m_physical_device;
     VkDevice m_logical_device;
 };
 
@@ -73,15 +76,40 @@ struct Swapchain
     Image* m_images;
 };
 
+struct CommandPoolDescription
+{
+    Queue* queue;
+};
+
+struct CommandPool
+{
+    VkCommandPool m_command_pool;
+};
+
+struct CommandBuffer
+{
+    VkCommandBuffer m_command_buffer;
+};
+
 Renderer create_renderer(const RendererDescription& description);
 void destroy_renderer(Renderer& renderer);
 
 Device create_device(const Renderer& renderer, const DeviceDescription& description);
-void destroy_device(const Renderer& renderer, Device& device);
+void destroy_device(Device& device);
 
-Queue get_queue(const Renderer& renderer, const Device& device, const QueueDescription& description);
+Queue get_queue(const Device& device, const QueueDescription& description);
 
 Swapchain create_swapchain(const Renderer& renderer, const Device& device, const SwapchainDescription& description);
-void destroy_swapchain(const Renderer& renderer, const Device& device, Swapchain& swapchain);
+void destroy_swapchain(const Device& device, Swapchain& swapchain);
+
+CommandPool create_command_pool(const Device& device, const CommandPoolDescription& description);
+void destroy_command_pool(const Device& device, CommandPool& command_pool);
+
+void allocate_command_buffers(
+    const Device& device, const CommandPool& command_pool, u32 count, CommandBuffer* command_buffers);
+void free_command_buffers(
+    const Device& device, const CommandPool& command_pool, u32 count, CommandBuffer* command_buffers);
+void begin_command_buffer(const CommandBuffer& command_buffer);
+void end_command_buffer(const CommandBuffer& command_buffer);
 
 } // namespace fluent
