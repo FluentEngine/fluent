@@ -21,4 +21,5 @@ SpacesInParentheses: 'false'
 SpacesInSquareBrackets: 'true'
 TabWidth: '4'
 SortIncludes: 'false'
+AlwaysBreakTemplateDeclarations: 'Yes'
 ...

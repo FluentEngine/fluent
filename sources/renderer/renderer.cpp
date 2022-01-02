@@ -1,4 +1,5 @@
 #include <map>
+#include <utils/hash.hpp>
 #include <SDL_vulkan.h>
 #include "core/window.hpp"
 #include "core/application.hpp"
@@ -19,10 +20,64 @@
 #define VK_ASSERT(x) x
 #endif
 
+namespace std
+{
+template <>
+struct hash<fluent::RenderPassInfo>
+{
+    std::size_t operator()(const fluent::RenderPassInfo& info) const
+    {
+        std::size_t result = 0;
+
+        fluent::hash_combine(result, info.color_attachment_count);
+        fluent::hash_combine(result, info.width);
+        fluent::hash_combine(result, info.height);
+        fluent::hash_combine(result, info.depth_stencil);
+
+        for (u32 i = 0; i < info.color_attachment_count; ++i)
+        {
+            fluent::hash_combine(result, info.color_attachments[ i ]->m_format);
+            fluent::hash_combine(result, info.color_attachments[ i ]->m_image_view);
+        }
+
+        if (info.depth_stencil)
+        {
+            fluent::hash_combine(result, info.depth_stencil->m_format);
+            fluent::hash_combine(result, info.depth_stencil->m_image_view);
+        }
+
+        return result;
+    }
+};
+
+bool operator==(const fluent::RenderPassInfo& a, const fluent::RenderPassInfo& b)
+{
+    if (std::tie(a.color_attachment_count, a.width, a.height, a.depth_stencil) !=
+        std::tie(b.color_attachment_count, b.width, b.height, b.depth_stencil))
+    {
+        return false;
+    }
+
+    u32 attachments_count = 0;
+
+    for (u32 i = 0; i < a.color_attachment_count; ++i)
+    {
+        fluent::Image* at_a = a.color_attachments[ 0 ];
+        fluent::Image* at_b = b.color_attachments[ 0 ];
+
+        if (std::tie(at_a->m_image_view, at_a->m_format) != std::tie(at_b->m_image_view, at_b->m_format))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+} // namespace std
+
 namespace fluent
 {
-// TODO: Hash it, avoid std map
-static std::vector<std::pair<RenderPassInfo, u32>> render_pass_infos;
+static std::unordered_map<RenderPassInfo, u32> render_pass_infos;
 static std::vector<VkRenderPass> render_passes;
 static std::vector<VkFramebuffer> framebuffers;
 
@@ -282,11 +337,6 @@ Device create_device(const Renderer& renderer, const DeviceDescription& descript
 
 void destroy_device(Device& device)
 {
-    for (u32 i = 0; i < render_passes.size(); ++i)
-    {
-        vkDestroyFramebuffer(device.m_logical_device, framebuffers[ i ], device.m_vulkan_allocator);
-        vkDestroyRenderPass(device.m_logical_device, render_passes[ i ], device.m_vulkan_allocator);
-    }
     FT_ASSERT(device.m_logical_device);
     vkDestroyDevice(device.m_logical_device, device.m_vulkan_allocator);
 }
@@ -437,8 +487,6 @@ void reset_fences(const Device& device, u32 count, Fence* fences)
 Swapchain create_swapchain(const Renderer& renderer, const Device& device, const SwapchainDescription& description)
 {
     Swapchain swapchain{};
-    swapchain.m_width = description.width;
-    swapchain.m_height = description.height;
 
     SDL_Vulkan_CreateSurface(( SDL_Window* ) get_app_window()->m_handle, device.m_instance, &swapchain.m_surface);
 
@@ -464,6 +512,12 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
     // determine present image count
     VkSurfaceCapabilitiesKHR surface_capabilities{};
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.m_physical_device, swapchain.m_surface, &surface_capabilities);
+
+    // determine swapchain size
+    swapchain.m_width = std::clamp(
+        description.width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width);
+    swapchain.m_height = std::clamp(
+        description.height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
 
     swapchain.m_image_count =
         std::clamp(description.image_count, surface_capabilities.minImageCount, surface_capabilities.maxImageCount);
@@ -562,6 +616,16 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
 
 void destroy_swapchain(const Device& device, Swapchain& swapchain)
 {
+    // TODO: decide when to destroy all framebuffers, now will do it on swapchain recreate
+    for (u32 i = 0; i < render_passes.size(); ++i)
+    {
+        vkDestroyFramebuffer(device.m_logical_device, framebuffers[ i ], device.m_vulkan_allocator);
+        vkDestroyRenderPass(device.m_logical_device, render_passes[ i ], device.m_vulkan_allocator);
+    }
+    render_pass_infos.clear();
+    render_passes.clear();
+    framebuffers.clear();
+
     for (u32 i = 0; i < swapchain.m_image_count; ++i)
     {
         FT_ASSERT(swapchain.m_images[ i ].m_image_view);
@@ -662,12 +726,7 @@ void cmd_begin_render_pass(const Device& device, const CommandBuffer& command_bu
     VkRenderPass render_pass = VK_NULL_HANDLE;
     VkFramebuffer framebuffer = VK_NULL_HANDLE;
 
-    auto it = std::find_if(render_pass_infos.begin(), render_pass_infos.end(), [ &info ](const auto& item) {
-        auto& a = item.first;
-        auto& b = info;
-        return a.color_attachment_count == b.color_attachment_count &&
-               a.color_attachments[ 0 ]->m_image_view == b.color_attachments[ 0 ]->m_image_view;
-    });
+    auto it = render_pass_infos.find(info);
 
     if (it == render_pass_infos.end())
     {
@@ -750,7 +809,7 @@ void cmd_begin_render_pass(const Device& device, const CommandBuffer& command_bu
         VK_ASSERT(vkCreateFramebuffer(
             device.m_logical_device, &framebuffer_create_info, device.m_vulkan_allocator, &framebuffer));
 
-        render_pass_infos.push_back(std::make_pair(info, render_passes.size()));
+        render_pass_infos[ info ] = render_passes.size();
         render_passes.push_back(render_pass);
         framebuffers.push_back(framebuffer);
     }
