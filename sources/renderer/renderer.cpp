@@ -1,5 +1,4 @@
 #include <map>
-#include <utils/hash.hpp>
 #include <SDL_vulkan.h>
 #include "core/window.hpp"
 #include "core/application.hpp"
@@ -20,67 +19,8 @@
 #define VK_ASSERT(x) x
 #endif
 
-namespace std
-{
-template <>
-struct hash<fluent::RenderPassInfo>
-{
-    std::size_t operator()(const fluent::RenderPassInfo& info) const
-    {
-        std::size_t result = 0;
-
-        fluent::hash_combine(result, info.color_attachment_count);
-        fluent::hash_combine(result, info.width);
-        fluent::hash_combine(result, info.height);
-        fluent::hash_combine(result, info.depth_stencil);
-
-        for (u32 i = 0; i < info.color_attachment_count; ++i)
-        {
-            fluent::hash_combine(result, info.color_attachments[ i ]->m_format);
-            fluent::hash_combine(result, info.color_attachments[ i ]->m_image_view);
-        }
-
-        if (info.depth_stencil)
-        {
-            fluent::hash_combine(result, info.depth_stencil->m_format);
-            fluent::hash_combine(result, info.depth_stencil->m_image_view);
-        }
-
-        return result;
-    }
-};
-
-bool operator==(const fluent::RenderPassInfo& a, const fluent::RenderPassInfo& b)
-{
-    if (std::tie(a.color_attachment_count, a.width, a.height, a.depth_stencil) !=
-        std::tie(b.color_attachment_count, b.width, b.height, b.depth_stencil))
-    {
-        return false;
-    }
-
-    u32 attachments_count = 0;
-
-    for (u32 i = 0; i < a.color_attachment_count; ++i)
-    {
-        fluent::Image* at_a = a.color_attachments[ 0 ];
-        fluent::Image* at_b = b.color_attachments[ 0 ];
-
-        if (std::tie(at_a->m_image_view, at_a->m_format) != std::tie(at_b->m_image_view, at_b->m_format))
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-} // namespace std
-
 namespace fluent
 {
-static std::unordered_map<RenderPassInfo, u32> render_pass_infos;
-static std::vector<VkRenderPass> render_passes;
-static std::vector<VkFramebuffer> framebuffers;
-
 static inline VkQueueFlagBits util_to_vk_queue_type(QueueType type)
 {
     switch (type)
@@ -343,7 +283,6 @@ VkPipelineStageFlags determine_pipeline_stage_flags(VkAccessFlags access_flags, 
 
 VkImageLayout determine_image_layout(ResourceState resource_state)
 {
-
     if (resource_state & eStorage)
         return VK_IMAGE_LAYOUT_GENERAL;
 
@@ -371,10 +310,10 @@ VkImageLayout determine_image_layout(ResourceState resource_state)
     return VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
-Renderer create_renderer(const RendererDescription& description)
+Renderer create_renderer(const RendererDesc& desc)
 {
     Renderer renderer{};
-    renderer.m_vulkan_allocator = description.vulkan_allocator;
+    renderer.m_vulkan_allocator = desc.vulkan_allocator;
 
     volkInitialize();
 
@@ -451,7 +390,7 @@ void destroy_renderer(Renderer& renderer)
     vkDestroyInstance(renderer.m_instance, renderer.m_vulkan_allocator);
 }
 
-Device create_device(const Renderer& renderer, const DeviceDescription& description)
+Device create_device(const Renderer& renderer, const DeviceDesc& desc)
 {
     Device device{};
     device.m_vulkan_allocator = renderer.m_vulkan_allocator;
@@ -509,13 +448,13 @@ void device_wait_idle(const Device& device)
     vkDeviceWaitIdle(device.m_logical_device);
 }
 
-Queue get_queue(const Device& device, const QueueDescription& description)
+Queue get_queue(const Device& device, const QueueDesc& desc)
 {
     Queue queue{};
-    u32 index = find_queue_family_index(device.m_physical_device, description.queue_type);
+    u32 index = find_queue_family_index(device.m_physical_device, desc.queue_type);
 
     queue.m_family_index = index;
-    queue.m_type = description.queue_type;
+    queue.m_type = desc.queue_type;
     vkGetDeviceQueue(device.m_logical_device, index, 0, &queue.m_queue);
 
     return queue;
@@ -526,60 +465,59 @@ void queue_wait_idle(const Queue& queue)
     vkQueueWaitIdle(queue.m_queue);
 }
 
-void queue_submit(const Queue& queue, const QueueSubmitDescription& description)
+void queue_submit(const Queue& queue, const QueueSubmitDesc& desc)
 {
     VkPipelineStageFlags wait_dst_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    VkSemaphore wait_semaphores[ description.wait_semaphore_count ];
-    VkCommandBuffer command_buffers[ description.command_buffer_count ];
-    VkSemaphore signal_semaphores[ description.signal_semaphore_count ];
+    VkSemaphore wait_semaphores[ desc.wait_semaphore_count ];
+    VkCommandBuffer command_buffers[ desc.command_buffer_count ];
+    VkSemaphore signal_semaphores[ desc.signal_semaphore_count ];
 
-    for (u32 i = 0; i < description.wait_semaphore_count; ++i)
+    for (u32 i = 0; i < desc.wait_semaphore_count; ++i)
     {
-        wait_semaphores[ i ] = description.wait_semaphores[ i ].m_semaphore;
+        wait_semaphores[ i ] = desc.wait_semaphores[ i ].m_semaphore;
     }
 
-    for (u32 i = 0; i < description.command_buffer_count; ++i)
+    for (u32 i = 0; i < desc.command_buffer_count; ++i)
     {
-        command_buffers[ i ] = description.command_buffers[ i ].m_command_buffer;
+        command_buffers[ i ] = desc.command_buffers[ i ].m_command_buffer;
     }
 
-    for (u32 i = 0; i < description.signal_semaphore_count; ++i)
+    for (u32 i = 0; i < desc.signal_semaphore_count; ++i)
     {
-        signal_semaphores[ i ] = description.signal_semaphores[ i ].m_semaphore;
+        signal_semaphores[ i ] = desc.signal_semaphores[ i ].m_semaphore;
     }
 
     VkSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.pNext = nullptr;
-    submit_info.waitSemaphoreCount = description.wait_semaphore_count;
+    submit_info.waitSemaphoreCount = desc.wait_semaphore_count;
     submit_info.pWaitSemaphores = wait_semaphores;
     submit_info.pWaitDstStageMask = &wait_dst_stage_mask;
-    submit_info.commandBufferCount = description.command_buffer_count;
+    submit_info.commandBufferCount = desc.command_buffer_count;
     submit_info.pCommandBuffers = command_buffers;
-    submit_info.signalSemaphoreCount = description.signal_semaphore_count;
+    submit_info.signalSemaphoreCount = desc.signal_semaphore_count;
     submit_info.pSignalSemaphores = signal_semaphores;
 
-    vkQueueSubmit(
-        queue.m_queue, 1, &submit_info, description.signal_fence ? description.signal_fence->m_fence : VK_NULL_HANDLE);
+    vkQueueSubmit(queue.m_queue, 1, &submit_info, desc.signal_fence ? desc.signal_fence->m_fence : VK_NULL_HANDLE);
 }
 
-void queue_present(const Queue& queue, const QueuePresentDescription& description)
+void queue_present(const Queue& queue, const QueuePresentDesc& desc)
 {
-    VkSemaphore wait_semaphores[ description.wait_semaphore_count ];
-    for (u32 i = 0; i < description.wait_semaphore_count; ++i)
+    VkSemaphore wait_semaphores[ desc.wait_semaphore_count ];
+    for (u32 i = 0; i < desc.wait_semaphore_count; ++i)
     {
-        wait_semaphores[ i ] = description.wait_semaphores[ i ].m_semaphore;
+        wait_semaphores[ i ] = desc.wait_semaphores[ i ].m_semaphore;
     }
 
     VkPresentInfoKHR present_info = {};
 
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present_info.pNext = nullptr;
-    present_info.waitSemaphoreCount = description.wait_semaphore_count;
+    present_info.waitSemaphoreCount = desc.wait_semaphore_count;
     present_info.pWaitSemaphores = wait_semaphores;
     present_info.swapchainCount = 1;
-    present_info.pSwapchains = &description.swapchain->m_swapchain;
-    present_info.pImageIndices = &description.image_index;
+    present_info.pSwapchains = &desc.swapchain->m_swapchain;
+    present_info.pImageIndices = &desc.image_index;
     present_info.pResults = nullptr;
 
     vkQueuePresentKHR(queue.m_queue, &present_info);
@@ -648,7 +586,7 @@ void reset_fences(const Device& device, u32 count, Fence* fences)
     vkResetFences(device.m_logical_device, count, vk_fences);
 }
 
-Swapchain create_swapchain(const Renderer& renderer, const Device& device, const SwapchainDescription& description)
+Swapchain create_swapchain(const Renderer& renderer, const Device& device, const SwapchainDesc& desc)
 {
     Swapchain swapchain{};
 
@@ -678,13 +616,13 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.m_physical_device, swapchain.m_surface, &surface_capabilities);
 
     // determine swapchain size
-    swapchain.m_width = std::clamp(
-        description.width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width);
-    swapchain.m_height = std::clamp(
-        description.height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
+    swapchain.m_width =
+        std::clamp(desc.width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width);
+    swapchain.m_height =
+        std::clamp(desc.height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
 
     swapchain.m_image_count =
-        std::clamp(description.image_count, surface_capabilities.minImageCount, surface_capabilities.maxImageCount);
+        std::clamp(desc.image_count, surface_capabilities.minImageCount, surface_capabilities.maxImageCount);
 
     /// find best surface format
     u32 surface_format_count = 0;
@@ -728,7 +666,7 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
     swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_create_info.queueFamilyIndexCount = 1;
-    swapchain_create_info.pQueueFamilyIndices = &description.queue->m_family_index;
+    swapchain_create_info.pQueueFamilyIndices = &desc.queue->m_family_index;
     swapchain_create_info.preTransform = pre_transform;
     // TODO: choose composite alpha according to caps
     swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -778,21 +716,36 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
             &swapchain.m_images[ i ].m_image_view));
     }
 
+    // create default render passes
+    RenderPassDesc render_pass_desc{};
+    render_pass_desc.color_attachment_count = 1;
+    render_pass_desc.color_attachment_load_ops[ 0 ] = AttachmentLoadOp::eClear;
+    render_pass_desc.color_image_states[ 0 ] = ResourceState::eColorAttachment;
+    render_pass_desc.depth_stencil = nullptr;
+    render_pass_desc.width = swapchain.m_width;
+    render_pass_desc.height = swapchain.m_height;
+
+    swapchain.m_render_passes = new RenderPass[ swapchain.m_image_count ];
+
+    for (u32 i = 0; i < swapchain.m_image_count; ++i)
+    {
+        render_pass_desc.color_attachments[ 0 ] = &swapchain.m_images[ i ];
+        swapchain.m_render_passes[ i ] = create_render_pass(device, render_pass_desc);
+    }
+
     return swapchain;
 }
 
 void destroy_swapchain(const Device& device, Swapchain& swapchain)
 {
-    // TODO: decide when to destroy all framebuffers, now will do it on swapchain recreate
-    for (u32 i = 0; i < render_passes.size(); ++i)
+    FT_ASSERT(swapchain.m_render_passes);
+    for (u32 i = 0; i < swapchain.m_image_count; ++i)
     {
-        vkDestroyFramebuffer(device.m_logical_device, framebuffers[ i ], device.m_vulkan_allocator);
-        vkDestroyRenderPass(device.m_logical_device, render_passes[ i ], device.m_vulkan_allocator);
+        destroy_render_pass(device, swapchain.m_render_passes[ i ]);
     }
-    render_pass_infos.clear();
-    render_passes.clear();
-    framebuffers.clear();
+    delete[] swapchain.m_render_passes;
 
+    FT_ASSERT(swapchain.m_image_count);
     for (u32 i = 0; i < swapchain.m_image_count; ++i)
     {
         FT_ASSERT(swapchain.m_images[ i ].m_image_view);
@@ -806,17 +759,23 @@ void destroy_swapchain(const Device& device, Swapchain& swapchain)
     vkDestroySurfaceKHR(device.m_instance, swapchain.m_surface, device.m_vulkan_allocator);
 }
 
-CommandPool create_command_pool(const Device& device, const CommandPoolDescription& description)
+const RenderPass* get_swapchain_render_pass(const Swapchain& swapchain, u32 image_index)
+{
+    FT_ASSERT(image_index < swapchain.m_image_count);
+    return &swapchain.m_render_passes[ image_index ];
+}
+
+CommandPool create_command_pool(const Device& device, const CommandPoolDesc& desc)
 {
     CommandPool command_pool{};
 
-    command_pool.m_queue_type = description.queue->m_type;
+    command_pool.m_queue_type = desc.queue->m_type;
 
     VkCommandPoolCreateInfo command_pool_create_info{};
     command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     command_pool_create_info.pNext = nullptr;
     command_pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    command_pool_create_info.queueFamilyIndex = description.queue->m_family_index;
+    command_pool_create_info.queueFamilyIndex = desc.queue->m_family_index;
 
     VK_ASSERT(vkCreateCommandPool(
         device.m_logical_device, &command_pool_create_info, device.m_vulkan_allocator, &command_pool.m_command_pool));
@@ -891,146 +850,155 @@ void acquire_next_image(
         fence.m_fence, &image_index);
 }
 
-void cmd_begin_render_pass(const Device& device, const CommandBuffer& command_buffer, const RenderPassInfo& info)
+RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc)
 {
-    VkRenderPass render_pass = VK_NULL_HANDLE;
-    VkFramebuffer framebuffer = VK_NULL_HANDLE;
+    RenderPass render_pass{};
+    render_pass.m_color_attachment_count = desc.color_attachment_count;
+    render_pass.m_width = desc.width;
+    render_pass.m_height = desc.height;
 
-    auto it = render_pass_infos.find(info);
+    u32 attachments_count = desc.color_attachment_count;
 
-    if (it == render_pass_infos.end())
+    VkAttachmentDescription attachment_descriptions[ desc.color_attachment_count + 1 ];
+    VkAttachmentReference color_attachment_references[ desc.color_attachment_count ];
+    VkAttachmentReference depth_attachment_reference{};
+
+    for (u32 i = 0; i < desc.color_attachment_count; ++i)
     {
-        u32 attachments_count = info.color_attachment_count;
+        attachment_descriptions[ i ].flags = 0;
+        attachment_descriptions[ i ].format = util_to_vk_format(desc.color_attachments[ i ]->m_format);
+        attachment_descriptions[ i ].samples = util_to_vk_sample_count(desc.color_attachments[ i ]->m_sample_count);
+        attachment_descriptions[ i ].loadOp = util_to_vk_load_op(desc.color_attachment_load_ops[ i ]);
+        attachment_descriptions[ i ].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachment_descriptions[ i ].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachment_descriptions[ i ].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachment_descriptions[ i ].initialLayout = determine_image_layout(desc.color_image_states[ i ]);
+        attachment_descriptions[ i ].finalLayout = determine_image_layout(desc.color_image_states[ i ]);
 
-        VkAttachmentDescription attachment_descriptions[ info.color_attachment_count + 1 ];
-        VkAttachmentReference color_attachment_references[ info.color_attachment_count ];
-        VkAttachmentReference depth_attachment_reference{};
-
-        for (u32 i = 0; i < info.color_attachment_count; ++i)
-        {
-            attachment_descriptions[ i ].flags = 0;
-            attachment_descriptions[ i ].format = util_to_vk_format(info.color_attachments[ i ]->m_format);
-            attachment_descriptions[ i ].samples = util_to_vk_sample_count(info.color_attachments[ i ]->m_sample_count);
-            attachment_descriptions[ i ].loadOp = util_to_vk_load_op(info.color_attachment_load_ops[ i ]);
-            attachment_descriptions[ i ].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            attachment_descriptions[ i ].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachment_descriptions[ i ].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment_descriptions[ i ].initialLayout = determine_image_layout(info.color_image_states[ i ]);
-            attachment_descriptions[ i ].finalLayout = determine_image_layout(info.color_image_states[ i ]);
-
-            color_attachment_references[ i ].attachment = i;
-            color_attachment_references[ i ].layout = determine_image_layout(info.color_image_states[ i ]);
-        }
-
-        if (info.depth_stencil)
-        {
-            u32 i = info.color_attachment_count;
-            attachment_descriptions[ i ].flags = 0;
-            attachment_descriptions[ i ].format = util_to_vk_format(info.depth_stencil->m_format);
-            attachment_descriptions[ i ].samples = util_to_vk_sample_count(info.depth_stencil->m_sample_count);
-            attachment_descriptions[ i ].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachment_descriptions[ i ].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment_descriptions[ i ].stencilLoadOp = util_to_vk_load_op(info.depth_stencil_load_op);
-            attachment_descriptions[ i ].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-            attachment_descriptions[ i ].initialLayout = determine_image_layout(info.depth_stencil_state);
-            attachment_descriptions[ i ].finalLayout = determine_image_layout(info.depth_stencil_state);
-
-            depth_attachment_reference.attachment = i;
-            depth_attachment_reference.layout = attachment_descriptions[ i ].finalLayout;
-            // TODO: support for depth attachment
-            attachments_count++;
-        }
-
-        // TODO: subpass setup from user code
-        VkSubpassDescription subpass_description{};
-        subpass_description.flags = 0;
-        subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass_description.inputAttachmentCount = 0;
-        subpass_description.pInputAttachments = nullptr;
-        subpass_description.colorAttachmentCount = info.color_attachment_count;
-        subpass_description.pColorAttachments = color_attachment_references;
-        subpass_description.pResolveAttachments = nullptr;
-        subpass_description.pDepthStencilAttachment = info.depth_stencil ? &depth_attachment_reference : nullptr;
-        subpass_description.preserveAttachmentCount = 0;
-        subpass_description.pPreserveAttachments = nullptr;
-
-        VkRenderPassCreateInfo render_pass_create_info{};
-        render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        render_pass_create_info.pNext = nullptr;
-        render_pass_create_info.flags = 0;
-        render_pass_create_info.attachmentCount = attachments_count;
-        render_pass_create_info.pAttachments = attachment_descriptions;
-        render_pass_create_info.subpassCount = 1;
-        render_pass_create_info.pSubpasses = &subpass_description;
-        render_pass_create_info.dependencyCount = 0;
-        render_pass_create_info.pDependencies = nullptr;
-
-        VK_ASSERT(vkCreateRenderPass(
-            device.m_logical_device, &render_pass_create_info, device.m_vulkan_allocator, &render_pass));
-
-        VkImageView image_views[ attachments_count ];
-        for (u32 i = 0; i < info.color_attachment_count; ++i)
-        {
-            image_views[ i ] = info.color_attachments[ i ]->m_image_view;
-        }
-
-        if (info.depth_stencil)
-        {
-            image_views[ info.color_attachment_count ] = info.depth_stencil->m_image_view;
-        }
-
-        VkFramebufferCreateInfo framebuffer_create_info{};
-        framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebuffer_create_info.pNext = nullptr;
-        framebuffer_create_info.flags = 0;
-        framebuffer_create_info.renderPass = render_pass;
-        framebuffer_create_info.attachmentCount = attachments_count;
-        framebuffer_create_info.pAttachments = image_views;
-        framebuffer_create_info.width = info.width;
-        framebuffer_create_info.height = info.height;
-        framebuffer_create_info.layers = 1;
-
-        VK_ASSERT(vkCreateFramebuffer(
-            device.m_logical_device, &framebuffer_create_info, device.m_vulkan_allocator, &framebuffer));
-
-        render_pass_infos[ info ] = render_passes.size();
-        render_passes.push_back(render_pass);
-        framebuffers.push_back(framebuffer);
-    }
-    else
-    {
-        render_pass = render_passes[ it->second ];
-        framebuffer = framebuffers[ it->second ];
+        color_attachment_references[ i ].attachment = i;
+        color_attachment_references[ i ].layout = determine_image_layout(desc.color_image_states[ i ]);
     }
 
-    // TODO: clear values
+    if (desc.depth_stencil)
+    {
+        render_pass.m_has_depth_stencil = true;
+
+        u32 i = desc.color_attachment_count;
+        attachment_descriptions[ i ].flags = 0;
+        attachment_descriptions[ i ].format = util_to_vk_format(desc.depth_stencil->m_format);
+        attachment_descriptions[ i ].samples = util_to_vk_sample_count(desc.depth_stencil->m_sample_count);
+        attachment_descriptions[ i ].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachment_descriptions[ i ].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachment_descriptions[ i ].stencilLoadOp = util_to_vk_load_op(desc.depth_stencil_load_op);
+        attachment_descriptions[ i ].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachment_descriptions[ i ].initialLayout = determine_image_layout(desc.depth_stencil_state);
+        attachment_descriptions[ i ].finalLayout = determine_image_layout(desc.depth_stencil_state);
+
+        depth_attachment_reference.attachment = i;
+        depth_attachment_reference.layout = attachment_descriptions[ i ].finalLayout;
+        // TODO: support for depth attachment
+        attachments_count++;
+    }
+
+    // TODO: subpass setup from user code
+    VkSubpassDescription subpass_description{};
+    subpass_description.flags = 0;
+    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass_description.inputAttachmentCount = 0;
+    subpass_description.pInputAttachments = nullptr;
+    subpass_description.colorAttachmentCount = desc.color_attachment_count;
+    subpass_description.pColorAttachments = color_attachment_references;
+    subpass_description.pResolveAttachments = nullptr;
+    subpass_description.pDepthStencilAttachment = desc.depth_stencil ? &depth_attachment_reference : nullptr;
+    subpass_description.preserveAttachmentCount = 0;
+    subpass_description.pPreserveAttachments = nullptr;
+
+    VkRenderPassCreateInfo render_pass_create_info{};
+    render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    render_pass_create_info.pNext = nullptr;
+    render_pass_create_info.flags = 0;
+    render_pass_create_info.attachmentCount = attachments_count;
+    render_pass_create_info.pAttachments = attachment_descriptions;
+    render_pass_create_info.subpassCount = 1;
+    render_pass_create_info.pSubpasses = &subpass_description;
+    render_pass_create_info.dependencyCount = 0;
+    render_pass_create_info.pDependencies = nullptr;
+
+    VK_ASSERT(vkCreateRenderPass(
+        device.m_logical_device, &render_pass_create_info, device.m_vulkan_allocator, &render_pass.m_render_pass));
+
+    VkImageView image_views[ attachments_count ];
+    for (u32 i = 0; i < desc.color_attachment_count; ++i)
+    {
+        image_views[ i ] = desc.color_attachments[ i ]->m_image_view;
+    }
+
+    if (desc.depth_stencil)
+    {
+        image_views[ desc.color_attachment_count ] = desc.depth_stencil->m_image_view;
+    }
+
+    VkFramebufferCreateInfo framebuffer_create_info{};
+    framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebuffer_create_info.pNext = nullptr;
+    framebuffer_create_info.flags = 0;
+    framebuffer_create_info.renderPass = render_pass.m_render_pass;
+    framebuffer_create_info.attachmentCount = attachments_count;
+    framebuffer_create_info.pAttachments = image_views;
+    framebuffer_create_info.width = desc.width;
+    framebuffer_create_info.height = desc.height;
+    framebuffer_create_info.layers = 1;
+
+    VK_ASSERT(vkCreateFramebuffer(
+        device.m_logical_device, &framebuffer_create_info, device.m_vulkan_allocator, &render_pass.m_framebuffer));
+
+    return render_pass;
+}
+
+void destroy_render_pass(const Device& device, RenderPass& render_pass)
+{
+    FT_ASSERT(render_pass.m_framebuffer);
+    FT_ASSERT(render_pass.m_render_pass);
+    vkDestroyFramebuffer(device.m_logical_device, render_pass.m_framebuffer, device.m_vulkan_allocator);
+    vkDestroyRenderPass(device.m_logical_device, render_pass.m_render_pass, device.m_vulkan_allocator);
+}
+
+void cmd_begin_render_pass(const CommandBuffer& command_buffer, const RenderPassBeginDesc& desc)
+{
+    FT_ASSERT(desc.render_pass);
+
     static VkClearValue clear_values[ MAX_ATTACHMENTS_COUNT + 1 ];
-    for (u32 i = 0; i < info.color_attachment_count; ++i)
+    const RenderPass* render_pass = desc.render_pass;
+    u32 clear_value_count = render_pass->m_color_attachment_count;
+
+    for (u32 i = 0; i < render_pass->m_color_attachment_count; ++i)
     {
         clear_values[ i ] = VkClearValue{};
-        clear_values[ i ].color.float32[ 0 ] = info.color_clear_values[ i ].color[ 0 ];
-        clear_values[ i ].color.float32[ 1 ] = info.color_clear_values[ i ].color[ 1 ];
-        clear_values[ i ].color.float32[ 2 ] = info.color_clear_values[ i ].color[ 2 ];
-        clear_values[ i ].color.float32[ 3 ] = info.color_clear_values[ i ].color[ 3 ];
+        clear_values[ i ].color.float32[ 0 ] = desc.clear_values[ i ].color[ 0 ];
+        clear_values[ i ].color.float32[ 1 ] = desc.clear_values[ i ].color[ 1 ];
+        clear_values[ i ].color.float32[ 2 ] = desc.clear_values[ i ].color[ 2 ];
+        clear_values[ i ].color.float32[ 3 ] = desc.clear_values[ i ].color[ 3 ];
     }
 
-    if (info.depth_stencil)
+    if (render_pass->m_has_depth_stencil)
     {
-        clear_values[ info.color_attachment_count ] = VkClearValue{};
-        clear_values[ info.color_attachment_count ].depthStencil.depth = info.depth_clear_value;
-        clear_values[ info.color_attachment_count ].depthStencil.stencil = info.stencil_clear_value;
+        clear_value_count++;
+        u32 idx = render_pass->m_color_attachment_count;
+        clear_values[ idx ] = VkClearValue{};
+        clear_values[ idx ].depthStencil.depth = desc.clear_values[ idx ].depth;
+        clear_values[ idx ].depthStencil.stencil = desc.clear_values[ idx ].stencil;
     }
 
     VkRenderPassBeginInfo render_pass_begin_info{};
     render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     render_pass_begin_info.pNext = nullptr;
-    render_pass_begin_info.renderPass = render_pass;
-    render_pass_begin_info.framebuffer = framebuffer;
-    render_pass_begin_info.renderArea.extent.width = info.width;
-    render_pass_begin_info.renderArea.extent.height = info.height;
+    render_pass_begin_info.renderPass = render_pass->m_render_pass;
+    render_pass_begin_info.framebuffer = render_pass->m_framebuffer;
+    render_pass_begin_info.renderArea.extent.width = render_pass->m_width;
+    render_pass_begin_info.renderArea.extent.height = render_pass->m_height;
     render_pass_begin_info.renderArea.offset.x = 0;
     render_pass_begin_info.renderArea.offset.y = 0;
-    render_pass_begin_info.clearValueCount = info.color_attachment_count + info.depth_stencil ? 1 : 0;
+    render_pass_begin_info.clearValueCount = clear_value_count;
     render_pass_begin_info.pClearValues = clear_values;
 
     vkCmdBeginRenderPass(command_buffer.m_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);

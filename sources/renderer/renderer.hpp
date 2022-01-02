@@ -9,7 +9,7 @@ namespace fluent
 
 static constexpr u32 MAX_ATTACHMENTS_COUNT = 10;
 
-struct RendererDescription
+struct RendererDesc
 {
     VkAllocationCallbacks* vulkan_allocator;
 };
@@ -30,7 +30,7 @@ struct Renderer
     VkPhysicalDevice m_physical_device;
 };
 
-struct DeviceDescription
+struct DeviceDesc
 {
 };
 
@@ -42,7 +42,7 @@ struct Device
     VkDevice m_logical_device;
 };
 
-struct QueueDescription
+struct QueueDesc
 {
     QueueType queue_type;
 };
@@ -64,7 +64,7 @@ struct Fence
     VkFence m_fence = VK_NULL_HANDLE;
 };
 
-struct SwapchainDescription
+struct SwapchainDesc
 {
     Queue* queue;
     u32 width;
@@ -84,6 +84,8 @@ struct Image
     u32 m_layer_count = 1;
 };
 
+struct RenderPass;
+
 struct Swapchain
 {
     VkPresentModeKHR m_present_mode;
@@ -94,10 +96,10 @@ struct Swapchain
     VkSwapchainKHR m_swapchain;
     Format m_format;
     Image* m_images;
-    u32 m_current_image_index;
+    RenderPass* m_render_passes;
 };
 
-struct CommandPoolDescription
+struct CommandPoolDesc
 {
     Queue* queue;
 };
@@ -114,7 +116,7 @@ struct CommandBuffer
     VkCommandBuffer m_command_buffer;
 };
 
-struct QueueSubmitDescription
+struct QueueSubmitDesc
 {
     u32 wait_semaphore_count;
     Semaphore* wait_semaphores;
@@ -125,7 +127,7 @@ struct QueueSubmitDescription
     Fence* signal_fence;
 };
 
-struct QueuePresentDescription
+struct QueuePresentDesc
 {
     u32 wait_semaphore_count;
     Semaphore* wait_semaphores;
@@ -133,25 +135,40 @@ struct QueuePresentDescription
     u32 image_index;
 };
 
-struct ClearValue
+struct RenderPassDesc
 {
-    f32 color[ 4 ];
-};
-
-struct RenderPassInfo
-{
+    u32 width;
+    u32 height;
     u32 color_attachment_count;
     Image* color_attachments[ MAX_ATTACHMENTS_COUNT ];
     AttachmentLoadOp color_attachment_load_ops[ MAX_ATTACHMENTS_COUNT ];
-    ClearValue color_clear_values[ MAX_ATTACHMENTS_COUNT ];
     ResourceState color_image_states[ MAX_ATTACHMENTS_COUNT ];
     Image* depth_stencil;
-    f32 depth_clear_value;
-    u32 stencil_clear_value;
     AttachmentLoadOp depth_stencil_load_op;
     ResourceState depth_stencil_state;
-    u32 width;
-    u32 height;
+};
+
+struct RenderPass
+{
+    VkRenderPass m_render_pass;
+    VkFramebuffer m_framebuffer;
+    u32 m_width;
+    u32 m_height;
+    u32 m_color_attachment_count;
+    bool m_has_depth_stencil;
+};
+
+struct ClearValue
+{
+    f32 color[ 4 ];
+    f32 depth;
+    u32 stencil;
+};
+
+struct RenderPassBeginDesc
+{
+    const RenderPass* render_pass;
+    ClearValue clear_values[ MAX_ATTACHMENTS_COUNT + 1 ];
 };
 
 struct BufferBarrier
@@ -167,17 +184,17 @@ struct ImageBarrier
     Queue* dst_queue;
 };
 
-Renderer create_renderer(const RendererDescription& description);
+Renderer create_renderer(const RendererDesc& desc);
 void destroy_renderer(Renderer& renderer);
 
-Device create_device(const Renderer& renderer, const DeviceDescription& description);
+Device create_device(const Renderer& renderer, const DeviceDesc& desc);
 void destroy_device(Device& device);
 void device_wait_idle(const Device& device);
 
-Queue get_queue(const Device& device, const QueueDescription& description);
+Queue get_queue(const Device& device, const QueueDesc& desc);
 void queue_wait_idle(const Queue& queue);
-void queue_submit(const Queue& queue, const QueueSubmitDescription& description);
-void queue_present(const Queue& queue, const QueuePresentDescription& description);
+void queue_submit(const Queue& queue, const QueueSubmitDesc& desc);
+void queue_present(const Queue& queue, const QueuePresentDesc& desc);
 
 Semaphore create_semaphore(const Device& device);
 void destroy_semaphore(const Device& device, Semaphore& semaphore);
@@ -186,10 +203,11 @@ void destroy_fence(const Device& device, Fence& fence);
 void wait_for_fences(const Device& device, u32 count, Fence* fences);
 void reset_fences(const Device& device, u32 count, Fence* fences);
 
-Swapchain create_swapchain(const Renderer& renderer, const Device& device, const SwapchainDescription& description);
+Swapchain create_swapchain(const Renderer& renderer, const Device& device, const SwapchainDesc& desc);
 void destroy_swapchain(const Device& device, Swapchain& swapchain);
+const RenderPass* get_swapchain_render_pass(const Swapchain& swapchain, u32 image_index);
 
-CommandPool create_command_pool(const Device& device, const CommandPoolDescription& description);
+CommandPool create_command_pool(const Device& device, const CommandPoolDesc& desc);
 void destroy_command_pool(const Device& device, CommandPool& command_pool);
 
 void allocate_command_buffers(
@@ -202,7 +220,9 @@ void end_command_buffer(const CommandBuffer& command_buffer);
 void acquire_next_image(
     const Device& device, const Swapchain& swapchain, const Semaphore& semaphore, const Fence& fence, u32& image_index);
 
-void cmd_begin_render_pass(const Device& device, const CommandBuffer& command_buffer, const RenderPassInfo& info);
+RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc);
+void destroy_render_pass(const Device& device, RenderPass& render_pass);
+void cmd_begin_render_pass(const CommandBuffer& command_buffer, const RenderPassBeginDesc& desc);
 void cmd_end_render_pass(const CommandBuffer& command_buffer);
 
 void cmd_barrier(

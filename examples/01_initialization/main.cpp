@@ -21,20 +21,20 @@ CommandBuffer command_buffers[ FRAME_COUNT ];
 
 void on_init()
 {
-    RendererDescription renderer_description{};
-    renderer_description.vulkan_allocator = nullptr;
-    renderer = create_renderer(renderer_description);
+    RendererDesc renderer_desc{};
+    renderer_desc.vulkan_allocator = nullptr;
+    renderer = create_renderer(renderer_desc);
 
-    DeviceDescription device_description{};
-    device = create_device(renderer, device_description);
+    DeviceDesc device_desc{};
+    device = create_device(renderer, device_desc);
 
-    QueueDescription queue_description{};
-    queue_description.queue_type = QueueType::eGraphics;
-    queue = get_queue(device, queue_description);
+    QueueDesc queue_desc{};
+    queue_desc.queue_type = QueueType::eGraphics;
+    queue = get_queue(device, queue_desc);
 
-    CommandPoolDescription command_pool_description{};
-    command_pool_description.queue = &queue;
-    command_pool = create_command_pool(device, command_pool_description);
+    CommandPoolDesc command_pool_desc{};
+    command_pool_desc.queue = &queue;
+    command_pool = create_command_pool(device, command_pool_desc);
 
     allocate_command_buffers(device, command_pool, FRAME_COUNT, command_buffers);
 
@@ -49,13 +49,13 @@ void on_init()
 
 void on_load(u32 width, u32 height)
 {
-    SwapchainDescription swapchain_description{};
-    swapchain_description.width = width;
-    swapchain_description.height = height;
-    swapchain_description.queue = &queue;
-    swapchain_description.image_count = FRAME_COUNT;
+    SwapchainDesc swapchain_desc{};
+    swapchain_desc.width = width;
+    swapchain_desc.height = height;
+    swapchain_desc.queue = &queue;
+    swapchain_desc.image_count = FRAME_COUNT;
 
-    swapchain = create_swapchain(renderer, device, swapchain_description);
+    swapchain = create_swapchain(renderer, device, swapchain_desc);
 }
 
 void on_update(f64 deltaTime)
@@ -86,20 +86,14 @@ void on_render()
 
     f32 clear_value[ 4 ] = { 0.2f, 0.3f, 0.4f, 1.0f };
 
-    RenderPassInfo render_pass_info{};
-    render_pass_info.color_attachment_count = 1;
-    render_pass_info.color_attachments[ 0 ] = &swapchain.m_images[ image_index ];
-    render_pass_info.color_attachment_load_ops[ 0 ] = AttachmentLoadOp::eClear;
-    render_pass_info.color_clear_values[ 0 ].color[ 0 ] = 1.0f;
-    render_pass_info.color_clear_values[ 0 ].color[ 1 ] = 0.8f;
-    render_pass_info.color_clear_values[ 0 ].color[ 2 ] = 0.4f;
-    render_pass_info.color_clear_values[ 0 ].color[ 3 ] = 1.0f;
-    render_pass_info.color_image_states[ 0 ] = ResourceState::eColorAttachment;
-    render_pass_info.depth_stencil = nullptr;
-    render_pass_info.width = swapchain.m_width;
-    render_pass_info.height = swapchain.m_height;
+    RenderPassBeginDesc render_pass_begin_desc{};
+    render_pass_begin_desc.render_pass = get_swapchain_render_pass(swapchain, image_index);
+    render_pass_begin_desc.clear_values[ 0 ].color[ 0 ] = 1.0f;
+    render_pass_begin_desc.clear_values[ 0 ].color[ 1 ] = 0.8f;
+    render_pass_begin_desc.clear_values[ 0 ].color[ 2 ] = 0.4f;
+    render_pass_begin_desc.clear_values[ 0 ].color[ 3 ] = 1.0f;
 
-    cmd_begin_render_pass(device, command_buffers[ frame_index ], render_pass_info);
+    cmd_begin_render_pass(command_buffers[ frame_index ], render_pass_begin_desc);
     cmd_end_render_pass(command_buffers[ frame_index ]);
 
     ImageBarrier to_present_barrier{};
@@ -113,24 +107,24 @@ void on_render()
 
     end_command_buffer(command_buffers[ frame_index ]);
 
-    QueueSubmitDescription queue_submit_description{};
-    queue_submit_description.wait_semaphore_count = 1;
-    queue_submit_description.wait_semaphores = &image_available_semaphores[ frame_index ];
-    queue_submit_description.command_buffer_count = 1;
-    queue_submit_description.command_buffers = &command_buffers[ frame_index ];
-    queue_submit_description.signal_semaphore_count = 1;
-    queue_submit_description.signal_semaphores = &rendering_finished_semaphores[ frame_index ];
-    queue_submit_description.signal_fence = &in_flight_fences[ frame_index ];
+    QueueSubmitDesc queue_submit_desc{};
+    queue_submit_desc.wait_semaphore_count = 1;
+    queue_submit_desc.wait_semaphores = &image_available_semaphores[ frame_index ];
+    queue_submit_desc.command_buffer_count = 1;
+    queue_submit_desc.command_buffers = &command_buffers[ frame_index ];
+    queue_submit_desc.signal_semaphore_count = 1;
+    queue_submit_desc.signal_semaphores = &rendering_finished_semaphores[ frame_index ];
+    queue_submit_desc.signal_fence = &in_flight_fences[ frame_index ];
 
-    queue_submit(queue, queue_submit_description);
+    queue_submit(queue, queue_submit_desc);
 
-    QueuePresentDescription queue_present_description{};
-    queue_present_description.wait_semaphore_count = 1;
-    queue_present_description.wait_semaphores = &rendering_finished_semaphores[ frame_index ];
-    queue_present_description.swapchain = &swapchain;
-    queue_present_description.image_index = image_index;
+    QueuePresentDesc queue_present_desc{};
+    queue_present_desc.wait_semaphore_count = 1;
+    queue_present_desc.wait_semaphores = &rendering_finished_semaphores[ frame_index ];
+    queue_present_desc.swapchain = &swapchain;
+    queue_present_desc.image_index = image_index;
 
-    queue_present(queue, queue_present_description);
+    queue_present(queue, queue_present_desc);
 
     command_buffers_recorded[ frame_index ] = false;
     frame_index = (frame_index + 1) % FRAME_COUNT;
