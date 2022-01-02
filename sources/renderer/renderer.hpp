@@ -55,6 +55,11 @@ struct Semaphore
     VkSemaphore m_semaphore;
 };
 
+struct Fence
+{
+    VkFence m_fence = VK_NULL_HANDLE;
+};
+
 struct SwapchainDescription
 {
     Queue* queue;
@@ -97,6 +102,25 @@ struct CommandBuffer
     VkCommandBuffer m_command_buffer;
 };
 
+struct QueueSubmitDescription
+{
+    u32 wait_semaphore_count;
+    Semaphore* wait_semaphores;
+    u32 command_buffer_count;
+    CommandBuffer* command_buffers;
+    u32 signal_semaphore_count;
+    Semaphore* signal_semaphores;
+    Fence* signal_fence;
+};
+
+struct QueuePresentDescription
+{
+    u32 wait_semaphore_count;
+    Semaphore* wait_semaphores;
+    Swapchain* swapchain;
+    u32 image_index;
+};
+
 Renderer create_renderer(const RendererDescription& description);
 void destroy_renderer(Renderer& renderer);
 
@@ -106,9 +130,15 @@ void device_wait_idle(const Device& device);
 
 Queue get_queue(const Device& device, const QueueDescription& description);
 void queue_wait_idle(const Queue& queue);
+void queue_submit(const Queue& queue, const QueueSubmitDescription& description);
+void queue_present(const Queue& queue, const QueuePresentDescription& description);
 
 Semaphore create_semaphore(const Device& device);
 void destroy_semaphore(const Device& device, Semaphore& semaphore);
+Fence create_fence(const Device& device);
+void destroy_fence(const Device& device, Fence& fence);
+void wait_for_fences(const Device& device, u32 count, Fence* fences);
+void reset_fences(const Device& device, u32 count, Fence* fences);
 
 Swapchain create_swapchain(const Renderer& renderer, const Device& device, const SwapchainDescription& description);
 void destroy_swapchain(const Device& device, Swapchain& swapchain);
@@ -123,4 +153,6 @@ void free_command_buffers(
 void begin_command_buffer(const CommandBuffer& command_buffer);
 void end_command_buffer(const CommandBuffer& command_buffer);
 
+void acquire_next_image(
+    const Device& device, const Swapchain& swapchain, const Semaphore& semaphore, const Fence& fence, u32& image_index);
 } // namespace fluent

@@ -33,7 +33,8 @@ void application_init(const ApplicationConfig* config)
     FT_ASSERT(config->on_unload);
     FT_ASSERT(config->on_shutdown);
 
-    FT_ASSERT(SDL_Init(SDL_INIT_VIDEO) >= 0);
+    int init_result = SDL_Init(SDL_INIT_VIDEO);
+    FT_ASSERT(init_result >= 0 && "SDL Init failed");
 
     app_state.window = fluent::create_window(config->title, config->x, config->y, config->width, config->height);
 

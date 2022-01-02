@@ -2,7 +2,7 @@
 
 #include "fluent/fluent.hpp"
 
-#define DEBUTESTING
+#define DEBUG_TESTING
 
 using namespace fluent;
 
@@ -13,8 +13,11 @@ Renderer renderer;
 Device device;
 Queue queue;
 CommandPool command_pool;
-Semaphore image_available_semaphore;
-Semaphore renderinfinished_semaphore;
+Semaphore image_available_semaphores[ FRAME_COUNT ];
+Semaphore rendering_finished_semaphores[ FRAME_COUNT ];
+Fence in_flight_fences[ FRAME_COUNT ];
+bool command_buffers_recorded[ FRAME_COUNT ];
+
 Swapchain swapchain;
 CommandBuffer command_buffers[ FRAME_COUNT ];
 
@@ -37,8 +40,13 @@ void on_init()
 
     allocate_command_buffers(device, command_pool, FRAME_COUNT, command_buffers);
 
-    image_available_semaphore = create_semaphore(device);
-    renderinfinished_semaphore = create_semaphore(device);
+    for (u32 i = 0; i < FRAME_COUNT; ++i)
+    {
+        image_available_semaphores[ i ] = create_semaphore(device);
+        rendering_finished_semaphores[ i ] = create_semaphore(device);
+        in_flight_fences[ i ] = create_fence(device);
+        command_buffers_recorded[ i ] = false;
+    }
 }
 
 void on_load(u32 width, u32 height)
@@ -58,13 +66,16 @@ void on_update(f64 deltaTime)
 
 void on_render()
 {
-#ifdef DEBUTESTING
+    if (!command_buffers_recorded[ frame_index ])
+    {
+        wait_for_fences(device, 1, &in_flight_fences[ frame_index ]);
+        reset_fences(device, 1, &in_flight_fences[ frame_index ]);
+        command_buffers_recorded[ frame_index ] = true;
+    }
+
     u32 image_index = 0;
-
-    VkResult result = vkAcquireNextImageKHR(
-        device.m_logical_device, swapchain.m_swapchain, std::numeric_limits<u64>::max(),
-        image_available_semaphore.m_semaphore, VK_NULL_HANDLE, &image_index);
-
+    acquire_next_image(device, swapchain, image_available_semaphores[ frame_index ], {}, image_index);
+#ifdef DEBUG_TESTING
     VkClearColorValue clear_color = { { 1.0f, 0.8f, 0.4f, 0.0f } };
 
     VkImageSubresourceRange image_subresource_range = {};
@@ -99,7 +110,7 @@ void on_render()
     clear_to_present.subresourceRange = image_subresource_range;
 #endif
     begin_command_buffer(command_buffers[ frame_index ]);
-#ifdef DEBUTESTING
+#ifdef DEBUG_TESTING
     vkCmdPipelineBarrier(
         command_buffers[ frame_index ].m_command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
         0, 0, nullptr, 0, nullptr, 1, &present_to_clear);
@@ -113,36 +124,27 @@ void on_render()
         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &clear_to_present);
 #endif
     end_command_buffer(command_buffers[ frame_index ]);
-#ifdef DEBUTESTING
-    VkPipelineStageFlags wait_dst_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT;
 
-    VkSubmitInfo submit_info = {};
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.pNext = nullptr;
-    submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = &image_available_semaphore.m_semaphore;
-    submit_info.pWaitDstStageMask = &wait_dst_stage_mask;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &command_buffers[ frame_index ].m_command_buffer;
-    submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &renderinfinished_semaphore.m_semaphore;
+    QueueSubmitDescription queue_submit_description{};
+    queue_submit_description.wait_semaphore_count = 1;
+    queue_submit_description.wait_semaphores = &image_available_semaphores[ frame_index ];
+    queue_submit_description.command_buffer_count = 1;
+    queue_submit_description.command_buffers = &command_buffers[ frame_index ];
+    queue_submit_description.signal_semaphore_count = 1;
+    queue_submit_description.signal_semaphores = &rendering_finished_semaphores[ frame_index ];
+    queue_submit_description.signal_fence = &in_flight_fences[ frame_index ];
 
-    result = vkQueueSubmit(queue.m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    queue_submit(queue, queue_submit_description);
 
-    VkPresentInfoKHR present_info = {};
+    QueuePresentDescription queue_present_description{};
+    queue_present_description.wait_semaphore_count = 1;
+    queue_present_description.wait_semaphores = &rendering_finished_semaphores[ frame_index ];
+    queue_present_description.swapchain = &swapchain;
+    queue_present_description.image_index = image_index;
 
-    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    present_info.pNext = nullptr;
-    present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = &renderinfinished_semaphore.m_semaphore;
-    present_info.swapchainCount = 1;
-    present_info.pSwapchains = &swapchain.m_swapchain;
-    present_info.pImageIndices = &image_index;
-    present_info.pResults = nullptr;
+    queue_present(queue, queue_present_description);
 
-    result = vkQueuePresentKHR(queue.m_queue, &present_info);
-    queue_wait_idle(queue);
-#endif
+    command_buffers_recorded[ frame_index ] = false;
     frame_index = (frame_index + 1) % FRAME_COUNT;
 }
 
@@ -154,8 +156,12 @@ void on_unload()
 void on_shutdown()
 {
     device_wait_idle(device);
-    destroy_semaphore(device, image_available_semaphore);
-    destroy_semaphore(device, renderinfinished_semaphore);
+    for (u32 i = 0; i < FRAME_COUNT; ++i)
+    {
+        destroy_semaphore(device, image_available_semaphores[ i ]);
+        destroy_semaphore(device, rendering_finished_semaphores[ i ]);
+        destroy_fence(device, in_flight_fences[ i ]);
+    }
     free_command_buffers(device, command_pool, FRAME_COUNT, command_buffers);
     destroy_command_pool(device, command_pool);
     destroy_device(device);

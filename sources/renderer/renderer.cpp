@@ -80,8 +80,9 @@ static inline void get_instance_extensions(u32& extensions_count, const char** e
 {
     if (extension_names == nullptr)
     {
-        FT_ASSERT(
-            SDL_Vulkan_GetInstanceExtensions(( SDL_Window* ) get_app_window()->m_handle, &extensions_count, nullptr));
+        bool result =
+            SDL_Vulkan_GetInstanceExtensions(( SDL_Window* ) get_app_window()->m_handle, &extensions_count, nullptr);
+        FT_ASSERT(result);
 #ifdef FLUENT_DEBUG
         extensions_count++;
 #endif
@@ -90,8 +91,9 @@ static inline void get_instance_extensions(u32& extensions_count, const char** e
     {
 #ifdef FLUENT_DEBUG
         u32 sdl_extensions_count = extensions_count - 1;
-        FT_ASSERT(SDL_Vulkan_GetInstanceExtensions(
-            ( SDL_Window* ) get_app_window()->m_handle, &sdl_extensions_count, extension_names));
+        bool result = SDL_Vulkan_GetInstanceExtensions(
+            ( SDL_Window* ) get_app_window()->m_handle, &sdl_extensions_count, extension_names);
+        FT_ASSERT(result);
         extension_names[ extensions_count - 1 ] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
 #else
         FT_ASSERT(SDL_Vulkan_GetInstanceExtensions(
@@ -299,6 +301,65 @@ void queue_wait_idle(const Queue& queue)
     vkQueueWaitIdle(queue.m_queue);
 }
 
+void queue_submit(const Queue& queue, const QueueSubmitDescription& description)
+{
+    VkPipelineStageFlags wait_dst_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    VkSemaphore wait_semaphores[ description.wait_semaphore_count ];
+    VkCommandBuffer command_buffers[ description.command_buffer_count ];
+    VkSemaphore signal_semaphores[ description.signal_semaphore_count ];
+
+    for (u32 i = 0; i < description.wait_semaphore_count; ++i)
+    {
+        wait_semaphores[ i ] = description.wait_semaphores[ i ].m_semaphore;
+    }
+
+    for (u32 i = 0; i < description.command_buffer_count; ++i)
+    {
+        command_buffers[ i ] = description.command_buffers[ i ].m_command_buffer;
+    }
+
+    for (u32 i = 0; i < description.signal_semaphore_count; ++i)
+    {
+        signal_semaphores[ i ] = description.signal_semaphores[ i ].m_semaphore;
+    }
+
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = nullptr;
+    submit_info.waitSemaphoreCount = description.wait_semaphore_count;
+    submit_info.pWaitSemaphores = wait_semaphores;
+    submit_info.pWaitDstStageMask = &wait_dst_stage_mask;
+    submit_info.commandBufferCount = description.command_buffer_count;
+    submit_info.pCommandBuffers = command_buffers;
+    submit_info.signalSemaphoreCount = description.signal_semaphore_count;
+    submit_info.pSignalSemaphores = signal_semaphores;
+
+    vkQueueSubmit(
+        queue.m_queue, 1, &submit_info, description.signal_fence ? description.signal_fence->m_fence : VK_NULL_HANDLE);
+}
+
+void queue_present(const Queue& queue, const QueuePresentDescription& description)
+{
+    VkSemaphore wait_semaphores[ description.wait_semaphore_count ];
+    for (u32 i = 0; i < description.wait_semaphore_count; ++i)
+    {
+        wait_semaphores[ i ] = description.wait_semaphores[ i ].m_semaphore;
+    }
+
+    VkPresentInfoKHR present_info = {};
+
+    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present_info.pNext = nullptr;
+    present_info.waitSemaphoreCount = description.wait_semaphore_count;
+    present_info.pWaitSemaphores = wait_semaphores;
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = &description.swapchain->m_swapchain;
+    present_info.pImageIndices = &description.image_index;
+    present_info.pResults = nullptr;
+
+    vkQueuePresentKHR(queue.m_queue, &present_info);
+}
+
 Semaphore create_semaphore(const Device& device)
 {
     Semaphore semaphore{};
@@ -318,6 +379,48 @@ void destroy_semaphore(const Device& device, Semaphore& semaphore)
 {
     FT_ASSERT(semaphore.m_semaphore);
     vkDestroySemaphore(device.m_logical_device, semaphore.m_semaphore, device.m_vulkan_allocator);
+}
+
+Fence create_fence(const Device& device)
+{
+    Fence fence{};
+
+    VkFenceCreateInfo fence_create_info{};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fence_create_info.pNext = nullptr;
+    fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    VK_ASSERT(vkCreateFence(device.m_logical_device, &fence_create_info, device.m_vulkan_allocator, &fence.m_fence));
+
+    return fence;
+}
+
+void destroy_fence(const Device& device, Fence& fence)
+{
+    FT_ASSERT(fence.m_fence);
+    vkDestroyFence(device.m_logical_device, fence.m_fence, device.m_vulkan_allocator);
+}
+
+void wait_for_fences(const Device& device, u32 count, Fence* fences)
+{
+    VkFence vk_fences[ count ];
+    for (u32 i = 0; i < count; ++i)
+    {
+        vk_fences[ i ] = fences[ i ].m_fence;
+    }
+
+    vkWaitForFences(device.m_logical_device, count, vk_fences, true, std::numeric_limits<u64>::max());
+}
+
+void reset_fences(const Device& device, u32 count, Fence* fences)
+{
+    VkFence vk_fences[ count ];
+    for (u32 i = 0; i < count; ++i)
+    {
+        vk_fences[ i ] = fences[ i ].m_fence;
+    }
+
+    vkResetFences(device.m_logical_device, count, vk_fences);
 }
 
 Swapchain create_swapchain(const Renderer& renderer, const Device& device, const SwapchainDescription& description)
@@ -529,6 +632,14 @@ void begin_command_buffer(const CommandBuffer& command_buffer)
 void end_command_buffer(const CommandBuffer& command_buffer)
 {
     VK_ASSERT(vkEndCommandBuffer(command_buffer.m_command_buffer));
+}
+
+void acquire_next_image(
+    const Device& device, const Swapchain& swapchain, const Semaphore& semaphore, const Fence& fence, u32& image_index)
+{
+    VkResult result = vkAcquireNextImageKHR(
+        device.m_logical_device, swapchain.m_swapchain, std::numeric_limits<u64>::max(), semaphore.m_semaphore,
+        fence.m_fence, &image_index);
 }
 
 } // namespace fluent
