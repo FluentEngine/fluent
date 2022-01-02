@@ -2,9 +2,12 @@
 
 #include "volk.h"
 #include "core/base.hpp"
+#include "renderer/renderer_enums.hpp"
 
 namespace fluent
 {
+
+static constexpr u32 MAX_ATTACHMENTS_COUNT = 10;
 
 struct RendererDescription
 {
@@ -72,6 +75,10 @@ struct Image
 {
     VkImage m_image;
     VkImageView m_image_view;
+    u32 m_width;
+    u32 m_height;
+    Format m_format;
+    SampleCount m_sample_count;
 };
 
 struct Swapchain
@@ -82,7 +89,7 @@ struct Swapchain
     u32 m_height;
     VkSurfaceKHR m_surface;
     VkSwapchainKHR m_swapchain;
-    VkFormat m_format;
+    Format m_format;
     Image* m_images;
     u32 m_current_image_index;
 };
@@ -121,6 +128,25 @@ struct QueuePresentDescription
     u32 image_index;
 };
 
+struct ClearValue
+{
+    f32 color[ 4 ];
+};
+
+struct RenderPassInfo
+{
+    u32 color_attachment_count;
+    Image* color_attachments[ MAX_ATTACHMENTS_COUNT ];
+    AttachmentLoadOp color_attachment_load_ops[ MAX_ATTACHMENTS_COUNT ];
+    ClearValue color_clear_values[ MAX_ATTACHMENTS_COUNT ];
+    Image* depth_stencil;
+    f32 depth_clear_value;
+    u32 stencil_clear_value;
+    AttachmentLoadOp depth_stencil_load_op;
+    u32 width;
+    u32 height;
+};
+
 Renderer create_renderer(const RendererDescription& description);
 void destroy_renderer(Renderer& renderer);
 
@@ -155,4 +181,8 @@ void end_command_buffer(const CommandBuffer& command_buffer);
 
 void acquire_next_image(
     const Device& device, const Swapchain& swapchain, const Semaphore& semaphore, const Fence& fence, u32& image_index);
+
+void cmd_begin_render_pass(const Device& device, const CommandBuffer& command_buffer, const RenderPassInfo& info);
+void cmd_end_render_pass(const CommandBuffer& command_buffer);
+
 } // namespace fluent

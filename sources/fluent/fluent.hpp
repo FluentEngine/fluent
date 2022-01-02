@@ -4,4 +4,5 @@
 #include "core/window.hpp"
 #include "core/application.hpp"
 
+#include "renderer/renderer_enums.hpp"
 #include "renderer/renderer.hpp"

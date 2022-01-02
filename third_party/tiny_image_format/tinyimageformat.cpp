@@ -1,0 +1,1 @@
+#include "tinyimageformat_base.h"

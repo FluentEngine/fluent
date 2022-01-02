@@ -2,8 +2,6 @@
 
 #include "fluent/fluent.hpp"
 
-#define DEBUG_TESTING
-
 using namespace fluent;
 
 static constexpr u32 FRAME_COUNT = 2;
@@ -75,54 +73,25 @@ void on_render()
 
     u32 image_index = 0;
     acquire_next_image(device, swapchain, image_available_semaphores[ frame_index ], {}, image_index);
-#ifdef DEBUG_TESTING
-    VkClearColorValue clear_color = { { 1.0f, 0.8f, 0.4f, 0.0f } };
-
-    VkImageSubresourceRange image_subresource_range = {};
-    image_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    image_subresource_range.baseMipLevel = 0;
-    image_subresource_range.levelCount = 1;
-    image_subresource_range.baseArrayLayer = 0;
-    image_subresource_range.layerCount = 1;
-
-    VkImageMemoryBarrier present_to_clear = {};
-    present_to_clear.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    present_to_clear.pNext = nullptr;
-    present_to_clear.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-    present_to_clear.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    present_to_clear.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    present_to_clear.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    present_to_clear.srcQueueFamilyIndex = queue.m_family_index;
-    present_to_clear.dstQueueFamilyIndex - queue.m_family_index;
-    present_to_clear.image = swapchain.m_images[ image_index ].m_image;
-    present_to_clear.subresourceRange = image_subresource_range;
-
-    VkImageMemoryBarrier clear_to_present = {};
-    clear_to_present.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    clear_to_present.pNext = nullptr;
-    clear_to_present.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    clear_to_present.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-    clear_to_present.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    clear_to_present.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    clear_to_present.srcQueueFamilyIndex = queue.m_family_index;
-    clear_to_present.dstQueueFamilyIndex - queue.m_family_index;
-    clear_to_present.image = swapchain.m_images[ image_index ].m_image;
-    clear_to_present.subresourceRange = image_subresource_range;
-#endif
     begin_command_buffer(command_buffers[ frame_index ]);
-#ifdef DEBUG_TESTING
-    vkCmdPipelineBarrier(
-        command_buffers[ frame_index ].m_command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-        0, 0, nullptr, 0, nullptr, 1, &present_to_clear);
 
-    vkCmdClearColorImage(
-        command_buffers[ frame_index ].m_command_buffer, swapchain.m_images[ image_index ].m_image,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &image_subresource_range);
+    f32 clear_value[ 4 ] = { 0.2f, 0.3f, 0.4f, 1.0f };
 
-    vkCmdPipelineBarrier(
-        command_buffers[ frame_index ].m_command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &clear_to_present);
-#endif
+    RenderPassInfo render_pass_info{};
+    render_pass_info.color_attachment_count = 1;
+    render_pass_info.color_attachments[ 0 ] = &swapchain.m_images[ image_index ];
+    render_pass_info.color_attachment_load_ops[ 0 ] = AttachmentLoadOp::eClear;
+    render_pass_info.color_clear_values[ 0 ].color[ 0 ] = 1.0f;
+    render_pass_info.color_clear_values[ 0 ].color[ 1 ] = 0.8f;
+    render_pass_info.color_clear_values[ 0 ].color[ 2 ] = 0.4f;
+    render_pass_info.color_clear_values[ 0 ].color[ 3 ] = 1.0f;
+    render_pass_info.depth_stencil = nullptr;
+    render_pass_info.width = swapchain.m_width;
+    render_pass_info.height = swapchain.m_height;
+
+    cmd_begin_render_pass(device, command_buffers[ frame_index ], render_pass_info);
+    cmd_end_render_pass(command_buffers[ frame_index ]);
+
     end_command_buffer(command_buffers[ frame_index ]);
 
     QueueSubmitDescription queue_submit_description{};
@@ -150,6 +119,7 @@ void on_render()
 
 void on_unload()
 {
+    queue_wait_idle(queue);
     destroy_swapchain(device, swapchain);
 }
 
