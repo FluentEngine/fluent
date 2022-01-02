@@ -208,6 +208,126 @@ static inline u32 find_queue_family_index(VkPhysicalDevice physical_device, Queu
     return index;
 }
 
+static inline bool format_has_depth_aspect(Format format)
+{
+    switch (format)
+    {
+    case Format::eD16Unorm:
+    case Format::eD16UnormS8Uint:
+    case Format::eD24UnormS8Uint:
+    case Format::eD32Sfloat:
+    case Format::eX8D24Unorm:
+    case Format::eD32SfloatS8Uint:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static inline bool format_has_stencil_aspect(Format format)
+{
+    switch (format)
+    {
+    case Format::eD16UnormS8Uint:
+    case Format::eD24UnormS8Uint:
+    case Format::eD32SfloatS8Uint:
+    case Format::eS8Uint:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static inline VkImageAspectFlags get_aspect_mask(Format format)
+{
+    VkImageAspectFlags aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    if (format_has_depth_aspect(format))
+    {
+        aspect_mask &= ~VK_IMAGE_ASPECT_COLOR_BIT;
+        aspect_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+    }
+    else if (format_has_stencil_aspect(format))
+    {
+        aspect_mask &= ~VK_IMAGE_ASPECT_COLOR_BIT;
+        aspect_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+    }
+
+    return aspect_mask;
+}
+
+static inline VkImageSubresourceRange get_image_subresource_range(const Image& image)
+{
+    VkImageSubresourceRange image_subresource_range{};
+    image_subresource_range.aspectMask = get_aspect_mask(image.m_format);
+    image_subresource_range.baseMipLevel = 0;
+    image_subresource_range.levelCount = image.m_mip_level_count;
+    image_subresource_range.baseArrayLayer = 0;
+    image_subresource_range.layerCount = image.m_layer_count;
+
+    return image_subresource_range;
+}
+
+VkPipelineStageFlags determine_pipeline_stage_flags(VkAccessFlags accessFlags, QueueType queueType)
+{
+    VkPipelineStageFlags flags = 0;
+
+    switch (queueType)
+    {
+    case QueueType::eGraphics: {
+        if ((accessFlags & (VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+
+        if ((accessFlags & (VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT)) != 0)
+        {
+            flags |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+            flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        }
+
+        if ((accessFlags & VK_ACCESS_INPUT_ATTACHMENT_READ_BIT) != 0)
+            flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+        if ((accessFlags & (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+        if (accessFlags & (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT))
+            flags |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        break;
+    }
+    case QueueType::eCompute: {
+        if ((accessFlags & (VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)) ||
+            (accessFlags & VK_ACCESS_INPUT_ATTACHMENT_READ_BIT) ||
+            (accessFlags & (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)) ||
+            (accessFlags &
+             (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)))
+            return VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+        if ((accessFlags & (VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT)) != 0)
+            flags |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+
+        break;
+    }
+    case QueueType::eTransfer:
+        return VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    default:
+        break;
+    }
+
+    if (accessFlags & VK_ACCESS_INDIRECT_COMMAND_READ_BIT)
+        flags |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+
+    if (accessFlags & (VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT))
+        flags |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+    if (accessFlags & (VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT))
+        flags |= VK_PIPELINE_STAGE_HOST_BIT;
+
+    if (flags == 0)
+        flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+    return flags;
+}
+
 Renderer create_renderer(const RendererDescription& description)
 {
     Renderer renderer{};
@@ -352,6 +472,7 @@ Queue get_queue(const Device& device, const QueueDescription& description)
     u32 index = find_queue_family_index(device.m_physical_device, description.queue_type);
 
     queue.m_family_index = index;
+    queue.m_type = description.queue_type;
     vkGetDeviceQueue(device.m_logical_device, index, 0, &queue.m_queue);
 
     return queue;
@@ -606,6 +727,9 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
         swapchain.m_images[ i ].m_height = swapchain.m_height;
         swapchain.m_images[ i ].m_format = swapchain.m_format;
         swapchain.m_images[ i ].m_sample_count = SampleCount::e1;
+        swapchain.m_images[ i ].m_mip_level_count = 1;
+        swapchain.m_images[ i ].m_layer_count = 1;
+
         VK_ASSERT(vkCreateImageView(
             device.m_logical_device, &image_view_create_info, device.m_vulkan_allocator,
             &swapchain.m_images[ i ].m_image_view));
@@ -642,6 +766,8 @@ void destroy_swapchain(const Device& device, Swapchain& swapchain)
 CommandPool create_command_pool(const Device& device, const CommandPoolDescription& description)
 {
     CommandPool command_pool{};
+
+    command_pool.m_queue_type = description.queue->m_type;
 
     VkCommandPoolCreateInfo command_pool_create_info{};
     command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -680,6 +806,7 @@ void allocate_command_buffers(
     for (u32 i = 0; i < count; ++i)
     {
         command_buffers[ i ].m_command_buffer = buffers[ i ];
+        command_buffers[ i ].m_queue_type = command_pool.m_queue_type;
     }
 }
 
@@ -734,6 +861,7 @@ void cmd_begin_render_pass(const Device& device, const CommandBuffer& command_bu
 
         VkAttachmentDescription attachment_descriptions[ info.color_attachment_count + 1 ];
         VkAttachmentReference color_attachment_references[ info.color_attachment_count ];
+        VkAttachmentReference depth_attachment_reference{};
 
         for (u32 i = 0; i < info.color_attachment_count; ++i)
         {
@@ -744,15 +872,28 @@ void cmd_begin_render_pass(const Device& device, const CommandBuffer& command_bu
             attachment_descriptions[ i ].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
             attachment_descriptions[ i ].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             attachment_descriptions[ i ].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment_descriptions[ i ].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            attachment_descriptions[ i ].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            attachment_descriptions[ i ].initialLayout = info.color_image_layouts[ i ];
+            attachment_descriptions[ i ].finalLayout = info.color_image_layouts[ i ];
 
             color_attachment_references[ i ].attachment = i;
-            color_attachment_references[ i ].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            color_attachment_references[ i ].layout = info.color_image_layouts[ i ];
         }
 
         if (info.depth_stencil)
         {
+            u32 i = info.color_attachment_count;
+            attachment_descriptions[ i ].flags = 0;
+            attachment_descriptions[ i ].format = util_to_vk_format(info.depth_stencil->m_format);
+            attachment_descriptions[ i ].samples = util_to_vk_sample_count(info.depth_stencil->m_sample_count);
+            attachment_descriptions[ i ].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            attachment_descriptions[ i ].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            attachment_descriptions[ i ].stencilLoadOp = util_to_vk_load_op(info.depth_stencil_load_op);
+            attachment_descriptions[ i ].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+            attachment_descriptions[ i ].initialLayout = info.depth_stencil_layout;
+            attachment_descriptions[ i ].finalLayout = info.depth_stencil_layout;
+
+            depth_attachment_reference.attachment = i;
+            depth_attachment_reference.layout = info.depth_stencil_layout;
             // TODO: support for depth attachment
             attachments_count++;
         }
@@ -766,7 +907,7 @@ void cmd_begin_render_pass(const Device& device, const CommandBuffer& command_bu
         subpass_description.colorAttachmentCount = info.color_attachment_count;
         subpass_description.pColorAttachments = color_attachment_references;
         subpass_description.pResolveAttachments = nullptr;
-        subpass_description.pDepthStencilAttachment = nullptr;
+        subpass_description.pDepthStencilAttachment = info.depth_stencil ? &depth_attachment_reference : nullptr;
         subpass_description.preserveAttachmentCount = 0;
         subpass_description.pPreserveAttachments = nullptr;
 
@@ -856,5 +997,54 @@ void cmd_end_render_pass(const CommandBuffer& command_buffer)
 {
     vkCmdEndRenderPass(command_buffer.m_command_buffer);
 }
+
+void cmd_barrier(
+    const CommandBuffer& command_buffer, u32 buffer_barriers_count, const BufferBarrier* buffer_barriers,
+    u32 image_barriers_count, const ImageBarrier* image_barriers)
+{
+    // TODO: rewrite without heap allocation
+    VkBufferMemoryBarrier* buffer_memory_barriers =
+        buffer_barriers_count ? new VkBufferMemoryBarrier[ buffer_barriers_count ] : nullptr;
+    VkImageMemoryBarrier* image_memory_barriers =
+        image_barriers_count ? new VkImageMemoryBarrier[ image_barriers_count ] : nullptr;
+
+    for (u32 i = 0; i < buffer_barriers_count; ++i)
+    {
+        // TODO: create buffer barriers
+    }
+
+    VkAccessFlags src_access = VkAccessFlags(0);
+    VkAccessFlags dst_access = VkAccessFlags(0);
+
+    // TODO: queues
+
+    for (u32 i = 0; i < image_barriers_count; ++i)
+    {
+        FT_ASSERT(image_barriers[ i ].image);
+        FT_ASSERT(image_barriers[ i ].src_queue);
+        FT_ASSERT(image_barriers[ i ].dst_queue);
+
+        image_memory_barriers[ i ].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        image_memory_barriers[ i ].pNext = nullptr;
+        image_memory_barriers[ i ].srcAccessMask = image_barriers[ i ].src_access_mask;
+        image_memory_barriers[ i ].dstAccessMask = image_barriers[ i ].dst_access_mask;
+        image_memory_barriers[ i ].oldLayout = image_barriers[ i ].old_layout;
+        image_memory_barriers[ i ].newLayout = image_barriers[ i ].new_layout;
+        image_memory_barriers[ i ].srcQueueFamilyIndex = image_barriers[ i ].src_queue->m_family_index;
+        image_memory_barriers[ i ].dstQueueFamilyIndex = image_barriers[ i ].dst_queue->m_family_index;
+        image_memory_barriers[ i ].image = image_barriers[ i ].image->m_image;
+        image_memory_barriers[ i ].subresourceRange = get_image_subresource_range(*image_barriers[ i ].image);
+
+        src_access |= image_barriers[ i ].src_access_mask;
+        dst_access |= image_barriers[ i ].dst_access_mask;
+    }
+
+    VkPipelineStageFlags src_stage = determine_pipeline_stage_flags(src_access, command_buffer.m_queue_type);
+    VkPipelineStageFlags dst_stage = determine_pipeline_stage_flags(dst_access, command_buffer.m_queue_type);
+
+    vkCmdPipelineBarrier(
+        command_buffer.m_command_buffer, src_stage, dst_stage, 0, 0, nullptr, buffer_barriers_count,
+        buffer_memory_barriers, image_barriers_count, image_memory_barriers);
+};
 
 } // namespace fluent

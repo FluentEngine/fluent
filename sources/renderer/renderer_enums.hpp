@@ -6,6 +6,8 @@
 namespace fluent
 {
 
+#define BITS(x) 1 << x
+
 enum class Format
 {
     eUndefined = TinyImageFormat_UNDEFINED,

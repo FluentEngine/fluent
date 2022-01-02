@@ -75,6 +75,17 @@ void on_render()
     acquire_next_image(device, swapchain, image_available_semaphores[ frame_index ], {}, image_index);
     begin_command_buffer(command_buffers[ frame_index ]);
 
+    ImageBarrier to_clear_barrier{};
+    to_clear_barrier.src_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    to_clear_barrier.dst_access_mask = VK_ACCESS_MEMORY_READ_BIT;
+    to_clear_barrier.src_queue = &queue;
+    to_clear_barrier.dst_queue = &queue;
+    to_clear_barrier.image = &swapchain.m_images[ image_index ];
+    to_clear_barrier.old_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+    to_clear_barrier.new_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    cmd_barrier(command_buffers[ frame_index ], 0, nullptr, 1, &to_clear_barrier);
+
     f32 clear_value[ 4 ] = { 0.2f, 0.3f, 0.4f, 1.0f };
 
     RenderPassInfo render_pass_info{};
@@ -85,12 +96,24 @@ void on_render()
     render_pass_info.color_clear_values[ 0 ].color[ 1 ] = 0.8f;
     render_pass_info.color_clear_values[ 0 ].color[ 2 ] = 0.4f;
     render_pass_info.color_clear_values[ 0 ].color[ 3 ] = 1.0f;
+    render_pass_info.color_image_layouts[ 0 ] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     render_pass_info.depth_stencil = nullptr;
     render_pass_info.width = swapchain.m_width;
     render_pass_info.height = swapchain.m_height;
 
     cmd_begin_render_pass(device, command_buffers[ frame_index ], render_pass_info);
     cmd_end_render_pass(command_buffers[ frame_index ]);
+
+    ImageBarrier to_present_barrier{};
+    to_present_barrier.src_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    to_present_barrier.dst_access_mask = VK_ACCESS_MEMORY_READ_BIT;
+    to_present_barrier.src_queue = &queue;
+    to_present_barrier.dst_queue = &queue;
+    to_present_barrier.image = &swapchain.m_images[ image_index ];
+    to_present_barrier.old_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    to_present_barrier.new_layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    cmd_barrier(command_buffers[ frame_index ], 0, nullptr, 1, &to_present_barrier);
 
     end_command_buffer(command_buffers[ frame_index ]);
 

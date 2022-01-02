@@ -50,6 +50,7 @@ struct QueueDescription
 struct Queue
 {
     u32 m_family_index;
+    QueueType m_type;
     VkQueue m_queue;
 };
 
@@ -79,6 +80,8 @@ struct Image
     u32 m_height;
     Format m_format;
     SampleCount m_sample_count;
+    u32 m_mip_level_count = 1;
+    u32 m_layer_count = 1;
 };
 
 struct Swapchain
@@ -101,11 +104,13 @@ struct CommandPoolDescription
 
 struct CommandPool
 {
+    QueueType m_queue_type;
     VkCommandPool m_command_pool;
 };
 
 struct CommandBuffer
 {
+    QueueType m_queue_type;
     VkCommandBuffer m_command_buffer;
 };
 
@@ -139,12 +144,29 @@ struct RenderPassInfo
     Image* color_attachments[ MAX_ATTACHMENTS_COUNT ];
     AttachmentLoadOp color_attachment_load_ops[ MAX_ATTACHMENTS_COUNT ];
     ClearValue color_clear_values[ MAX_ATTACHMENTS_COUNT ];
+    VkImageLayout color_image_layouts[ MAX_ATTACHMENTS_COUNT ];
     Image* depth_stencil;
     f32 depth_clear_value;
     u32 stencil_clear_value;
     AttachmentLoadOp depth_stencil_load_op;
+    VkImageLayout depth_stencil_layout;
     u32 width;
     u32 height;
+};
+
+struct BufferBarrier
+{
+};
+
+struct ImageBarrier
+{
+    VkAccessFlags src_access_mask;
+    VkAccessFlags dst_access_mask;
+    VkImageLayout old_layout;
+    VkImageLayout new_layout;
+    Image* image;
+    Queue* src_queue;
+    Queue* dst_queue;
 };
 
 Renderer create_renderer(const RendererDescription& description);
@@ -184,5 +206,9 @@ void acquire_next_image(
 
 void cmd_begin_render_pass(const Device& device, const CommandBuffer& command_buffer, const RenderPassInfo& info);
 void cmd_end_render_pass(const CommandBuffer& command_buffer);
+
+void cmd_barrier(
+    const CommandBuffer& command_buffer, u32 buffer_barriers_count, const BufferBarrier* buffer_barriers,
+    u32 image_barriers_count, const ImageBarrier* image_barriers);
 
 } // namespace fluent
