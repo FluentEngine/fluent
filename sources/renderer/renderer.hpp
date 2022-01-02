@@ -144,12 +144,12 @@ struct RenderPassInfo
     Image* color_attachments[ MAX_ATTACHMENTS_COUNT ];
     AttachmentLoadOp color_attachment_load_ops[ MAX_ATTACHMENTS_COUNT ];
     ClearValue color_clear_values[ MAX_ATTACHMENTS_COUNT ];
-    VkImageLayout color_image_layouts[ MAX_ATTACHMENTS_COUNT ];
+    ResourceState color_image_states[ MAX_ATTACHMENTS_COUNT ];
     Image* depth_stencil;
     f32 depth_clear_value;
     u32 stencil_clear_value;
     AttachmentLoadOp depth_stencil_load_op;
-    VkImageLayout depth_stencil_layout;
+    ResourceState depth_stencil_state;
     u32 width;
     u32 height;
 };
@@ -160,10 +160,8 @@ struct BufferBarrier
 
 struct ImageBarrier
 {
-    VkAccessFlags src_access_mask;
-    VkAccessFlags dst_access_mask;
-    VkImageLayout old_layout;
-    VkImageLayout new_layout;
+    ResourceState old_state;
+    ResourceState new_state;
     Image* image;
     Queue* src_queue;
     Queue* dst_queue;

@@ -6,7 +6,7 @@
 namespace fluent
 {
 
-#define BITS(x) 1 << x
+#define BIT(x) 1 << x
 
 enum class Format
 {
@@ -216,25 +216,37 @@ enum class Format
 
 enum class SampleCount
 {
-    e1 = 0x00000001,
-    e2 = 0x00000002,
-    e4 = 0x00000004,
-    e8 = 0x00000008,
-    e16 = 0x00000010,
-    e32 = 0x00000020,
-    e64 = 0x00000040
+    e1,
+    e2,
+    e4,
+    e8,
+    e16,
+    e32,
+    e64
 };
 
 enum class AttachmentLoadOp
 {
-    eLoad = 0,
+    eLoad,
     eClear = 1,
     eDontCare = 2
+};
+
+enum ResourceState
+{
+    eUndefined = BIT(0),
+    eStorage = BIT(1),
+    eColorAttachment = BIT(2),
+    eDepthStencilAttachment = BIT(3),
+    eDepthStencilReadOnly = BIT(4),
+    eShaderReadOnly = BIT(5),
+    eTransferSrc = BIT(6),
+    eTransferDst = BIT(7),
+    ePresent = BIT(8)
 };
 
 VkFormat util_to_vk_format(Format format);
 Format util_from_vk_format(VkFormat format);
 VkSampleCountFlagBits util_to_vk_sample_count(SampleCount sample_count);
 VkAttachmentLoadOp util_to_vk_load_op(AttachmentLoadOp load_op);
-
 } // namespace fluent

@@ -268,64 +268,107 @@ static inline VkImageSubresourceRange get_image_subresource_range(const Image& i
     return image_subresource_range;
 }
 
-VkPipelineStageFlags determine_pipeline_stage_flags(VkAccessFlags accessFlags, QueueType queueType)
+VkAccessFlags determine_access_flags(ResourceState resource_state)
+{
+    VkAccessFlags access_flags = 0;
+
+    if (resource_state & eStorage)
+        access_flags |= (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+
+    if (resource_state & eColorAttachment)
+        access_flags |= (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+
+    if (resource_state & eDepthStencilAttachment)
+        access_flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+    if (resource_state & eDepthStencilReadOnly)
+        access_flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+
+    if (resource_state & eShaderReadOnly)
+        access_flags |= VK_ACCESS_SHADER_READ_BIT;
+
+    if (resource_state & eTransferSrc)
+        access_flags |= VK_ACCESS_TRANSFER_READ_BIT;
+
+    if (resource_state & eTransferDst)
+        access_flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
+
+    if (resource_state & ePresent)
+        access_flags |= VK_ACCESS_MEMORY_READ_BIT;
+
+    return access_flags;
+}
+
+VkPipelineStageFlags determine_pipeline_stage_flags(VkAccessFlags access_flags, QueueType queue_type)
 {
     VkPipelineStageFlags flags = 0;
 
-    switch (queueType)
+    switch (queue_type)
     {
     case QueueType::eGraphics: {
-        if ((accessFlags & (VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)) != 0)
+        if (access_flags & (VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
+        {
             flags |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+        }
 
-        if ((accessFlags & (VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT)) != 0)
+        if (access_flags & (VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT))
         {
             flags |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
             flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         }
 
-        if ((accessFlags & VK_ACCESS_INPUT_ATTACHMENT_READ_BIT) != 0)
+        if (access_flags & VK_ACCESS_INPUT_ATTACHMENT_READ_BIT)
+        {
             flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        }
 
-        if ((accessFlags & (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)) != 0)
+        if (access_flags & (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT))
+        {
             flags |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        }
 
-        if (accessFlags & (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT))
+        if (access_flags & (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT))
+        {
             flags |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        }
         break;
     }
-    case QueueType::eCompute: {
-        if ((accessFlags & (VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)) ||
-            (accessFlags & VK_ACCESS_INPUT_ATTACHMENT_READ_BIT) ||
-            (accessFlags & (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)) ||
-            (accessFlags &
-             (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)))
-            return VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-
-        if ((accessFlags & (VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT)) != 0)
-            flags |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-
-        break;
     }
-    case QueueType::eTransfer:
-        return VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-    default:
-        break;
-    }
-
-    if (accessFlags & VK_ACCESS_INDIRECT_COMMAND_READ_BIT)
-        flags |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
-
-    if (accessFlags & (VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT))
-        flags |= VK_PIPELINE_STAGE_TRANSFER_BIT;
-
-    if (accessFlags & (VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT))
-        flags |= VK_PIPELINE_STAGE_HOST_BIT;
 
     if (flags == 0)
         flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
     return flags;
+}
+
+VkImageLayout determine_image_layout(ResourceState resource_state)
+{
+
+    if (resource_state & eStorage)
+        return VK_IMAGE_LAYOUT_GENERAL;
+
+    if (resource_state & eColorAttachment)
+        return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    if (resource_state & eDepthStencilAttachment)
+        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    if (resource_state & eDepthStencilReadOnly)
+        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
+    if (resource_state & eShaderReadOnly)
+        return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    if (resource_state & ePresent)
+        return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    if (resource_state & eTransferSrc)
+        return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+    if (resource_state & eTransferDst)
+        return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+    return VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
 Renderer create_renderer(const RendererDescription& description)
@@ -872,11 +915,11 @@ void cmd_begin_render_pass(const Device& device, const CommandBuffer& command_bu
             attachment_descriptions[ i ].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
             attachment_descriptions[ i ].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             attachment_descriptions[ i ].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment_descriptions[ i ].initialLayout = info.color_image_layouts[ i ];
-            attachment_descriptions[ i ].finalLayout = info.color_image_layouts[ i ];
+            attachment_descriptions[ i ].initialLayout = determine_image_layout(info.color_image_states[ i ]);
+            attachment_descriptions[ i ].finalLayout = determine_image_layout(info.color_image_states[ i ]);
 
             color_attachment_references[ i ].attachment = i;
-            color_attachment_references[ i ].layout = info.color_image_layouts[ i ];
+            color_attachment_references[ i ].layout = determine_image_layout(info.color_image_states[ i ]);
         }
 
         if (info.depth_stencil)
@@ -889,11 +932,11 @@ void cmd_begin_render_pass(const Device& device, const CommandBuffer& command_bu
             attachment_descriptions[ i ].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
             attachment_descriptions[ i ].stencilLoadOp = util_to_vk_load_op(info.depth_stencil_load_op);
             attachment_descriptions[ i ].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-            attachment_descriptions[ i ].initialLayout = info.depth_stencil_layout;
-            attachment_descriptions[ i ].finalLayout = info.depth_stencil_layout;
+            attachment_descriptions[ i ].initialLayout = determine_image_layout(info.depth_stencil_state);
+            attachment_descriptions[ i ].finalLayout = determine_image_layout(info.depth_stencil_state);
 
             depth_attachment_reference.attachment = i;
-            depth_attachment_reference.layout = info.depth_stencil_layout;
+            depth_attachment_reference.layout = attachment_descriptions[ i ].finalLayout;
             // TODO: support for depth attachment
             attachments_count++;
         }
@@ -1024,19 +1067,22 @@ void cmd_barrier(
         FT_ASSERT(image_barriers[ i ].src_queue);
         FT_ASSERT(image_barriers[ i ].dst_queue);
 
+        VkAccessFlags src_access_mask = determine_access_flags(image_barriers[ i ].old_state);
+        VkAccessFlags dst_access_mask = determine_access_flags(image_barriers[ i ].new_state);
+
         image_memory_barriers[ i ].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         image_memory_barriers[ i ].pNext = nullptr;
-        image_memory_barriers[ i ].srcAccessMask = image_barriers[ i ].src_access_mask;
-        image_memory_barriers[ i ].dstAccessMask = image_barriers[ i ].dst_access_mask;
-        image_memory_barriers[ i ].oldLayout = image_barriers[ i ].old_layout;
-        image_memory_barriers[ i ].newLayout = image_barriers[ i ].new_layout;
+        image_memory_barriers[ i ].srcAccessMask = src_access_mask;
+        image_memory_barriers[ i ].dstAccessMask = dst_access_mask;
+        image_memory_barriers[ i ].oldLayout = determine_image_layout(image_barriers[ i ].old_state);
+        image_memory_barriers[ i ].newLayout = determine_image_layout(image_barriers[ i ].new_state);
         image_memory_barriers[ i ].srcQueueFamilyIndex = image_barriers[ i ].src_queue->m_family_index;
         image_memory_barriers[ i ].dstQueueFamilyIndex = image_barriers[ i ].dst_queue->m_family_index;
         image_memory_barriers[ i ].image = image_barriers[ i ].image->m_image;
         image_memory_barriers[ i ].subresourceRange = get_image_subresource_range(*image_barriers[ i ].image);
 
-        src_access |= image_barriers[ i ].src_access_mask;
-        dst_access |= image_barriers[ i ].dst_access_mask;
+        src_access |= src_access_mask;
+        dst_access |= dst_access_mask;
     }
 
     VkPipelineStageFlags src_stage = determine_pipeline_stage_flags(src_access, command_buffer.m_queue_type);
