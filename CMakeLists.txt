@@ -44,10 +44,18 @@ target_include_directories(${target}
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
 
 target_link_libraries(${target} PUBLIC ${libs})
-target_compile_definitions(${target} PUBLIC FLUENT_DEBUG)
-target_compile_options(${target} PUBLIC -g)
 
 set(FLUENT_BUILD_TESTS ON)
+set(FLUENT_DEBUG_BUILD ON)
+
+if (FLUENT_DEBUG_BUILD)
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+	set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+	target_compile_definitions(${target} PUBLIC FLUENT_DEBUG)
+	target_compile_options(${target} PUBLIC -g)
+else()
+	target_compile_options(${target} PUBLIC -O3)
+endif()
 
 if (FLUENT_BUILD_TESTS)
     add_subdirectory(examples)

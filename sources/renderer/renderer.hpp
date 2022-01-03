@@ -253,7 +253,6 @@ struct DepthStateDesc
 
 struct PipelineDesc
 {
-    PipelineType pipeline_type;
     u32 binding_desc_count;
     VertexBindingDesc* binding_descs;
     u32 attribute_desc_count;
@@ -265,6 +264,7 @@ struct PipelineDesc
 
 struct Pipeline
 {
+    PipelineType m_type;
     VkPipelineLayout m_pipeline_layout;
     VkPipeline m_pipeline;
 };
@@ -314,7 +314,7 @@ void destroy_shader(const Device& device, Shader& shader);
 DescriptorSetLayout create_descriptor_set_layout(const Device& device, const DescriptorSetLayoutDesc& desc);
 void destroy_descriptor_set_layout(const Device& device, DescriptorSetLayout& layout);
 
-Pipeline create_pipeline(const Device& device, const PipelineDesc& desc);
+Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc);
 void destroy_pipeline(const Device& device, Pipeline& pipeline);
 
 void cmd_begin_render_pass(const CommandBuffer& command_buffer, const RenderPassBeginDesc& desc);
@@ -323,4 +323,14 @@ void cmd_end_render_pass(const CommandBuffer& command_buffer);
 void cmd_barrier(
     const CommandBuffer& command_buffer, u32 buffer_barriers_count, const BufferBarrier* buffer_barriers,
     u32 image_barriers_count, const ImageBarrier* image_barriers);
+
+void cmd_set_scissor(const CommandBuffer& command_buffer, i32 x, i32 y, u32 width, u32 height);
+void cmd_set_viewport(
+    const CommandBuffer& command_buffer, f32 x, f32 y, f32 width, f32 height, f32 min_depth, f32 max_depth);
+
+void cmd_bind_pipeline(const CommandBuffer& command_buffer, const Pipeline& pipeline);
+void cmd_draw(
+    const CommandBuffer& command_buffer, uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex,
+    uint32_t first_instance);
+
 } // namespace fluent

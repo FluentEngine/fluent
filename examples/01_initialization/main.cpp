@@ -68,18 +68,17 @@ void on_init()
     descriptor_set_layout = create_descriptor_set_layout(device, descriptor_set_layout_desc);
 
     PipelineDesc pipeline_desc{};
-    pipeline_desc.pipeline_type = PipelineType::eGraphics;
     pipeline_desc.binding_desc_count = 0;
     pipeline_desc.binding_descs = nullptr;
     pipeline_desc.attribute_desc_count = 0;
     pipeline_desc.attribute_descs = nullptr;
-    pipeline_desc.rasterizer_desc.cull_mode = CullMode::eBack;
+    pipeline_desc.rasterizer_desc.cull_mode = CullMode::eNone;
     pipeline_desc.rasterizer_desc.front_face = FrontFace::eCounterClockwise;
     pipeline_desc.depth_state_desc.depth_test = false;
     pipeline_desc.depth_state_desc.depth_write = false;
     pipeline_desc.descriptor_set_layout = &descriptor_set_layout;
 
-    pipeline = create_pipeline(device, pipeline_desc);
+    pipeline = create_graphics_pipeline(device, pipeline_desc);
 
     for (u32 i = 0; i < 2; ++i)
     {
@@ -113,7 +112,10 @@ void on_render()
 
     u32 image_index = 0;
     acquire_next_image(device, swapchain, image_available_semaphores[ frame_index ], {}, image_index);
-    begin_command_buffer(command_buffers[ frame_index ]);
+
+    auto& cmd = command_buffers[ frame_index ];
+
+    begin_command_buffer(cmd);
 
     ImageBarrier to_clear_barrier{};
     to_clear_barrier.src_queue = &queue;
@@ -122,7 +124,7 @@ void on_render()
     to_clear_barrier.old_state = ResourceState::eUndefined;
     to_clear_barrier.new_state = ResourceState::eColorAttachment;
 
-    cmd_barrier(command_buffers[ frame_index ], 0, nullptr, 1, &to_clear_barrier);
+    cmd_barrier(cmd, 0, nullptr, 1, &to_clear_barrier);
 
     RenderPassBeginDesc render_pass_begin_desc{};
     render_pass_begin_desc.render_pass = get_swapchain_render_pass(swapchain, image_index);
@@ -131,8 +133,12 @@ void on_render()
     render_pass_begin_desc.clear_values[ 0 ].color[ 2 ] = 0.4f;
     render_pass_begin_desc.clear_values[ 0 ].color[ 3 ] = 1.0f;
 
-    cmd_begin_render_pass(command_buffers[ frame_index ], render_pass_begin_desc);
-    cmd_end_render_pass(command_buffers[ frame_index ]);
+    cmd_begin_render_pass(cmd, render_pass_begin_desc);
+    cmd_set_viewport(cmd, 0, 0, swapchain.m_width, swapchain.m_height, 0.0f, 1.0f);
+    cmd_set_scissor(cmd, 0, 0, swapchain.m_width, swapchain.m_height);
+    cmd_bind_pipeline(cmd, pipeline);
+    cmd_draw(cmd, 3, 1, 0, 0);
+    cmd_end_render_pass(cmd);
 
     ImageBarrier to_present_barrier{};
     to_present_barrier.src_queue = &queue;
@@ -141,15 +147,15 @@ void on_render()
     to_present_barrier.old_state = ResourceState::eColorAttachment;
     to_present_barrier.new_state = ResourceState::ePresent;
 
-    cmd_barrier(command_buffers[ frame_index ], 0, nullptr, 1, &to_present_barrier);
+    cmd_barrier(cmd, 0, nullptr, 1, &to_present_barrier);
 
-    end_command_buffer(command_buffers[ frame_index ]);
+    end_command_buffer(cmd);
 
     QueueSubmitDesc queue_submit_desc{};
     queue_submit_desc.wait_semaphore_count = 1;
     queue_submit_desc.wait_semaphores = &image_available_semaphores[ frame_index ];
     queue_submit_desc.command_buffer_count = 1;
-    queue_submit_desc.command_buffers = &command_buffers[ frame_index ];
+    queue_submit_desc.command_buffers = &cmd;
     queue_submit_desc.signal_semaphore_count = 1;
     queue_submit_desc.signal_semaphores = &rendering_finished_semaphores[ frame_index ];
     queue_submit_desc.signal_fence = &in_flight_fences[ frame_index ];

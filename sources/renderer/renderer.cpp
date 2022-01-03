@@ -51,10 +51,9 @@ VkSampleCountFlagBits to_vk_sample_count(SampleCount sample_count)
     case SampleCount::e32:
         return VK_SAMPLE_COUNT_32_BIT;
     default:
-        break;
+        FT_ASSERT(false);
+        return VkSampleCountFlagBits(-1);
     }
-
-    return VkSampleCountFlagBits(-1);
 }
 
 VkAttachmentLoadOp to_vk_load_op(AttachmentLoadOp load_op)
@@ -68,9 +67,9 @@ VkAttachmentLoadOp to_vk_load_op(AttachmentLoadOp load_op)
     case AttachmentLoadOp::eLoad:
         return VK_ATTACHMENT_LOAD_OP_LOAD;
     default:
-        break;
+        FT_ASSERT(false);
+        return VkAttachmentLoadOp(-1);
     }
-    return VkAttachmentLoadOp(-1);
 }
 
 static inline VkQueueFlagBits to_vk_queue_type(QueueType type)
@@ -84,6 +83,7 @@ static inline VkQueueFlagBits to_vk_queue_type(QueueType type)
     case QueueType::eTransfer:
         return VK_QUEUE_TRANSFER_BIT;
     default:
+        FT_ASSERT(false);
         return VkQueueFlagBits(-1);
     }
 }
@@ -97,6 +97,7 @@ VkVertexInputRate to_vk_vertex_input_rate(VertexInputRate input_rate)
     case VertexInputRate::eInstance:
         return VK_VERTEX_INPUT_RATE_INSTANCE;
     default:
+        FT_ASSERT(false);
         return VkVertexInputRate(-1);
     }
 }
@@ -112,6 +113,7 @@ VkCullModeFlagBits to_vk_cull_mode(CullMode cull_mode)
     case CullMode::eNone:
         return VK_CULL_MODE_NONE;
     default:
+        FT_ASSERT(false);
         return VkCullModeFlagBits(-1);
     }
 }
@@ -125,6 +127,7 @@ VkFrontFace to_vk_front_face(FrontFace front_face)
     case FrontFace::eCounterClockwise:
         return VK_FRONT_FACE_COUNTER_CLOCKWISE;
     default:
+        FT_ASSERT(false);
         return VkFrontFace(-1);
     }
 }
@@ -150,6 +153,7 @@ VkCompareOp to_vk_compare_op(CompareOp op)
     case CompareOp::eAlways:
         return VK_COMPARE_OP_ALWAYS;
     default:
+        FT_ASSERT(false);
         return VkCompareOp(-1);
     }
 }
@@ -175,7 +179,22 @@ VkShaderStageFlagBits to_vk_shader_stage(ShaderStage shader_stage)
     case ShaderStage::eAll:
         return VK_SHADER_STAGE_ALL;
     default:
+        FT_ASSERT(false);
         return VkShaderStageFlagBits(-1);
+    }
+}
+
+VkPipelineBindPoint to_vk_pipeline_bind_point(PipelineType type)
+{
+    switch (type)
+    {
+    case PipelineType::eCompute:
+        return VK_PIPELINE_BIND_POINT_COMPUTE;
+    case PipelineType::eGraphics:
+        return VK_PIPELINE_BIND_POINT_GRAPHICS;
+    default:
+        FT_ASSERT(false);
+        return VkPipelineBindPoint(-1);
     }
 }
 
@@ -226,7 +245,6 @@ static inline void get_instance_extensions(u32& extensions_count, const char** e
     {
         bool result =
             SDL_Vulkan_GetInstanceExtensions(( SDL_Window* ) get_app_window()->m_handle, &extensions_count, nullptr);
-        FT_ASSERT(result);
 #ifdef FLUENT_DEBUG
         extensions_count++;
 #endif
@@ -240,8 +258,8 @@ static inline void get_instance_extensions(u32& extensions_count, const char** e
         FT_ASSERT(result);
         extension_names[ extensions_count - 1 ] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
 #else
-        FT_ASSERT(SDL_Vulkan_GetInstanceExtensions(
-            ( SDL_Window* ) get_app_window()->m_handle, &extensions_count, extension_names));
+        bool result = SDL_Vulkan_GetInstanceExtensions(
+            ( SDL_Window* ) get_app_window()->m_handle, &extensions_count, extension_names);
 #endif
     }
 }
@@ -467,7 +485,7 @@ Renderer create_renderer(const RendererDesc& desc)
     app_info.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
     app_info.pEngineName = "Fluent";
     app_info.engineVersion = VK_MAKE_VERSION(0, 0, 1);
-    app_info.apiVersion = VK_API_VERSION_1_2;
+    app_info.apiVersion = VK_API_VERSION_1_1;
 
     u32 extensions_count = 0;
     get_instance_extensions(extensions_count, nullptr);
@@ -1144,10 +1162,6 @@ DescriptorSetLayout create_descriptor_set_layout(const Device& device, const Des
     DescriptorSetLayout descriptor_set_layout{};
     descriptor_set_layout.m_shader_count = desc.m_shader_count;
     descriptor_set_layout.m_shaders = desc.m_shaders;
-    // for (u32 i = 0; i < descriptor_set_layout.m_shader_count; ++i)
-    // {
-    //     descriptor_set_layout.m_shaders[ i ] = desc.m_shaders[ i ];
-    // }
 
     return descriptor_set_layout;
 }
@@ -1155,7 +1169,6 @@ DescriptorSetLayout create_descriptor_set_layout(const Device& device, const Des
 void destroy_descriptor_set_layout(const Device& device, DescriptorSetLayout& layout)
 {
     FT_ASSERT(layout.m_shaders);
-    // delete[] layout.m_shaders;
 }
 
 Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc)
@@ -1163,12 +1176,13 @@ Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc
     FT_ASSERT(desc.descriptor_set_layout);
 
     Pipeline pipeline{};
+    pipeline.m_type = PipelineType::eGraphics;
 
     u32 shader_stage_count = desc.descriptor_set_layout->m_shader_count;
     VkPipelineShaderStageCreateInfo shader_stage_create_infos[ shader_stage_count ];
     for (u32 i = 0; i < shader_stage_count; ++i)
     {
-        shader_stage_create_infos[ i ] = {};
+        shader_stage_create_infos[ i ] = VkPipelineShaderStageCreateInfo{};
         shader_stage_create_infos[ i ].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         shader_stage_create_infos[ i ].pNext = nullptr;
         shader_stage_create_infos[ i ].flags = 0;
@@ -1178,24 +1192,26 @@ Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc
         shader_stage_create_infos[ i ].pSpecializationInfo = nullptr;
     }
 
-    VkVertexInputBindingDescription* binding_descriptions;
+    VkVertexInputBindingDescription* binding_descriptions = nullptr;
     if (desc.binding_desc_count > 0)
     {
         binding_descriptions = new VkVertexInputBindingDescription[ desc.binding_desc_count ];
         for (u32 i = 0; i < desc.binding_desc_count; ++i)
         {
+            binding_descriptions[ i ] = VkVertexInputBindingDescription{};
             binding_descriptions[ i ].binding = desc.binding_descs[ i ].binding;
             binding_descriptions[ i ].stride = desc.binding_descs[ i ].stride;
             binding_descriptions[ i ].inputRate = to_vk_vertex_input_rate(desc.binding_descs[ i ].input_rate);
         }
     }
 
-    VkVertexInputAttributeDescription* attribute_descriptions;
+    VkVertexInputAttributeDescription* attribute_descriptions = nullptr;
     if (desc.attribute_desc_count > 0)
     {
         attribute_descriptions = new VkVertexInputAttributeDescription[ desc.attribute_desc_count ];
         for (u32 i = 0; i < desc.attribute_desc_count; ++i)
         {
+            attribute_descriptions[ i ] = VkVertexInputAttributeDescription{};
             attribute_descriptions[ i ].location = desc.attribute_descs[ i ].location;
             attribute_descriptions[ i ].binding = desc.attribute_descs[ i ].binding;
             attribute_descriptions[ i ].format = to_vk_format(desc.attribute_descs[ i ].format);
@@ -1273,18 +1289,20 @@ Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc
     dynamic_state_create_info.dynamicStateCount = dynamic_state_count;
     dynamic_state_create_info.pDynamicStates = dynamic_states;
 
-    // TODO: push constan range
+    // TODO: push constant range
     VkPushConstantRange push_constant_range{};
     push_constant_range.size = MAX_PUSH_CONSTANT_RANGE;
     push_constant_range.stageFlags =
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
+    u32 set_layout_count = desc.descriptor_set_layout->m_descriptor_set_layout ? 1 : 0;
+    VkDescriptorSetLayout* set_layout =
+        set_layout_count ? &desc.descriptor_set_layout->m_descriptor_set_layout : nullptr;
+
     VkPipelineLayoutCreateInfo pipeline_layout_create_info{};
     pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_create_info.setLayoutCount = desc.descriptor_set_layout->m_descriptor_set_layout ? 1 : 0;
-    pipeline_layout_create_info.pSetLayouts = desc.descriptor_set_layout->m_descriptor_set_layout
-                                                  ? &desc.descriptor_set_layout->m_descriptor_set_layout
-                                                  : nullptr;
+    pipeline_layout_create_info.setLayoutCount = set_layout_count;
+    pipeline_layout_create_info.pSetLayouts = set_layout;
     pipeline_layout_create_info.pushConstantRangeCount = 1;
     pipeline_layout_create_info.pPushConstantRanges = &push_constant_range;
 
@@ -1296,6 +1314,7 @@ Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc
     render_pass_desc.width = 0;
     render_pass_desc.height = 0;
     render_pass_desc.color_attachment_count = 0;
+    render_pass_desc.depth_stencil = nullptr;
 
     RenderPass render_pass = create_render_pass(device, render_pass_desc);
 
@@ -1315,7 +1334,8 @@ Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc
     pipeline_create_info.renderPass = render_pass.m_render_pass;
 
     VK_ASSERT(vkCreateGraphicsPipelines(
-        device.m_logical_device, {}, 1, &pipeline_create_info, device.m_vulkan_allocator, &pipeline.m_pipeline));
+        device.m_logical_device, VK_NULL_HANDLE, 1, &pipeline_create_info, device.m_vulkan_allocator,
+        &pipeline.m_pipeline));
 
     destroy_render_pass(device, render_pass);
 
@@ -1330,19 +1350,6 @@ Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc
     }
 
     return pipeline;
-}
-
-Pipeline create_pipeline(const Device& device, const PipelineDesc& desc)
-{
-    switch (desc.pipeline_type)
-    {
-    case PipelineType::eGraphics:
-        return create_graphics_pipeline(device, desc);
-    case PipelineType::eCompute:
-    default:
-        FT_ASSERT(false);
-        return {};
-    }
 }
 
 void destroy_pipeline(const Device& device, Pipeline& pipeline)
@@ -1468,5 +1475,41 @@ void cmd_barrier(
         command_buffer.m_command_buffer, src_stage, dst_stage, 0, 0, nullptr, buffer_barriers_count,
         buffer_memory_barriers, image_barriers_count, image_memory_barriers);
 };
+
+void cmd_set_scissor(const CommandBuffer& command_buffer, i32 x, i32 y, u32 width, u32 height)
+{
+    VkRect2D scissor{};
+    scissor.offset.x = x;
+    scissor.offset.y = y;
+    scissor.extent.width = width;
+    scissor.extent.height = height;
+    vkCmdSetScissor(command_buffer.m_command_buffer, 0, 1, &scissor);
+}
+
+void cmd_set_viewport(
+    const CommandBuffer& command_buffer, f32 x, f32 y, f32 width, f32 height, f32 min_depth, f32 max_depth)
+{
+    VkViewport viewport{};
+    viewport.x = x;
+    viewport.y = y + height;
+    viewport.width = width;
+    viewport.height = -height;
+    viewport.minDepth = min_depth;
+    viewport.maxDepth = max_depth;
+
+    vkCmdSetViewport(command_buffer.m_command_buffer, 0, 1, &viewport);
+}
+
+void cmd_bind_pipeline(const CommandBuffer& command_buffer, const Pipeline& pipeline)
+{
+    vkCmdBindPipeline(command_buffer.m_command_buffer, to_vk_pipeline_bind_point(pipeline.m_type), pipeline.m_pipeline);
+}
+
+void cmd_draw(
+    const CommandBuffer& command_buffer, uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex,
+    uint32_t first_instance)
+{
+    vkCmdDraw(command_buffer.m_command_buffer, vertex_count, instance_count, first_vertex, first_instance);
+}
 
 } // namespace fluent
