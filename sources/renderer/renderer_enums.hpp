@@ -8,6 +8,14 @@ namespace fluent
 
 #define BIT(x) 1 << x
 
+enum class QueueType : u8
+{
+    eGraphics = 0,
+    eCompute = 1,
+    eTransfer = 2,
+    eLast
+};
+
 enum class Format
 {
     eUndefined = TinyImageFormat_UNDEFINED,
@@ -243,6 +251,13 @@ enum ResourceState
     eTransferSrc = BIT(6),
     eTransferDst = BIT(7),
     ePresent = BIT(8)
+};
+
+enum DescriptorType
+{
+    eVertexBuffer = BIT(0),
+    eIndexBuffer = BIT(1),
+    eUniformBuffer = BIT(2),
 };
 
 enum class PipelineType

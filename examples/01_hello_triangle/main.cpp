@@ -22,6 +22,8 @@ CommandBuffer command_buffers[ FRAME_COUNT ];
 DescriptorSetLayout descriptor_set_layout;
 Pipeline pipeline;
 
+Buffer vertex_buffer;
+
 void on_init()
 {
     app_set_shaders_directory("../../../examples/shaders/");
@@ -96,6 +98,23 @@ void on_init()
     {
         destroy_shader(device, shaders[ i ]);
     }
+
+    float vertices[] = { -0.5, -0.5, 0.5, -0.5, 0.0, 0.5 };
+
+    BufferDesc buffer_desc{};
+    buffer_desc.size = sizeof(vertices);
+    buffer_desc.descriptor_type = DescriptorType::eVertexBuffer;
+    buffer_desc.resource_state = ResourceState::eTransferDst;
+
+    vertex_buffer = create_buffer(device, buffer_desc);
+
+    BufferUpdateDesc buffer_update_desc{};
+    buffer_update_desc.buffer = &vertex_buffer;
+    buffer_update_desc.data = vertices;
+    buffer_update_desc.offset = 0;
+    buffer_update_desc.size = sizeof(vertices);
+
+    update_buffer(device, buffer_update_desc);
 }
 
 void on_resize(u32 width, u32 height)
@@ -188,6 +207,7 @@ void on_update(f64 delta_time)
 void on_shutdown()
 {
     device_wait_idle(device);
+    destroy_buffer(device, vertex_buffer);
     destroy_pipeline(device, pipeline);
     destroy_descriptor_set_layout(device, descriptor_set_layout);
     destroy_swapchain(device, swapchain);

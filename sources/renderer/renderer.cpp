@@ -88,7 +88,7 @@ static inline VkQueueFlagBits to_vk_queue_type(QueueType type)
     }
 }
 
-VkVertexInputRate to_vk_vertex_input_rate(VertexInputRate input_rate)
+static inline VkVertexInputRate to_vk_vertex_input_rate(VertexInputRate input_rate)
 {
     switch (input_rate)
     {
@@ -102,7 +102,7 @@ VkVertexInputRate to_vk_vertex_input_rate(VertexInputRate input_rate)
     }
 }
 
-VkCullModeFlagBits to_vk_cull_mode(CullMode cull_mode)
+static inline VkCullModeFlagBits to_vk_cull_mode(CullMode cull_mode)
 {
     switch (cull_mode)
     {
@@ -118,7 +118,7 @@ VkCullModeFlagBits to_vk_cull_mode(CullMode cull_mode)
     }
 }
 
-VkFrontFace to_vk_front_face(FrontFace front_face)
+static inline VkFrontFace to_vk_front_face(FrontFace front_face)
 {
     switch (front_face)
     {
@@ -132,7 +132,7 @@ VkFrontFace to_vk_front_face(FrontFace front_face)
     }
 }
 
-VkCompareOp to_vk_compare_op(CompareOp op)
+static inline VkCompareOp to_vk_compare_op(CompareOp op)
 {
     switch (op)
     {
@@ -158,7 +158,7 @@ VkCompareOp to_vk_compare_op(CompareOp op)
     }
 }
 
-VkShaderStageFlagBits to_vk_shader_stage(ShaderStage shader_stage)
+static inline VkShaderStageFlagBits to_vk_shader_stage(ShaderStage shader_stage)
 {
     switch (shader_stage)
     {
@@ -184,7 +184,7 @@ VkShaderStageFlagBits to_vk_shader_stage(ShaderStage shader_stage)
     }
 }
 
-VkPipelineBindPoint to_vk_pipeline_bind_point(PipelineType type)
+static inline VkPipelineBindPoint to_vk_pipeline_bind_point(PipelineType type)
 {
     switch (type)
     {
@@ -196,6 +196,155 @@ VkPipelineBindPoint to_vk_pipeline_bind_point(PipelineType type)
         FT_ASSERT(false);
         return VkPipelineBindPoint(-1);
     }
+}
+
+static inline VkAccessFlags determine_access_flags(ResourceState resource_state)
+{
+    VkAccessFlags access_flags = 0;
+
+    if (resource_state & eStorage)
+        access_flags |= (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+
+    if (resource_state & eColorAttachment)
+        access_flags |= (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+
+    if (resource_state & eDepthStencilAttachment)
+        access_flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+    if (resource_state & eDepthStencilReadOnly)
+        access_flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+
+    if (resource_state & eShaderReadOnly)
+        access_flags |= VK_ACCESS_SHADER_READ_BIT;
+
+    if (resource_state & eTransferSrc)
+        access_flags |= VK_ACCESS_TRANSFER_READ_BIT;
+
+    if (resource_state & eTransferDst)
+        access_flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
+
+    if (resource_state & ePresent)
+        access_flags |= VK_ACCESS_MEMORY_READ_BIT;
+
+    return access_flags;
+}
+
+static inline VkPipelineStageFlags determine_pipeline_stage_flags(VkAccessFlags access_flags, QueueType queue_type)
+{
+    VkPipelineStageFlags flags = 0;
+
+    switch (queue_type)
+    {
+    case QueueType::eGraphics: {
+        if (access_flags & (VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
+        {
+            flags |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+        }
+
+        if (access_flags & (VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT))
+        {
+            flags |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+            flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        }
+
+        if (access_flags & VK_ACCESS_INPUT_ATTACHMENT_READ_BIT)
+        {
+            flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        }
+
+        if (access_flags & (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT))
+        {
+            flags |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        }
+
+        if (access_flags & (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT))
+        {
+            flags |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        }
+        break;
+    }
+    }
+
+    if (flags == 0)
+        flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+    return flags;
+}
+
+static inline VkImageLayout determine_image_layout(ResourceState resource_state)
+{
+    if (resource_state & eStorage)
+        return VK_IMAGE_LAYOUT_GENERAL;
+
+    if (resource_state & eColorAttachment)
+        return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    if (resource_state & eDepthStencilAttachment)
+        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    if (resource_state & eDepthStencilReadOnly)
+        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
+    if (resource_state & eShaderReadOnly)
+        return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    if (resource_state & ePresent)
+        return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    if (resource_state & eTransferSrc)
+        return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+    if (resource_state & eTransferDst)
+        return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+    return VK_IMAGE_LAYOUT_UNDEFINED;
+}
+
+static inline VmaMemoryUsage determine_vma_memory_usage(ResourceState resource_state)
+{
+    // TODO: determine memory usage
+    VmaMemoryUsage memory_usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+    // can be used as source in transfer operation
+    if (resource_state & ResourceState::eTransferSrc)
+    {
+        memory_usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+    }
+
+    return memory_usage;
+}
+
+static inline VkBufferUsageFlags determine_vk_buffer_usage(ResourceState resource_state, DescriptorType descriptor_type)
+{
+    // TODO: determine buffer usage flags
+    VkBufferUsageFlags buffer_usage = VkBufferUsageFlags(0);
+
+    if (descriptor_type & DescriptorType::eVertexBuffer)
+    {
+        buffer_usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    }
+
+    if (descriptor_type & DescriptorType::eIndexBuffer)
+    {
+        buffer_usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    }
+
+    if (descriptor_type & DescriptorType::eUniformBuffer)
+    {
+        buffer_usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    }
+
+    if (resource_state & ResourceState::eTransferSrc)
+    {
+        buffer_usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    }
+
+    if (resource_state & ResourceState::eTransferDst)
+    {
+        buffer_usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    }
+
+    return buffer_usage;
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(
@@ -370,108 +519,6 @@ static inline VkImageSubresourceRange get_image_subresource_range(const Image& i
     return image_subresource_range;
 }
 
-VkAccessFlags determine_access_flags(ResourceState resource_state)
-{
-    VkAccessFlags access_flags = 0;
-
-    if (resource_state & eStorage)
-        access_flags |= (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
-
-    if (resource_state & eColorAttachment)
-        access_flags |= (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-
-    if (resource_state & eDepthStencilAttachment)
-        access_flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-    if (resource_state & eDepthStencilReadOnly)
-        access_flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-
-    if (resource_state & eShaderReadOnly)
-        access_flags |= VK_ACCESS_SHADER_READ_BIT;
-
-    if (resource_state & eTransferSrc)
-        access_flags |= VK_ACCESS_TRANSFER_READ_BIT;
-
-    if (resource_state & eTransferDst)
-        access_flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
-
-    if (resource_state & ePresent)
-        access_flags |= VK_ACCESS_MEMORY_READ_BIT;
-
-    return access_flags;
-}
-
-VkPipelineStageFlags determine_pipeline_stage_flags(VkAccessFlags access_flags, QueueType queue_type)
-{
-    VkPipelineStageFlags flags = 0;
-
-    switch (queue_type)
-    {
-    case QueueType::eGraphics: {
-        if (access_flags & (VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
-        {
-            flags |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-        }
-
-        if (access_flags & (VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT))
-        {
-            flags |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
-            flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        }
-
-        if (access_flags & VK_ACCESS_INPUT_ATTACHMENT_READ_BIT)
-        {
-            flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        }
-
-        if (access_flags & (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT))
-        {
-            flags |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        }
-
-        if (access_flags & (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT))
-        {
-            flags |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-        }
-        break;
-    }
-    }
-
-    if (flags == 0)
-        flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-
-    return flags;
-}
-
-VkImageLayout determine_image_layout(ResourceState resource_state)
-{
-    if (resource_state & eStorage)
-        return VK_IMAGE_LAYOUT_GENERAL;
-
-    if (resource_state & eColorAttachment)
-        return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    if (resource_state & eDepthStencilAttachment)
-        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    if (resource_state & eDepthStencilReadOnly)
-        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-
-    if (resource_state & eShaderReadOnly)
-        return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-    if (resource_state & ePresent)
-        return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    if (resource_state & eTransferSrc)
-        return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-
-    if (resource_state & eTransferDst)
-        return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-
-    return VK_IMAGE_LAYOUT_UNDEFINED;
-}
-
 Renderer create_renderer(const RendererDesc& desc)
 {
     Renderer renderer{};
@@ -610,6 +657,26 @@ Device create_device(const Renderer& renderer, const DeviceDesc& desc)
 
     VK_ASSERT(vmaCreateAllocator(&vma_allocator_create_info, &device.m_memory_allocator));
 
+    // create staging buffer
+    BufferDesc buffer_desc{};
+    buffer_desc.size = STAGING_BUFFER_SIZE;
+    buffer_desc.resource_state = ResourceState::eTransferSrc;
+    device.m_staging_buffer.m_memory_used = 0;
+    device.m_staging_buffer.m_buffer = create_buffer(device, buffer_desc);
+    map_memory(device, device.m_staging_buffer.m_buffer);
+
+    // TODO: move it to transfer queue
+    QueueDesc queue_desc{};
+    queue_desc.queue_type = QueueType::eGraphics;
+
+    device.m_upload_queue = get_queue(device, queue_desc);
+
+    CommandPoolDesc command_pool_desc{};
+    command_pool_desc.queue = &device.m_upload_queue;
+    device.m_command_pool = create_command_pool(device, command_pool_desc);
+
+    allocate_command_buffers(device, device.m_command_pool, 1, &device.m_upload_command_buffer);
+
     return device;
 }
 
@@ -617,6 +684,10 @@ void destroy_device(Device& device)
 {
     FT_ASSERT(device.m_memory_allocator);
     FT_ASSERT(device.m_logical_device);
+    free_command_buffers(device, device.m_command_pool, 1, &device.m_upload_command_buffer);
+    destroy_command_pool(device, device.m_command_pool);
+    unmap_memory(device, device.m_staging_buffer.m_buffer);
+    destroy_buffer(device, device.m_staging_buffer.m_buffer);
     vmaDestroyAllocator(device.m_memory_allocator);
     vkDestroyDevice(device.m_logical_device, device.m_vulkan_allocator);
 }
@@ -1506,6 +1577,98 @@ void cmd_draw(
     uint32_t first_instance)
 {
     vkCmdDraw(command_buffer.m_command_buffer, vertex_count, instance_count, first_vertex, first_instance);
+}
+
+void map_memory(const Device& device, Buffer& buffer)
+{
+    FT_ASSERT(buffer.m_mapped_memory == nullptr);
+    vmaMapMemory(device.m_memory_allocator, buffer.m_allocation, &buffer.m_mapped_memory);
+}
+
+void unmap_memory(const Device& device, Buffer& buffer)
+{
+    FT_ASSERT(buffer.m_mapped_memory);
+    vmaUnmapMemory(device.m_memory_allocator, buffer.m_allocation);
+}
+
+Buffer create_buffer(const Device& device, const BufferDesc& desc)
+{
+    Buffer buffer{};
+    buffer.m_size = desc.size;
+    buffer.m_resource_state = desc.resource_state;
+    buffer.m_descriptor_type = desc.descriptor_type;
+
+    VmaAllocationCreateInfo allocation_create_info{};
+    allocation_create_info.usage = determine_vma_memory_usage(desc.resource_state);
+
+    VkBufferCreateInfo buffer_create_info{};
+    buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_create_info.pNext = nullptr;
+    buffer_create_info.flags = 0;
+    buffer_create_info.size = desc.size;
+    buffer_create_info.usage = determine_vk_buffer_usage(desc.resource_state, desc.descriptor_type);
+    buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    buffer_create_info.queueFamilyIndexCount = 0;
+    buffer_create_info.pQueueFamilyIndices = nullptr;
+
+    VK_ASSERT(vmaCreateBuffer(
+        device.m_memory_allocator, &buffer_create_info, &allocation_create_info, &buffer.m_buffer, &buffer.m_allocation,
+        nullptr));
+
+    return buffer;
+}
+
+void destroy_buffer(const Device& device, Buffer& buffer)
+{
+    FT_ASSERT(buffer.m_allocation);
+    FT_ASSERT(buffer.m_buffer);
+    vmaDestroyBuffer(device.m_memory_allocator, buffer.m_buffer, buffer.m_allocation);
+}
+
+void update_buffer(const Device& device, BufferUpdateDesc& desc)
+{
+    FT_ASSERT(desc.buffer);
+    FT_ASSERT(desc.offset + desc.size <= desc.buffer->m_size);
+
+    Buffer* buffer = desc.buffer;
+
+    if (buffer->m_resource_state & ResourceState::eTransferSrc)
+    {
+        bool was_mapped = buffer->m_mapped_memory;
+        if (was_mapped)
+        {
+            map_memory(device, *buffer);
+        }
+
+        std::memcpy(( u8* ) buffer->m_mapped_memory + desc.offset, desc.data, desc.size);
+
+        if (was_mapped)
+        {
+            unmap_memory(device, *buffer);
+        }
+    }
+    else
+    {
+        // TODO: decide what to do in this case
+        FT_ASSERT(desc.size < (device.m_staging_buffer.m_buffer.m_size - device.m_staging_buffer.m_memory_used));
+        u8* dst = ( u8* ) device.m_staging_buffer.m_buffer.m_mapped_memory + device.m_staging_buffer.m_memory_used;
+        std::memcpy(dst, desc.data, desc.size);
+
+        VkBufferCopy buffer_copy{};
+        buffer_copy.srcOffset = device.m_staging_buffer.m_memory_used;
+        buffer_copy.dstOffset = desc.offset;
+        buffer_copy.size = desc.size;
+
+        begin_command_buffer(device.m_upload_command_buffer);
+
+        vkCmdCopyBuffer(
+            device.m_upload_command_buffer.m_command_buffer, device.m_staging_buffer.m_buffer.m_buffer,
+            buffer->m_buffer, 1, &buffer_copy);
+
+        end_command_buffer(device.m_upload_command_buffer);
+
+        queue_wait_idle(device.m_upload_queue);
+    }
 }
 
 } // namespace fluent

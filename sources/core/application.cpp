@@ -31,9 +31,15 @@ std::string get_exec_path(u32 argc, char* argv_zero)
     getcwd(launch_directory.data(), 100);
     launch_directory = launch_directory.substr(0, launch_directory.find_first_of('\0'));
 
-    std::string launch_to_exec(argv_zero);
-    launch_to_exec = launch_to_exec.substr(launch_to_exec.find_first_of('/'), launch_to_exec.find_last_of('/'));
+    // TODO: absolute path bug
+    if (argv_zero[ 0 ] == '/')
+    {
+        launch_directory.clear();
+        launch_directory = "/";
+    }
 
+    std::string launch_to_exec(argv_zero);
+    launch_to_exec = launch_to_exec.substr(launch_to_exec.find_first_of('/'), launch_to_exec.find_last_of('/')) + "/";
     exec_path = launch_directory + launch_to_exec;
 
     return exec_path;

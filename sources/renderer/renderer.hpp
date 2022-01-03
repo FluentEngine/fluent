@@ -7,48 +7,18 @@
 
 namespace fluent
 {
+// Forward declares
+struct RenderPass;
+struct Buffer;
+struct StagingBuffer;
 
+static constexpr u32 STAGING_BUFFER_SIZE = 10 * 1024 * 1024 * 8; // ~50 mb
 static constexpr u32 FLUENT_VULKAN_API_VERSION = VK_API_VERSION_1_2;
 static constexpr u32 MAX_ATTACHMENTS_COUNT = 10;
 static constexpr u32 MAX_PUSH_CONSTANT_RANGE = 128;
 static constexpr u32 MAX_STAGE_COUNT = 5;
 static constexpr u32 MAX_VERTEX_BINGINGS_COUNT = 15;
 static constexpr u32 MAX_VERTEX_ATTRIBUTE_COUNT = 15;
-
-struct RendererDesc
-{
-    VkAllocationCallbacks* vulkan_allocator;
-};
-
-enum class QueueType : u8
-{
-    eGraphics = 0,
-    eCompute = 1,
-    eTransfer = 2,
-    eLast
-};
-
-struct Renderer
-{
-    VkAllocationCallbacks* m_vulkan_allocator;
-    VkInstance m_instance;
-    VkDebugUtilsMessengerEXT m_debug_messenger;
-    VkPhysicalDevice m_physical_device;
-};
-
-struct DeviceDesc
-{
-    u32 frame_in_use_count;
-};
-
-struct Device
-{
-    VkAllocationCallbacks* m_vulkan_allocator;
-    VkInstance m_instance;
-    VkPhysicalDevice m_physical_device;
-    VkDevice m_logical_device;
-    VmaAllocator m_memory_allocator;
-};
 
 struct QueueDesc
 {
@@ -84,6 +54,7 @@ struct Image
 {
     VkImage m_image;
     VkImageView m_image_view;
+    VmaAllocation m_allocation;
     u32 m_width;
     u32 m_height;
     Format m_format;
@@ -92,12 +63,36 @@ struct Image
     u32 m_layer_count = 1;
 };
 
+struct BufferDesc
+{
+    u32 size;
+    ResourceState resource_state;
+    DescriptorType descriptor_type;
+};
+
+struct BufferUpdateDesc
+{
+    u32 offset;
+    u32 size;
+    void* data;
+    Buffer* buffer;
+};
+
 struct Buffer
 {
     VkBuffer m_buffer;
+    VmaAllocation m_allocation;
+    u32 m_size;
+    ResourceState m_resource_state;
+    DescriptorType m_descriptor_type;
+    void* m_mapped_memory;
 };
 
-struct RenderPass;
+struct StagingBuffer
+{
+    Buffer m_buffer;
+    u32 m_memory_used;
+};
 
 struct Swapchain
 {
@@ -276,6 +271,37 @@ struct Pipeline
     VkPipeline m_pipeline;
 };
 
+struct RendererDesc
+{
+    VkAllocationCallbacks* vulkan_allocator;
+};
+
+struct Renderer
+{
+    VkAllocationCallbacks* m_vulkan_allocator;
+    VkInstance m_instance;
+    VkDebugUtilsMessengerEXT m_debug_messenger;
+    VkPhysicalDevice m_physical_device;
+};
+
+struct DeviceDesc
+{
+    u32 frame_in_use_count;
+};
+
+struct Device
+{
+    VkAllocationCallbacks* m_vulkan_allocator;
+    VkInstance m_instance;
+    VkPhysicalDevice m_physical_device;
+    VkDevice m_logical_device;
+    VmaAllocator m_memory_allocator;
+    Queue m_upload_queue;
+    CommandPool m_command_pool;
+    CommandBuffer m_upload_command_buffer;
+    StagingBuffer m_staging_buffer;
+};
+
 Renderer create_renderer(const RendererDesc& desc);
 void destroy_renderer(Renderer& renderer);
 
@@ -339,5 +365,13 @@ void cmd_bind_pipeline(const CommandBuffer& command_buffer, const Pipeline& pipe
 void cmd_draw(
     const CommandBuffer& command_buffer, uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex,
     uint32_t first_instance);
+
+void map_memory(const Device& device, Buffer& buffer);
+void unmap_memory(const Device& device, Buffer& buffer);
+
+Buffer create_buffer(const Device& device, const BufferDesc& desc);
+void destroy_buffer(const Device& device, Buffer& buffer);
+
+void update_buffer(const Device& device, BufferUpdateDesc& buffer_update_desc);
 
 } // namespace fluent
