@@ -24,10 +24,12 @@ set(common_sources
 	)
 
 set(renderer_sources
-	${src_dir}/renderer/renderer_enums.cpp
 	${src_dir}/renderer/renderer.cpp)
 
-set(sources ${common_sources} ${renderer_sources})
+set(util_sources
+	${src_dir}/utils/utils.cpp)
+
+set(sources ${common_sources} ${renderer_sources} ${util_sources})
 set(includes ${CMAKE_CURRENT_SOURCE_DIR}/sources)
 set(libs spdlog volk SDL2 tiny_image_format)
 

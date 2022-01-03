@@ -8,6 +8,7 @@ namespace fluent
 {
 
 static constexpr u32 MAX_ATTACHMENTS_COUNT = 10;
+static constexpr u32 MAX_PUSH_CONSTANT_RANGE = 128;
 
 struct RendererDesc
 {
@@ -32,6 +33,7 @@ struct Renderer
 
 struct DeviceDesc
 {
+    // for future use
 };
 
 struct Device
@@ -82,6 +84,11 @@ struct Image
     SampleCount m_sample_count;
     u32 m_mip_level_count = 1;
     u32 m_layer_count = 1;
+};
+
+struct Buffer
+{
+    VkBuffer m_buffer;
 };
 
 struct RenderPass;
@@ -173,6 +180,13 @@ struct RenderPassBeginDesc
 
 struct BufferBarrier
 {
+    ResourceState old_state;
+    ResourceState new_state;
+    Buffer* buffer;
+    Queue* src_queue;
+    Queue* dst_queue;
+    u32 size;
+    u32 offset;
 };
 
 struct ImageBarrier
@@ -182,6 +196,77 @@ struct ImageBarrier
     Image* image;
     Queue* src_queue;
     Queue* dst_queue;
+};
+
+struct ShaderDesc
+{
+    ShaderStage stage;
+    const char* filename;
+};
+
+struct Shader
+{
+    ShaderStage m_stage;
+    VkShaderModule m_shader;
+};
+
+struct DescriptorSetLayoutDesc
+{
+    u32 m_shader_count;
+    Shader* m_shaders;
+};
+
+struct DescriptorSetLayout
+{
+    u32 m_shader_count;
+    Shader* m_shaders;
+    VkDescriptorSetLayout m_descriptor_set_layout;
+};
+
+struct VertexBindingDesc
+{
+    uint32_t binding;
+    uint32_t stride;
+    VertexInputRate input_rate;
+};
+
+struct VertexAttributeDesc
+{
+    uint32_t location;
+    uint32_t binding;
+    Format format;
+    uint32_t offset;
+};
+
+struct RasterizerStateDesc
+{
+    CullMode cull_mode;
+    FrontFace front_face;
+};
+
+struct DepthStateDesc
+{
+    bool depth_test;
+    bool depth_write;
+    CompareOp compare_op;
+};
+
+struct PipelineDesc
+{
+    PipelineType pipeline_type;
+    u32 binding_desc_count;
+    VertexBindingDesc* binding_descs;
+    u32 attribute_desc_count;
+    VertexAttributeDesc* attribute_descs;
+    RasterizerStateDesc rasterizer_desc;
+    DepthStateDesc depth_state_desc;
+    DescriptorSetLayout* descriptor_set_layout;
+};
+
+struct Pipeline
+{
+    VkPipelineLayout m_pipeline_layout;
+    VkPipeline m_pipeline;
 };
 
 Renderer create_renderer(const RendererDesc& desc);
@@ -222,11 +307,20 @@ void acquire_next_image(
 
 RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc);
 void destroy_render_pass(const Device& device, RenderPass& render_pass);
+
+Shader create_shader(const Device& device, const ShaderDesc& desc);
+void destroy_shader(const Device& device, Shader& shader);
+
+DescriptorSetLayout create_descriptor_set_layout(const Device& device, const DescriptorSetLayoutDesc& desc);
+void destroy_descriptor_set_layout(const Device& device, DescriptorSetLayout& layout);
+
+Pipeline create_pipeline(const Device& device, const PipelineDesc& desc);
+void destroy_pipeline(const Device& device, Pipeline& pipeline);
+
 void cmd_begin_render_pass(const CommandBuffer& command_buffer, const RenderPassBeginDesc& desc);
 void cmd_end_render_pass(const CommandBuffer& command_buffer);
 
 void cmd_barrier(
     const CommandBuffer& command_buffer, u32 buffer_barriers_count, const BufferBarrier* buffer_barriers,
     u32 image_barriers_count, const ImageBarrier* image_barriers);
-
 } // namespace fluent

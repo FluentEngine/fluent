@@ -19,6 +19,9 @@ bool command_buffers_recorded[ FRAME_COUNT ];
 Swapchain swapchain;
 CommandBuffer command_buffers[ FRAME_COUNT ];
 
+DescriptorSetLayout descriptor_set_layout;
+Pipeline pipeline;
+
 void on_init()
 {
     RendererDesc renderer_desc{};
@@ -44,6 +47,43 @@ void on_init()
         rendering_finished_semaphores[ i ] = create_semaphore(device);
         in_flight_fences[ i ] = create_fence(device);
         command_buffers_recorded[ i ] = false;
+    }
+
+    ShaderDesc vert_shader_desc{};
+    vert_shader_desc.filename = "../examples/shaders/main.vert.glsl.spv";
+    vert_shader_desc.stage = ShaderStage::eVertex;
+
+    ShaderDesc frag_shader_desc{};
+    frag_shader_desc.filename = "../examples/shaders/main.frag.glsl.spv";
+    frag_shader_desc.stage = ShaderStage::eFragment;
+
+    Shader shaders[ 2 ];
+    shaders[ 0 ] = create_shader(device, vert_shader_desc);
+    shaders[ 1 ] = create_shader(device, frag_shader_desc);
+
+    DescriptorSetLayoutDesc descriptor_set_layout_desc{};
+    descriptor_set_layout_desc.m_shader_count = 2;
+    descriptor_set_layout_desc.m_shaders = shaders;
+
+    descriptor_set_layout = create_descriptor_set_layout(device, descriptor_set_layout_desc);
+
+    PipelineDesc pipeline_desc{};
+    pipeline_desc.pipeline_type = PipelineType::eGraphics;
+    pipeline_desc.binding_desc_count = 0;
+    pipeline_desc.binding_descs = nullptr;
+    pipeline_desc.attribute_desc_count = 0;
+    pipeline_desc.attribute_descs = nullptr;
+    pipeline_desc.rasterizer_desc.cull_mode = CullMode::eBack;
+    pipeline_desc.rasterizer_desc.front_face = FrontFace::eCounterClockwise;
+    pipeline_desc.depth_state_desc.depth_test = false;
+    pipeline_desc.depth_state_desc.depth_write = false;
+    pipeline_desc.descriptor_set_layout = &descriptor_set_layout;
+
+    pipeline = create_pipeline(device, pipeline_desc);
+
+    for (u32 i = 0; i < 2; ++i)
+    {
+        destroy_shader(device, shaders[ i ]);
     }
 }
 
@@ -83,8 +123,6 @@ void on_render()
     to_clear_barrier.new_state = ResourceState::eColorAttachment;
 
     cmd_barrier(command_buffers[ frame_index ], 0, nullptr, 1, &to_clear_barrier);
-
-    f32 clear_value[ 4 ] = { 0.2f, 0.3f, 0.4f, 1.0f };
 
     RenderPassBeginDesc render_pass_begin_desc{};
     render_pass_begin_desc.render_pass = get_swapchain_render_pass(swapchain, image_index);
@@ -139,6 +177,8 @@ void on_unload()
 void on_shutdown()
 {
     device_wait_idle(device);
+    destroy_pipeline(device, pipeline);
+    destroy_descriptor_set_layout(device, descriptor_set_layout);
     for (u32 i = 0; i < FRAME_COUNT; ++i)
     {
         destroy_semaphore(device, image_available_semaphores[ i ]);

@@ -245,8 +245,68 @@ enum ResourceState
     ePresent = BIT(8)
 };
 
-VkFormat util_to_vk_format(Format format);
-Format util_from_vk_format(VkFormat format);
-VkSampleCountFlagBits util_to_vk_sample_count(SampleCount sample_count);
-VkAttachmentLoadOp util_to_vk_load_op(AttachmentLoadOp load_op);
+enum class PipelineType
+{
+    eCompute,
+    eGraphics
+};
+
+enum class VertexInputRate
+{
+    eVertex,
+    eInstance
+};
+
+enum class FrontFace
+{
+    eClockwise,
+    eCounterClockwise
+};
+
+enum class SamplerMipmapMode
+{
+    eNearest,
+    eLinear
+};
+
+enum class SamplerAddressMode
+{
+    eRepeat,
+    eMirroredRepeat,
+    eClampToEdge,
+    eClampToBorder,
+    eMirrorClampToEdge,
+};
+
+enum class CompareOp
+{
+    eNever,
+    eLess,
+    eEqual,
+    eLessOrEqual,
+    eGreater,
+    eNotEqual,
+    eGreaterOrEqual,
+    eAlways
+};
+
+enum class CullMode
+{
+    eNone,
+    eFront,
+    eBack
+};
+
+enum class ShaderStage
+{
+    eVertex,
+    eTessellationControl,
+    eTessellationEvaluation,
+    eGeometry,
+    eFragment,
+    eCompute,
+    eAllGraphics,
+    eAll
+};
+
 } // namespace fluent

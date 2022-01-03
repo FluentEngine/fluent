@@ -1,5 +1,7 @@
 #include <map>
 #include <SDL_vulkan.h>
+#include "tinyimageformat_apis.h"
+#include "utils/utils.hpp"
 #include "core/window.hpp"
 #include "core/application.hpp"
 #include "renderer/renderer.hpp"
@@ -21,7 +23,57 @@
 
 namespace fluent
 {
-static inline VkQueueFlagBits util_to_vk_queue_type(QueueType type)
+
+VkFormat to_vk_format(Format format)
+{
+    return static_cast<VkFormat>(TinyImageFormat_ToVkFormat(static_cast<TinyImageFormat>(format)));
+}
+
+Format from_vk_format(VkFormat format)
+{
+    return static_cast<Format>(TinyImageFormat_FromVkFormat(static_cast<TinyImageFormat_VkFormat>(format)));
+}
+
+VkSampleCountFlagBits to_vk_sample_count(SampleCount sample_count)
+{
+    switch (sample_count)
+    {
+    case SampleCount::e1:
+        return VK_SAMPLE_COUNT_1_BIT;
+    case SampleCount::e2:
+        return VK_SAMPLE_COUNT_2_BIT;
+    case SampleCount::e4:
+        return VK_SAMPLE_COUNT_4_BIT;
+    case SampleCount::e8:
+        return VK_SAMPLE_COUNT_8_BIT;
+    case SampleCount::e16:
+        return VK_SAMPLE_COUNT_16_BIT;
+    case SampleCount::e32:
+        return VK_SAMPLE_COUNT_32_BIT;
+    default:
+        break;
+    }
+
+    return VkSampleCountFlagBits(-1);
+}
+
+VkAttachmentLoadOp to_vk_load_op(AttachmentLoadOp load_op)
+{
+    switch (load_op)
+    {
+    case AttachmentLoadOp::eClear:
+        return VK_ATTACHMENT_LOAD_OP_CLEAR;
+    case AttachmentLoadOp::eDontCare:
+        return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    case AttachmentLoadOp::eLoad:
+        return VK_ATTACHMENT_LOAD_OP_LOAD;
+    default:
+        break;
+    }
+    return VkAttachmentLoadOp(-1);
+}
+
+static inline VkQueueFlagBits to_vk_queue_type(QueueType type)
 {
     switch (type)
     {
@@ -33,6 +85,97 @@ static inline VkQueueFlagBits util_to_vk_queue_type(QueueType type)
         return VK_QUEUE_TRANSFER_BIT;
     default:
         return VkQueueFlagBits(-1);
+    }
+}
+
+VkVertexInputRate to_vk_vertex_input_rate(VertexInputRate input_rate)
+{
+    switch (input_rate)
+    {
+    case VertexInputRate::eVertex:
+        return VK_VERTEX_INPUT_RATE_VERTEX;
+    case VertexInputRate::eInstance:
+        return VK_VERTEX_INPUT_RATE_INSTANCE;
+    default:
+        return VkVertexInputRate(-1);
+    }
+}
+
+VkCullModeFlagBits to_vk_cull_mode(CullMode cull_mode)
+{
+    switch (cull_mode)
+    {
+    case CullMode::eBack:
+        return VK_CULL_MODE_BACK_BIT;
+    case CullMode::eFront:
+        return VK_CULL_MODE_FRONT_BIT;
+    case CullMode::eNone:
+        return VK_CULL_MODE_NONE;
+    default:
+        return VkCullModeFlagBits(-1);
+    }
+}
+
+VkFrontFace to_vk_front_face(FrontFace front_face)
+{
+    switch (front_face)
+    {
+    case FrontFace::eClockwise:
+        return VK_FRONT_FACE_CLOCKWISE;
+    case FrontFace::eCounterClockwise:
+        return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    default:
+        return VkFrontFace(-1);
+    }
+}
+
+VkCompareOp to_vk_compare_op(CompareOp op)
+{
+    switch (op)
+    {
+    case CompareOp::eNever:
+        return VK_COMPARE_OP_NEVER;
+    case CompareOp::eLess:
+        return VK_COMPARE_OP_LESS;
+    case CompareOp::eEqual:
+        return VK_COMPARE_OP_EQUAL;
+    case CompareOp::eLessOrEqual:
+        return VK_COMPARE_OP_LESS_OR_EQUAL;
+    case CompareOp::eGreater:
+        return VK_COMPARE_OP_GREATER;
+    case CompareOp::eNotEqual:
+        return VK_COMPARE_OP_NOT_EQUAL;
+    case CompareOp::eGreaterOrEqual:
+        return VK_COMPARE_OP_GREATER_OR_EQUAL;
+    case CompareOp::eAlways:
+        return VK_COMPARE_OP_ALWAYS;
+    default:
+        return VkCompareOp(-1);
+    }
+}
+
+VkShaderStageFlagBits to_vk_shader_stage(ShaderStage shader_stage)
+{
+    switch (shader_stage)
+    {
+    case ShaderStage::eVertex:
+        return VK_SHADER_STAGE_VERTEX_BIT;
+    case ShaderStage::eTessellationControl:
+        return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+    case ShaderStage::eTessellationEvaluation:
+        return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    case ShaderStage::eGeometry:
+        return VK_SHADER_STAGE_GEOMETRY_BIT;
+    case ShaderStage::eFragment:
+        return VK_SHADER_STAGE_FRAGMENT_BIT;
+    case ShaderStage::eCompute:
+        return VK_SHADER_STAGE_COMPUTE_BIT;
+    case ShaderStage::eAllGraphics:
+        return VK_SHADER_STAGE_ALL_GRAPHICS;
+    case ShaderStage::eAll:
+        return VK_SHADER_STAGE_ALL;
+    default:
+        return VkShaderStageFlagBits(-1);
     }
 }
 
@@ -130,7 +273,7 @@ static inline u32 find_queue_family_index(VkPhysicalDevice physical_device, Queu
     VkQueueFamilyProperties queue_families[ queue_family_count ];
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families);
 
-    VkQueueFlagBits target_queue_type = util_to_vk_queue_type(queue_type);
+    VkQueueFlagBits target_queue_type = to_vk_queue_type(queue_type);
 
     // TODO: Find dedicated queue first
     for (u32 i = 0; i < queue_family_count; ++i)
@@ -639,7 +782,7 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
             surface_format = surface_formats[ i ];
     }
 
-    swapchain.m_format = util_from_vk_format(surface_format.format);
+    swapchain.m_format = from_vk_format(surface_format.format);
 
     /// fins swapchain pretransform
     VkSurfaceTransformFlagBitsKHR pre_transform;
@@ -866,9 +1009,9 @@ RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc)
     for (u32 i = 0; i < desc.color_attachment_count; ++i)
     {
         attachment_descriptions[ i ].flags = 0;
-        attachment_descriptions[ i ].format = util_to_vk_format(desc.color_attachments[ i ]->m_format);
-        attachment_descriptions[ i ].samples = util_to_vk_sample_count(desc.color_attachments[ i ]->m_sample_count);
-        attachment_descriptions[ i ].loadOp = util_to_vk_load_op(desc.color_attachment_load_ops[ i ]);
+        attachment_descriptions[ i ].format = to_vk_format(desc.color_attachments[ i ]->m_format);
+        attachment_descriptions[ i ].samples = to_vk_sample_count(desc.color_attachments[ i ]->m_sample_count);
+        attachment_descriptions[ i ].loadOp = to_vk_load_op(desc.color_attachment_load_ops[ i ]);
         attachment_descriptions[ i ].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachment_descriptions[ i ].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachment_descriptions[ i ].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -885,11 +1028,11 @@ RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc)
 
         u32 i = desc.color_attachment_count;
         attachment_descriptions[ i ].flags = 0;
-        attachment_descriptions[ i ].format = util_to_vk_format(desc.depth_stencil->m_format);
-        attachment_descriptions[ i ].samples = util_to_vk_sample_count(desc.depth_stencil->m_sample_count);
+        attachment_descriptions[ i ].format = to_vk_format(desc.depth_stencil->m_format);
+        attachment_descriptions[ i ].samples = to_vk_sample_count(desc.depth_stencil->m_sample_count);
         attachment_descriptions[ i ].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachment_descriptions[ i ].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment_descriptions[ i ].stencilLoadOp = util_to_vk_load_op(desc.depth_stencil_load_op);
+        attachment_descriptions[ i ].stencilLoadOp = to_vk_load_op(desc.depth_stencil_load_op);
         attachment_descriptions[ i ].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachment_descriptions[ i ].initialLayout = determine_image_layout(desc.depth_stencil_state);
         attachment_descriptions[ i ].finalLayout = determine_image_layout(desc.depth_stencil_state);
@@ -938,29 +1081,276 @@ RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc)
         image_views[ desc.color_attachment_count ] = desc.depth_stencil->m_image_view;
     }
 
-    VkFramebufferCreateInfo framebuffer_create_info{};
-    framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebuffer_create_info.pNext = nullptr;
-    framebuffer_create_info.flags = 0;
-    framebuffer_create_info.renderPass = render_pass.m_render_pass;
-    framebuffer_create_info.attachmentCount = attachments_count;
-    framebuffer_create_info.pAttachments = image_views;
-    framebuffer_create_info.width = desc.width;
-    framebuffer_create_info.height = desc.height;
-    framebuffer_create_info.layers = 1;
+    if (desc.width > 0 && desc.height > 0)
+    {
+        VkFramebufferCreateInfo framebuffer_create_info{};
+        framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebuffer_create_info.pNext = nullptr;
+        framebuffer_create_info.flags = 0;
+        framebuffer_create_info.renderPass = render_pass.m_render_pass;
+        framebuffer_create_info.attachmentCount = attachments_count;
+        framebuffer_create_info.pAttachments = image_views;
+        framebuffer_create_info.width = desc.width;
+        framebuffer_create_info.height = desc.height;
+        framebuffer_create_info.layers = 1;
 
-    VK_ASSERT(vkCreateFramebuffer(
-        device.m_logical_device, &framebuffer_create_info, device.m_vulkan_allocator, &render_pass.m_framebuffer));
+        VK_ASSERT(vkCreateFramebuffer(
+            device.m_logical_device, &framebuffer_create_info, device.m_vulkan_allocator, &render_pass.m_framebuffer));
+    }
 
     return render_pass;
 }
 
 void destroy_render_pass(const Device& device, RenderPass& render_pass)
 {
-    FT_ASSERT(render_pass.m_framebuffer);
     FT_ASSERT(render_pass.m_render_pass);
-    vkDestroyFramebuffer(device.m_logical_device, render_pass.m_framebuffer, device.m_vulkan_allocator);
+    if (render_pass.m_framebuffer)
+    {
+        vkDestroyFramebuffer(device.m_logical_device, render_pass.m_framebuffer, device.m_vulkan_allocator);
+    }
     vkDestroyRenderPass(device.m_logical_device, render_pass.m_render_pass, device.m_vulkan_allocator);
+}
+
+Shader create_shader(const Device& device, const ShaderDesc& desc)
+{
+    Shader shader{};
+    shader.m_stage = desc.stage;
+
+    auto byte_code = read_file_binary(desc.filename);
+
+    VkShaderModuleCreateInfo shader_create_info{};
+    shader_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    shader_create_info.pNext = nullptr;
+    shader_create_info.flags = 0;
+    shader_create_info.codeSize = byte_code.size() * sizeof(uint32_t);
+    shader_create_info.pCode = byte_code.data();
+
+    VK_ASSERT(vkCreateShaderModule(
+        device.m_logical_device, &shader_create_info, device.m_vulkan_allocator, &shader.m_shader));
+
+    return shader;
+}
+
+void destroy_shader(const Device& device, Shader& shader)
+{
+    FT_ASSERT(shader.m_shader);
+    vkDestroyShaderModule(device.m_logical_device, shader.m_shader, device.m_vulkan_allocator);
+}
+
+DescriptorSetLayout create_descriptor_set_layout(const Device& device, const DescriptorSetLayoutDesc& desc)
+{
+    FT_ASSERT(desc.m_shader_count);
+
+    DescriptorSetLayout descriptor_set_layout{};
+    descriptor_set_layout.m_shader_count = desc.m_shader_count;
+    descriptor_set_layout.m_shaders = desc.m_shaders;
+    // for (u32 i = 0; i < descriptor_set_layout.m_shader_count; ++i)
+    // {
+    //     descriptor_set_layout.m_shaders[ i ] = desc.m_shaders[ i ];
+    // }
+
+    return descriptor_set_layout;
+}
+
+void destroy_descriptor_set_layout(const Device& device, DescriptorSetLayout& layout)
+{
+    FT_ASSERT(layout.m_shaders);
+    // delete[] layout.m_shaders;
+}
+
+Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc)
+{
+    FT_ASSERT(desc.descriptor_set_layout);
+
+    Pipeline pipeline{};
+
+    u32 shader_stage_count = desc.descriptor_set_layout->m_shader_count;
+    VkPipelineShaderStageCreateInfo shader_stage_create_infos[ shader_stage_count ];
+    for (u32 i = 0; i < shader_stage_count; ++i)
+    {
+        shader_stage_create_infos[ i ] = {};
+        shader_stage_create_infos[ i ].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        shader_stage_create_infos[ i ].pNext = nullptr;
+        shader_stage_create_infos[ i ].flags = 0;
+        shader_stage_create_infos[ i ].stage = to_vk_shader_stage(desc.descriptor_set_layout->m_shaders[ i ].m_stage);
+        shader_stage_create_infos[ i ].module = desc.descriptor_set_layout->m_shaders[ i ].m_shader;
+        shader_stage_create_infos[ i ].pName = "main";
+        shader_stage_create_infos[ i ].pSpecializationInfo = nullptr;
+    }
+
+    VkVertexInputBindingDescription* binding_descriptions;
+    if (desc.binding_desc_count > 0)
+    {
+        binding_descriptions = new VkVertexInputBindingDescription[ desc.binding_desc_count ];
+        for (u32 i = 0; i < desc.binding_desc_count; ++i)
+        {
+            binding_descriptions[ i ].binding = desc.binding_descs[ i ].binding;
+            binding_descriptions[ i ].stride = desc.binding_descs[ i ].stride;
+            binding_descriptions[ i ].inputRate = to_vk_vertex_input_rate(desc.binding_descs[ i ].input_rate);
+        }
+    }
+
+    VkVertexInputAttributeDescription* attribute_descriptions;
+    if (desc.attribute_desc_count > 0)
+    {
+        attribute_descriptions = new VkVertexInputAttributeDescription[ desc.attribute_desc_count ];
+        for (u32 i = 0; i < desc.attribute_desc_count; ++i)
+        {
+            attribute_descriptions[ i ].location = desc.attribute_descs[ i ].location;
+            attribute_descriptions[ i ].binding = desc.attribute_descs[ i ].binding;
+            attribute_descriptions[ i ].format = to_vk_format(desc.attribute_descs[ i ].format);
+            attribute_descriptions[ i ].offset = desc.attribute_descs[ i ].offset;
+        }
+    }
+
+    VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info{};
+    vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertex_input_state_create_info.vertexBindingDescriptionCount = desc.binding_desc_count;
+    vertex_input_state_create_info.pVertexBindingDescriptions = binding_descriptions;
+    vertex_input_state_create_info.vertexAttributeDescriptionCount = desc.attribute_desc_count;
+    vertex_input_state_create_info.pVertexAttributeDescriptions = attribute_descriptions;
+
+    VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info{};
+    input_assembly_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    input_assembly_state_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    input_assembly_state_create_info.primitiveRestartEnable = false;
+
+    // Dynamic states
+    VkViewport viewport{};
+    VkRect2D scissor{};
+
+    VkPipelineViewportStateCreateInfo viewport_state_create_info{};
+    viewport_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewport_state_create_info.viewportCount = 1;
+    viewport_state_create_info.pViewports = &viewport;
+    viewport_state_create_info.scissorCount = 1;
+    viewport_state_create_info.pScissors = &scissor;
+
+    VkPipelineRasterizationStateCreateInfo rasterization_state_create_info{};
+    rasterization_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterization_state_create_info.cullMode = to_vk_cull_mode(desc.rasterizer_desc.cull_mode);
+    rasterization_state_create_info.frontFace = to_vk_front_face(desc.rasterizer_desc.front_face);
+    rasterization_state_create_info.lineWidth = 1.0f;
+
+    VkPipelineMultisampleStateCreateInfo multisample_state_create_info{};
+    multisample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisample_state_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    multisample_state_create_info.minSampleShading = 1.0f;
+
+    VkPipelineColorBlendAttachmentState color_blend_attachment_state{};
+    color_blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+    color_blend_attachment_state.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+    color_blend_attachment_state.colorBlendOp = VK_BLEND_OP_ADD;
+    color_blend_attachment_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    color_blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    color_blend_attachment_state.colorWriteMask =
+        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+    VkPipelineColorBlendStateCreateInfo color_blend_state_create_info{};
+    color_blend_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    color_blend_state_create_info.logicOpEnable = false;
+    color_blend_state_create_info.logicOp = VK_LOGIC_OP_COPY;
+    color_blend_state_create_info.attachmentCount = 1;
+    color_blend_state_create_info.pAttachments = &color_blend_attachment_state;
+
+    VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info{};
+    depth_stencil_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depth_stencil_state_create_info.depthTestEnable = desc.depth_state_desc.depth_test ? VK_TRUE : VK_FALSE;
+    depth_stencil_state_create_info.depthWriteEnable = desc.depth_state_desc.depth_write ? VK_TRUE : VK_FALSE;
+    depth_stencil_state_create_info.depthCompareOp =
+        desc.depth_state_desc.depth_test ? to_vk_compare_op(desc.depth_state_desc.compare_op) : VK_COMPARE_OP_ALWAYS;
+    depth_stencil_state_create_info.depthBoundsTestEnable = VK_FALSE;
+    depth_stencil_state_create_info.minDepthBounds = 0.0f; // Optional
+    depth_stencil_state_create_info.maxDepthBounds = 1.0f; // Optional
+    depth_stencil_state_create_info.stencilTestEnable = VK_FALSE;
+
+    const uint32_t dynamic_state_count = 2;
+    VkDynamicState dynamic_states[ dynamic_state_count ] = { VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_VIEWPORT };
+
+    VkPipelineDynamicStateCreateInfo dynamic_state_create_info{};
+    dynamic_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamic_state_create_info.dynamicStateCount = dynamic_state_count;
+    dynamic_state_create_info.pDynamicStates = dynamic_states;
+
+    // TODO: push constan range
+    VkPushConstantRange push_constant_range{};
+    push_constant_range.size = MAX_PUSH_CONSTANT_RANGE;
+    push_constant_range.stageFlags =
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info{};
+    pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_create_info.setLayoutCount = desc.descriptor_set_layout->m_descriptor_set_layout ? 1 : 0;
+    pipeline_layout_create_info.pSetLayouts = desc.descriptor_set_layout->m_descriptor_set_layout
+                                                  ? &desc.descriptor_set_layout->m_descriptor_set_layout
+                                                  : nullptr;
+    pipeline_layout_create_info.pushConstantRangeCount = 1;
+    pipeline_layout_create_info.pPushConstantRanges = &push_constant_range;
+
+    VK_ASSERT(vkCreatePipelineLayout(
+        device.m_logical_device, &pipeline_layout_create_info, device.m_vulkan_allocator, &pipeline.m_pipeline_layout));
+
+    // create dummy render pass
+    RenderPassDesc render_pass_desc{};
+    render_pass_desc.width = 0;
+    render_pass_desc.height = 0;
+    render_pass_desc.color_attachment_count = 0;
+
+    RenderPass render_pass = create_render_pass(device, render_pass_desc);
+
+    VkGraphicsPipelineCreateInfo pipeline_create_info{};
+    pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipeline_create_info.stageCount = shader_stage_count;
+    pipeline_create_info.pStages = shader_stage_create_infos;
+    pipeline_create_info.pVertexInputState = &vertex_input_state_create_info;
+    pipeline_create_info.pInputAssemblyState = &input_assembly_state_create_info;
+    pipeline_create_info.pViewportState = &viewport_state_create_info;
+    pipeline_create_info.pMultisampleState = &multisample_state_create_info;
+    pipeline_create_info.pRasterizationState = &rasterization_state_create_info;
+    pipeline_create_info.pColorBlendState = &color_blend_state_create_info;
+    pipeline_create_info.pDepthStencilState = &depth_stencil_state_create_info;
+    pipeline_create_info.pDynamicState = &dynamic_state_create_info;
+    pipeline_create_info.layout = pipeline.m_pipeline_layout;
+    pipeline_create_info.renderPass = render_pass.m_render_pass;
+
+    VK_ASSERT(vkCreateGraphicsPipelines(
+        device.m_logical_device, {}, 1, &pipeline_create_info, device.m_vulkan_allocator, &pipeline.m_pipeline));
+
+    destroy_render_pass(device, render_pass);
+
+    if (binding_descriptions)
+    {
+        delete[] binding_descriptions;
+    }
+
+    if (attribute_descriptions)
+    {
+        delete[] attribute_descriptions;
+    }
+
+    return pipeline;
+}
+
+Pipeline create_pipeline(const Device& device, const PipelineDesc& desc)
+{
+    switch (desc.pipeline_type)
+    {
+    case PipelineType::eGraphics:
+        return create_graphics_pipeline(device, desc);
+    case PipelineType::eCompute:
+    default:
+        FT_ASSERT(false);
+        return {};
+    }
+}
+
+void destroy_pipeline(const Device& device, Pipeline& pipeline)
+{
+    FT_ASSERT(pipeline.m_pipeline_layout);
+    FT_ASSERT(pipeline.m_pipeline);
+    vkDestroyPipelineLayout(device.m_logical_device, pipeline.m_pipeline_layout, device.m_vulkan_allocator);
+    vkDestroyPipeline(device.m_logical_device, pipeline.m_pipeline, device.m_vulkan_allocator);
 }
 
 void cmd_begin_render_pass(const CommandBuffer& command_buffer, const RenderPassBeginDesc& desc)
@@ -1019,15 +1409,33 @@ void cmd_barrier(
     VkImageMemoryBarrier* image_memory_barriers =
         image_barriers_count ? new VkImageMemoryBarrier[ image_barriers_count ] : nullptr;
 
-    for (u32 i = 0; i < buffer_barriers_count; ++i)
-    {
-        // TODO: create buffer barriers
-    }
-
+    // TODO: multi-queue barriers
     VkAccessFlags src_access = VkAccessFlags(0);
     VkAccessFlags dst_access = VkAccessFlags(0);
 
-    // TODO: queues
+    for (u32 i = 0; i < buffer_barriers_count; ++i)
+    {
+        FT_ASSERT(buffer_barriers[ i ].buffer);
+        FT_ASSERT(buffer_barriers[ i ].src_queue);
+        FT_ASSERT(buffer_barriers[ i ].dst_queue);
+
+        VkAccessFlags src_access_mask = determine_access_flags(buffer_barriers[ i ].old_state);
+        VkAccessFlags dst_access_mask = determine_access_flags(buffer_barriers[ i ].new_state);
+
+        VkBufferMemoryBarrier buffer_memory_barrier{};
+        buffer_memory_barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        buffer_memory_barrier.pNext = nullptr;
+        buffer_memory_barrier.srcAccessMask = src_access_mask;
+        buffer_memory_barrier.dstAccessMask = dst_access_mask;
+        buffer_memory_barrier.srcQueueFamilyIndex = buffer_barriers[ i ].src_queue->m_family_index;
+        buffer_memory_barrier.dstQueueFamilyIndex = buffer_barriers[ i ].dst_queue->m_family_index;
+        buffer_memory_barrier.buffer = buffer_barriers[ i ].buffer->m_buffer;
+        buffer_memory_barrier.offset = buffer_barriers[ i ].offset;
+        buffer_memory_barrier.size = buffer_barriers[ i ].size;
+
+        src_access |= src_access_mask;
+        dst_access |= dst_access_mask;
+    }
 
     for (u32 i = 0; i < image_barriers_count; ++i)
     {
