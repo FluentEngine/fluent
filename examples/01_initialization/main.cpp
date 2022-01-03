@@ -29,6 +29,7 @@ void on_init()
     renderer = create_renderer(renderer_desc);
 
     DeviceDesc device_desc{};
+    device_desc.frame_in_use_count = 2;
     device = create_device(renderer, device_desc);
 
     QueueDesc queue_desc{};
@@ -48,13 +49,10 @@ void on_init()
         in_flight_fences[ i ] = create_fence(device);
         command_buffers_recorded[ i ] = false;
     }
-}
 
-void on_load(u32 width, u32 height)
-{
     SwapchainDesc swapchain_desc{};
-    swapchain_desc.width = width;
-    swapchain_desc.height = height;
+    swapchain_desc.width = window_get_width(get_app_window());
+    swapchain_desc.height = window_get_height(get_app_window());
     swapchain_desc.queue = &queue;
     swapchain_desc.image_count = FRAME_COUNT;
 
@@ -98,11 +96,21 @@ void on_load(u32 width, u32 height)
     }
 }
 
-void on_update(f64 deltaTime)
+void on_resize(u32 width, u32 height)
 {
+    queue_wait_idle(queue);
+    destroy_swapchain(device, swapchain);
+
+    SwapchainDesc swapchain_desc{};
+    swapchain_desc.width = window_get_width(get_app_window());
+    swapchain_desc.height = window_get_height(get_app_window());
+    swapchain_desc.queue = &queue;
+    swapchain_desc.image_count = FRAME_COUNT;
+
+    swapchain = create_swapchain(renderer, device, swapchain_desc);
 }
 
-void on_render()
+void on_update(f64 delta_time)
 {
     if (!command_buffers_recorded[ frame_index ])
     {
@@ -175,17 +183,12 @@ void on_render()
     frame_index = (frame_index + 1) % FRAME_COUNT;
 }
 
-void on_unload()
-{
-    queue_wait_idle(queue);
-    destroy_pipeline(device, pipeline);
-    destroy_descriptor_set_layout(device, descriptor_set_layout);
-    destroy_swapchain(device, swapchain);
-}
-
 void on_shutdown()
 {
     device_wait_idle(device);
+    destroy_pipeline(device, pipeline);
+    destroy_descriptor_set_layout(device, descriptor_set_layout);
+    destroy_swapchain(device, swapchain);
     for (u32 i = 0; i < FRAME_COUNT; ++i)
     {
         destroy_semaphore(device, image_available_semaphores[ i ]);
@@ -208,10 +211,8 @@ int main()
     config.height = 600;
     config.log_level = LogLevel::eTrace;
     config.on_init = on_init;
-    config.on_load = on_load;
     config.on_update = on_update;
-    config.on_render = on_render;
-    config.on_unload = on_unload;
+    config.on_resize = on_resize;
     config.on_shutdown = on_shutdown;
 
     application_init(&config);

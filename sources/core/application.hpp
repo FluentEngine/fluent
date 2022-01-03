@@ -9,10 +9,8 @@ struct Window;
 
 using InitCallback = void (*)();
 using UpdateCallback = void (*)(f64 deltaTime);
-using RenderCallback = void (*)();
-using LoadCallback = void (*)(u32 width, u32 height);
-using UnloadCallback = void (*)();
 using ShutdownCallback = void (*)();
+using ResizeCallback = void (*)(u32 width, u32 height);
 
 struct ApplicationConfig
 {
@@ -24,10 +22,8 @@ struct ApplicationConfig
     LogLevel log_level;
     InitCallback on_init;
     UpdateCallback on_update;
-    RenderCallback on_render;
-    LoadCallback on_load;
-    UnloadCallback on_unload;
     ShutdownCallback on_shutdown;
+    ResizeCallback on_resize;
 };
 
 void application_init(const ApplicationConfig* state);

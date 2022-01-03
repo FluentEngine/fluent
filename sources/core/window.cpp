@@ -30,4 +30,14 @@ void destroy_window(Window& window)
     SDL_DestroyWindow(( SDL_Window* ) window.m_handle);
 }
 
+u32 window_get_width(const Window* window)
+{
+    return window->m_data[ WindowParams::eWidth ];
+}
+
+u32 window_get_height(const Window* window)
+{
+    return window->m_data[ WindowParams::eHeight ];
+}
+
 } // namespace fluent

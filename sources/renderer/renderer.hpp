@@ -1,14 +1,19 @@
 #pragma once
 
 #include "volk.h"
+#include "vk_mem_alloc.h"
 #include "core/base.hpp"
 #include "renderer/renderer_enums.hpp"
 
 namespace fluent
 {
 
+static constexpr u32 FLUENT_VULKAN_API_VERSION = VK_API_VERSION_1_2;
 static constexpr u32 MAX_ATTACHMENTS_COUNT = 10;
 static constexpr u32 MAX_PUSH_CONSTANT_RANGE = 128;
+static constexpr u32 MAX_STAGE_COUNT = 5;
+static constexpr u32 MAX_VERTEX_BINGINGS_COUNT = 15;
+static constexpr u32 MAX_VERTEX_ATTRIBUTE_COUNT = 15;
 
 struct RendererDesc
 {
@@ -33,7 +38,7 @@ struct Renderer
 
 struct DeviceDesc
 {
-    // for future use
+    u32 frame_in_use_count;
 };
 
 struct Device
@@ -42,6 +47,7 @@ struct Device
     VkInstance m_instance;
     VkPhysicalDevice m_physical_device;
     VkDevice m_logical_device;
+    VmaAllocator m_memory_allocator;
 };
 
 struct QueueDesc
@@ -162,7 +168,7 @@ struct RenderPass
     u32 m_width;
     u32 m_height;
     u32 m_color_attachment_count;
-    bool m_has_depth_stencil;
+    b32 m_has_depth_stencil;
 };
 
 struct ClearValue
@@ -246,8 +252,8 @@ struct RasterizerStateDesc
 
 struct DepthStateDesc
 {
-    bool depth_test;
-    bool depth_write;
+    b32 depth_test;
+    b32 depth_write;
     CompareOp compare_op;
 };
 

@@ -13,11 +13,9 @@ struct ApplicationState
     Window window;
 
     InitCallback on_init;
-    LoadCallback on_load;
     UpdateCallback on_update;
-    RenderCallback on_render;
-    UnloadCallback on_unload;
     ShutdownCallback on_shutdown;
+    ResizeCallback on_resize;
 
     f64 delta_time;
 };
@@ -27,11 +25,9 @@ static ApplicationState app_state{};
 void application_init(const ApplicationConfig* config)
 {
     FT_ASSERT(config->on_init);
-    FT_ASSERT(config->on_load);
     FT_ASSERT(config->on_update);
-    FT_ASSERT(config->on_render);
-    FT_ASSERT(config->on_unload);
     FT_ASSERT(config->on_shutdown);
+    FT_ASSERT(config->on_resize);
 
     int init_result = SDL_Init(SDL_INIT_VIDEO);
     FT_ASSERT(init_result >= 0 && "SDL Init failed");
@@ -40,13 +36,11 @@ void application_init(const ApplicationConfig* config)
 
     app_state.title = config->title;
     app_state.on_init = config->on_init;
-    app_state.on_load = config->on_load;
     app_state.on_update = config->on_update;
-    app_state.on_render = config->on_render;
-    app_state.on_unload = config->on_unload;
     app_state.on_shutdown = config->on_shutdown;
+    app_state.on_resize = config->on_resize;
 
-    spdlog::set_level(util_to_spdlog_level(config->log_level));
+    spdlog::set_level(to_spdlog_level(config->log_level));
 }
 
 void application_run()
@@ -54,9 +48,6 @@ void application_run()
     app_state.on_init();
 
     app_state.is_running = true;
-
-    app_state.on_load(
-        app_state.window.m_data[ WindowParams::eWidth ], app_state.window.m_data[ WindowParams::eHeight ]);
 
     SDL_Event e;
 
@@ -81,10 +72,7 @@ void application_run()
                     app_state.window.m_data[ WindowParams::eWidth ] = e.window.data1;
                     app_state.window.m_data[ WindowParams::eHeight ] = e.window.data2;
 
-                    app_state.on_unload();
-                    app_state.on_load(
-                        app_state.window.m_data[ WindowParams::eWidth ],
-                        app_state.window.m_data[ WindowParams::eHeight ]);
+                    app_state.on_resize(e.window.data1, e.window.data2);
                 }
                 break;
             default:
@@ -93,10 +81,8 @@ void application_run()
         }
 
         app_state.on_update(app_state.delta_time);
-        app_state.on_render();
     }
 
-    app_state.on_unload();
     app_state.on_shutdown();
 }
 

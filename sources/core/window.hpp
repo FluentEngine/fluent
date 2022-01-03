@@ -23,4 +23,7 @@ struct Window
 Window create_window(const char* title, u32 x, u32 y, u32 width, u32 height);
 void destroy_window(Window& window);
 
+u32 window_get_width(const Window* window);
+u32 window_get_height(const Window* window);
+
 } // namespace fluent

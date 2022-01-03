@@ -18,6 +18,7 @@ using i64 = int64_t;
 using u64 = uint64_t;
 using f32 = float;
 using f64 = double;
+using b32 = u32;
 
 #include "core/log.hpp"
 #include "core/assert.hpp"

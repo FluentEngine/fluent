@@ -243,7 +243,7 @@ static inline void get_instance_extensions(u32& extensions_count, const char** e
 {
     if (extension_names == nullptr)
     {
-        bool result =
+        b32 result =
             SDL_Vulkan_GetInstanceExtensions(( SDL_Window* ) get_app_window()->m_handle, &extensions_count, nullptr);
 #ifdef FLUENT_DEBUG
         extensions_count++;
@@ -253,12 +253,12 @@ static inline void get_instance_extensions(u32& extensions_count, const char** e
     {
 #ifdef FLUENT_DEBUG
         u32 sdl_extensions_count = extensions_count - 1;
-        bool result = SDL_Vulkan_GetInstanceExtensions(
+        b32 result = SDL_Vulkan_GetInstanceExtensions(
             ( SDL_Window* ) get_app_window()->m_handle, &sdl_extensions_count, extension_names);
         FT_ASSERT(result);
         extension_names[ extensions_count - 1 ] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
 #else
-        bool result = SDL_Vulkan_GetInstanceExtensions(
+        b32 result = SDL_Vulkan_GetInstanceExtensions(
             ( SDL_Window* ) get_app_window()->m_handle, &extensions_count, extension_names);
 #endif
     }
@@ -310,7 +310,7 @@ static inline u32 find_queue_family_index(VkPhysicalDevice physical_device, Queu
     return index;
 }
 
-static inline bool format_has_depth_aspect(Format format)
+static inline b32 format_has_depth_aspect(Format format)
 {
     switch (format)
     {
@@ -326,7 +326,7 @@ static inline bool format_has_depth_aspect(Format format)
     }
 }
 
-static inline bool format_has_stencil_aspect(Format format)
+static inline b32 format_has_stencil_aspect(Format format)
 {
     switch (format)
     {
@@ -486,7 +486,7 @@ Renderer create_renderer(const RendererDesc& desc)
     app_info.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
     app_info.pEngineName = "Fluent";
     app_info.engineVersion = VK_MAKE_VERSION(0, 0, 1);
-    app_info.apiVersion = VK_API_VERSION_1_1;
+    app_info.apiVersion = FLUENT_VULKAN_API_VERSION;
 
     u32 extensions_count = 0;
     get_instance_extensions(extensions_count, nullptr);
@@ -554,6 +554,8 @@ void destroy_renderer(Renderer& renderer)
 
 Device create_device(const Renderer& renderer, const DeviceDesc& desc)
 {
+    FT_ASSERT(desc.frame_in_use_count > 0);
+
     Device device{};
     device.m_vulkan_allocator = renderer.m_vulkan_allocator;
     device.m_instance = renderer.m_instance;
@@ -597,12 +599,25 @@ Device create_device(const Renderer& renderer, const DeviceDesc& desc)
     VK_ASSERT(vkCreateDevice(
         device.m_physical_device, &device_create_info, device.m_vulkan_allocator, &device.m_logical_device));
 
+    VmaAllocatorCreateInfo vma_allocator_create_info{};
+    vma_allocator_create_info.instance = device.m_instance;
+    vma_allocator_create_info.physicalDevice = device.m_physical_device;
+    vma_allocator_create_info.device = device.m_logical_device;
+    vma_allocator_create_info.flags = 0;
+    vma_allocator_create_info.pAllocationCallbacks = device.m_vulkan_allocator;
+    vma_allocator_create_info.frameInUseCount = desc.frame_in_use_count;
+    vma_allocator_create_info.vulkanApiVersion = FLUENT_VULKAN_API_VERSION;
+
+    VK_ASSERT(vmaCreateAllocator(&vma_allocator_create_info, &device.m_memory_allocator));
+
     return device;
 }
 
 void destroy_device(Device& device)
 {
+    FT_ASSERT(device.m_memory_allocator);
     FT_ASSERT(device.m_logical_device);
+    vmaDestroyAllocator(device.m_memory_allocator);
     vkDestroyDevice(device.m_logical_device, device.m_vulkan_allocator);
 }
 
@@ -1184,7 +1199,6 @@ void destroy_descriptor_set_layout(const Device& device, DescriptorSetLayout& la
 
 Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc)
 {
-    static constexpr int MAX_STAGE_COUNT = 5; // ??? TODO: Remove from here maybe or rename it
     FT_ASSERT(desc.descriptor_set_layout);
     FT_ASSERT(desc.render_pass);
 
@@ -1195,7 +1209,6 @@ Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc
     VkPipelineShaderStageCreateInfo shader_stage_create_infos[ MAX_STAGE_COUNT ];
     for (u32 i = 0; i < shader_stage_count; ++i)
     {
-        shader_stage_create_infos[ i ] = VkPipelineShaderStageCreateInfo{};
         shader_stage_create_infos[ i ].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         shader_stage_create_infos[ i ].pNext = nullptr;
         shader_stage_create_infos[ i ].flags = 0;
@@ -1205,31 +1218,21 @@ Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc
         shader_stage_create_infos[ i ].pSpecializationInfo = nullptr;
     }
 
-    VkVertexInputBindingDescription* binding_descriptions = nullptr;
-    if (desc.binding_desc_count > 0)
+    VkVertexInputBindingDescription binding_descriptions[ MAX_VERTEX_BINGINGS_COUNT ];
+    for (u32 i = 0; i < desc.binding_desc_count; ++i)
     {
-        binding_descriptions = new VkVertexInputBindingDescription[ desc.binding_desc_count ];
-        for (u32 i = 0; i < desc.binding_desc_count; ++i)
-        {
-            binding_descriptions[ i ] = VkVertexInputBindingDescription{};
-            binding_descriptions[ i ].binding = desc.binding_descs[ i ].binding;
-            binding_descriptions[ i ].stride = desc.binding_descs[ i ].stride;
-            binding_descriptions[ i ].inputRate = to_vk_vertex_input_rate(desc.binding_descs[ i ].input_rate);
-        }
+        binding_descriptions[ i ].binding = desc.binding_descs[ i ].binding;
+        binding_descriptions[ i ].stride = desc.binding_descs[ i ].stride;
+        binding_descriptions[ i ].inputRate = to_vk_vertex_input_rate(desc.binding_descs[ i ].input_rate);
     }
 
-    VkVertexInputAttributeDescription* attribute_descriptions = nullptr;
-    if (desc.attribute_desc_count > 0)
+    VkVertexInputAttributeDescription attribute_descriptions[ MAX_VERTEX_ATTRIBUTE_COUNT ];
+    for (u32 i = 0; i < desc.attribute_desc_count; ++i)
     {
-        attribute_descriptions = new VkVertexInputAttributeDescription[ desc.attribute_desc_count ];
-        for (u32 i = 0; i < desc.attribute_desc_count; ++i)
-        {
-            attribute_descriptions[ i ] = VkVertexInputAttributeDescription{};
-            attribute_descriptions[ i ].location = desc.attribute_descs[ i ].location;
-            attribute_descriptions[ i ].binding = desc.attribute_descs[ i ].binding;
-            attribute_descriptions[ i ].format = to_vk_format(desc.attribute_descs[ i ].format);
-            attribute_descriptions[ i ].offset = desc.attribute_descs[ i ].offset;
-        }
+        attribute_descriptions[ i ].location = desc.attribute_descs[ i ].location;
+        attribute_descriptions[ i ].binding = desc.attribute_descs[ i ].binding;
+        attribute_descriptions[ i ].format = to_vk_format(desc.attribute_descs[ i ].format);
+        attribute_descriptions[ i ].offset = desc.attribute_descs[ i ].offset;
     }
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info{};
@@ -1322,15 +1325,6 @@ Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc
     VK_ASSERT(vkCreatePipelineLayout(
         device.m_logical_device, &pipeline_layout_create_info, device.m_vulkan_allocator, &pipeline.m_pipeline_layout));
 
-    //// create dummy render pass
-    // RenderPassDesc render_pass_desc{};
-    // render_pass_desc.width = 0;
-    // render_pass_desc.height = 0;
-    // render_pass_desc.color_attachment_count = 0;
-    // render_pass_desc.depth_stencil = nullptr;
-
-    // RenderPass render_pass = create_render_pass(device, render_pass_desc);
-
     VkGraphicsPipelineCreateInfo pipeline_create_info{};
     pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipeline_create_info.stageCount = shader_stage_count;
@@ -1349,18 +1343,6 @@ Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc
     VK_ASSERT(vkCreateGraphicsPipelines(
         device.m_logical_device, VK_NULL_HANDLE, 1, &pipeline_create_info, device.m_vulkan_allocator,
         &pipeline.m_pipeline));
-
-    // destroy_render_pass(device, render_pass);
-
-    if (binding_descriptions)
-    {
-        delete[] binding_descriptions;
-    }
-
-    if (attribute_descriptions)
-    {
-        delete[] attribute_descriptions;
-    }
 
     return pipeline;
 }
