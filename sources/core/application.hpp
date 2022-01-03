@@ -14,6 +14,8 @@ using ResizeCallback = void (*)(u32 width, u32 height);
 
 struct ApplicationConfig
 {
+    u32 argc;
+    char** argv;
     const char* title = nullptr;
     u32 x;
     u32 y;
@@ -26,11 +28,14 @@ struct ApplicationConfig
     ResizeCallback on_resize;
 };
 
-void application_init(const ApplicationConfig* state);
-void application_run();
-void application_shutdown();
+void app_init(const ApplicationConfig* state);
+void app_run();
+void app_shutdown();
+
+void app_set_shaders_directory(const std::string& path);
 
 const char* get_app_name();
 const Window* get_app_window();
+const std::string& get_app_shaders_directory();
 
 } // namespace fluent

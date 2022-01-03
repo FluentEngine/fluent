@@ -1160,7 +1160,7 @@ Shader create_shader(const Device& device, const ShaderDesc& desc)
     Shader shader{};
     shader.m_stage = desc.stage;
 
-    auto byte_code = read_file_binary(desc.filename);
+    auto byte_code = read_file_binary(get_app_shaders_directory() + desc.filename);
 
     VkShaderModuleCreateInfo shader_create_info{};
     shader_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

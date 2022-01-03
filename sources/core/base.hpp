@@ -4,8 +4,11 @@
 #undef NDEBUG
 #endif
 
+#include <string>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <unistd.h>
 #include <malloc.h>
 
 using i8 = int8_t;

@@ -1,1 +1,1 @@
-add_subdirectory(01_initialization)
+add_subdirectory(01_hello_triangle)

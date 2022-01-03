@@ -24,6 +24,8 @@ Pipeline pipeline;
 
 void on_init()
 {
+    app_set_shaders_directory("../../../examples/shaders/");
+
     RendererDesc renderer_desc{};
     renderer_desc.vulkan_allocator = nullptr;
     renderer = create_renderer(renderer_desc);
@@ -59,11 +61,11 @@ void on_init()
     swapchain = create_swapchain(renderer, device, swapchain_desc);
 
     ShaderDesc vert_shader_desc{};
-    vert_shader_desc.filename = "../examples/shaders/main.vert.glsl.spv";
+    vert_shader_desc.filename = "main.vert.glsl.spv";
     vert_shader_desc.stage = ShaderStage::eVertex;
 
     ShaderDesc frag_shader_desc{};
-    frag_shader_desc.filename = "../examples/shaders/main.frag.glsl.spv";
+    frag_shader_desc.filename = "main.frag.glsl.spv";
     frag_shader_desc.stage = ShaderStage::eFragment;
 
     Shader shaders[ 2 ];
@@ -201,9 +203,11 @@ void on_shutdown()
     destroy_renderer(renderer);
 }
 
-int main()
+int main(int argc, char** argv)
 {
     ApplicationConfig config;
+    config.argc = argc;
+    config.argv = argv;
     config.title = "TestApp";
     config.x = 0;
     config.y = 0;
@@ -215,9 +219,9 @@ int main()
     config.on_resize = on_resize;
     config.on_shutdown = on_shutdown;
 
-    application_init(&config);
-    application_run();
-    application_shutdown();
+    app_init(&config);
+    app_run();
+    app_shutdown();
 
     return 0;
 }
