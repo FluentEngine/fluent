@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <malloc.h>
 
 using i8 = int8_t;
 using u8 = uint8_t;

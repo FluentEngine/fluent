@@ -1,4 +1,4 @@
-#include <map>
+#include <algorithm>
 #include <SDL_vulkan.h>
 #include "tinyimageformat_apis.h"
 #include "utils/utils.hpp"
@@ -288,7 +288,8 @@ static inline u32 find_queue_family_index(VkPhysicalDevice physical_device, Queu
 
     u32 queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
-    VkQueueFamilyProperties queue_families[ queue_family_count ];
+    VkQueueFamilyProperties* queue_families =
+        ( VkQueueFamilyProperties* ) alloca(queue_family_count * sizeof(VkQueueFamilyProperties));
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families);
 
     VkQueueFlagBits target_queue_type = to_vk_queue_type(queue_type);
@@ -489,12 +490,12 @@ Renderer create_renderer(const RendererDesc& desc)
 
     u32 extensions_count = 0;
     get_instance_extensions(extensions_count, nullptr);
-    const char* extensions[ extensions_count ];
+    const char** extensions = ( const char** ) alloca(extensions_count * sizeof(const char*));
     get_instance_extensions(extensions_count, extensions);
 
     u32 layers_count = 0;
     get_instance_layers(layers_count, nullptr);
-    const char* layers[ layers_count ];
+    const char** layers = ( const char** ) alloca(layers_count * sizeof(const char*));
     get_instance_layers(layers_count, layers);
 
     VkInstanceCreateInfo instance_create_info{};
@@ -520,7 +521,7 @@ Renderer create_renderer(const RendererDesc& desc)
     u32 device_count = 0;
     vkEnumeratePhysicalDevices(renderer.m_instance, &device_count, nullptr);
     FT_ASSERT(device_count != 0);
-    VkPhysicalDevice physical_devices[ device_count ];
+    VkPhysicalDevice* physical_devices = ( VkPhysicalDevice* ) alloca(device_count * sizeof(VkPhysicalDevice));
     vkEnumeratePhysicalDevices(renderer.m_instance, &device_count, physical_devices);
 
     renderer.m_physical_device = physical_devices[ 0 ];
@@ -560,10 +561,11 @@ Device create_device(const Renderer& renderer, const DeviceDesc& desc)
 
     u32 queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(device.m_physical_device, &queue_family_count, nullptr);
-    VkQueueFamilyProperties queue_families[ queue_family_count ];
+    VkQueueFamilyProperties* queue_families =
+        ( VkQueueFamilyProperties* ) alloca(queue_family_count * sizeof(VkQueueFamilyProperties));
     vkGetPhysicalDeviceQueueFamilyProperties(device.m_physical_device, &queue_family_count, queue_families);
 
-    VkDeviceQueueCreateInfo queue_create_infos[ queue_family_count ];
+    VkDeviceQueueCreateInfo queue_create_infos[ static_cast<int>(QueueType::eLast) ];
     f32 queue_priority = 1.0f;
 
     for (u32 i = 0; i < queue_family_count; ++i)
@@ -577,7 +579,7 @@ Device create_device(const Renderer& renderer, const DeviceDesc& desc)
         queue_create_infos[ i ].queueFamilyIndex = i;
     }
 
-    u32 device_extension_count = 1;
+    static const u32 device_extension_count = 1;
     const char* device_extensions[ device_extension_count ] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
     VkDeviceCreateInfo device_create_info{};
@@ -629,9 +631,9 @@ void queue_wait_idle(const Queue& queue)
 void queue_submit(const Queue& queue, const QueueSubmitDesc& desc)
 {
     VkPipelineStageFlags wait_dst_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    VkSemaphore wait_semaphores[ desc.wait_semaphore_count ];
-    VkCommandBuffer command_buffers[ desc.command_buffer_count ];
-    VkSemaphore signal_semaphores[ desc.signal_semaphore_count ];
+    VkSemaphore* wait_semaphores = ( VkSemaphore* ) alloca(desc.wait_semaphore_count * sizeof(VkSemaphore));
+    VkCommandBuffer* command_buffers = ( VkCommandBuffer* ) alloca(desc.command_buffer_count * sizeof(VkCommandBuffer));
+    VkSemaphore* signal_semaphores = ( VkSemaphore* ) alloca(desc.signal_semaphore_count * sizeof(VkSemaphore));
 
     for (u32 i = 0; i < desc.wait_semaphore_count; ++i)
     {
@@ -664,7 +666,8 @@ void queue_submit(const Queue& queue, const QueueSubmitDesc& desc)
 
 void queue_present(const Queue& queue, const QueuePresentDesc& desc)
 {
-    VkSemaphore wait_semaphores[ desc.wait_semaphore_count ];
+    VkSemaphore* wait_semaphores = ( VkSemaphore* ) alloca(desc.wait_semaphore_count * sizeof(VkSemaphore));
+
     for (u32 i = 0; i < desc.wait_semaphore_count; ++i)
     {
         wait_semaphores[ i ] = desc.wait_semaphores[ i ].m_semaphore;
@@ -727,7 +730,7 @@ void destroy_fence(const Device& device, Fence& fence)
 
 void wait_for_fences(const Device& device, u32 count, Fence* fences)
 {
-    VkFence vk_fences[ count ];
+    VkFence* vk_fences = ( VkFence* ) alloca(count * sizeof(VkFence));
     for (u32 i = 0; i < count; ++i)
     {
         vk_fences[ i ] = fences[ i ].m_fence;
@@ -738,7 +741,7 @@ void wait_for_fences(const Device& device, u32 count, Fence* fences)
 
 void reset_fences(const Device& device, u32 count, Fence* fences)
 {
-    VkFence vk_fences[ count ];
+    VkFence* vk_fences = ( VkFence* ) alloca(count * sizeof(VkFence));
     for (u32 i = 0; i < count; ++i)
     {
         vk_fences[ i ] = fences[ i ].m_fence;
@@ -753,11 +756,17 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
 
     SDL_Vulkan_CreateSurface(( SDL_Window* ) get_app_window()->m_handle, device.m_instance, &swapchain.m_surface);
 
+    VkBool32 support_surface = false;
+    vkGetPhysicalDeviceSurfaceSupportKHR(
+        device.m_physical_device, desc.queue->m_family_index, swapchain.m_surface, &support_surface);
+
+    FT_ASSERT(support_surface);
+
     // find best present mode
     uint32_t present_mode_count = 0;
     vkGetPhysicalDeviceSurfacePresentModesKHR(
         device.m_physical_device, swapchain.m_surface, &present_mode_count, nullptr);
-    VkPresentModeKHR present_modes[ present_mode_count ];
+    VkPresentModeKHR* present_modes = ( VkPresentModeKHR* ) alloca(present_mode_count * sizeof(VkPresentModeKHR));
     vkGetPhysicalDeviceSurfacePresentModesKHR(
         device.m_physical_device, swapchain.m_surface, &present_mode_count, present_modes);
 
@@ -788,7 +797,9 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
     /// find best surface format
     u32 surface_format_count = 0;
     vkGetPhysicalDeviceSurfaceFormatsKHR(device.m_physical_device, swapchain.m_surface, &surface_format_count, nullptr);
-    VkSurfaceFormatKHR surface_formats[ surface_format_count ];
+    VkSurfaceFormatKHR* surface_formats =
+        ( VkSurfaceFormatKHR* ) alloca(surface_format_count * sizeof(VkSurfaceFormatKHR));
+
     vkGetPhysicalDeviceSurfaceFormatsKHR(
         device.m_physical_device, swapchain.m_surface, &surface_format_count, surface_formats);
 
@@ -839,7 +850,7 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
         device.m_logical_device, &swapchain_create_info, device.m_vulkan_allocator, &swapchain.m_swapchain));
 
     vkGetSwapchainImagesKHR(device.m_logical_device, swapchain.m_swapchain, &swapchain.m_image_count, nullptr);
-    VkImage swapchain_images[ swapchain.m_image_count ];
+    VkImage* swapchain_images = ( VkImage* ) alloca(swapchain.m_image_count * sizeof(VkImage));
     vkGetSwapchainImagesKHR(device.m_logical_device, swapchain.m_swapchain, &swapchain.m_image_count, swapchain_images);
 
     VkImageViewCreateInfo image_view_create_info{};
@@ -955,7 +966,7 @@ void allocate_command_buffers(
 {
     FT_ASSERT(command_buffers);
 
-    VkCommandBuffer buffers[ count ] = {};
+    VkCommandBuffer* buffers = ( VkCommandBuffer* ) alloca(count * sizeof(VkCommandBuffer));
 
     VkCommandBufferAllocateInfo command_buffer_allocate_info{};
     command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -978,7 +989,7 @@ void free_command_buffers(
 {
     FT_ASSERT(command_buffers);
 
-    VkCommandBuffer buffers[ count ];
+    VkCommandBuffer* buffers = ( VkCommandBuffer* ) alloca(count * sizeof(VkCommandBuffer));
     for (u32 i = 0; i < count; ++i)
     {
         buffers[ i ] = command_buffers[ i ].m_command_buffer;
@@ -1020,8 +1031,8 @@ RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc)
 
     u32 attachments_count = desc.color_attachment_count;
 
-    VkAttachmentDescription attachment_descriptions[ desc.color_attachment_count + 1 ];
-    VkAttachmentReference color_attachment_references[ desc.color_attachment_count ];
+    VkAttachmentDescription attachment_descriptions[ MAX_ATTACHMENTS_COUNT + 1 ];
+    VkAttachmentReference color_attachment_references[ MAX_ATTACHMENTS_COUNT ];
     VkAttachmentReference depth_attachment_reference{};
 
     for (u32 i = 0; i < desc.color_attachment_count; ++i)
@@ -1044,7 +1055,7 @@ RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc)
     {
         render_pass.m_has_depth_stencil = true;
 
-        u32 i = desc.color_attachment_count;
+        u32 i = attachments_count;
         attachment_descriptions[ i ].flags = 0;
         attachment_descriptions[ i ].format = to_vk_format(desc.depth_stencil->m_format);
         attachment_descriptions[ i ].samples = to_vk_sample_count(desc.depth_stencil->m_sample_count);
@@ -1057,7 +1068,7 @@ RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc)
 
         depth_attachment_reference.attachment = i;
         depth_attachment_reference.layout = attachment_descriptions[ i ].finalLayout;
-        // TODO: support for depth attachment
+
         attachments_count++;
     }
 
@@ -1068,7 +1079,7 @@ RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc)
     subpass_description.inputAttachmentCount = 0;
     subpass_description.pInputAttachments = nullptr;
     subpass_description.colorAttachmentCount = desc.color_attachment_count;
-    subpass_description.pColorAttachments = color_attachment_references;
+    subpass_description.pColorAttachments = attachments_count ? color_attachment_references : nullptr;
     subpass_description.pResolveAttachments = nullptr;
     subpass_description.pDepthStencilAttachment = desc.depth_stencil ? &depth_attachment_reference : nullptr;
     subpass_description.preserveAttachmentCount = 0;
@@ -1079,7 +1090,7 @@ RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc)
     render_pass_create_info.pNext = nullptr;
     render_pass_create_info.flags = 0;
     render_pass_create_info.attachmentCount = attachments_count;
-    render_pass_create_info.pAttachments = attachment_descriptions;
+    render_pass_create_info.pAttachments = attachments_count ? attachment_descriptions : nullptr;
     render_pass_create_info.subpassCount = 1;
     render_pass_create_info.pSubpasses = &subpass_description;
     render_pass_create_info.dependencyCount = 0;
@@ -1088,7 +1099,7 @@ RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc)
     VK_ASSERT(vkCreateRenderPass(
         device.m_logical_device, &render_pass_create_info, device.m_vulkan_allocator, &render_pass.m_render_pass));
 
-    VkImageView image_views[ attachments_count ];
+    VkImageView image_views[ MAX_ATTACHMENTS_COUNT + 1 ];
     for (u32 i = 0; i < desc.color_attachment_count; ++i)
     {
         image_views[ i ] = desc.color_attachments[ i ]->m_image_view;
@@ -1173,13 +1184,15 @@ void destroy_descriptor_set_layout(const Device& device, DescriptorSetLayout& la
 
 Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc)
 {
+    static constexpr int MAX_STAGE_COUNT = 5; // ??? TODO: Remove from here maybe or rename it
     FT_ASSERT(desc.descriptor_set_layout);
+    FT_ASSERT(desc.render_pass);
 
     Pipeline pipeline{};
     pipeline.m_type = PipelineType::eGraphics;
 
     u32 shader_stage_count = desc.descriptor_set_layout->m_shader_count;
-    VkPipelineShaderStageCreateInfo shader_stage_create_infos[ shader_stage_count ];
+    VkPipelineShaderStageCreateInfo shader_stage_create_infos[ MAX_STAGE_COUNT ];
     for (u32 i = 0; i < shader_stage_count; ++i)
     {
         shader_stage_create_infos[ i ] = VkPipelineShaderStageCreateInfo{};
@@ -1309,14 +1322,14 @@ Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc
     VK_ASSERT(vkCreatePipelineLayout(
         device.m_logical_device, &pipeline_layout_create_info, device.m_vulkan_allocator, &pipeline.m_pipeline_layout));
 
-    // create dummy render pass
-    RenderPassDesc render_pass_desc{};
-    render_pass_desc.width = 0;
-    render_pass_desc.height = 0;
-    render_pass_desc.color_attachment_count = 0;
-    render_pass_desc.depth_stencil = nullptr;
+    //// create dummy render pass
+    // RenderPassDesc render_pass_desc{};
+    // render_pass_desc.width = 0;
+    // render_pass_desc.height = 0;
+    // render_pass_desc.color_attachment_count = 0;
+    // render_pass_desc.depth_stencil = nullptr;
 
-    RenderPass render_pass = create_render_pass(device, render_pass_desc);
+    // RenderPass render_pass = create_render_pass(device, render_pass_desc);
 
     VkGraphicsPipelineCreateInfo pipeline_create_info{};
     pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -1331,13 +1344,13 @@ Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc
     pipeline_create_info.pDepthStencilState = &depth_stencil_state_create_info;
     pipeline_create_info.pDynamicState = &dynamic_state_create_info;
     pipeline_create_info.layout = pipeline.m_pipeline_layout;
-    pipeline_create_info.renderPass = render_pass.m_render_pass;
+    pipeline_create_info.renderPass = desc.render_pass->m_render_pass;
 
     VK_ASSERT(vkCreateGraphicsPipelines(
         device.m_logical_device, VK_NULL_HANDLE, 1, &pipeline_create_info, device.m_vulkan_allocator,
         &pipeline.m_pipeline));
 
-    destroy_render_pass(device, render_pass);
+    // destroy_render_pass(device, render_pass);
 
     if (binding_descriptions)
     {
@@ -1410,11 +1423,12 @@ void cmd_barrier(
     const CommandBuffer& command_buffer, u32 buffer_barriers_count, const BufferBarrier* buffer_barriers,
     u32 image_barriers_count, const ImageBarrier* image_barriers)
 {
-    // TODO: rewrite without heap allocation
     VkBufferMemoryBarrier* buffer_memory_barriers =
-        buffer_barriers_count ? new VkBufferMemoryBarrier[ buffer_barriers_count ] : nullptr;
+        buffer_barriers_count ? ( VkBufferMemoryBarrier* ) alloca(buffer_barriers_count * sizeof(VkBufferMemoryBarrier))
+                              : nullptr;
     VkImageMemoryBarrier* image_memory_barriers =
-        image_barriers_count ? new VkImageMemoryBarrier[ image_barriers_count ] : nullptr;
+        image_barriers_count ? ( VkImageMemoryBarrier* ) alloca(image_barriers_count * sizeof(VkImageMemoryBarrier))
+                             : nullptr;
 
     // TODO: multi-queue barriers
     VkAccessFlags src_access = VkAccessFlags(0);

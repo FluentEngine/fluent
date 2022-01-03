@@ -2,7 +2,9 @@ set(target volk)
 project(${target})
 add_library(${target} volk.c)
 
-target_link_libraries(${target} dl)
+if (UNIX AND NOT APPLE)
+	target_link_libraries(${target} dl)
+endif()
 
 target_include_directories(${target}
 	PUBLIC

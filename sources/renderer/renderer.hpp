@@ -260,6 +260,7 @@ struct PipelineDesc
     RasterizerStateDesc rasterizer_desc;
     DepthStateDesc depth_state_desc;
     DescriptorSetLayout* descriptor_set_layout;
+    RenderPass* render_pass;
 };
 
 struct Pipeline

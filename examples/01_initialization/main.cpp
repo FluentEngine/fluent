@@ -48,6 +48,17 @@ void on_init()
         in_flight_fences[ i ] = create_fence(device);
         command_buffers_recorded[ i ] = false;
     }
+}
+
+void on_load(u32 width, u32 height)
+{
+    SwapchainDesc swapchain_desc{};
+    swapchain_desc.width = width;
+    swapchain_desc.height = height;
+    swapchain_desc.queue = &queue;
+    swapchain_desc.image_count = FRAME_COUNT;
+
+    swapchain = create_swapchain(renderer, device, swapchain_desc);
 
     ShaderDesc vert_shader_desc{};
     vert_shader_desc.filename = "../examples/shaders/main.vert.glsl.spv";
@@ -77,6 +88,7 @@ void on_init()
     pipeline_desc.depth_state_desc.depth_test = false;
     pipeline_desc.depth_state_desc.depth_write = false;
     pipeline_desc.descriptor_set_layout = &descriptor_set_layout;
+    pipeline_desc.render_pass = &swapchain.m_render_passes[ 0 ];
 
     pipeline = create_graphics_pipeline(device, pipeline_desc);
 
@@ -84,17 +96,6 @@ void on_init()
     {
         destroy_shader(device, shaders[ i ]);
     }
-}
-
-void on_load(u32 width, u32 height)
-{
-    SwapchainDesc swapchain_desc{};
-    swapchain_desc.width = width;
-    swapchain_desc.height = height;
-    swapchain_desc.queue = &queue;
-    swapchain_desc.image_count = FRAME_COUNT;
-
-    swapchain = create_swapchain(renderer, device, swapchain_desc);
 }
 
 void on_update(f64 deltaTime)
@@ -177,14 +178,14 @@ void on_render()
 void on_unload()
 {
     queue_wait_idle(queue);
+    destroy_pipeline(device, pipeline);
+    destroy_descriptor_set_layout(device, descriptor_set_layout);
     destroy_swapchain(device, swapchain);
 }
 
 void on_shutdown()
 {
     device_wait_idle(device);
-    destroy_pipeline(device, pipeline);
-    destroy_descriptor_set_layout(device, descriptor_set_layout);
     for (u32 i = 0; i < FRAME_COUNT; ++i)
     {
         destroy_semaphore(device, image_available_semaphores[ i ]);
