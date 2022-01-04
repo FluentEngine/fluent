@@ -12,6 +12,7 @@ namespace fluent
 struct RenderPass;
 struct Buffer;
 struct StagingBuffer;
+struct Image;
 
 static constexpr u32 STAGING_BUFFER_SIZE = 10 * 1024 * 1024 * 8; // ~50 mb
 static constexpr u32 FLUENT_VULKAN_API_VERSION = VK_API_VERSION_1_2;
@@ -51,6 +52,50 @@ struct SwapchainDesc
     u32 image_count;
 };
 
+struct SamplerDesc
+{
+    Filter mag_filter = Filter::eNearest;
+    Filter min_filter = Filter::eNearest;
+    SamplerMipmapMode mipmap_mode = SamplerMipmapMode::eNearest;
+    SamplerAddressMode address_mode_u = SamplerAddressMode::eRepeat;
+    SamplerAddressMode address_mode_v = SamplerAddressMode::eRepeat;
+    SamplerAddressMode address_mode_w = SamplerAddressMode::eRepeat;
+    f32 mip_lod_bias;
+    bool anisotropy_enable;
+    f32 max_anisotropy;
+    b32 compare_enable;
+    CompareOp compare_op = CompareOp::eNever;
+    f32 min_lod;
+    f32 max_lod;
+};
+
+struct Sampler
+{
+    VkSampler m_sampler;
+};
+
+struct ImageDesc
+{
+    u32 width;
+    u32 height;
+    u32 depth;
+    Format format;
+    SampleCount sample_count;
+    u32 layer_count = 1;
+    u32 mip_levels = 1;
+    ResourceState resource_state;
+    DescriptorType descriptor_type;
+    const char* filename;
+};
+
+struct ImageUpdateDesc
+{
+    Image* image;
+    u32 size;
+    const void* data;
+    ResourceState resource_state;
+};
+
 struct Image
 {
     VkImage m_image;
@@ -62,6 +107,8 @@ struct Image
     SampleCount m_sample_count;
     u32 m_mip_level_count = 1;
     u32 m_layer_count = 1;
+    ResourceState m_resource_state;
+    DescriptorType m_descriptor_type;
 };
 
 struct BufferDesc
@@ -69,6 +116,7 @@ struct BufferDesc
     u32 size;
     ResourceState resource_state;
     DescriptorType descriptor_type;
+    const void* data;
 };
 
 struct BufferUpdateDesc
@@ -305,6 +353,39 @@ struct Device
     VkDescriptorPool m_descriptor_pool;
 };
 
+struct DescriptorSetDesc
+{
+    DescriptorSetLayout* descriptor_set_layout;
+};
+
+struct DescriptorSet
+{
+    VkDescriptorSet m_descriptor_set;
+};
+
+struct BufferSetWrite
+{
+    Buffer* buffer;
+    u32 offset = 0;
+    u32 range = 0;
+};
+
+struct ImageSetWrite
+{
+    Sampler* sampler;
+    Image* image;
+};
+
+struct DescriptorSetUpdateDesc
+{
+    DescriptorType descriptor_type;
+    u32 binding;
+    u32 buffer_set_write_count = 0;
+    BufferSetWrite* buffer_set_writes;
+    u32 image_set_write_count = 0;
+    ImageSetWrite* image_set_writes;
+};
+
 Renderer create_renderer(const RendererDesc& desc);
 void destroy_renderer(Renderer& renderer);
 
@@ -379,5 +460,17 @@ Buffer create_buffer(const Device& device, const BufferDesc& desc);
 void destroy_buffer(const Device& device, Buffer& buffer);
 
 void update_buffer(const Device& device, BufferUpdateDesc& buffer_update_desc);
+
+Sampler create_sampler(const Device& device, const SamplerDesc& desc);
+void destroy_sampler(const Device& device, Sampler& sampler);
+
+Image create_image(const Device& device, const ImageDesc& desc);
+void destroy_image(const Device& device, Image& image);
+
+void update_image(const Device& device, const ImageUpdateDesc& desc);
+
+DescriptorSet create_descriptor_set(const Device& device, const DescriptorSetDesc& desc);
+void destroy_descriptor_set(const Device& device, DescriptorSet& set);
+void update_descriptor_set(const Device& device, DescriptorSet& set, u32 count, const DescriptorSetUpdateDesc* descs);
 
 } // namespace fluent

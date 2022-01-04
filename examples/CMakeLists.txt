@@ -1,1 +1,2 @@
 add_subdirectory(01_hello_triangle)
+add_subdirectory(02_load_texture)

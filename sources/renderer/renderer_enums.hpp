@@ -334,4 +334,10 @@ enum class ShaderStage
     eAll
 };
 
+enum class Filter
+{
+    eNearest = 0,
+    eLinear = 1,
+};
+
 } // namespace fluent

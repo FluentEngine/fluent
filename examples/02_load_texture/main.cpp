@@ -26,6 +26,8 @@ Buffer vertex_buffer;
 
 static const f32 vertices[] = { -0.5f, -0.5f, 0.5f, -0.5f, 0.0f, 0.5f };
 
+Image texture;
+
 void on_init()
 {
     app_set_shaders_directory("../../../examples/shaders/");
@@ -113,6 +115,19 @@ void on_init()
     buffer_desc.data = vertices;
 
     vertex_buffer = create_buffer(device, buffer_desc);
+
+    ImageDesc image_desc{};
+    image_desc.width = 256;
+    image_desc.height = 256;
+    image_desc.depth = 1;
+    image_desc.sample_count = SampleCount::e1;
+    image_desc.format = Format::eR8G8B8A8Unorm;
+    image_desc.layer_count = 1;
+    image_desc.mip_levels = 1;
+    image_desc.descriptor_type = DescriptorType::eSampledImage;
+    image_desc.resource_state = ResourceState::eShaderReadOnly;
+
+    texture = create_image(device, image_desc);
 }
 
 void on_resize(u32 width, u32 height)
@@ -206,6 +221,7 @@ void on_update(f64 delta_time)
 void on_shutdown()
 {
     device_wait_idle(device);
+    destroy_image(device, texture);
     destroy_buffer(device, vertex_buffer);
     destroy_pipeline(device, pipeline);
     destroy_descriptor_set_layout(device, descriptor_set_layout);

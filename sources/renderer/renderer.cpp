@@ -230,6 +230,54 @@ static inline VkDescriptorType to_vk_descriptor_type(DescriptorType descriptor_t
     }
 }
 
+VkFilter to_vk_filter(Filter filter)
+{
+    switch (filter)
+    {
+    case Filter::eLinear:
+        return VK_FILTER_LINEAR;
+    case Filter::eNearest:
+        return VK_FILTER_NEAREST;
+    default:
+        FT_ASSERT(false);
+        return VkFilter(-1);
+    }
+}
+
+VkSamplerMipmapMode to_vk_sampler_mipmap_mode(SamplerMipmapMode mode)
+{
+    switch (mode)
+    {
+    case SamplerMipmapMode::eNearest:
+        return VkSamplerMipmapMode::VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    case SamplerMipmapMode::eLinear:
+        return VkSamplerMipmapMode::VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    default:
+        FT_ASSERT(false);
+        return VkSamplerMipmapMode(-1);
+    }
+}
+
+VkSamplerAddressMode to_vk_sampler_address_mode(SamplerAddressMode mode)
+{
+    switch (mode)
+    {
+    case SamplerAddressMode::eRepeat:
+        return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    case SamplerAddressMode::eMirroredRepeat:
+        return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+    case SamplerAddressMode::eClampToEdge:
+        return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    case SamplerAddressMode::eClampToBorder:
+        return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    case SamplerAddressMode::eMirrorClampToEdge:
+        return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+    default:
+        FT_ASSERT(false);
+        return VkSamplerAddressMode(-1);
+    }
+}
+
 static inline VkAccessFlags determine_access_flags(ResourceState resource_state)
 {
     VkAccessFlags access_flags = 0;
@@ -377,6 +425,54 @@ static inline VkBufferUsageFlags determine_vk_buffer_usage(ResourceState resourc
     }
 
     return buffer_usage;
+}
+
+static inline VkImageUsageFlags determine_vk_image_usage(ResourceState resource_state, DescriptorType descriptor_type)
+{
+    VkImageUsageFlags image_usage = VkImageUsageFlags(0);
+
+    if (descriptor_type & DescriptorType::eSampledImage)
+    {
+        image_usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+    }
+
+    if (descriptor_type & DescriptorType::eStorageImage)
+    {
+        image_usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+    }
+
+    if (descriptor_type & DescriptorType::eInputAttachment)
+    {
+        image_usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+    }
+
+    if (resource_state & ResourceState::eColorAttachment)
+    {
+        image_usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    }
+
+    if (resource_state & ResourceState::eDepthStencilAttachment)
+    {
+        image_usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    }
+
+    if (resource_state & ResourceState::eDepthStencilReadOnly)
+    {
+        // TODO: ?
+        image_usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    }
+
+    if (resource_state & ResourceState::eTransferSrc)
+    {
+        image_usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
+
+    if (resource_state & ResourceState::eTransferDst)
+    {
+        image_usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
+
+    return image_usage;
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(
@@ -549,6 +645,13 @@ static inline VkImageSubresourceRange get_image_subresource_range(const Image& i
     image_subresource_range.layerCount = image.m_layer_count;
 
     return image_subresource_range;
+}
+
+VkImageSubresourceLayers get_image_subresource_layers(const Image& image)
+{
+    auto subresourceRange = get_image_subresource_range(image);
+    return VkImageSubresourceLayers{ subresourceRange.aspectMask, subresourceRange.baseMipLevel,
+                                     subresourceRange.baseArrayLayer, subresourceRange.layerCount };
 }
 
 Renderer create_renderer(const RendererDesc& desc)
@@ -1722,6 +1825,46 @@ void cmd_copy_buffer(
     vkCmdCopyBuffer(command_buffer.m_command_buffer, src.m_buffer, dst.m_buffer, 1, &buffer_copy);
 }
 
+void cmd_copy_buffer_to_image(
+    const CommandBuffer& command_buffer, const Buffer& src, u32 src_offset, Image& dst, ResourceState dst_state)
+{
+    if (dst_state != ResourceState::eTransferDst)
+    {
+        // TODO:
+        VkImageMemoryBarrier to_transfer_dst_barrier{};
+        to_transfer_dst_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        to_transfer_dst_barrier.srcAccessMask = determine_access_flags(dst_state);
+        to_transfer_dst_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        to_transfer_dst_barrier.oldLayout = determine_image_layout(dst_state);
+        to_transfer_dst_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        to_transfer_dst_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        to_transfer_dst_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        to_transfer_dst_barrier.image = dst.m_image;
+        to_transfer_dst_barrier.subresourceRange = get_image_subresource_range(dst);
+
+        vkCmdPipelineBarrier(
+            command_buffer.m_command_buffer,
+            determine_pipeline_stage_flags(
+                to_transfer_dst_barrier.srcAccessMask | to_transfer_dst_barrier.dstAccessMask,
+                command_buffer.m_queue_type),
+            VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &to_transfer_dst_barrier);
+    }
+
+    auto dst_layers = get_image_subresource_layers(dst);
+
+    VkBufferImageCopy buffer_to_image_copy_info{};
+    buffer_to_image_copy_info.bufferOffset = src_offset;
+    buffer_to_image_copy_info.bufferImageHeight = 0;
+    buffer_to_image_copy_info.bufferRowLength = 0;
+    buffer_to_image_copy_info.imageSubresource = dst_layers;
+    buffer_to_image_copy_info.imageOffset = VkOffset3D{ 0, 0, 0 };
+    buffer_to_image_copy_info.imageExtent = VkExtent3D{ dst.m_width, dst.m_height, 1 };
+
+    vkCmdCopyBufferToImage(
+        command_buffer.m_command_buffer, src.m_buffer, dst.m_image, determine_image_layout(ResourceState::eTransferDst),
+        1, &buffer_to_image_copy_info);
+}
+
 void immediate_submit(const Queue& queue, const CommandBuffer& command_buffer)
 {
     QueueSubmitDesc submit_desc{};
@@ -1760,6 +1903,17 @@ Buffer create_buffer(const Device& device, const BufferDesc& desc)
     VK_ASSERT(vmaCreateBuffer(
         device.m_memory_allocator, &buffer_create_info, &allocation_create_info, &buffer.m_buffer, &buffer.m_allocation,
         nullptr));
+
+    if (desc.data)
+    {
+        BufferUpdateDesc buffer_update_desc{};
+        buffer_update_desc.data = desc.data;
+        buffer_update_desc.buffer = &buffer;
+        buffer_update_desc.offset = 0;
+        buffer_update_desc.size = desc.size;
+
+        update_buffer(device, buffer_update_desc);
+    }
 
     return buffer;
 }
@@ -1807,6 +1961,233 @@ void update_buffer(const Device& device, BufferUpdateDesc& desc)
 
         immediate_submit(device.m_upload_queue, device.m_upload_command_buffer);
     }
+}
+
+Sampler create_sampler(const Device& device, const SamplerDesc& desc)
+{
+    Sampler sampler{};
+
+    VkSamplerCreateInfo sampler_create_info{};
+    sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_create_info.pNext = nullptr;
+    sampler_create_info.flags = 0;
+    sampler_create_info.magFilter = to_vk_filter(desc.mag_filter);
+    sampler_create_info.minFilter = to_vk_filter(desc.min_filter);
+    sampler_create_info.mipmapMode = to_vk_sampler_mipmap_mode(desc.mipmap_mode);
+    sampler_create_info.addressModeU = to_vk_sampler_address_mode(desc.address_mode_u);
+    sampler_create_info.addressModeV = to_vk_sampler_address_mode(desc.address_mode_v);
+    sampler_create_info.addressModeW = to_vk_sampler_address_mode(desc.address_mode_w);
+    sampler_create_info.mipLodBias = desc.mip_lod_bias;
+    sampler_create_info.anisotropyEnable = desc.anisotropy_enable;
+    sampler_create_info.maxAnisotropy = desc.max_anisotropy;
+    sampler_create_info.compareEnable = desc.compare_enable;
+    sampler_create_info.compareOp = to_vk_compare_op(desc.compare_op);
+    sampler_create_info.minLod = desc.min_lod;
+    sampler_create_info.maxLod = desc.max_lod;
+    sampler_create_info.unnormalizedCoordinates = false;
+
+    VK_ASSERT(
+        vkCreateSampler(device.m_logical_device, &sampler_create_info, device.m_vulkan_allocator, &sampler.m_sampler));
+
+    return sampler;
+}
+
+void destroy_sampler(const Device& device, Sampler& sampler)
+{
+    FT_ASSERT(sampler.m_sampler);
+    vkDestroySampler(device.m_logical_device, sampler.m_sampler, device.m_vulkan_allocator);
+}
+
+Image create_image(const Device& device, const ImageDesc& desc)
+{
+    Image image{};
+    image.m_width = desc.width;
+    image.m_height = desc.height;
+    image.m_format = desc.format;
+    image.m_sample_count = desc.sample_count;
+    image.m_mip_level_count = desc.mip_levels;
+    image.m_layer_count = desc.layer_count;
+    image.m_resource_state = desc.resource_state;
+    image.m_descriptor_type = desc.descriptor_type;
+
+    VmaAllocationCreateInfo allocation_create_info{};
+    allocation_create_info.usage = determine_vma_memory_usage(desc.resource_state);
+
+    VkImageCreateInfo image_create_info{};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = nullptr;
+    image_create_info.flags = 0;
+    // TODO: determine image type properly
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = to_vk_format(desc.format);
+    image_create_info.extent.width = desc.width;
+    image_create_info.extent.height = desc.height;
+    image_create_info.extent.depth = desc.depth;
+    image_create_info.mipLevels = desc.mip_levels;
+    image_create_info.arrayLayers = desc.layer_count;
+    image_create_info.samples = to_vk_sample_count(desc.sample_count);
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage = determine_vk_image_usage(desc.resource_state, desc.descriptor_type);
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.queueFamilyIndexCount = 0;
+    image_create_info.pQueueFamilyIndices = nullptr;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VK_ASSERT(vmaCreateImage(
+        device.m_memory_allocator, &image_create_info, &allocation_create_info, &image.m_image, &image.m_allocation,
+        nullptr));
+
+    if (desc.filename)
+    {
+        FT_ASSERT(false && "Not implemented");
+        // TODO: load image from file
+        u32 image_data_size = 0;
+        void* image_data = nullptr;
+
+        ImageUpdateDesc image_update_desc{};
+        image_update_desc.image = &image;
+        image_update_desc.size = image_data_size;
+        image_update_desc.data = image_data;
+        image_update_desc.resource_state = image.m_resource_state;
+
+        update_image(device, image_update_desc);
+    }
+
+    // TODO: fill properly
+    VkImageViewCreateInfo image_view_create_info{};
+    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_create_info.pNext = nullptr;
+    image_view_create_info.flags = 0;
+    image_view_create_info.image = image.m_image;
+    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    image_view_create_info.format = image_create_info.format;
+    image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_view_create_info.subresourceRange.baseMipLevel = 0;
+    image_view_create_info.subresourceRange.levelCount = 1;
+    image_view_create_info.subresourceRange.baseArrayLayer = 0;
+    image_view_create_info.subresourceRange.layerCount = 1;
+
+    VK_ASSERT(vkCreateImageView(
+        device.m_logical_device, &image_view_create_info, device.m_vulkan_allocator, &image.m_image_view));
+
+    return image;
+}
+
+void destroy_image(const Device& device, Image& image)
+{
+    FT_ASSERT(image.m_image_view);
+    FT_ASSERT(image.m_image);
+    FT_ASSERT(image.m_allocation);
+    vkDestroyImageView(device.m_logical_device, image.m_image_view, device.m_vulkan_allocator);
+    vmaDestroyImage(device.m_memory_allocator, image.m_image, image.m_allocation);
+}
+
+void update_image(const Device& device, const ImageUpdateDesc& desc)
+{
+    write_to_staging_buffer(device, desc.size, desc.data);
+
+    begin_command_buffer(device.m_upload_command_buffer);
+
+    cmd_copy_buffer_to_image(
+        device.m_upload_command_buffer, device.m_staging_buffer.m_buffer, device.m_staging_buffer.m_memory_used,
+        *desc.image, desc.resource_state);
+
+    end_command_buffer(device.m_upload_command_buffer);
+
+    immediate_submit(device.m_upload_queue, device.m_upload_command_buffer);
+}
+
+DescriptorSet create_descriptor_set(const Device& device, const DescriptorSetDesc& desc)
+{
+    DescriptorSet descriptor_set{};
+
+    VkDescriptorSetAllocateInfo descriptor_set_allocate_info{};
+    descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    descriptor_set_allocate_info.pNext = nullptr;
+    descriptor_set_allocate_info.descriptorPool = device.m_descriptor_pool;
+    descriptor_set_allocate_info.descriptorSetCount = 1;
+    descriptor_set_allocate_info.pSetLayouts = &desc.descriptor_set_layout->m_descriptor_set_layout;
+
+    VK_ASSERT(vkAllocateDescriptorSets(
+        device.m_logical_device, &descriptor_set_allocate_info, &descriptor_set.m_descriptor_set));
+
+    return descriptor_set;
+}
+
+void destroy_descriptor_set(const Device& device, DescriptorSet& set)
+{
+    FT_ASSERT(set.m_descriptor_set);
+    vkFreeDescriptorSets(device.m_logical_device, device.m_descriptor_pool, 1, &set.m_descriptor_set);
+}
+
+void update_descriptor_set(const Device& device, DescriptorSet& set, u32 count, const DescriptorSetUpdateDesc* descs)
+{
+    // TODO: rewrite
+    std::vector<std::vector<VkDescriptorBufferInfo>> buffer_updates(count);
+    std::vector<std::vector<VkDescriptorImageInfo>> image_updates(count);
+    std::vector<VkWriteDescriptorSet> descriptor_writes(count);
+
+    uint32_t buffer_update_idx = 0;
+    uint32_t image_update_idx = 0;
+    uint32_t write = 0;
+
+    for (u32 i = 0; i < count; ++i)
+    {
+        auto& update = descs[ i ];
+
+        auto& writeDescriptorSet = descriptor_writes[ write++ ];
+        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptorSet.dstBinding = update.binding;
+        writeDescriptorSet.descriptorCount = 1;
+        writeDescriptorSet.dstSet = set.m_descriptor_set;
+        writeDescriptorSet.descriptorType = to_vk_descriptor_type(update.descriptor_type);
+
+        if (update.buffer_set_write_count > 0)
+        {
+            auto& buffer_update_infos = buffer_updates[ buffer_update_idx++ ];
+            buffer_update_infos.resize(update.buffer_set_write_count, {});
+
+            for (uint32_t i = 0; i < buffer_update_infos.size(); ++i)
+            {
+                buffer_update_infos[ i ].buffer = update.buffer_set_writes[ i ].buffer->m_buffer;
+                buffer_update_infos[ i ].offset = update.buffer_set_writes[ i ].offset;
+                buffer_update_infos[ i ].range = update.buffer_set_writes[ i ].range;
+            }
+
+            writeDescriptorSet.descriptorCount = buffer_update_infos.size();
+            writeDescriptorSet.pBufferInfo = buffer_update_infos.data();
+        }
+
+        if (update.image_set_write_count > 0)
+        {
+            auto& image_update_infos = image_updates[ image_update_idx++ ];
+            image_update_infos.resize(update.image_set_write_count, {});
+
+            for (uint32_t i = 0; i < image_update_infos.size(); ++i)
+            {
+                if (update.image_set_writes[ i ].sampler != nullptr)
+                {
+                    image_update_infos[ i ].sampler = update.image_set_writes[ i ].sampler->m_sampler;
+                }
+
+                if (update.image_set_writes[ i ].image != nullptr)
+                {
+                    // TODO: determine image layout
+                    // imageUpdateInfos[ i ].imageLayout = ImageUsageToImageLayout(update.imageUpdates[ i ].usage);
+                    image_update_infos[ i ].imageView = update.image_set_writes[ i ].image->m_image_view;
+                }
+            }
+
+            writeDescriptorSet.descriptorCount = image_update_infos.size();
+            writeDescriptorSet.pImageInfo = image_update_infos.data();
+        }
+    }
+
+    vkUpdateDescriptorSets(device.m_logical_device, descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
 }
 
 } // namespace fluent
