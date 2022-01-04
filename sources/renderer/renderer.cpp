@@ -198,6 +198,38 @@ static inline VkPipelineBindPoint to_vk_pipeline_bind_point(PipelineType type)
     }
 }
 
+static inline VkDescriptorType to_vk_descriptor_type(DescriptorType descriptor_type)
+{
+    switch (descriptor_type)
+    {
+    case DescriptorType::eSampler:
+        return VK_DESCRIPTOR_TYPE_SAMPLER;
+    case DescriptorType::eCombinedImageSampler:
+        return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    case DescriptorType::eSampledImage:
+        return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    case DescriptorType::eStorageImage:
+        return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    case DescriptorType::eUniformTexelBuffer:
+        return VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+    case DescriptorType::eStorageTexelBuffer:
+        return VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+    case DescriptorType::eUniformBuffer:
+        return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    case DescriptorType::eStorageBuffer:
+        return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    case DescriptorType::eUniformBufferDynamic:
+        return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    case DescriptorType::eStorageBufferDynamic:
+        return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+    case DescriptorType::eInputAttachment:
+        return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+    default:
+        FT_ASSERT(false);
+        return VkDescriptorType(-1);
+    }
+}
+
 static inline VkAccessFlags determine_access_flags(ResourceState resource_state)
 {
     VkAccessFlags access_flags = 0;
@@ -599,6 +631,26 @@ void destroy_renderer(Renderer& renderer)
     vkDestroyInstance(renderer.m_instance, renderer.m_vulkan_allocator);
 }
 
+void write_to_staging_buffer(const Device& device, u32 size, const void* data)
+{
+    // TODO: decide what to do if no space left
+    FT_ASSERT(size < (device.m_staging_buffer.m_buffer.m_size - device.m_staging_buffer.m_memory_used));
+    u8* dst = ( u8* ) device.m_staging_buffer.m_buffer.m_mapped_memory + device.m_staging_buffer.m_memory_used;
+    std::memcpy(dst, data, size);
+}
+
+void map_memory(const Device& device, Buffer& buffer)
+{
+    FT_ASSERT(buffer.m_mapped_memory == nullptr);
+    vmaMapMemory(device.m_memory_allocator, buffer.m_allocation, &buffer.m_mapped_memory);
+}
+
+void unmap_memory(const Device& device, Buffer& buffer)
+{
+    FT_ASSERT(buffer.m_mapped_memory);
+    vmaUnmapMemory(device.m_memory_allocator, buffer.m_allocation);
+}
+
 Device create_device(const Renderer& renderer, const DeviceDesc& desc)
 {
     FT_ASSERT(desc.frame_in_use_count > 0);
@@ -677,13 +729,41 @@ Device create_device(const Renderer& renderer, const DeviceDesc& desc)
 
     allocate_command_buffers(device, device.m_command_pool, 1, &device.m_upload_command_buffer);
 
+    static constexpr u32 pool_size_count = 11;
+    VkDescriptorPoolSize pool_sizes[ pool_size_count ] = {
+        { VK_DESCRIPTOR_TYPE_SAMPLER, 1024 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1024 },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1024 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1024 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1024 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1024 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1024 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1024 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1024 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1024 },
+        { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1024 },
+    };
+
+    VkDescriptorPoolCreateInfo descriptor_pool_create_info{};
+    descriptor_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descriptor_pool_create_info.pNext = nullptr;
+    descriptor_pool_create_info.flags = 0;
+    descriptor_pool_create_info.maxSets = 2048 * pool_size_count;
+    descriptor_pool_create_info.poolSizeCount = pool_size_count;
+    descriptor_pool_create_info.pPoolSizes = pool_sizes;
+
+    VK_ASSERT(vkCreateDescriptorPool(
+        device.m_logical_device, &descriptor_pool_create_info, device.m_vulkan_allocator, &device.m_descriptor_pool));
+
     return device;
 }
 
 void destroy_device(Device& device)
 {
+    FT_ASSERT(device.m_descriptor_pool);
     FT_ASSERT(device.m_memory_allocator);
     FT_ASSERT(device.m_logical_device);
+    vkDestroyDescriptorPool(device.m_logical_device, device.m_descriptor_pool, device.m_vulkan_allocator);
     free_command_buffers(device, device.m_command_pool, 1, &device.m_upload_command_buffer);
     destroy_command_pool(device, device.m_command_pool);
     unmap_memory(device, device.m_staging_buffer.m_buffer);
@@ -1243,6 +1323,8 @@ Shader create_shader(const Device& device, const ShaderDesc& desc)
     VK_ASSERT(vkCreateShaderModule(
         device.m_logical_device, &shader_create_info, device.m_vulkan_allocator, &shader.m_shader));
 
+    shader.m_reflect_data = reflect(byte_code.size() * sizeof(u32), byte_code.data());
+
     return shader;
 }
 
@@ -1260,12 +1342,56 @@ DescriptorSetLayout create_descriptor_set_layout(const Device& device, const Des
     descriptor_set_layout.m_shader_count = desc.m_shader_count;
     descriptor_set_layout.m_shaders = desc.m_shaders;
 
+    // count bindings in all shaders
+    u32 binding_count = 0;
+    for (u32 i = 0; i < descriptor_set_layout.m_shader_count; ++i)
+    {
+        binding_count += descriptor_set_layout.m_shaders[ i ].m_reflect_data.binding_count;
+    }
+
+    if (binding_count > 0)
+    {
+        // collect all bindings
+        VkDescriptorSetLayoutBinding* bindings = new VkDescriptorSetLayoutBinding[ binding_count ];
+        u32 binding_index = 0;
+        for (u32 i = 0; i < descriptor_set_layout.m_shader_count; ++i)
+        {
+            for (u32 j = 0; j < descriptor_set_layout.m_shaders[ i ].m_reflect_data.binding_count; ++j)
+            {
+                auto& reflected_binding = descriptor_set_layout.m_shaders[ i ].m_reflect_data.bindings[ j ];
+                bindings[ binding_index ].binding = reflected_binding.binding;
+                bindings[ binding_index ].descriptorCount = reflected_binding.descriptor_count;
+                bindings[ binding_index ].descriptorType = to_vk_descriptor_type(reflected_binding.descriptor_type);
+                bindings[ binding_index ].pImmutableSamplers = nullptr; // ??? TODO
+                bindings[ binding_index ].stageFlags = to_vk_shader_stage(descriptor_set_layout.m_shaders[ i ].m_stage);
+            }
+        }
+
+        VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info{};
+        descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        descriptor_set_layout_create_info.pNext = nullptr;
+        descriptor_set_layout_create_info.flags = 0;
+        descriptor_set_layout_create_info.bindingCount = binding_count;
+        descriptor_set_layout_create_info.pBindings = bindings;
+
+        VK_ASSERT(vkCreateDescriptorSetLayout(
+            device.m_logical_device, &descriptor_set_layout_create_info, device.m_vulkan_allocator,
+            &descriptor_set_layout.m_descriptor_set_layout));
+
+        delete[] bindings;
+    }
+
     return descriptor_set_layout;
 }
 
 void destroy_descriptor_set_layout(const Device& device, DescriptorSetLayout& layout)
 {
     FT_ASSERT(layout.m_shaders);
+    if (layout.m_descriptor_set_layout)
+    {
+        vkDestroyDescriptorSetLayout(
+            device.m_logical_device, layout.m_descriptor_set_layout, device.m_vulkan_allocator);
+    }
 }
 
 Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc)
@@ -1579,16 +1705,36 @@ void cmd_draw(
     vkCmdDraw(command_buffer.m_command_buffer, vertex_count, instance_count, first_vertex, first_instance);
 }
 
-void map_memory(const Device& device, Buffer& buffer)
+void cmd_bind_vertex_buffer(const CommandBuffer& command_buffer, const Buffer& buffer)
 {
-    FT_ASSERT(buffer.m_mapped_memory == nullptr);
-    vmaMapMemory(device.m_memory_allocator, buffer.m_allocation, &buffer.m_mapped_memory);
+    static constexpr VkDeviceSize offset = 0;
+    vkCmdBindVertexBuffers(command_buffer.m_command_buffer, 0, 1, &buffer.m_buffer, &offset);
 }
 
-void unmap_memory(const Device& device, Buffer& buffer)
+void cmd_copy_buffer(
+    const CommandBuffer& command_buffer, const Buffer& src, u32 src_offset, Buffer& dst, u32 dst_offset, u32 size)
 {
-    FT_ASSERT(buffer.m_mapped_memory);
-    vmaUnmapMemory(device.m_memory_allocator, buffer.m_allocation);
+    VkBufferCopy buffer_copy{};
+    buffer_copy.srcOffset = src_offset;
+    buffer_copy.dstOffset = dst_offset;
+    buffer_copy.size = size;
+
+    vkCmdCopyBuffer(command_buffer.m_command_buffer, src.m_buffer, dst.m_buffer, 1, &buffer_copy);
+}
+
+void immediate_submit(const Queue& queue, const CommandBuffer& command_buffer)
+{
+    QueueSubmitDesc submit_desc{};
+    submit_desc.wait_semaphore_count = 0;
+    submit_desc.wait_semaphores = nullptr;
+    submit_desc.command_buffer_count = 1;
+    submit_desc.command_buffers = &command_buffer;
+    submit_desc.signal_semaphore_count = 0;
+    submit_desc.signal_semaphores = 0;
+    submit_desc.signal_fence = nullptr;
+
+    queue_submit(queue, submit_desc);
+    queue_wait_idle(queue);
 }
 
 Buffer create_buffer(const Device& device, const BufferDesc& desc)
@@ -1635,39 +1781,31 @@ void update_buffer(const Device& device, BufferUpdateDesc& desc)
     if (buffer->m_resource_state & ResourceState::eTransferSrc)
     {
         bool was_mapped = buffer->m_mapped_memory;
-        if (was_mapped)
+        if (!was_mapped)
         {
             map_memory(device, *buffer);
         }
 
         std::memcpy(( u8* ) buffer->m_mapped_memory + desc.offset, desc.data, desc.size);
 
-        if (was_mapped)
+        if (!was_mapped)
         {
             unmap_memory(device, *buffer);
         }
     }
     else
     {
-        // TODO: decide what to do in this case
-        FT_ASSERT(desc.size < (device.m_staging_buffer.m_buffer.m_size - device.m_staging_buffer.m_memory_used));
-        u8* dst = ( u8* ) device.m_staging_buffer.m_buffer.m_mapped_memory + device.m_staging_buffer.m_memory_used;
-        std::memcpy(dst, desc.data, desc.size);
-
-        VkBufferCopy buffer_copy{};
-        buffer_copy.srcOffset = device.m_staging_buffer.m_memory_used;
-        buffer_copy.dstOffset = desc.offset;
-        buffer_copy.size = desc.size;
+        write_to_staging_buffer(device, desc.size, desc.data);
 
         begin_command_buffer(device.m_upload_command_buffer);
 
-        vkCmdCopyBuffer(
-            device.m_upload_command_buffer.m_command_buffer, device.m_staging_buffer.m_buffer.m_buffer,
-            buffer->m_buffer, 1, &buffer_copy);
+        cmd_copy_buffer(
+            device.m_upload_command_buffer, device.m_staging_buffer.m_buffer, device.m_staging_buffer.m_memory_used,
+            *desc.buffer, desc.offset, desc.size);
 
         end_command_buffer(device.m_upload_command_buffer);
 
-        queue_wait_idle(device.m_upload_queue);
+        immediate_submit(device.m_upload_queue, device.m_upload_command_buffer);
     }
 }
 

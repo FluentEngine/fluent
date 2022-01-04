@@ -24,6 +24,8 @@ Pipeline pipeline;
 
 Buffer vertex_buffer;
 
+static const f32 vertices[] = { -0.5f, -0.5f, 0.5f, -0.5f, 0.0f, 0.5f };
+
 void on_init()
 {
     app_set_shaders_directory("../../../examples/shaders/");
@@ -81,10 +83,15 @@ void on_init()
     descriptor_set_layout = create_descriptor_set_layout(device, descriptor_set_layout_desc);
 
     PipelineDesc pipeline_desc{};
-    pipeline_desc.binding_desc_count = 0;
-    pipeline_desc.binding_descs = nullptr;
-    pipeline_desc.attribute_desc_count = 0;
-    pipeline_desc.attribute_descs = nullptr;
+    pipeline_desc.binding_desc_count = 1;
+    pipeline_desc.binding_descs[ 0 ].binding = 0;
+    pipeline_desc.binding_descs[ 0 ].input_rate = VertexInputRate::eVertex;
+    pipeline_desc.binding_descs[ 0 ].stride = 2 * sizeof(float);
+    pipeline_desc.attribute_desc_count = 1;
+    pipeline_desc.attribute_descs[ 0 ].binding = 0;
+    pipeline_desc.attribute_descs[ 0 ].format = Format::eR32G32Sfloat;
+    pipeline_desc.attribute_descs[ 0 ].location = 0;
+    pipeline_desc.attribute_descs[ 0 ].offset = 0;
     pipeline_desc.rasterizer_desc.cull_mode = CullMode::eNone;
     pipeline_desc.rasterizer_desc.front_face = FrontFace::eCounterClockwise;
     pipeline_desc.depth_state_desc.depth_test = false;
@@ -98,8 +105,6 @@ void on_init()
     {
         destroy_shader(device, shaders[ i ]);
     }
-
-    float vertices[] = { -0.5, -0.5, 0.5, -0.5, 0.0, 0.5 };
 
     BufferDesc buffer_desc{};
     buffer_desc.size = sizeof(vertices);
@@ -167,6 +172,7 @@ void on_update(f64 delta_time)
     cmd_set_viewport(cmd, 0, 0, swapchain.m_width, swapchain.m_height, 0.0f, 1.0f);
     cmd_set_scissor(cmd, 0, 0, swapchain.m_width, swapchain.m_height);
     cmd_bind_pipeline(cmd, pipeline);
+    cmd_bind_vertex_buffer(cmd, vertex_buffer);
     cmd_draw(cmd, 3, 1, 0, 0);
     cmd_end_render_pass(cmd);
 

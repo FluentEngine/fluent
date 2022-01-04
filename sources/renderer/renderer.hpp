@@ -4,6 +4,7 @@
 #include "vk_mem_alloc.h"
 #include "core/base.hpp"
 #include "renderer/renderer_enums.hpp"
+#include "renderer/shader_reflection.hpp"
 
 namespace fluent
 {
@@ -74,7 +75,7 @@ struct BufferUpdateDesc
 {
     u32 offset;
     u32 size;
-    void* data;
+    const void* data;
     Buffer* buffer;
 };
 
@@ -129,7 +130,7 @@ struct QueueSubmitDesc
     u32 wait_semaphore_count;
     Semaphore* wait_semaphores;
     u32 command_buffer_count;
-    CommandBuffer* command_buffers;
+    const CommandBuffer* command_buffers;
     u32 signal_semaphore_count;
     Semaphore* signal_semaphores;
     Fence* signal_fence;
@@ -209,6 +210,7 @@ struct Shader
 {
     ShaderStage m_stage;
     VkShaderModule m_shader;
+    ReflectionData m_reflect_data;
 };
 
 struct DescriptorSetLayoutDesc
@@ -255,9 +257,9 @@ struct DepthStateDesc
 struct PipelineDesc
 {
     u32 binding_desc_count;
-    VertexBindingDesc* binding_descs;
+    VertexBindingDesc binding_descs[ MAX_VERTEX_BINGINGS_COUNT ];
     u32 attribute_desc_count;
-    VertexAttributeDesc* attribute_descs;
+    VertexAttributeDesc attribute_descs[ MAX_VERTEX_ATTRIBUTE_COUNT ];
     RasterizerStateDesc rasterizer_desc;
     DepthStateDesc depth_state_desc;
     DescriptorSetLayout* descriptor_set_layout;
@@ -300,6 +302,7 @@ struct Device
     CommandPool m_command_pool;
     CommandBuffer m_upload_command_buffer;
     StagingBuffer m_staging_buffer;
+    VkDescriptorPool m_descriptor_pool;
 };
 
 Renderer create_renderer(const RendererDesc& desc);
@@ -363,11 +366,14 @@ void cmd_set_viewport(
 
 void cmd_bind_pipeline(const CommandBuffer& command_buffer, const Pipeline& pipeline);
 void cmd_draw(
-    const CommandBuffer& command_buffer, uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex,
-    uint32_t first_instance);
+    const CommandBuffer& command_buffer, u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance);
 
-void map_memory(const Device& device, Buffer& buffer);
-void unmap_memory(const Device& device, Buffer& buffer);
+void cmd_bind_vertex_buffer(const CommandBuffer& command_buffer, const Buffer& buffer);
+
+void cmd_copy_buffer(
+    const CommandBuffer& command_buffer, const Buffer& src, u32 src_offset, Buffer& dst, u32 dst_offset, u32 size);
+
+void immediate_submit(const Queue& queue, const CommandBuffer& command_buffer);
 
 Buffer create_buffer(const Device& device, const BufferDesc& desc);
 void destroy_buffer(const Device& device, Buffer& buffer);

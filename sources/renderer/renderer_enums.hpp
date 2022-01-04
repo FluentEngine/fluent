@@ -258,6 +258,16 @@ enum DescriptorType
     eVertexBuffer = BIT(0),
     eIndexBuffer = BIT(1),
     eUniformBuffer = BIT(2),
+    eSampler = BIT(3),
+    eCombinedImageSampler = BIT(4),
+    eSampledImage = BIT(5),
+    eStorageImage = BIT(6),
+    eUniformTexelBuffer = BIT(7),
+    eStorageTexelBuffer = BIT(8),
+    eStorageBuffer = BIT(9),
+    eUniformBufferDynamic = BIT(10),
+    eStorageBufferDynamic = BIT(11),
+    eInputAttachment = BIT(12)
 };
 
 enum class PipelineType
