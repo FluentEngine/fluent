@@ -40,7 +40,7 @@ set(math_sources
 
 set(sources ${common_sources} ${renderer_sources} ${util_sources})
 set(includes ${CMAKE_CURRENT_SOURCE_DIR}/sources)
-set(libs spdlog volk vma_allocator SDL2 tiny_image_format spirv_reflect tinyddsloader stb_image glm)
+set(libs spdlog volk vma_allocator SDL2::SDL2-static tiny_image_format spirv_reflect tinyddsloader stb_image glm)
 
 add_library(${target} ${sources})
 

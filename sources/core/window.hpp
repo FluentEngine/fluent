@@ -16,8 +16,8 @@ enum WindowParams : u8
 
 struct Window
 {
-    void* m_handle;
-    u32 m_data[ static_cast<int>(WindowParams::eLast) ];
+    void* handle;
+    u32 data[ static_cast<int>(WindowParams::eLast) ];
 };
 
 Window create_window(const char* title, u32 x, u32 y, u32 width, u32 height);

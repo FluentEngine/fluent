@@ -29,19 +29,19 @@ struct QueueDesc
 
 struct Queue
 {
-    u32 m_family_index;
-    QueueType m_type;
-    VkQueue m_queue;
+    u32 family_index;
+    QueueType type;
+    VkQueue queue;
 };
 
 struct Semaphore
 {
-    VkSemaphore m_semaphore;
+    VkSemaphore semaphore;
 };
 
 struct Fence
 {
-    VkFence m_fence = VK_NULL_HANDLE;
+    VkFence fence = VK_NULL_HANDLE;
 };
 
 struct SwapchainDesc
@@ -71,7 +71,7 @@ struct SamplerDesc
 
 struct Sampler
 {
-    VkSampler m_sampler;
+    VkSampler sampler;
 };
 
 struct ImageDesc
@@ -100,17 +100,17 @@ struct ImageUpdateDesc
 
 struct Image
 {
-    VkImage m_image;
-    VkImageView m_image_view;
-    VmaAllocation m_allocation;
-    u32 m_width;
-    u32 m_height;
-    Format m_format;
-    SampleCount m_sample_count;
-    u32 m_mip_level_count = 1;
-    u32 m_layer_count = 1;
-    ResourceState m_resource_state;
-    DescriptorType m_descriptor_type;
+    VkImage image;
+    VkImageView image_view;
+    VmaAllocation allocation;
+    u32 width;
+    u32 height;
+    Format format;
+    SampleCount sample_count;
+    u32 mip_level_count = 1;
+    u32 layer_count = 1;
+    ResourceState resource_state;
+    DescriptorType descriptor_type;
 };
 
 struct BufferDesc
@@ -131,31 +131,31 @@ struct BufferUpdateDesc
 
 struct Buffer
 {
-    VkBuffer m_buffer;
-    VmaAllocation m_allocation;
-    u32 m_size;
-    ResourceState m_resource_state;
-    DescriptorType m_descriptor_type;
-    void* m_mapped_memory;
+    VkBuffer buffer;
+    VmaAllocation allocation;
+    u32 size;
+    ResourceState resource_state;
+    DescriptorType descriptor_type;
+    void* mapped_memory;
 };
 
 struct StagingBuffer
 {
-    Buffer m_buffer;
-    u32 m_memory_used;
+    Buffer buffer;
+    u32 memory_used;
 };
 
 struct Swapchain
 {
-    VkPresentModeKHR m_present_mode;
-    u32 m_image_count;
-    u32 m_width;
-    u32 m_height;
-    VkSurfaceKHR m_surface;
-    VkSwapchainKHR m_swapchain;
-    Format m_format;
-    Image* m_images;
-    RenderPass* m_render_passes;
+    VkPresentModeKHR present_mode;
+    u32 image_count;
+    u32 width;
+    u32 height;
+    VkSurfaceKHR surface;
+    VkSwapchainKHR swapchain;
+    Format format;
+    Image* images;
+    RenderPass* render_passes;
 };
 
 struct CommandPoolDesc
@@ -165,14 +165,14 @@ struct CommandPoolDesc
 
 struct CommandPool
 {
-    QueueType m_queue_type;
-    VkCommandPool m_command_pool;
+    QueueType queue_type;
+    VkCommandPool command_pool;
 };
 
 struct CommandBuffer
 {
-    QueueType m_queue_type;
-    VkCommandBuffer m_command_buffer;
+    QueueType queue_type;
+    VkCommandBuffer command_buffer;
 };
 
 struct QueueSubmitDesc
@@ -209,12 +209,12 @@ struct RenderPassDesc
 
 struct RenderPass
 {
-    VkRenderPass m_render_pass;
-    VkFramebuffer m_framebuffer;
-    u32 m_width;
-    u32 m_height;
-    u32 m_color_attachment_count;
-    b32 m_has_depth_stencil;
+    VkRenderPass render_pass;
+    VkFramebuffer framebuffer;
+    u32 width;
+    u32 height;
+    u32 color_attachment_count;
+    b32 has_depth_stencil;
 };
 
 struct ClearValue
@@ -258,22 +258,22 @@ struct ShaderDesc
 
 struct Shader
 {
-    ShaderStage m_stage;
-    VkShaderModule m_shader;
-    ReflectionData m_reflect_data;
+    ShaderStage stage;
+    VkShaderModule shader;
+    ReflectionData reflect_data;
 };
 
 struct DescriptorSetLayoutDesc
 {
-    u32 m_shader_count;
-    Shader* m_shaders;
+    u32 shader_count;
+    Shader* shaders;
 };
 
 struct DescriptorSetLayout
 {
-    u32 m_shader_count;
-    Shader* m_shaders;
-    VkDescriptorSetLayout m_descriptor_set_layout;
+    u32 shader_count;
+    Shader* shaders;
+    VkDescriptorSetLayout descriptor_set_layout;
 };
 
 struct VertexBindingDesc
@@ -318,9 +318,9 @@ struct PipelineDesc
 
 struct Pipeline
 {
-    PipelineType m_type;
-    VkPipelineLayout m_pipeline_layout;
-    VkPipeline m_pipeline;
+    PipelineType type;
+    VkPipelineLayout pipeline_layout;
+    VkPipeline pipeline;
 };
 
 struct RendererDesc
@@ -330,10 +330,10 @@ struct RendererDesc
 
 struct Renderer
 {
-    VkAllocationCallbacks* m_vulkan_allocator;
-    VkInstance m_instance;
-    VkDebugUtilsMessengerEXT m_debug_messenger;
-    VkPhysicalDevice m_physical_device;
+    VkAllocationCallbacks* vulkan_allocator;
+    VkInstance instance;
+    VkDebugUtilsMessengerEXT debug_messenger;
+    VkPhysicalDevice physical_device;
 };
 
 struct DeviceDesc
@@ -343,16 +343,16 @@ struct DeviceDesc
 
 struct Device
 {
-    VkAllocationCallbacks* m_vulkan_allocator;
-    VkInstance m_instance;
-    VkPhysicalDevice m_physical_device;
-    VkDevice m_logical_device;
-    VmaAllocator m_memory_allocator;
-    Queue m_upload_queue;
-    CommandPool m_command_pool;
-    CommandBuffer m_upload_command_buffer;
-    StagingBuffer m_staging_buffer;
-    VkDescriptorPool m_descriptor_pool;
+    VkAllocationCallbacks* vulkan_allocator;
+    VkInstance instance;
+    VkPhysicalDevice physical_device;
+    VkDevice logical_device;
+    VmaAllocator memory_allocator;
+    Queue upload_queue;
+    CommandPool command_pool;
+    CommandBuffer upload_command_buffer;
+    StagingBuffer staging_buffer;
+    VkDescriptorPool descriptor_pool;
 };
 
 struct DescriptorSetDesc
@@ -362,7 +362,7 @@ struct DescriptorSetDesc
 
 struct DescriptorSet
 {
-    VkDescriptorSet m_descriptor_set;
+    VkDescriptorSet descriptor_set;
 };
 
 struct BufferSetWrite

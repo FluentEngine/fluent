@@ -91,8 +91,8 @@ void on_init()
     shaders[ 1 ] = create_shader(device, frag_shader_desc);
 
     DescriptorSetLayoutDesc descriptor_set_layout_desc{};
-    descriptor_set_layout_desc.m_shader_count = 2;
-    descriptor_set_layout_desc.m_shaders = shaders;
+    descriptor_set_layout_desc.shader_count = 2;
+    descriptor_set_layout_desc.shaders = shaders;
 
     descriptor_set_layout = create_descriptor_set_layout(device, descriptor_set_layout_desc);
 
@@ -115,7 +115,7 @@ void on_init()
     pipeline_desc.depth_state_desc.depth_test = false;
     pipeline_desc.depth_state_desc.depth_write = false;
     pipeline_desc.descriptor_set_layout = &descriptor_set_layout;
-    pipeline_desc.render_pass = &swapchain.m_render_passes[ 0 ];
+    pipeline_desc.render_pass = &swapchain.render_passes[ 0 ];
 
     pipeline = create_graphics_pipeline(device, pipeline_desc);
 
@@ -202,7 +202,7 @@ void on_update(f64 delta_time)
     ImageBarrier to_clear_barrier{};
     to_clear_barrier.src_queue = &queue;
     to_clear_barrier.dst_queue = &queue;
-    to_clear_barrier.image = &swapchain.m_images[ image_index ];
+    to_clear_barrier.image = &swapchain.images[ image_index ];
     to_clear_barrier.old_state = ResourceState::eUndefined;
     to_clear_barrier.new_state = ResourceState::eColorAttachment;
 
@@ -216,8 +216,8 @@ void on_update(f64 delta_time)
     render_pass_begin_desc.clear_values[ 0 ].color[ 3 ] = 1.0f;
 
     cmd_begin_render_pass(cmd, render_pass_begin_desc);
-    cmd_set_viewport(cmd, 0, 0, swapchain.m_width, swapchain.m_height, 0.0f, 1.0f);
-    cmd_set_scissor(cmd, 0, 0, swapchain.m_width, swapchain.m_height);
+    cmd_set_viewport(cmd, 0, 0, swapchain.width, swapchain.height, 0.0f, 1.0f);
+    cmd_set_scissor(cmd, 0, 0, swapchain.width, swapchain.height);
     cmd_bind_pipeline(cmd, pipeline);
     cmd_bind_descriptor_set(cmd, descriptor_set, pipeline);
     cmd_bind_vertex_buffer(cmd, vertex_buffer);
@@ -227,7 +227,7 @@ void on_update(f64 delta_time)
     ImageBarrier to_present_barrier{};
     to_present_barrier.src_queue = &queue;
     to_present_barrier.dst_queue = &queue;
-    to_present_barrier.image = &swapchain.m_images[ image_index ];
+    to_present_barrier.image = &swapchain.images[ image_index ];
     to_present_barrier.old_state = ResourceState::eColorAttachment;
     to_present_barrier.new_state = ResourceState::ePresent;
 

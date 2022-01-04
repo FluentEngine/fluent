@@ -1,4 +1,5 @@
 #include <chrono>
+#include <filesystem>
 #include <SDL.h>
 #include "core/window.hpp"
 #include "core/application.hpp"
@@ -26,46 +27,20 @@ static ApplicationState app_state{};
 
 std::string get_exec_path(u32 argc, char* argv_zero)
 {
-    std::string exec_path;
-    std::string launch_directory;
-    launch_directory.resize(100);
-    getcwd(launch_directory.data(), 100);
-    launch_directory = launch_directory.substr(0, launch_directory.find_first_of('\0'));
-
-    // TODO: absolute path bug
-    if (argv_zero[ 0 ] == '/')
-    {
-        launch_directory.clear();
-        launch_directory = "/";
-    }
-
-    std::string launch_to_exec(argv_zero);
-    launch_to_exec = launch_to_exec.substr(launch_to_exec.find_first_of('/'), launch_to_exec.find_last_of('/')) + "/";
-    exec_path = launch_directory + launch_to_exec;
+    std::string exec_path =
+        std::filesystem::weakly_canonical(std::filesystem::path(argv_zero)).parent_path().string() + "/";
 
     return exec_path;
 }
 
 void app_set_shaders_directory(const std::string& path)
 {
-    auto directory = path;
-    if (path.find_last_of('/') != path.length() - 1)
-    {
-        directory += "/";
-    }
-
-    app_state.m_shaders_directory = app_state.m_exec_path + directory;
+    app_state.m_shaders_directory = app_state.m_exec_path + std::filesystem::path(path).string() + "/";
 }
 
 void app_set_textures_directory(const std::string& path)
 {
-    auto directory = path;
-    if (path.find_last_of('/') != path.length() - 1)
-    {
-        directory += "/";
-    }
-
-    app_state.m_textures_directory = app_state.m_exec_path + directory;
+    app_state.m_textures_directory = app_state.m_exec_path + std::filesystem::path(path).string() + "/";
 }
 
 void app_init(const ApplicationConfig* config)
@@ -121,8 +96,8 @@ void app_run()
             case SDL_WINDOWEVENT:
                 if (e.window.event == SDL_WINDOWEVENT_RESIZED)
                 {
-                    app_state.m_window.m_data[ WindowParams::eWidth ] = e.window.data1;
-                    app_state.m_window.m_data[ WindowParams::eHeight ] = e.window.data2;
+                    app_state.m_window.data[ WindowParams::eWidth ] = e.window.data1;
+                    app_state.m_window.data[ WindowParams::eHeight ] = e.window.data2;
 
                     app_state.m_on_resize(e.window.data1, e.window.data2);
                 }

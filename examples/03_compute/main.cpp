@@ -110,8 +110,8 @@ void on_init()
     Shader shader = create_shader(device, shader_desc);
 
     DescriptorSetLayoutDesc descriptor_set_layout_desc{};
-    descriptor_set_layout_desc.m_shader_count = 1;
-    descriptor_set_layout_desc.m_shaders = &shader;
+    descriptor_set_layout_desc.shader_count = 1;
+    descriptor_set_layout_desc.shaders = &shader;
 
     descriptor_set_layout = create_descriptor_set_layout(device, descriptor_set_layout_desc);
 
@@ -180,8 +180,8 @@ void on_update(f64 delta_time)
 
     begin_command_buffer(cmd);
 
-    cmd_set_viewport(cmd, 0, 0, swapchain.m_width, swapchain.m_height, 0.0f, 1.0f);
-    cmd_set_scissor(cmd, 0, 0, swapchain.m_width, swapchain.m_height);
+    cmd_set_viewport(cmd, 0, 0, swapchain.width, swapchain.height, 0.0f, 1.0f);
+    cmd_set_scissor(cmd, 0, 0, swapchain.width, swapchain.height);
     cmd_bind_pipeline(cmd, pipeline);
     cmd_bind_descriptor_set(cmd, descriptor_set, pipeline);
 
@@ -190,16 +190,16 @@ void on_update(f64 delta_time)
     pcb.mouse_x = 0;
     pcb.mouse_y = 0;
     cmd_push_constants(cmd, pipeline, 0, sizeof(PushConstantBlock), &pcb);
-    cmd_dispatch(cmd, output_texture.m_width / 16, output_texture.m_height, 1);
+    cmd_dispatch(cmd, output_texture.width / 16, output_texture.height / 16, 1);
 
     cmd_blit_image(
-        cmd, output_texture, ResourceState::eStorage, swapchain.m_images[ image_index ], ResourceState::eUndefined,
+        cmd, output_texture, ResourceState::eStorage, swapchain.images[ image_index ], ResourceState::eUndefined,
         Filter::eLinear);
 
     ImageBarrier to_present_barrier{};
     to_present_barrier.src_queue = &queue;
     to_present_barrier.dst_queue = &queue;
-    to_present_barrier.image = &swapchain.m_images[ image_index ];
+    to_present_barrier.image = &swapchain.images[ image_index ];
     to_present_barrier.old_state = ResourceState::eTransferDst;
     to_present_barrier.new_state = ResourceState::ePresent;
 

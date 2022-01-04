@@ -15,29 +15,29 @@ Window create_window(const char* title, u32 x, u32 y, u32 width, u32 height)
     FT_ASSERT(window && "Failed to create window");
 
     Window result{};
-    result.m_handle = window;
-    result.m_data[ WindowParams::ePositionX ] = x;
-    result.m_data[ WindowParams::ePositionY ] = y;
-    result.m_data[ WindowParams::eWidth ] = width;
-    result.m_data[ WindowParams::eHeight ] = height;
+    result.handle = window;
+    result.data[ WindowParams::ePositionX ] = x;
+    result.data[ WindowParams::ePositionY ] = y;
+    result.data[ WindowParams::eWidth ] = width;
+    result.data[ WindowParams::eHeight ] = height;
 
     return result;
 }
 
 void destroy_window(Window& window)
 {
-    FT_ASSERT(window.m_handle && "Window is nullptr");
-    SDL_DestroyWindow(( SDL_Window* ) window.m_handle);
+    FT_ASSERT(window.handle && "Window is nullptr");
+    SDL_DestroyWindow(( SDL_Window* ) window.handle);
 }
 
 u32 window_get_width(const Window* window)
 {
-    return window->m_data[ WindowParams::eWidth ];
+    return window->data[ WindowParams::eWidth ];
 }
 
 u32 window_get_height(const Window* window)
 {
-    return window->m_data[ WindowParams::eHeight ];
+    return window->data[ WindowParams::eHeight ];
 }
 
 } // namespace fluent
