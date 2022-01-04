@@ -28,7 +28,7 @@ static const f32 vertices[] = { -0.5f, -0.5f, 0.5f, -0.5f, 0.0f, 0.5f };
 
 void on_init()
 {
-    app_set_shaders_directory("../../../examples/shaders/");
+    app_set_shaders_directory("../../../examples/shaders/01_hello_triangle");
 
     RendererDesc renderer_desc{};
     renderer_desc.vulkan_allocator = nullptr;

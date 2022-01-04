@@ -47,7 +47,12 @@ std::string get_exec_path(u32 argc, char* argv_zero)
 
 void app_set_shaders_directory(const std::string& path)
 {
-    auto directory = path.substr(0, path.find_last_of('/')) + "/";
+    auto directory = path;
+    if (path.find_last_of('/') != path.length() - 1)
+    {
+        directory += "/";
+    }
+
     app_state.m_shaders_directory = app_state.m_exec_path + directory;
 }
 

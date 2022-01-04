@@ -244,8 +244,8 @@ struct ImageBarrier
     ResourceState old_state;
     ResourceState new_state;
     Image* image;
-    Queue* src_queue;
-    Queue* dst_queue;
+    const Queue* src_queue;
+    const Queue* dst_queue;
 };
 
 struct ShaderDesc
@@ -472,5 +472,6 @@ void update_image(const Device& device, const ImageUpdateDesc& desc);
 DescriptorSet create_descriptor_set(const Device& device, const DescriptorSetDesc& desc);
 void destroy_descriptor_set(const Device& device, DescriptorSet& set);
 void update_descriptor_set(const Device& device, DescriptorSet& set, u32 count, const DescriptorSetUpdateDesc* descs);
+void cmd_bind_descriptor_set(const CommandBuffer& command_buffer, const DescriptorSet& set, const Pipeline& pipeline);
 
 } // namespace fluent

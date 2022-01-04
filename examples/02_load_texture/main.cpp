@@ -24,13 +24,15 @@ Pipeline pipeline;
 
 Buffer vertex_buffer;
 
-static const f32 vertices[] = { -0.5f, -0.5f, 0.5f, -0.5f, 0.0f, 0.5f };
+static const f32 vertices[] = { -0.5f, -0.5f, 0.0f, 0.0f, 0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.5f, 0.0f, 1.0f };
 
+DescriptorSet descriptor_set;
+Sampler sampler;
 Image texture;
 
 void on_init()
 {
-    app_set_shaders_directory("../../../examples/shaders/");
+    app_set_shaders_directory("../../../examples/shaders/02_load_texture");
 
     RendererDesc renderer_desc{};
     renderer_desc.vulkan_allocator = nullptr;
@@ -88,12 +90,16 @@ void on_init()
     pipeline_desc.binding_desc_count = 1;
     pipeline_desc.binding_descs[ 0 ].binding = 0;
     pipeline_desc.binding_descs[ 0 ].input_rate = VertexInputRate::eVertex;
-    pipeline_desc.binding_descs[ 0 ].stride = 2 * sizeof(float);
-    pipeline_desc.attribute_desc_count = 1;
+    pipeline_desc.binding_descs[ 0 ].stride = 4 * sizeof(float);
+    pipeline_desc.attribute_desc_count = 2;
     pipeline_desc.attribute_descs[ 0 ].binding = 0;
     pipeline_desc.attribute_descs[ 0 ].format = Format::eR32G32Sfloat;
     pipeline_desc.attribute_descs[ 0 ].location = 0;
     pipeline_desc.attribute_descs[ 0 ].offset = 0;
+    pipeline_desc.attribute_descs[ 1 ].binding = 0;
+    pipeline_desc.attribute_descs[ 1 ].format = Format::eR32G32Sfloat;
+    pipeline_desc.attribute_descs[ 1 ].location = 1;
+    pipeline_desc.attribute_descs[ 1 ].offset = 2 * sizeof(float);
     pipeline_desc.rasterizer_desc.cull_mode = CullMode::eNone;
     pipeline_desc.rasterizer_desc.front_face = FrontFace::eCounterClockwise;
     pipeline_desc.depth_state_desc.depth_test = false;
@@ -116,6 +122,13 @@ void on_init()
 
     vertex_buffer = create_buffer(device, buffer_desc);
 
+    SamplerDesc sampler_desc{};
+    sampler_desc.mipmap_mode = SamplerMipmapMode::eLinear;
+    sampler_desc.min_lod = 0;
+    sampler_desc.max_lod = 1000;
+
+    sampler = create_sampler(device, sampler_desc);
+
     ImageDesc image_desc{};
     image_desc.width = 256;
     image_desc.height = 256;
@@ -128,6 +141,33 @@ void on_init()
     image_desc.resource_state = ResourceState::eShaderReadOnly;
 
     texture = create_image(device, image_desc);
+
+    ImageSetWrite sampler_write = {};
+    sampler_write.sampler = &sampler;
+    sampler_write.image = nullptr;
+    ImageSetWrite image_write = {};
+    image_write.sampler = nullptr;
+    image_write.image = &texture;
+
+    DescriptorSetUpdateDesc set_updates[ 2 ];
+    set_updates[ 0 ].descriptor_type = DescriptorType::eSampler;
+    set_updates[ 0 ].binding = 0;
+    set_updates[ 0 ].buffer_set_write_count = 0;
+    set_updates[ 0 ].buffer_set_writes = nullptr;
+    set_updates[ 0 ].image_set_write_count = 1;
+    set_updates[ 0 ].image_set_writes = &sampler_write;
+    set_updates[ 1 ].descriptor_type = DescriptorType::eSampledImage;
+    set_updates[ 1 ].binding = 1;
+    set_updates[ 1 ].buffer_set_write_count = 0;
+    set_updates[ 1 ].buffer_set_writes = nullptr;
+    set_updates[ 1 ].image_set_write_count = 1;
+    set_updates[ 1 ].image_set_writes = &image_write;
+
+    DescriptorSetDesc descriptor_set_desc{};
+    descriptor_set_desc.descriptor_set_layout = &descriptor_set_layout;
+
+    descriptor_set = create_descriptor_set(device, descriptor_set_desc);
+    update_descriptor_set(device, descriptor_set, 2, set_updates);
 }
 
 void on_resize(u32 width, u32 height)
@@ -180,6 +220,7 @@ void on_update(f64 delta_time)
     cmd_set_viewport(cmd, 0, 0, swapchain.m_width, swapchain.m_height, 0.0f, 1.0f);
     cmd_set_scissor(cmd, 0, 0, swapchain.m_width, swapchain.m_height);
     cmd_bind_pipeline(cmd, pipeline);
+    cmd_bind_descriptor_set(cmd, descriptor_set, pipeline);
     cmd_bind_vertex_buffer(cmd, vertex_buffer);
     cmd_draw(cmd, 3, 1, 0, 0);
     cmd_end_render_pass(cmd);
@@ -221,7 +262,9 @@ void on_update(f64 delta_time)
 void on_shutdown()
 {
     device_wait_idle(device);
+    destroy_descriptor_set(device, descriptor_set);
     destroy_image(device, texture);
+    destroy_sampler(device, sampler);
     destroy_buffer(device, vertex_buffer);
     destroy_pipeline(device, pipeline);
     destroy_descriptor_set_layout(device, descriptor_set_layout);

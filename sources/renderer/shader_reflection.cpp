@@ -115,23 +115,13 @@ ReflectionData reflect(u32 byte_code_size, const u32* byte_code)
     u32 i = 0;
     for (const auto& descriptor_binding : descriptor_bindings)
     {
-        // auto& uniformBlock = result.descriptor_sets[ descriptor_binding->set ];
-
-        // std::vector<ShaderType> uniform_variables;
-        // recursive_uniform_visit(uniform_variables, *descriptor_binding->type_description);
-
         result.bindings[ i ].binding = descriptor_binding->binding;
         result.bindings[ i ].descriptor_count = descriptor_binding->count;
         result.bindings[ i ].descriptor_type =
             to_desctriptor_type(( VkDescriptorType ) descriptor_binding->descriptor_type);
 
-        // uniformBlock.push_back(Uniform{ std::move(uniform_variables),
-        //                                 to_desctriptor_type(( VkDescriptorType )
-        //                                 descriptor_binding->descriptor_type), descriptor_binding->binding,
-        //                                 descriptor_binding->count });
+        i++;
     }
-    // if (result.descriptor_sets.empty())
-    //     result.descriptor_sets.emplace_back(); // insert empty descriptor set
 
     spvReflectDestroyShaderModule(&reflected_shader);
 

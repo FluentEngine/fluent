@@ -850,7 +850,7 @@ Device create_device(const Renderer& renderer, const DeviceDesc& desc)
     VkDescriptorPoolCreateInfo descriptor_pool_create_info{};
     descriptor_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptor_pool_create_info.pNext = nullptr;
-    descriptor_pool_create_info.flags = 0;
+    descriptor_pool_create_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
     descriptor_pool_create_info.maxSets = 2048 * pool_size_count;
     descriptor_pool_create_info.poolSizeCount = pool_size_count;
     descriptor_pool_create_info.pPoolSizes = pool_sizes;
@@ -1467,6 +1467,7 @@ DescriptorSetLayout create_descriptor_set_layout(const Device& device, const Des
                 bindings[ binding_index ].descriptorType = to_vk_descriptor_type(reflected_binding.descriptor_type);
                 bindings[ binding_index ].pImmutableSamplers = nullptr; // ??? TODO
                 bindings[ binding_index ].stageFlags = to_vk_shader_stage(descriptor_set_layout.m_shaders[ i ].m_stage);
+                binding_index++;
             }
         }
 
@@ -2074,6 +2075,21 @@ Image create_image(const Device& device, const ImageDesc& desc)
     VK_ASSERT(vkCreateImageView(
         device.m_logical_device, &image_view_create_info, device.m_vulkan_allocator, &image.m_image_view));
 
+    if (desc.resource_state != ResourceState::eUndefined)
+    {
+        ImageBarrier image_barrier{};
+        image_barrier.image = &image;
+        image_barrier.old_state = ResourceState::eUndefined;
+        image_barrier.new_state = desc.resource_state;
+        image_barrier.src_queue = &device.m_upload_queue;
+        image_barrier.dst_queue = &device.m_upload_queue;
+
+        begin_command_buffer(device.m_upload_command_buffer);
+        cmd_barrier(device.m_upload_command_buffer, 0, nullptr, 1, &image_barrier);
+        end_command_buffer(device.m_upload_command_buffer);
+        immediate_submit(device.m_upload_queue, device.m_upload_command_buffer);
+    }
+
     return image;
 }
 
@@ -2103,6 +2119,9 @@ void update_image(const Device& device, const ImageUpdateDesc& desc)
 
 DescriptorSet create_descriptor_set(const Device& device, const DescriptorSetDesc& desc)
 {
+    FT_ASSERT(desc.descriptor_set_layout);
+    FT_ASSERT(desc.descriptor_set_layout->m_descriptor_set_layout != VK_NULL_HANDLE);
+
     DescriptorSet descriptor_set{};
 
     VkDescriptorSetAllocateInfo descriptor_set_allocate_info{};
@@ -2139,27 +2158,27 @@ void update_descriptor_set(const Device& device, DescriptorSet& set, u32 count, 
     {
         auto& update = descs[ i ];
 
-        auto& writeDescriptorSet = descriptor_writes[ write++ ];
-        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writeDescriptorSet.dstBinding = update.binding;
-        writeDescriptorSet.descriptorCount = 1;
-        writeDescriptorSet.dstSet = set.m_descriptor_set;
-        writeDescriptorSet.descriptorType = to_vk_descriptor_type(update.descriptor_type);
+        auto& write_descriptor_set = descriptor_writes[ write++ ];
+        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write_descriptor_set.dstBinding = update.binding;
+        write_descriptor_set.descriptorCount = 1;
+        write_descriptor_set.dstSet = set.m_descriptor_set;
+        write_descriptor_set.descriptorType = to_vk_descriptor_type(update.descriptor_type);
 
         if (update.buffer_set_write_count > 0)
         {
             auto& buffer_update_infos = buffer_updates[ buffer_update_idx++ ];
             buffer_update_infos.resize(update.buffer_set_write_count, {});
 
-            for (uint32_t i = 0; i < buffer_update_infos.size(); ++i)
+            for (u32 j = 0; j < buffer_update_infos.size(); ++j)
             {
-                buffer_update_infos[ i ].buffer = update.buffer_set_writes[ i ].buffer->m_buffer;
-                buffer_update_infos[ i ].offset = update.buffer_set_writes[ i ].offset;
-                buffer_update_infos[ i ].range = update.buffer_set_writes[ i ].range;
+                buffer_update_infos[ j ].buffer = update.buffer_set_writes[ j ].buffer->m_buffer;
+                buffer_update_infos[ j ].offset = update.buffer_set_writes[ j ].offset;
+                buffer_update_infos[ j ].range = update.buffer_set_writes[ j ].range;
             }
 
-            writeDescriptorSet.descriptorCount = buffer_update_infos.size();
-            writeDescriptorSet.pBufferInfo = buffer_update_infos.data();
+            write_descriptor_set.descriptorCount = buffer_update_infos.size();
+            write_descriptor_set.pBufferInfo = buffer_update_infos.data();
         }
 
         if (update.image_set_write_count > 0)
@@ -2167,27 +2186,34 @@ void update_descriptor_set(const Device& device, DescriptorSet& set, u32 count, 
             auto& image_update_infos = image_updates[ image_update_idx++ ];
             image_update_infos.resize(update.image_set_write_count, {});
 
-            for (uint32_t i = 0; i < image_update_infos.size(); ++i)
+            for (u32 j = 0; j < image_update_infos.size(); ++j)
             {
-                if (update.image_set_writes[ i ].sampler != nullptr)
+                if (update.image_set_writes[ j ].sampler != nullptr)
                 {
-                    image_update_infos[ i ].sampler = update.image_set_writes[ i ].sampler->m_sampler;
+                    image_update_infos[ j ].sampler = update.image_set_writes[ j ].sampler->m_sampler;
                 }
 
-                if (update.image_set_writes[ i ].image != nullptr)
+                if (update.image_set_writes[ j ].image != nullptr)
                 {
-                    // TODO: determine image layout
-                    // imageUpdateInfos[ i ].imageLayout = ImageUsageToImageLayout(update.imageUpdates[ i ].usage);
-                    image_update_infos[ i ].imageView = update.image_set_writes[ i ].image->m_image_view;
+                    image_update_infos[ j ].imageLayout =
+                        determine_image_layout(update.image_set_writes[ j ].image->m_resource_state);
+                    image_update_infos[ j ].imageView = update.image_set_writes[ j ].image->m_image_view;
                 }
             }
 
-            writeDescriptorSet.descriptorCount = image_update_infos.size();
-            writeDescriptorSet.pImageInfo = image_update_infos.data();
+            write_descriptor_set.descriptorCount = image_update_infos.size();
+            write_descriptor_set.pImageInfo = image_update_infos.data();
         }
     }
 
     vkUpdateDescriptorSets(device.m_logical_device, descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
+}
+
+void cmd_bind_descriptor_set(const CommandBuffer& command_buffer, const DescriptorSet& set, const Pipeline& pipeline)
+{
+    vkCmdBindDescriptorSets(
+        command_buffer.m_command_buffer, to_vk_pipeline_bind_point(pipeline.m_type), pipeline.m_pipeline_layout, 0, 1,
+        &set.m_descriptor_set, 0, nullptr);
 }
 
 } // namespace fluent
