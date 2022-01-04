@@ -456,6 +456,9 @@ void cmd_bind_vertex_buffer(const CommandBuffer& command_buffer, const Buffer& b
 void cmd_copy_buffer(
     const CommandBuffer& command_buffer, const Buffer& src, u32 src_offset, Buffer& dst, u32 dst_offset, u32 size);
 
+void cmd_copy_buffer_to_image(const CommandBuffer& command_buffer, const Buffer& src, u32 src_offset, Image& dst);
+void cmd_bind_descriptor_set(const CommandBuffer& command_buffer, const DescriptorSet& set, const Pipeline& pipeline);
+
 void immediate_submit(const Queue& queue, const CommandBuffer& command_buffer);
 
 Buffer create_buffer(const Device& device, const BufferDesc& desc);
@@ -476,6 +479,5 @@ void update_image(const Device& device, const ImageUpdateDesc& desc);
 DescriptorSet create_descriptor_set(const Device& device, const DescriptorSetDesc& desc);
 void destroy_descriptor_set(const Device& device, DescriptorSet& set);
 void update_descriptor_set(const Device& device, DescriptorSet& set, u32 count, const DescriptorSetUpdateDesc* descs);
-void cmd_bind_descriptor_set(const CommandBuffer& command_buffer, const DescriptorSet& set, const Pipeline& pipeline);
 
 } // namespace fluent
