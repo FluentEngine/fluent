@@ -13,6 +13,7 @@ add_subdirectory(third_party/tiny_image_format)
 add_subdirectory(third_party/spirv_reflect)
 add_subdirectory(third_party/tinyddsloader)
 add_subdirectory(third_party/stb_image)
+add_subdirectory(third_party/glm)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -34,9 +35,12 @@ set(renderer_sources
 set(util_sources
 	${src_dir}/utils/utils.cpp)
 
+set(math_sources 
+	${src_dir}/math/math.cpp)
+
 set(sources ${common_sources} ${renderer_sources} ${util_sources})
 set(includes ${CMAKE_CURRENT_SOURCE_DIR}/sources)
-set(libs spdlog volk vma_allocator SDL2 tiny_image_format spirv_reflect tinyddsloader stb_image)
+set(libs spdlog volk vma_allocator SDL2 tiny_image_format spirv_reflect tinyddsloader stb_image glm)
 
 add_library(${target} ${sources})
 

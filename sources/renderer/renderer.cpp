@@ -311,6 +311,7 @@ static inline VkAccessFlags determine_access_flags(ResourceState resource_state)
 
 static inline VkPipelineStageFlags determine_pipeline_stage_flags(VkAccessFlags access_flags, QueueType queue_type)
 {
+    // TODO: FIX THIS
     VkPipelineStageFlags flags = 0;
 
     switch (queue_type)
@@ -343,7 +344,18 @@ static inline VkPipelineStageFlags determine_pipeline_stage_flags(VkAccessFlags 
         }
         break;
     }
+    case QueueType::eCompute: {
     }
+    }
+
+    if (access_flags & (VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT) ||
+        access_flags & VK_ACCESS_INPUT_ATTACHMENT_READ_BIT ||
+        access_flags & (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT) ||
+        access_flags & (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT))
+        return VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+    if (access_flags & (VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT))
+        flags |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 
     if (access_flags & VK_ACCESS_INDIRECT_COMMAND_READ_BIT)
         flags |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
@@ -1507,6 +1519,49 @@ void destroy_descriptor_set_layout(const Device& device, DescriptorSetLayout& la
     }
 }
 
+Pipeline create_compute_pipeline(const Device& device, const PipelineDesc& desc)
+{
+    FT_ASSERT(desc.descriptor_set_layout);
+
+    Pipeline pipeline{};
+    pipeline.m_type = PipelineType::eCompute;
+
+    VkPipelineShaderStageCreateInfo shader_stage_create_info{};
+    shader_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shader_stage_create_info.pNext = nullptr;
+    shader_stage_create_info.flags = 0;
+    shader_stage_create_info.stage = to_vk_shader_stage(desc.descriptor_set_layout->m_shaders[ 0 ].m_stage);
+    shader_stage_create_info.module = desc.descriptor_set_layout->m_shaders[ 0 ].m_shader;
+    shader_stage_create_info.pName = "main";
+    shader_stage_create_info.pSpecializationInfo = nullptr;
+
+    VkPushConstantRange push_constant_range{};
+    push_constant_range.size = MAX_PUSH_CONSTANT_RANGE;
+    push_constant_range.stageFlags =
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info{};
+    pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_create_info.setLayoutCount = 1;
+    pipeline_layout_create_info.pSetLayouts = &desc.descriptor_set_layout->m_descriptor_set_layout;
+    pipeline_layout_create_info.pushConstantRangeCount = 1;
+    pipeline_layout_create_info.pPushConstantRanges = &push_constant_range;
+
+    VK_ASSERT(vkCreatePipelineLayout(
+        device.m_logical_device, &pipeline_layout_create_info, nullptr, &pipeline.m_pipeline_layout));
+
+    VkComputePipelineCreateInfo compute_pipeline_create_info{};
+    compute_pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    compute_pipeline_create_info.stage = shader_stage_create_info;
+    compute_pipeline_create_info.layout = pipeline.m_pipeline_layout;
+
+    VK_ASSERT(vkCreateComputePipelines(
+        device.m_logical_device, {}, 1, &compute_pipeline_create_info, device.m_vulkan_allocator,
+        &pipeline.m_pipeline));
+
+    return pipeline;
+}
+
 Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc)
 {
     FT_ASSERT(desc.descriptor_set_layout);
@@ -1852,6 +1907,81 @@ void cmd_copy_buffer_to_image(const CommandBuffer& command_buffer, const Buffer&
         1, &buffer_to_image_copy_info);
 }
 
+void cmd_dispatch(const CommandBuffer& command_buffer, u32 group_count_x, u32 group_count_y, u32 group_count_z)
+{
+    vkCmdDispatch(command_buffer.m_command_buffer, group_count_x, group_count_y, group_count_z);
+}
+
+void cmd_push_constants(
+    const CommandBuffer& command_buffer, const Pipeline& pipeline, u32 offset, u32 size, const void* data)
+{
+    vkCmdPushConstants(
+        command_buffer.m_command_buffer, pipeline.m_pipeline_layout,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, offset, size, data);
+}
+
+void cmd_blit_image(
+    const CommandBuffer& command_buffer, const Image& src, ResourceState src_state, const Image& dst,
+    ResourceState dst_state, Filter filter)
+{
+    auto sourceRange = get_image_subresource_range(src);
+    auto distanceRange = get_image_subresource_range(dst);
+
+    VkImageMemoryBarrier barriers[ 2 ] = {};
+    size_t barrierCount = 0;
+
+    VkImageMemoryBarrier toTransferSrcBarrier{};
+    toTransferSrcBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    toTransferSrcBarrier.srcAccessMask = determine_access_flags(src_state);
+    toTransferSrcBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    toTransferSrcBarrier.oldLayout = determine_image_layout(src_state);
+    toTransferSrcBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    toTransferSrcBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    toTransferSrcBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    toTransferSrcBarrier.image = src.m_image;
+    toTransferSrcBarrier.subresourceRange = sourceRange;
+
+    VkImageMemoryBarrier toTransferDstBarrier{};
+    toTransferDstBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    toTransferDstBarrier.srcAccessMask = determine_access_flags(dst_state);
+    toTransferDstBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    toTransferDstBarrier.oldLayout = determine_image_layout(dst_state);
+    toTransferDstBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    toTransferDstBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    toTransferDstBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    toTransferDstBarrier.image = dst.m_image;
+    toTransferDstBarrier.subresourceRange = distanceRange;
+
+    if (src_state != ResourceState::eTransferSrc)
+        barriers[ barrierCount++ ] = toTransferSrcBarrier;
+    if (dst_state != ResourceState::eTransferDst)
+        barriers[ barrierCount++ ] = toTransferDstBarrier;
+
+    if (barrierCount > 0)
+    {
+        vkCmdPipelineBarrier(
+            command_buffer.m_command_buffer,
+            determine_pipeline_stage_flags(src_state, command_buffer.m_queue_type) |
+                determine_pipeline_stage_flags(dst_state, command_buffer.m_queue_type),
+            VK_PIPELINE_STAGE_TRANSFER_BIT, {}, 0, nullptr, 0, nullptr, static_cast<u32>(barrierCount), barriers);
+    }
+
+    auto srcLayers = get_image_subresource_layers(src);
+    auto dstLayers = get_image_subresource_layers(dst);
+
+    VkImageBlit imageBlitInfo{};
+    imageBlitInfo.srcOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
+    imageBlitInfo.srcOffsets[ 1 ] = VkOffset3D{ ( i32 ) src.m_width, ( i32 ) src.m_height, 1 };
+    imageBlitInfo.dstOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
+    imageBlitInfo.dstOffsets[ 1 ] = VkOffset3D{ ( i32 ) dst.m_width, ( i32 ) dst.m_height, 1 };
+    imageBlitInfo.srcSubresource = srcLayers;
+    imageBlitInfo.dstSubresource = dstLayers;
+
+    vkCmdBlitImage(
+        command_buffer.m_command_buffer, src.m_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst.m_image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlitInfo, to_vk_filter(filter));
+}
+
 void immediate_submit(const Queue& queue, const CommandBuffer& command_buffer)
 {
     QueueSubmitDesc submit_desc{};
@@ -1997,7 +2127,7 @@ Image create_image(const Device& device, const ImageDesc& desc)
     Image image{};
 
     VmaAllocationCreateInfo allocation_create_info{};
-    allocation_create_info.usage = determine_vma_memory_usage(desc.resource_state);
+    allocation_create_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
     VkImageCreateInfo image_create_info{};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;

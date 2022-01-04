@@ -6,3 +6,5 @@
 
 #include "renderer/renderer_enums.hpp"
 #include "renderer/renderer.hpp"
+
+#include "math/math.hpp"

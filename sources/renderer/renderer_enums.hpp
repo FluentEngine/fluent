@@ -240,7 +240,7 @@ enum class AttachmentLoadOp
     eDontCare = 2
 };
 
-enum ResourceState
+enum ResourceState : u32
 {
     eUndefined = BIT(0),
     eStorage = BIT(1),

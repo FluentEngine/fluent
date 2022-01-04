@@ -433,6 +433,7 @@ void destroy_shader(const Device& device, Shader& shader);
 DescriptorSetLayout create_descriptor_set_layout(const Device& device, const DescriptorSetLayoutDesc& desc);
 void destroy_descriptor_set_layout(const Device& device, DescriptorSetLayout& layout);
 
+Pipeline create_compute_pipeline(const Device& device, const PipelineDesc& desc);
 Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc);
 void destroy_pipeline(const Device& device, Pipeline& pipeline);
 
@@ -458,6 +459,15 @@ void cmd_copy_buffer(
 
 void cmd_copy_buffer_to_image(const CommandBuffer& command_buffer, const Buffer& src, u32 src_offset, Image& dst);
 void cmd_bind_descriptor_set(const CommandBuffer& command_buffer, const DescriptorSet& set, const Pipeline& pipeline);
+
+void cmd_dispatch(const CommandBuffer& command_buffer, u32 group_count_x, u32 group_count_y, u32 group_count_z);
+
+void cmd_push_constants(
+    const CommandBuffer& command_buffer, const Pipeline& pipeline, u32 offset, u32 size, const void* data);
+
+void cmd_blit_image(
+    const CommandBuffer& command_buffer, const Image& src, ResourceState src_state, const Image& dst,
+    ResourceState dst_state, Filter filter);
 
 void immediate_submit(const Queue& queue, const CommandBuffer& command_buffer);
 
