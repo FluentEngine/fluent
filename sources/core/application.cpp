@@ -10,6 +10,7 @@ struct ApplicationState
 {
     std::string m_exec_path;
     std::string m_shaders_directory;
+    std::string m_textures_directory;
     b32 m_is_inited;
     b32 m_is_running;
     const char* m_title;
@@ -54,6 +55,17 @@ void app_set_shaders_directory(const std::string& path)
     }
 
     app_state.m_shaders_directory = app_state.m_exec_path + directory;
+}
+
+void app_set_textures_directory(const std::string& path)
+{
+    auto directory = path;
+    if (path.find_last_of('/') != path.length() - 1)
+    {
+        directory += "/";
+    }
+
+    app_state.m_textures_directory = app_state.m_exec_path + directory;
 }
 
 void app_init(const ApplicationConfig* config)
@@ -146,6 +158,11 @@ const Window* get_app_window()
 const std::string& get_app_shaders_directory()
 {
     return app_state.m_shaders_directory;
+}
+
+const std::string& get_app_textures_directory()
+{
+    return app_state.m_textures_directory;
 }
 
 } // namespace fluent

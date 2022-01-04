@@ -24,7 +24,16 @@ Pipeline pipeline;
 
 Buffer vertex_buffer;
 
-static const f32 vertices[] = { -0.5f, -0.5f, 0.0f, 0.0f, 0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.5f, 0.0f, 1.0f };
+// clang-format off
+static const f32 vertices[] = {
+    -0.5f, -0.5f, 0.0f, 0.0f, 
+    0.5f, -0.5f, 1.0f, 0.0f, 
+    0.5f, 0.5f, 1.0f, 1.0f, 
+    0.5f, 0.5f, 1.0f, 1.0f, 
+    -0.5f, 0.5f, 0.0f, 1.0f,
+    -0.5f, -0.5f, 0.0f, 0.0f,
+};
+// clang-format on
 
 DescriptorSet descriptor_set;
 Sampler sampler;
@@ -33,6 +42,7 @@ Image texture;
 void on_init()
 {
     app_set_shaders_directory("../../../examples/shaders/02_load_texture");
+    app_set_textures_directory("../../../examples/textures");
 
     RendererDesc renderer_desc{};
     renderer_desc.vulkan_allocator = nullptr;
@@ -129,18 +139,7 @@ void on_init()
 
     sampler = create_sampler(device, sampler_desc);
 
-    ImageDesc image_desc{};
-    image_desc.width = 256;
-    image_desc.height = 256;
-    image_desc.depth = 1;
-    image_desc.sample_count = SampleCount::e1;
-    image_desc.format = Format::eR8G8B8A8Unorm;
-    image_desc.layer_count = 1;
-    image_desc.mip_levels = 1;
-    image_desc.descriptor_type = DescriptorType::eSampledImage;
-    image_desc.resource_state = ResourceState::eShaderReadOnly;
-
-    texture = create_image(device, image_desc);
+    texture = load_image_from_file(device, "statue.jpg", ResourceState::eShaderReadOnly);
 
     ImageSetWrite sampler_write = {};
     sampler_write.sampler = &sampler;
@@ -222,7 +221,7 @@ void on_update(f64 delta_time)
     cmd_bind_pipeline(cmd, pipeline);
     cmd_bind_descriptor_set(cmd, descriptor_set, pipeline);
     cmd_bind_vertex_buffer(cmd, vertex_buffer);
-    cmd_draw(cmd, 3, 1, 0, 0);
+    cmd_draw(cmd, 6, 1, 0, 0);
     cmd_end_render_pass(cmd);
 
     ImageBarrier to_present_barrier{};

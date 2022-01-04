@@ -86,6 +86,8 @@ struct ImageDesc
     ResourceState resource_state;
     DescriptorType descriptor_type;
     const char* filename;
+    u32 data_size;
+    void* data;
 };
 
 struct ImageUpdateDesc
@@ -466,6 +468,8 @@ void destroy_sampler(const Device& device, Sampler& sampler);
 
 Image create_image(const Device& device, const ImageDesc& desc);
 void destroy_image(const Device& device, Image& image);
+Image load_image_from_dds_file(const Device& device, const char* filename, ResourceState resource_state);
+Image load_image_from_file(const Device& device, const char* filename, ResourceState resource_state);
 
 void update_image(const Device& device, const ImageUpdateDesc& desc);
 

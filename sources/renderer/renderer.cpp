@@ -345,6 +345,15 @@ static inline VkPipelineStageFlags determine_pipeline_stage_flags(VkAccessFlags 
     }
     }
 
+    if (access_flags & VK_ACCESS_INDIRECT_COMMAND_READ_BIT)
+        flags |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+
+    if (access_flags & (VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT))
+        flags |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+    if (access_flags & (VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT))
+        flags |= VK_PIPELINE_STAGE_HOST_BIT;
+
     if (flags == 0)
         flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
@@ -1829,27 +1838,27 @@ void cmd_copy_buffer(
 void cmd_copy_buffer_to_image(
     const CommandBuffer& command_buffer, const Buffer& src, u32 src_offset, Image& dst, ResourceState dst_state)
 {
-    if (dst_state != ResourceState::eTransferDst)
-    {
-        // TODO:
-        VkImageMemoryBarrier to_transfer_dst_barrier{};
-        to_transfer_dst_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        to_transfer_dst_barrier.srcAccessMask = determine_access_flags(dst_state);
-        to_transfer_dst_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        to_transfer_dst_barrier.oldLayout = determine_image_layout(dst_state);
-        to_transfer_dst_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        to_transfer_dst_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        to_transfer_dst_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        to_transfer_dst_barrier.image = dst.m_image;
-        to_transfer_dst_barrier.subresourceRange = get_image_subresource_range(dst);
+    // if (dst_state != ResourceState::eTransferDst)
+    // {
+    //     // TODO:
+    //     VkImageMemoryBarrier to_transfer_dst_barrier{};
+    //     to_transfer_dst_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    //     to_transfer_dst_barrier.srcAccessMask = determine_access_flags(dst_state);
+    //     to_transfer_dst_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    //     to_transfer_dst_barrier.oldLayout = determine_image_layout(dst_state);
+    //     to_transfer_dst_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    //     to_transfer_dst_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    //     to_transfer_dst_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    //     to_transfer_dst_barrier.image = dst.m_image;
+    //     to_transfer_dst_barrier.subresourceRange = get_image_subresource_range(dst);
 
-        vkCmdPipelineBarrier(
-            command_buffer.m_command_buffer,
-            determine_pipeline_stage_flags(
-                to_transfer_dst_barrier.srcAccessMask | to_transfer_dst_barrier.dstAccessMask,
-                command_buffer.m_queue_type),
-            VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &to_transfer_dst_barrier);
-    }
+    //     vkCmdPipelineBarrier(
+    //         command_buffer.m_command_buffer,
+    //         determine_pipeline_stage_flags(
+    //             to_transfer_dst_barrier.dstAccessMask | to_transfer_dst_barrier.srcAccessMask,
+    //             command_buffer.m_queue_type),
+    //         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &to_transfer_dst_barrier);
+    // }
 
     auto dst_layers = get_image_subresource_layers(dst);
 
@@ -2001,18 +2010,13 @@ void destroy_sampler(const Device& device, Sampler& sampler)
 
 Image create_image(const Device& device, const ImageDesc& desc)
 {
+    // TODO: refactor this function
+    ImageDesc image_desc = desc;
+
     Image image{};
-    image.m_width = desc.width;
-    image.m_height = desc.height;
-    image.m_format = desc.format;
-    image.m_sample_count = desc.sample_count;
-    image.m_mip_level_count = desc.mip_levels;
-    image.m_layer_count = desc.layer_count;
-    image.m_resource_state = desc.resource_state;
-    image.m_descriptor_type = desc.descriptor_type;
 
     VmaAllocationCreateInfo allocation_create_info{};
-    allocation_create_info.usage = determine_vma_memory_usage(desc.resource_state);
+    allocation_create_info.usage = determine_vma_memory_usage(image_desc.resource_state);
 
     VkImageCreateInfo image_create_info{};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -2020,15 +2024,15 @@ Image create_image(const Device& device, const ImageDesc& desc)
     image_create_info.flags = 0;
     // TODO: determine image type properly
     image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    image_create_info.format = to_vk_format(desc.format);
-    image_create_info.extent.width = desc.width;
-    image_create_info.extent.height = desc.height;
-    image_create_info.extent.depth = desc.depth;
-    image_create_info.mipLevels = desc.mip_levels;
-    image_create_info.arrayLayers = desc.layer_count;
-    image_create_info.samples = to_vk_sample_count(desc.sample_count);
+    image_create_info.format = to_vk_format(image_desc.format);
+    image_create_info.extent.width = image_desc.width;
+    image_create_info.extent.height = image_desc.height;
+    image_create_info.extent.depth = image_desc.depth;
+    image_create_info.mipLevels = image_desc.mip_levels;
+    image_create_info.arrayLayers = image_desc.layer_count;
+    image_create_info.samples = to_vk_sample_count(image_desc.sample_count);
     image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_create_info.usage = determine_vk_image_usage(desc.resource_state, desc.descriptor_type);
+    image_create_info.usage = determine_vk_image_usage(image_desc.resource_state, image_desc.descriptor_type);
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_create_info.queueFamilyIndexCount = 0;
     image_create_info.pQueueFamilyIndices = nullptr;
@@ -2038,20 +2042,49 @@ Image create_image(const Device& device, const ImageDesc& desc)
         device.m_memory_allocator, &image_create_info, &allocation_create_info, &image.m_image, &image.m_allocation,
         nullptr));
 
-    if (desc.filename)
-    {
-        FT_ASSERT(false && "Not implemented");
-        // TODO: load image from file
-        u32 image_data_size = 0;
-        void* image_data = nullptr;
+    image.m_width = image_desc.width;
+    image.m_height = image_desc.height;
+    image.m_format = image_desc.format;
+    image.m_sample_count = image_desc.sample_count;
+    image.m_mip_level_count = image_desc.mip_levels;
+    image.m_layer_count = image_desc.layer_count;
+    image.m_resource_state = image_desc.resource_state;
+    image.m_descriptor_type = image_desc.descriptor_type;
 
+    if (image_desc.data)
+    {
         ImageUpdateDesc image_update_desc{};
         image_update_desc.image = &image;
-        image_update_desc.size = image_data_size;
-        image_update_desc.data = image_data;
+        image_update_desc.size = image_desc.data_size;
+        image_update_desc.data = image_desc.data;
         image_update_desc.resource_state = image.m_resource_state;
 
+        ImageBarrier image_barrier{};
+        image_barrier.image = &image;
+        image_barrier.old_state = ResourceState::eUndefined;
+        image_barrier.new_state = ResourceState::eTransferDst;
+        image_barrier.src_queue = &device.m_upload_queue;
+        image_barrier.dst_queue = &device.m_upload_queue;
+        begin_command_buffer(device.m_upload_command_buffer);
+        cmd_barrier(device.m_upload_command_buffer, 0, nullptr, 1, &image_barrier);
+        end_command_buffer(device.m_upload_command_buffer);
+        immediate_submit(device.m_upload_queue, device.m_upload_command_buffer);
         update_image(device, image_update_desc);
+    }
+
+    if (image_desc.resource_state != ResourceState::eUndefined)
+    {
+        ImageBarrier image_barrier{};
+        image_barrier.image = &image;
+        image_barrier.old_state = ResourceState::eUndefined;
+        image_barrier.new_state = image_desc.resource_state;
+        image_barrier.src_queue = &device.m_upload_queue;
+        image_barrier.dst_queue = &device.m_upload_queue;
+
+        begin_command_buffer(device.m_upload_command_buffer);
+        cmd_barrier(device.m_upload_command_buffer, 0, nullptr, 1, &image_barrier);
+        end_command_buffer(device.m_upload_command_buffer);
+        immediate_submit(device.m_upload_queue, device.m_upload_command_buffer);
     }
 
     // TODO: fill properly
@@ -2075,21 +2108,6 @@ Image create_image(const Device& device, const ImageDesc& desc)
     VK_ASSERT(vkCreateImageView(
         device.m_logical_device, &image_view_create_info, device.m_vulkan_allocator, &image.m_image_view));
 
-    if (desc.resource_state != ResourceState::eUndefined)
-    {
-        ImageBarrier image_barrier{};
-        image_barrier.image = &image;
-        image_barrier.old_state = ResourceState::eUndefined;
-        image_barrier.new_state = desc.resource_state;
-        image_barrier.src_queue = &device.m_upload_queue;
-        image_barrier.dst_queue = &device.m_upload_queue;
-
-        begin_command_buffer(device.m_upload_command_buffer);
-        cmd_barrier(device.m_upload_command_buffer, 0, nullptr, 1, &image_barrier);
-        end_command_buffer(device.m_upload_command_buffer);
-        immediate_submit(device.m_upload_queue, device.m_upload_command_buffer);
-    }
-
     return image;
 }
 
@@ -2100,6 +2118,30 @@ void destroy_image(const Device& device, Image& image)
     FT_ASSERT(image.m_allocation);
     vkDestroyImageView(device.m_logical_device, image.m_image_view, device.m_vulkan_allocator);
     vmaDestroyImage(device.m_memory_allocator, image.m_image, image.m_allocation);
+}
+
+Image load_image_from_dds_file(const Device& device, const char* filename, ResourceState resource_state)
+{
+    std::string filepath = std::string(get_app_textures_directory()) + std::string(filename);
+    ImageDesc image_desc = read_image_desc_from_dds(filepath.c_str());
+    image_desc.descriptor_type = DescriptorType::eSampledImage;
+    image_desc.resource_state = ResourceState(ResourceState::eTransferDst | resource_state);
+    Image image = create_image(device, image_desc);
+    release_image_desc_dds(image_desc);
+
+    return image;
+}
+
+Image load_image_from_file(const Device& device, const char* filename, ResourceState resource_state)
+{
+    std::string filepath = std::string(get_app_textures_directory()) + std::string(filename);
+    ImageDesc image_desc = read_image_desc(filepath.c_str());
+    image_desc.descriptor_type = DescriptorType::eSampledImage;
+    image_desc.resource_state = ResourceState(ResourceState::eTransferDst | resource_state);
+    Image image = create_image(device, image_desc);
+    release_image_desc(image_desc);
+
+    return image;
 }
 
 void update_image(const Device& device, const ImageUpdateDesc& desc)

@@ -11,6 +11,8 @@ add_subdirectory(third_party/vk_mem_alloc)
 add_subdirectory(third_party/SDL)
 add_subdirectory(third_party/tiny_image_format)
 add_subdirectory(third_party/spirv_reflect)
+add_subdirectory(third_party/tinyddsloader)
+add_subdirectory(third_party/stb_image)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -34,7 +36,7 @@ set(util_sources
 
 set(sources ${common_sources} ${renderer_sources} ${util_sources})
 set(includes ${CMAKE_CURRENT_SOURCE_DIR}/sources)
-set(libs spdlog volk vma_allocator SDL2 tiny_image_format spirv_reflect)
+set(libs spdlog volk vma_allocator SDL2 tiny_image_format spirv_reflect tinyddsloader stb_image)
 
 add_library(${target} ${sources})
 
