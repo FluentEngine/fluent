@@ -22,5 +22,23 @@ using f32 = float;
 using f64 = double;
 using b32 = u32;
 
+#define MAKE_ENUM_FLAG(TYPE, ENUM_TYPE)                                                                                \
+    static inline ENUM_TYPE operator|(ENUM_TYPE a, ENUM_TYPE b)                                                        \
+    {                                                                                                                  \
+        return ( ENUM_TYPE ) (( TYPE ) (a) | ( TYPE ) (b));                                                            \
+    }                                                                                                                  \
+    static inline ENUM_TYPE operator&(ENUM_TYPE a, ENUM_TYPE b)                                                        \
+    {                                                                                                                  \
+        return ( ENUM_TYPE ) (( TYPE ) (a) & ( TYPE ) (b));                                                            \
+    }                                                                                                                  \
+    static inline ENUM_TYPE operator|=(ENUM_TYPE& a, ENUM_TYPE b)                                                      \
+    {                                                                                                                  \
+        return a = (a | b);                                                                                            \
+    }                                                                                                                  \
+    static inline ENUM_TYPE operator&=(ENUM_TYPE& a, ENUM_TYPE b)                                                      \
+    {                                                                                                                  \
+        return a = (a & b);                                                                                            \
+    }
+
 #include "core/log.hpp"
 #include "core/assert.hpp"

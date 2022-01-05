@@ -25,6 +25,8 @@ struct PushConstantBlock
     f32 mouse_y;
 };
 
+const InputSystem* input_system = nullptr;
+
 static constexpr u32 FRAME_COUNT = 2;
 u32 frame_index = 0;
 
@@ -56,8 +58,8 @@ void create_output_texture()
     image_desc.mip_levels = 1;
     image_desc.depth = 1;
     image_desc.format = Format::eR8G8B8A8Unorm;
-    image_desc.width = 512;
-    image_desc.height = 512;
+    image_desc.width = 1024;
+    image_desc.height = 1024;
     image_desc.resource_state = ResourceState(ResourceState::eTransferSrc | ResourceState::eStorage);
     image_desc.descriptor_type = DescriptorType::eStorageImage;
 
@@ -131,23 +133,25 @@ void on_init()
 
     create_output_texture();
 
-    ImageSetWrite image_write = {};
-    image_write.sampler = nullptr;
-    image_write.image = &output_texture;
-
-    DescriptorSetUpdateDesc set_updates[ 1 ];
-    set_updates[ 0 ].descriptor_type = DescriptorType::eStorageImage;
-    set_updates[ 0 ].binding = 0;
-    set_updates[ 0 ].buffer_set_write_count = 0;
-    set_updates[ 0 ].buffer_set_writes = nullptr;
-    set_updates[ 0 ].image_set_write_count = 1;
-    set_updates[ 0 ].image_set_writes = &image_write;
-
     DescriptorSetDesc descriptor_set_desc{};
     descriptor_set_desc.descriptor_set_layout = &descriptor_set_layout;
 
     descriptor_set = create_descriptor_set(device, descriptor_set_desc);
-    update_descriptor_set(device, descriptor_set, 1, set_updates);
+
+    DescriptorImageDesc descriptor_image_desc{};
+    descriptor_image_desc.sampler = nullptr;
+    descriptor_image_desc.resource_state = ResourceState::eStorage;
+    descriptor_image_desc.image = &output_texture;
+
+    DescriptorWriteDesc descriptor_write_desc{};
+    descriptor_write_desc.descriptor_type = DescriptorType::eStorageImage;
+    descriptor_write_desc.binding = 0;
+    descriptor_write_desc.descriptor_count = 1;
+    descriptor_write_desc.descriptor_image_descs = &descriptor_image_desc;
+
+    update_descriptor_set(device, descriptor_set, 1, &descriptor_write_desc);
+
+    input_system = get_app_input_system();
 }
 
 void on_resize(u32 width, u32 height)
@@ -187,8 +191,8 @@ void on_update(f64 delta_time)
 
     PushConstantBlock pcb;
     pcb.time = get_time() / 400.0f;
-    pcb.mouse_x = 0;
-    pcb.mouse_y = 0;
+    pcb.mouse_x = get_mouse_pos_x(input_system);
+    pcb.mouse_y = get_mouse_pos_y(input_system);
     cmd_push_constants(cmd, pipeline, 0, sizeof(PushConstantBlock), &pcb);
     cmd_dispatch(cmd, output_texture.width / 16, output_texture.height / 16, 1);
 

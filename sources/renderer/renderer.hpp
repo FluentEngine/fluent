@@ -19,8 +19,9 @@ static constexpr u32 FLUENT_VULKAN_API_VERSION = VK_API_VERSION_1_2;
 static constexpr u32 MAX_ATTACHMENTS_COUNT = 10;
 static constexpr u32 MAX_PUSH_CONSTANT_RANGE = 128;
 static constexpr u32 MAX_STAGE_COUNT = 5;
-static constexpr u32 MAX_VERTEX_BINGINGS_COUNT = 15;
+static constexpr u32 MAX_VERTEX_BINDING_COUNT = 15;
 static constexpr u32 MAX_VERTEX_ATTRIBUTE_COUNT = 15;
+static constexpr u32 MAX_DESCRIPTOR_BINDING_COUNT = 15;
 
 struct QueueDesc
 {
@@ -50,6 +51,7 @@ struct SwapchainDesc
     u32 width;
     u32 height;
     u32 image_count;
+    b32 builtin_depth;
 };
 
 struct SamplerDesc
@@ -155,6 +157,7 @@ struct Swapchain
     VkSwapchainKHR swapchain;
     Format format;
     Image* images;
+    Image depth_image;
     RenderPass* render_passes;
 };
 
@@ -307,7 +310,7 @@ struct DepthStateDesc
 struct PipelineDesc
 {
     u32 binding_desc_count;
-    VertexBindingDesc binding_descs[ MAX_VERTEX_BINGINGS_COUNT ];
+    VertexBindingDesc binding_descs[ MAX_VERTEX_BINDING_COUNT ];
     u32 attribute_desc_count;
     VertexAttributeDesc attribute_descs[ MAX_VERTEX_ATTRIBUTE_COUNT ];
     RasterizerStateDesc rasterizer_desc;
@@ -365,27 +368,27 @@ struct DescriptorSet
     VkDescriptorSet descriptor_set;
 };
 
-struct BufferSetWrite
+struct DescriptorBufferDesc
 {
     Buffer* buffer;
     u32 offset = 0;
     u32 range = 0;
 };
 
-struct ImageSetWrite
+struct DescriptorImageDesc
 {
     Sampler* sampler;
     Image* image;
+    ResourceState resource_state;
 };
 
-struct DescriptorSetUpdateDesc
+struct DescriptorWriteDesc
 {
-    DescriptorType descriptor_type;
+    u32 descriptor_count;
     u32 binding;
-    u32 buffer_set_write_count = 0;
-    BufferSetWrite* buffer_set_writes;
-    u32 image_set_write_count = 0;
-    ImageSetWrite* image_set_writes;
+    DescriptorType descriptor_type;
+    DescriptorImageDesc* descriptor_image_descs;
+    DescriptorBufferDesc* descriptor_buffer_descs;
 };
 
 Renderer create_renderer(const RendererDesc& desc);
@@ -449,8 +452,12 @@ void cmd_set_viewport(const CommandBuffer& cmd, f32 x, f32 y, f32 width, f32 hei
 
 void cmd_bind_pipeline(const CommandBuffer& cmd, const Pipeline& pipeline);
 void cmd_draw(const CommandBuffer& cmd, u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance);
+void cmd_draw_indexed(
+    const CommandBuffer& cmd, u32 index_count, u32 instance_count, u32 first_index, u32 vertex_offset,
+    u32 first_instance);
 
 void cmd_bind_vertex_buffer(const CommandBuffer& cmd, const Buffer& buffer);
+void cmd_bind_index_buffer_u32(const CommandBuffer& cmd, const Buffer& buffer);
 
 void cmd_copy_buffer(
     const CommandBuffer& cmd, const Buffer& src, u32 src_offset, Buffer& dst, u32 dst_offset, u32 size);
@@ -485,6 +492,6 @@ void update_image(const Device& device, const ImageUpdateDesc& desc);
 
 DescriptorSet create_descriptor_set(const Device& device, const DescriptorSetDesc& desc);
 void destroy_descriptor_set(const Device& device, DescriptorSet& set);
-void update_descriptor_set(const Device& device, DescriptorSet& set, u32 count, const DescriptorSetUpdateDesc* descs);
+void update_descriptor_set(const Device& device, DescriptorSet& set, u32 count, const DescriptorWriteDesc* descs);
 
 } // namespace fluent

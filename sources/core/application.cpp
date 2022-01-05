@@ -3,24 +3,27 @@
 #include <SDL.h>
 #include "core/window.hpp"
 #include "core/application.hpp"
+#include "core/input.hpp"
 
 namespace fluent
 {
 
 struct ApplicationState
 {
-    std::string m_exec_path;
-    std::string m_shaders_directory;
-    std::string m_textures_directory;
-    b32 m_is_inited;
-    b32 m_is_running;
-    const char* m_title;
-    Window m_window;
-    InitCallback m_on_init;
-    UpdateCallback m_on_update;
-    ShutdownCallback m_on_shutdown;
-    ResizeCallback m_on_resize;
-    f32 m_delta_time;
+    std::string exec_path;
+    std::string shaders_directory;
+    std::string textures_directory;
+    std::string models_directory;
+    b32 is_inited;
+    b32 is_running;
+    const char* title;
+    Window window;
+    InitCallback on_init;
+    UpdateCallback on_update;
+    ShutdownCallback on_shutdown;
+    ResizeCallback on_resize;
+    f32 delta_time;
+    InputSystem input_system;
 };
 
 static ApplicationState app_state{};
@@ -35,12 +38,17 @@ std::string get_exec_path(u32 argc, char* argv_zero)
 
 void app_set_shaders_directory(const std::string& path)
 {
-    app_state.m_shaders_directory = app_state.m_exec_path + std::filesystem::path(path).string() + "/";
+    app_state.shaders_directory = app_state.exec_path + std::filesystem::path(path).string() + "/";
 }
 
 void app_set_textures_directory(const std::string& path)
 {
-    app_state.m_textures_directory = app_state.m_exec_path + std::filesystem::path(path).string() + "/";
+    app_state.textures_directory = app_state.exec_path + std::filesystem::path(path).string() + "/";
+}
+
+void app_set_models_directory(const std::string& path)
+{
+    app_state.models_directory = app_state.exec_path + std::filesystem::path(path).string() + "/";
 }
 
 void app_init(const ApplicationConfig* config)
@@ -54,36 +62,38 @@ void app_init(const ApplicationConfig* config)
     int init_result = SDL_Init(SDL_INIT_VIDEO);
     FT_ASSERT(init_result >= 0 && "SDL Init failed");
 
-    app_state.m_window = fluent::create_window(config->title, config->x, config->y, config->width, config->height);
+    app_state.window = fluent::create_window(config->title, config->x, config->y, config->width, config->height);
 
-    app_state.m_exec_path = get_exec_path(config->argc, config->argv[ 0 ]);
-    app_state.m_title = config->title;
-    app_state.m_on_init = config->on_init;
-    app_state.m_on_update = config->on_update;
-    app_state.m_on_shutdown = config->on_shutdown;
-    app_state.m_on_resize = config->on_resize;
+    app_state.exec_path = get_exec_path(config->argc, config->argv[ 0 ]);
+    app_state.title = config->title;
+    app_state.on_init = config->on_init;
+    app_state.on_update = config->on_update;
+    app_state.on_shutdown = config->on_shutdown;
+    app_state.on_resize = config->on_resize;
 
     spdlog::set_level(to_spdlog_level(config->log_level));
 
-    app_state.m_is_inited = true;
+    init_input_system(&app_state.input_system);
+
+    app_state.is_inited = true;
 }
 
 void app_run()
 {
-    FT_ASSERT(app_state.m_is_inited);
+    FT_ASSERT(app_state.is_inited);
 
-    app_state.m_on_init();
+    app_state.on_init();
 
-    app_state.m_is_running = true;
+    app_state.is_running = true;
 
     SDL_Event e;
 
     f32 last_tick = get_time();
-    app_state.m_delta_time = 0.0;
+    app_state.delta_time = 0.0;
 
-    while (app_state.m_is_running)
+    while (app_state.is_running)
     {
-        app_state.m_delta_time = (get_time() - last_tick);
+        app_state.delta_time = (get_time() - last_tick);
         last_tick = get_time();
 
         while (SDL_PollEvent(&e) != 0)
@@ -91,53 +101,70 @@ void app_run()
             switch (e.type)
             {
             case SDL_QUIT:
-                app_state.m_is_running = false;
+                app_state.is_running = false;
                 break;
             case SDL_WINDOWEVENT:
                 if (e.window.event == SDL_WINDOWEVENT_RESIZED)
                 {
-                    app_state.m_window.data[ WindowParams::eWidth ] = e.window.data1;
-                    app_state.m_window.data[ WindowParams::eHeight ] = e.window.data2;
+                    app_state.window.data[ WindowParams::eWidth ] = e.window.data1;
+                    app_state.window.data[ WindowParams::eHeight ] = e.window.data2;
 
-                    app_state.m_on_resize(e.window.data1, e.window.data2);
+                    app_state.on_resize(e.window.data1, e.window.data2);
                 }
+                break;
+            case SDL_KEYDOWN:
+                break;
+            case SDL_KEYUP:
+                break;
+            case SDL_MOUSEMOTION:
+                update_input_mouse_state(&app_state.input_system, e.motion.x, e.motion.y);
                 break;
             default:
                 break;
             }
         }
 
-        app_state.m_on_update(app_state.m_delta_time);
+        app_state.on_update(app_state.delta_time);
     }
 
-    app_state.m_on_shutdown();
+    app_state.on_shutdown();
 }
 
 void app_shutdown()
 {
-    FT_ASSERT(app_state.m_is_inited);
-    fluent::destroy_window(app_state.m_window);
+    FT_ASSERT(app_state.is_inited);
+    fluent::destroy_window(app_state.window);
     SDL_Quit();
 }
 
 const char* get_app_name()
 {
-    return app_state.m_title;
+    return app_state.title;
 }
 
 const Window* get_app_window()
 {
-    return &app_state.m_window;
+    return &app_state.window;
+}
+
+const InputSystem* get_app_input_system()
+{
+    return &app_state.input_system;
 }
 
 const std::string& get_app_shaders_directory()
 {
-    return app_state.m_shaders_directory;
+    return app_state.shaders_directory;
 }
 
 const std::string& get_app_textures_directory()
 {
-    return app_state.m_textures_directory;
+    return app_state.textures_directory;
+}
+
+const std::string& get_app_models_directory()
+{
+    return app_state.models_directory;
 }
 
 f32 get_time()
@@ -147,7 +174,7 @@ f32 get_time()
 
 f32 get_delta_time()
 {
-    return app_state.m_delta_time;
+    return app_state.delta_time;
 }
 
 } // namespace fluent

@@ -40,4 +40,9 @@ u32 window_get_height(const Window* window)
     return window->data[ WindowParams::eHeight ];
 }
 
+f32 window_get_aspect(const Window* window)
+{
+    return ( f32 ) window->data[ WindowParams::eWidth ] / ( f32 ) window->data[ WindowParams::eHeight ];
+}
+
 } // namespace fluent

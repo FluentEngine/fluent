@@ -240,7 +240,7 @@ enum class AttachmentLoadOp
     eDontCare = 2
 };
 
-enum ResourceState : u32
+enum class ResourceState : u32
 {
     eUndefined = BIT(0),
     eStorage = BIT(1),
@@ -252,23 +252,26 @@ enum ResourceState : u32
     eTransferDst = BIT(7),
     ePresent = BIT(8)
 };
+MAKE_ENUM_FLAG(u32, ResourceState);
 
-enum DescriptorType
+enum class DescriptorType : u32
 {
-    eVertexBuffer = BIT(0),
-    eIndexBuffer = BIT(1),
-    eUniformBuffer = BIT(2),
-    eSampler = BIT(3),
-    eCombinedImageSampler = BIT(4),
-    eSampledImage = BIT(5),
-    eStorageImage = BIT(6),
-    eUniformTexelBuffer = BIT(7),
-    eStorageTexelBuffer = BIT(8),
-    eStorageBuffer = BIT(9),
-    eUniformBufferDynamic = BIT(10),
-    eStorageBufferDynamic = BIT(11),
-    eInputAttachment = BIT(12)
+    eUndefined = BIT(0),
+    eVertexBuffer = BIT(1),
+    eIndexBuffer = BIT(2),
+    eUniformBuffer = BIT(3),
+    eSampler = BIT(4),
+    eCombinedImageSampler = BIT(5),
+    eSampledImage = BIT(6),
+    eStorageImage = BIT(7),
+    eUniformTexelBuffer = BIT(8),
+    eStorageTexelBuffer = BIT(9),
+    eStorageBuffer = BIT(10),
+    eUniformBufferDynamic = BIT(11),
+    eStorageBufferDynamic = BIT(12),
+    eInputAttachment = BIT(13)
 };
+MAKE_ENUM_FLAG(u32, DescriptorType);
 
 enum class PipelineType
 {

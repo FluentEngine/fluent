@@ -4,7 +4,8 @@ cmake_policy(SET CMP0042 NEW) # ENABLE CMP0042: MACOSX_RPATH is enabled by defau
 cmake_policy(SET CMP0063 NEW) # ENABLE CMP0063: Honor visibility properties for all target types.
 cmake_policy(SET CMP0077 NEW) # ENABLE CMP0077: option() honors normal variables
 
-
+set(BUILD_SHARED_LIBS OFF)
+set(ASSIMP_BUILD_TESTS OFF)
 add_subdirectory(third_party/spdlog)
 add_subdirectory(third_party/volk)
 add_subdirectory(third_party/vk_mem_alloc)
@@ -14,6 +15,8 @@ add_subdirectory(third_party/spirv_reflect)
 add_subdirectory(third_party/tinyddsloader)
 add_subdirectory(third_party/stb_image)
 add_subdirectory(third_party/glm)
+add_subdirectory(third_party/tinygltf)
+add_subdirectory(third_party/assimp)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -22,9 +25,10 @@ project(${target} CXX)
 
 set(src_dir ${CMAKE_CURRENT_SOURCE_DIR}/sources)
 
-set(common_sources 
+set(core_sources 
 	${src_dir}/core/log.cpp
     ${src_dir}/core/window.cpp
+	${src_dir}/core/input.cpp
 	${src_dir}/core/application.cpp
 	)
 
@@ -38,9 +42,12 @@ set(util_sources
 set(math_sources 
 	${src_dir}/math/math.cpp)
 
-set(sources ${common_sources} ${renderer_sources} ${util_sources})
+set(scene_sources
+	${src_dir}/scene/model_loader.cpp)
+
+set(sources ${core_sources} ${renderer_sources} ${util_sources} ${math_sources} ${scene_sources})
 set(includes ${CMAKE_CURRENT_SOURCE_DIR}/sources)
-set(libs spdlog volk vma_allocator SDL2::SDL2-static tiny_image_format spirv_reflect tinyddsloader stb_image glm)
+set(libs spdlog volk vma_allocator SDL2::SDL2-static tiny_image_format spirv_reflect tinyddsloader stb_image glm tinygltf assimp)
 
 add_library(${target} ${sources})
 

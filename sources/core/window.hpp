@@ -25,5 +25,6 @@ void destroy_window(Window& window);
 
 u32 window_get_width(const Window* window);
 u32 window_get_height(const Window* window);
+f32 window_get_aspect(const Window* window);
 
 } // namespace fluent

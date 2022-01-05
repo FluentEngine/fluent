@@ -282,28 +282,28 @@ static inline VkAccessFlags determine_access_flags(ResourceState resource_state)
 {
     VkAccessFlags access_flags = 0;
 
-    if (resource_state & eStorage)
+    if (b32(resource_state & ResourceState::eStorage))
         access_flags |= (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
 
-    if (resource_state & eColorAttachment)
+    if (b32(resource_state & ResourceState::eColorAttachment))
         access_flags |= (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
-    if (resource_state & eDepthStencilAttachment)
+    if (b32(resource_state & ResourceState::eDepthStencilAttachment))
         access_flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-    if (resource_state & eDepthStencilReadOnly)
+    if (b32(resource_state & ResourceState::eDepthStencilReadOnly))
         access_flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 
-    if (resource_state & eShaderReadOnly)
+    if (b32(resource_state & ResourceState::eShaderReadOnly))
         access_flags |= VK_ACCESS_SHADER_READ_BIT;
 
-    if (resource_state & eTransferSrc)
+    if (b32(resource_state & ResourceState::eTransferSrc))
         access_flags |= VK_ACCESS_TRANSFER_READ_BIT;
 
-    if (resource_state & eTransferDst)
+    if (b32(resource_state & ResourceState::eTransferDst))
         access_flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
 
-    if (resource_state & ePresent)
+    if (b32(resource_state & ResourceState::ePresent))
         access_flags |= VK_ACCESS_MEMORY_READ_BIT;
 
     return access_flags;
@@ -374,28 +374,28 @@ static inline VkPipelineStageFlags determine_pipeline_stage_flags(VkAccessFlags 
 
 static inline VkImageLayout determine_image_layout(ResourceState resource_state)
 {
-    if (resource_state & eStorage)
+    if (b32(resource_state & ResourceState::eStorage))
         return VK_IMAGE_LAYOUT_GENERAL;
 
-    if (resource_state & eColorAttachment)
+    if (b32(resource_state & ResourceState::eColorAttachment))
         return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    if (resource_state & eDepthStencilAttachment)
+    if (b32(resource_state & ResourceState::eDepthStencilAttachment))
         return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-    if (resource_state & eDepthStencilReadOnly)
+    if (b32(resource_state & ResourceState::eDepthStencilReadOnly))
         return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
-    if (resource_state & eShaderReadOnly)
+    if (b32(resource_state & ResourceState::eShaderReadOnly))
         return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-    if (resource_state & ePresent)
+    if (b32(resource_state & ResourceState::ePresent))
         return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-    if (resource_state & eTransferSrc)
+    if (b32(resource_state & ResourceState::eTransferSrc))
         return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
-    if (resource_state & eTransferDst)
+    if (b32(resource_state & ResourceState::eTransferDst))
         return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
     return VK_IMAGE_LAYOUT_UNDEFINED;
@@ -407,7 +407,7 @@ static inline VmaMemoryUsage determine_vma_memory_usage(ResourceState resource_s
     VmaMemoryUsage memory_usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
     // can be used as source in transfer operation
-    if (resource_state & ResourceState::eTransferSrc)
+    if (b32(resource_state & ResourceState::eTransferSrc))
     {
         memory_usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
     }
@@ -420,27 +420,27 @@ static inline VkBufferUsageFlags determine_vk_buffer_usage(ResourceState resourc
     // TODO: determine buffer usage flags
     VkBufferUsageFlags buffer_usage = VkBufferUsageFlags(0);
 
-    if (descriptor_type & DescriptorType::eVertexBuffer)
+    if (b32(descriptor_type & DescriptorType::eVertexBuffer))
     {
         buffer_usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     }
 
-    if (descriptor_type & DescriptorType::eIndexBuffer)
+    if (b32(descriptor_type & DescriptorType::eIndexBuffer))
     {
         buffer_usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
     }
 
-    if (descriptor_type & DescriptorType::eUniformBuffer)
+    if (b32(descriptor_type & DescriptorType::eUniformBuffer))
     {
         buffer_usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     }
 
-    if (resource_state & ResourceState::eTransferSrc)
+    if (b32(resource_state & ResourceState::eTransferSrc))
     {
         buffer_usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     }
 
-    if (resource_state & ResourceState::eTransferDst)
+    if (b32(resource_state & ResourceState::eTransferDst))
     {
         buffer_usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     }
@@ -452,43 +452,43 @@ static inline VkImageUsageFlags determine_vk_image_usage(ResourceState resource_
 {
     VkImageUsageFlags image_usage = VkImageUsageFlags(0);
 
-    if (descriptor_type & DescriptorType::eSampledImage)
+    if (b32(descriptor_type & DescriptorType::eSampledImage))
     {
         image_usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
     }
 
-    if (descriptor_type & DescriptorType::eStorageImage)
+    if (b32(descriptor_type & DescriptorType::eStorageImage))
     {
         image_usage |= VK_IMAGE_USAGE_STORAGE_BIT;
     }
 
-    if (descriptor_type & DescriptorType::eInputAttachment)
+    if (b32(descriptor_type & DescriptorType::eInputAttachment))
     {
         image_usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
     }
 
-    if (resource_state & ResourceState::eColorAttachment)
+    if (b32(resource_state & ResourceState::eColorAttachment))
     {
         image_usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     }
 
-    if (resource_state & ResourceState::eDepthStencilAttachment)
+    if (b32(resource_state & ResourceState::eDepthStencilAttachment))
     {
         image_usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     }
 
-    if (resource_state & ResourceState::eDepthStencilReadOnly)
+    if (b32(resource_state & ResourceState::eDepthStencilReadOnly))
     {
         // TODO: ?
         image_usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     }
 
-    if (resource_state & ResourceState::eTransferSrc)
+    if (b32(resource_state & ResourceState::eTransferSrc))
     {
         image_usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
 
-    if (resource_state & ResourceState::eTransferDst)
+    if (b32(resource_state & ResourceState::eTransferDst))
     {
         image_usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
@@ -804,12 +804,23 @@ Device create_device(const Renderer& renderer, const DeviceDesc& desc)
         queue_create_infos[ i ].queueFamilyIndex = i;
     }
 
-    static const u32 device_extension_count = 1;
-    const char* device_extensions[ device_extension_count ] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+    static const u32 device_extension_count = 2;
+    const char* device_extensions[ device_extension_count ] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+                                                                VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME };
+
+    // TODO: check support
+    VkPhysicalDeviceDescriptorIndexingFeatures descriptor_indexing_features{};
+    descriptor_indexing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+    descriptor_indexing_features.descriptorBindingPartiallyBound = true;
+
+    VkPhysicalDeviceMultiviewFeatures multiview_features{};
+    multiview_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;
+    multiview_features.multiview = true;
+    multiview_features.pNext = &descriptor_indexing_features;
 
     VkDeviceCreateInfo device_create_info{};
     device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    device_create_info.pNext = nullptr;
+    device_create_info.pNext = &multiview_features;
     device_create_info.flags = 0;
     device_create_info.queueCreateInfoCount = queue_family_count;
     device_create_info.pQueueCreateInfos = queue_create_infos;
@@ -1177,12 +1188,29 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
             &swapchain.images[ i ].image_view));
     }
 
+    if (desc.builtin_depth)
+    {
+        ImageDesc image_desc{};
+        image_desc.width = swapchain.width;
+        image_desc.height = swapchain.height;
+        image_desc.depth = 1;
+        image_desc.layer_count = 1;
+        image_desc.mip_levels = 1;
+        image_desc.format = Format::eD32Sfloat;
+        image_desc.resource_state = ResourceState(ResourceState::eTransferDst | ResourceState::eDepthStencilAttachment);
+        image_desc.descriptor_type = DescriptorType::eUndefined;
+
+        swapchain.depth_image = create_image(device, image_desc);
+    }
+
     // create default render passes
     RenderPassDesc render_pass_desc{};
     render_pass_desc.color_attachment_count = 1;
     render_pass_desc.color_attachment_load_ops[ 0 ] = AttachmentLoadOp::eClear;
     render_pass_desc.color_image_states[ 0 ] = ResourceState::eColorAttachment;
-    render_pass_desc.depth_stencil = nullptr;
+    render_pass_desc.depth_stencil = desc.builtin_depth ? &swapchain.depth_image : nullptr;
+    render_pass_desc.depth_stencil_load_op = AttachmentLoadOp::eClear;
+    render_pass_desc.depth_stencil_state = ResourceState::eDepthStencilAttachment;
     render_pass_desc.width = swapchain.width;
     render_pass_desc.height = swapchain.height;
 
@@ -1205,6 +1233,11 @@ void destroy_swapchain(const Device& device, Swapchain& swapchain)
         destroy_render_pass(device, swapchain.render_passes[ i ]);
     }
     delete[] swapchain.render_passes;
+
+    if (swapchain.depth_image.image)
+    {
+        destroy_image(device, swapchain.depth_image);
+    }
 
     FT_ASSERT(swapchain.image_count);
     for (u32 i = 0; i < swapchain.image_count; ++i)
@@ -1348,10 +1381,10 @@ RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc)
         attachment_descriptions[ i ].flags = 0;
         attachment_descriptions[ i ].format = to_vk_format(desc.depth_stencil->format);
         attachment_descriptions[ i ].samples = to_vk_sample_count(desc.depth_stencil->sample_count);
-        attachment_descriptions[ i ].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachment_descriptions[ i ].loadOp = to_vk_load_op(desc.depth_stencil_load_op);
         attachment_descriptions[ i ].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment_descriptions[ i ].stencilLoadOp = to_vk_load_op(desc.depth_stencil_load_op);
-        attachment_descriptions[ i ].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachment_descriptions[ i ].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachment_descriptions[ i ].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         attachment_descriptions[ i ].initialLayout = determine_image_layout(desc.depth_stencil_state);
         attachment_descriptions[ i ].finalLayout = determine_image_layout(desc.depth_stencil_state);
 
@@ -1467,33 +1500,42 @@ DescriptorSetLayout create_descriptor_set_layout(const Device& device, const Des
 
     // count bindings in all shaders
     u32 binding_count = 0;
+    VkDescriptorBindingFlags binding_flags[ MAX_DESCRIPTOR_BINDING_COUNT ] = {};
+    // collect all bindings
+    VkDescriptorSetLayoutBinding bindings[ MAX_DESCRIPTOR_BINDING_COUNT ];
+
     for (u32 i = 0; i < descriptor_set_layout.shader_count; ++i)
     {
-        binding_count += descriptor_set_layout.shaders[ i ].reflect_data.binding_count;
+        for (u32 j = 0; j < descriptor_set_layout.shaders[ i ].reflect_data.binding_count; ++j)
+        {
+            auto& reflected_binding = descriptor_set_layout.shaders[ i ].reflect_data.bindings[ j ];
+            bindings[ binding_count ].binding = reflected_binding.binding;
+            bindings[ binding_count ].descriptorCount = reflected_binding.descriptor_count;
+            bindings[ binding_count ].descriptorType = to_vk_descriptor_type(reflected_binding.descriptor_type);
+            bindings[ binding_count ].pImmutableSamplers = nullptr; // ??? TODO
+            bindings[ binding_count ].stageFlags = to_vk_shader_stage(descriptor_set_layout.shaders[ i ].stage);
+
+            if (reflected_binding.descriptor_count > 1)
+            {
+                binding_flags[ binding_count ] = VkDescriptorBindingFlags{};
+                binding_flags[ binding_count ] |= VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
+            }
+
+            binding_count++;
+        }
     }
 
     if (binding_count > 0)
     {
-        // collect all bindings
-        VkDescriptorSetLayoutBinding* bindings = new VkDescriptorSetLayoutBinding[ binding_count ];
-        u32 binding_index = 0;
-        for (u32 i = 0; i < descriptor_set_layout.shader_count; ++i)
-        {
-            for (u32 j = 0; j < descriptor_set_layout.shaders[ i ].reflect_data.binding_count; ++j)
-            {
-                auto& reflected_binding = descriptor_set_layout.shaders[ i ].reflect_data.bindings[ j ];
-                bindings[ binding_index ].binding = reflected_binding.binding;
-                bindings[ binding_index ].descriptorCount = reflected_binding.descriptor_count;
-                bindings[ binding_index ].descriptorType = to_vk_descriptor_type(reflected_binding.descriptor_type);
-                bindings[ binding_index ].pImmutableSamplers = nullptr; // ??? TODO
-                bindings[ binding_index ].stageFlags = to_vk_shader_stage(descriptor_set_layout.shaders[ i ].stage);
-                binding_index++;
-            }
-        }
+        VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags_create_info{};
+        binding_flags_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+        binding_flags_create_info.pNext = nullptr;
+        binding_flags_create_info.bindingCount = binding_count;
+        binding_flags_create_info.pBindingFlags = binding_flags;
 
         VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info{};
         descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        descriptor_set_layout_create_info.pNext = nullptr;
+        descriptor_set_layout_create_info.pNext = &binding_flags_create_info;
         descriptor_set_layout_create_info.flags = 0;
         descriptor_set_layout_create_info.bindingCount = binding_count;
         descriptor_set_layout_create_info.pBindings = bindings;
@@ -1501,8 +1543,6 @@ DescriptorSetLayout create_descriptor_set_layout(const Device& device, const Des
         VK_ASSERT(vkCreateDescriptorSetLayout(
             device.logical_device, &descriptor_set_layout_create_info, device.vulkan_allocator,
             &descriptor_set_layout.descriptor_set_layout));
-
-        delete[] bindings;
     }
 
     return descriptor_set_layout;
@@ -1580,7 +1620,7 @@ Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc
         shader_stage_create_infos[ i ].pSpecializationInfo = nullptr;
     }
 
-    VkVertexInputBindingDescription binding_descriptions[ MAX_VERTEX_BINGINGS_COUNT ];
+    VkVertexInputBindingDescription binding_descriptions[ MAX_VERTEX_BINDING_COUNT ];
     for (u32 i = 0; i < desc.binding_desc_count; ++i)
     {
         binding_descriptions[ i ].binding = desc.binding_descs[ i ].binding;
@@ -1860,17 +1900,28 @@ void cmd_bind_pipeline(const CommandBuffer& cmd, const Pipeline& pipeline)
     vkCmdBindPipeline(cmd.command_buffer, to_vk_pipeline_bind_point(pipeline.type), pipeline.pipeline);
 }
 
-void cmd_draw(
-    const CommandBuffer& cmd, uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex,
-    uint32_t first_instance)
+void cmd_draw(const CommandBuffer& cmd, u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance)
 {
     vkCmdDraw(cmd.command_buffer, vertex_count, instance_count, first_vertex, first_instance);
+}
+
+void cmd_draw_indexed(
+    const CommandBuffer& cmd, u32 index_count, u32 instance_count, u32 first_index, u32 vertex_offset,
+    u32 first_instance)
+{
+    vkCmdDrawIndexed(cmd.command_buffer, index_count, instance_count, first_index, vertex_offset, first_instance);
 }
 
 void cmd_bind_vertex_buffer(const CommandBuffer& cmd, const Buffer& buffer)
 {
     static constexpr VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(cmd.command_buffer, 0, 1, &buffer.buffer, &offset);
+}
+
+void cmd_bind_index_buffer_u32(const CommandBuffer& cmd, const Buffer& buffer)
+{
+    static constexpr VkDeviceSize offset = 0;
+    vkCmdBindIndexBuffer(cmd.command_buffer, buffer.buffer, offset, VK_INDEX_TYPE_UINT32);
 }
 
 void cmd_copy_buffer(const CommandBuffer& cmd, const Buffer& src, u32 src_offset, Buffer& dst, u32 dst_offset, u32 size)
@@ -2039,7 +2090,7 @@ void update_buffer(const Device& device, BufferUpdateDesc& desc)
 
     Buffer* buffer = desc.buffer;
 
-    if (buffer->resource_state & ResourceState::eTransferSrc)
+    if (b32(buffer->resource_state & ResourceState::eTransferSrc))
     {
         bool was_mapped = buffer->mapped_memory;
         if (!was_mapped)
@@ -2290,7 +2341,7 @@ void destroy_descriptor_set(const Device& device, DescriptorSet& set)
     vkFreeDescriptorSets(device.logical_device, device.descriptor_pool, 1, &set.descriptor_set);
 }
 
-void update_descriptor_set(const Device& device, DescriptorSet& set, u32 count, const DescriptorSetUpdateDesc* descs)
+void update_descriptor_set(const Device& device, DescriptorSet& set, u32 count, const DescriptorWriteDesc* descs)
 {
     // TODO: rewrite
     std::vector<std::vector<VkDescriptorBufferInfo>> buffer_updates(count);
@@ -2303,53 +2354,53 @@ void update_descriptor_set(const Device& device, DescriptorSet& set, u32 count, 
 
     for (u32 i = 0; i < count; ++i)
     {
-        auto& update = descs[ i ];
+        const auto& descriptor_write = descs[ i ];
 
         auto& write_descriptor_set = descriptor_writes[ write++ ];
+        write_descriptor_set = {};
         write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write_descriptor_set.dstBinding = update.binding;
-        write_descriptor_set.descriptorCount = 1;
+        write_descriptor_set.dstBinding = descriptor_write.binding;
+        write_descriptor_set.descriptorCount = descriptor_write.descriptor_count;
         write_descriptor_set.dstSet = set.descriptor_set;
-        write_descriptor_set.descriptorType = to_vk_descriptor_type(update.descriptor_type);
+        write_descriptor_set.descriptorType = to_vk_descriptor_type(descriptor_write.descriptor_type);
 
-        if (update.buffer_set_write_count > 0)
+        if (descriptor_write.descriptor_buffer_descs)
         {
-            auto& buffer_update_infos = buffer_updates[ buffer_update_idx++ ];
-            buffer_update_infos.resize(update.buffer_set_write_count, {});
+            auto& bds = buffer_updates.emplace_back();
+            bds.resize(descriptor_write.descriptor_count);
 
-            for (u32 j = 0; j < buffer_update_infos.size(); ++j)
+            for (u32 j = 0; j < descriptor_write.descriptor_count; ++j)
             {
-                buffer_update_infos[ j ].buffer = update.buffer_set_writes[ j ].buffer->buffer;
-                buffer_update_infos[ j ].offset = update.buffer_set_writes[ j ].offset;
-                buffer_update_infos[ j ].range = update.buffer_set_writes[ j ].range;
+                bds[ j ] = {};
+                bds[ j ].buffer = descriptor_write.descriptor_buffer_descs[ j ].buffer->buffer;
+                bds[ j ].offset = descriptor_write.descriptor_buffer_descs[ j ].offset;
+                bds[ j ].range = descriptor_write.descriptor_buffer_descs[ j ].range;
             }
 
-            write_descriptor_set.descriptorCount = buffer_update_infos.size();
-            write_descriptor_set.pBufferInfo = buffer_update_infos.data();
+            write_descriptor_set.pBufferInfo = bds.data();
         }
-
-        if (update.image_set_write_count > 0)
+        else
         {
-            auto& image_update_infos = image_updates[ image_update_idx++ ];
-            image_update_infos.resize(update.image_set_write_count, {});
+            auto& ids = image_updates.emplace_back();
+            ids.resize(descriptor_write.descriptor_count);
 
-            for (u32 j = 0; j < image_update_infos.size(); ++j)
+            for (u32 j = 0; j < descriptor_write.descriptor_count; ++j)
             {
-                if (update.image_set_writes[ j ].sampler != nullptr)
-                {
-                    image_update_infos[ j ].sampler = update.image_set_writes[ j ].sampler->sampler;
-                }
+                auto& image_write = descriptor_write.descriptor_image_descs[ j ];
+                ids[ j ] = {};
 
-                if (update.image_set_writes[ j ].image != nullptr)
+                if (image_write.image)
                 {
-                    image_update_infos[ j ].imageLayout =
-                        determine_image_layout(update.image_set_writes[ j ].image->resource_state);
-                    image_update_infos[ j ].imageView = update.image_set_writes[ j ].image->image_view;
+                    ids[ j ].imageLayout = determine_image_layout(image_write.resource_state);
+                    ids[ j ].imageView = image_write.image->image_view;
+                }
+                else
+                {
+                    ids[ j ].sampler = image_write.sampler->sampler;
                 }
             }
 
-            write_descriptor_set.descriptorCount = image_update_infos.size();
-            write_descriptor_set.pImageInfo = image_update_infos.data();
+            write_descriptor_set.pImageInfo = ids.data();
         }
     }
 
