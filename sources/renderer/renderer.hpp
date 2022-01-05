@@ -165,13 +165,13 @@ struct CommandPoolDesc
 
 struct CommandPool
 {
-    QueueType queue_type;
+    Queue* queue;
     VkCommandPool command_pool;
 };
 
 struct CommandBuffer
 {
-    QueueType queue_type;
+    Queue* queue;
     VkCommandBuffer command_buffer;
 };
 
@@ -245,7 +245,7 @@ struct ImageBarrier
 {
     ResourceState old_state;
     ResourceState new_state;
-    Image* image;
+    const Image* image;
     const Queue* src_queue;
     const Queue* dst_queue;
 };
@@ -418,8 +418,8 @@ void allocate_command_buffers(
     const Device& device, const CommandPool& command_pool, u32 count, CommandBuffer* command_buffers);
 void free_command_buffers(
     const Device& device, const CommandPool& command_pool, u32 count, CommandBuffer* command_buffers);
-void begin_command_buffer(const CommandBuffer& command_buffer);
-void end_command_buffer(const CommandBuffer& command_buffer);
+void begin_command_buffer(const CommandBuffer& cmd);
+void end_command_buffer(const CommandBuffer& cmd);
 
 void acquire_next_image(
     const Device& device, const Swapchain& swapchain, const Semaphore& semaphore, const Fence& fence, u32& image_index);
@@ -437,39 +437,36 @@ Pipeline create_compute_pipeline(const Device& device, const PipelineDesc& desc)
 Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc);
 void destroy_pipeline(const Device& device, Pipeline& pipeline);
 
-void cmd_begin_render_pass(const CommandBuffer& command_buffer, const RenderPassBeginDesc& desc);
-void cmd_end_render_pass(const CommandBuffer& command_buffer);
+void cmd_begin_render_pass(const CommandBuffer& cmd, const RenderPassBeginDesc& desc);
+void cmd_end_render_pass(const CommandBuffer& cmd);
 
 void cmd_barrier(
-    const CommandBuffer& command_buffer, u32 buffer_barriers_count, const BufferBarrier* buffer_barriers,
-    u32 image_barriers_count, const ImageBarrier* image_barriers);
+    const CommandBuffer& cmd, u32 buffer_barriers_count, const BufferBarrier* buffer_barriers, u32 image_barriers_count,
+    const ImageBarrier* image_barriers);
 
-void cmd_set_scissor(const CommandBuffer& command_buffer, i32 x, i32 y, u32 width, u32 height);
-void cmd_set_viewport(
-    const CommandBuffer& command_buffer, f32 x, f32 y, f32 width, f32 height, f32 min_depth, f32 max_depth);
+void cmd_set_scissor(const CommandBuffer& cmd, i32 x, i32 y, u32 width, u32 height);
+void cmd_set_viewport(const CommandBuffer& cmd, f32 x, f32 y, f32 width, f32 height, f32 min_depth, f32 max_depth);
 
-void cmd_bind_pipeline(const CommandBuffer& command_buffer, const Pipeline& pipeline);
-void cmd_draw(
-    const CommandBuffer& command_buffer, u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance);
+void cmd_bind_pipeline(const CommandBuffer& cmd, const Pipeline& pipeline);
+void cmd_draw(const CommandBuffer& cmd, u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance);
 
-void cmd_bind_vertex_buffer(const CommandBuffer& command_buffer, const Buffer& buffer);
+void cmd_bind_vertex_buffer(const CommandBuffer& cmd, const Buffer& buffer);
 
 void cmd_copy_buffer(
-    const CommandBuffer& command_buffer, const Buffer& src, u32 src_offset, Buffer& dst, u32 dst_offset, u32 size);
+    const CommandBuffer& cmd, const Buffer& src, u32 src_offset, Buffer& dst, u32 dst_offset, u32 size);
 
-void cmd_copy_buffer_to_image(const CommandBuffer& command_buffer, const Buffer& src, u32 src_offset, Image& dst);
-void cmd_bind_descriptor_set(const CommandBuffer& command_buffer, const DescriptorSet& set, const Pipeline& pipeline);
+void cmd_copy_buffer_to_image(const CommandBuffer& cmd, const Buffer& src, u32 src_offset, Image& dst);
+void cmd_bind_descriptor_set(const CommandBuffer& cmd, const DescriptorSet& set, const Pipeline& pipeline);
 
-void cmd_dispatch(const CommandBuffer& command_buffer, u32 group_count_x, u32 group_count_y, u32 group_count_z);
+void cmd_dispatch(const CommandBuffer& cmd, u32 group_count_x, u32 group_count_y, u32 group_count_z);
 
-void cmd_push_constants(
-    const CommandBuffer& command_buffer, const Pipeline& pipeline, u32 offset, u32 size, const void* data);
+void cmd_push_constants(const CommandBuffer& cmd, const Pipeline& pipeline, u32 offset, u32 size, const void* data);
 
 void cmd_blit_image(
-    const CommandBuffer& command_buffer, const Image& src, ResourceState src_state, const Image& dst,
-    ResourceState dst_state, Filter filter);
+    const CommandBuffer& cmd, const Image& src, ResourceState src_state, Image& dst, ResourceState dst_state,
+    Filter filter);
 
-void immediate_submit(const Queue& queue, const CommandBuffer& command_buffer);
+void immediate_submit(const Queue& queue, const CommandBuffer& cmd);
 
 Buffer create_buffer(const Device& device, const BufferDesc& desc);
 void destroy_buffer(const Device& device, Buffer& buffer);

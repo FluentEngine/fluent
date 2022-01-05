@@ -186,7 +186,7 @@ void on_update(f64 delta_time)
     cmd_bind_descriptor_set(cmd, descriptor_set, pipeline);
 
     PushConstantBlock pcb;
-    pcb.time = 0;
+    pcb.time = get_time() / 400.0f;
     pcb.mouse_x = 0;
     pcb.mouse_y = 0;
     cmd_push_constants(cmd, pipeline, 0, sizeof(PushConstantBlock), &pcb);

@@ -819,8 +819,8 @@ Device create_device(const Renderer& renderer, const DeviceDesc& desc)
     device_create_info.ppEnabledExtensionNames = device_extensions;
     device_create_info.pEnabledFeatures = nullptr;
 
-    VK_ASSERT(vkCreateDevice(
-        device.physical_device, &device_create_info, device.vulkan_allocator, &device.logical_device));
+    VK_ASSERT(
+        vkCreateDevice(device.physical_device, &device_create_info, device.vulkan_allocator, &device.logical_device));
 
     VmaAllocatorCreateInfo vma_allocator_create_info{};
     vma_allocator_create_info.instance = device.instance;
@@ -1054,8 +1054,7 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
 
     // find best present mode
     uint32_t present_mode_count = 0;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(
-        device.physical_device, swapchain.surface, &present_mode_count, nullptr);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(device.physical_device, swapchain.surface, &present_mode_count, nullptr);
     VkPresentModeKHR* present_modes = ( VkPresentModeKHR* ) alloca(present_mode_count * sizeof(VkPresentModeKHR));
     vkGetPhysicalDeviceSurfacePresentModesKHR(
         device.physical_device, swapchain.surface, &present_mode_count, present_modes);
@@ -1231,7 +1230,7 @@ CommandPool create_command_pool(const Device& device, const CommandPoolDesc& des
 {
     CommandPool command_pool{};
 
-    command_pool.queue_type = desc.queue->type;
+    command_pool.queue = desc.queue;
 
     VkCommandPoolCreateInfo command_pool_create_info{};
     command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -1270,7 +1269,7 @@ void allocate_command_buffers(
     for (u32 i = 0; i < count; ++i)
     {
         command_buffers[ i ].command_buffer = buffers[ i ];
-        command_buffers[ i ].queue_type = command_pool.queue_type;
+        command_buffers[ i ].queue = command_pool.queue;
     }
 }
 
@@ -1288,7 +1287,7 @@ void free_command_buffers(
     vkFreeCommandBuffers(device.logical_device, command_pool.command_pool, count, buffers);
 }
 
-void begin_command_buffer(const CommandBuffer& command_buffer)
+void begin_command_buffer(const CommandBuffer& cmd)
 {
     VkCommandBufferBeginInfo command_buffer_begin_info{};
     command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1296,20 +1295,20 @@ void begin_command_buffer(const CommandBuffer& command_buffer)
     command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     command_buffer_begin_info.pInheritanceInfo = nullptr;
 
-    VK_ASSERT(vkBeginCommandBuffer(command_buffer.command_buffer, &command_buffer_begin_info));
+    VK_ASSERT(vkBeginCommandBuffer(cmd.command_buffer, &command_buffer_begin_info));
 }
 
-void end_command_buffer(const CommandBuffer& command_buffer)
+void end_command_buffer(const CommandBuffer& cmd)
 {
-    VK_ASSERT(vkEndCommandBuffer(command_buffer.command_buffer));
+    VK_ASSERT(vkEndCommandBuffer(cmd.command_buffer));
 }
 
 void acquire_next_image(
     const Device& device, const Swapchain& swapchain, const Semaphore& semaphore, const Fence& fence, u32& image_index)
 {
     VkResult result = vkAcquireNextImageKHR(
-        device.logical_device, swapchain.swapchain, std::numeric_limits<u64>::max(), semaphore.semaphore,
-        fence.fence, &image_index);
+        device.logical_device, swapchain.swapchain, std::numeric_limits<u64>::max(), semaphore.semaphore, fence.fence,
+        &image_index);
 }
 
 RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc)
@@ -1444,8 +1443,8 @@ Shader create_shader(const Device& device, const ShaderDesc& desc)
     shader_create_info.codeSize = byte_code.size() * sizeof(uint32_t);
     shader_create_info.pCode = byte_code.data();
 
-    VK_ASSERT(vkCreateShaderModule(
-        device.logical_device, &shader_create_info, device.vulkan_allocator, &shader.shader));
+    VK_ASSERT(
+        vkCreateShaderModule(device.logical_device, &shader_create_info, device.vulkan_allocator, &shader.shader));
 
     shader.reflect_data = reflect(byte_code.size() * sizeof(u32), byte_code.data());
 
@@ -1514,8 +1513,7 @@ void destroy_descriptor_set_layout(const Device& device, DescriptorSetLayout& la
     FT_ASSERT(layout.shaders);
     if (layout.descriptor_set_layout)
     {
-        vkDestroyDescriptorSetLayout(
-            device.logical_device, layout.descriptor_set_layout, device.vulkan_allocator);
+        vkDestroyDescriptorSetLayout(device.logical_device, layout.descriptor_set_layout, device.vulkan_allocator);
     }
 }
 
@@ -1556,8 +1554,7 @@ Pipeline create_compute_pipeline(const Device& device, const PipelineDesc& desc)
     compute_pipeline_create_info.layout = pipeline.pipeline_layout;
 
     VK_ASSERT(vkCreateComputePipelines(
-        device.logical_device, {}, 1, &compute_pipeline_create_info, device.vulkan_allocator,
-        &pipeline.pipeline));
+        device.logical_device, {}, 1, &compute_pipeline_create_info, device.vulkan_allocator, &pipeline.pipeline));
 
     return pipeline;
 }
@@ -1677,8 +1674,7 @@ Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
     u32 set_layout_count = desc.descriptor_set_layout->descriptor_set_layout ? 1 : 0;
-    VkDescriptorSetLayout* set_layout =
-        set_layout_count ? &desc.descriptor_set_layout->descriptor_set_layout : nullptr;
+    VkDescriptorSetLayout* set_layout = set_layout_count ? &desc.descriptor_set_layout->descriptor_set_layout : nullptr;
 
     VkPipelineLayoutCreateInfo pipeline_layout_create_info{};
     pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -1706,8 +1702,7 @@ Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc
     pipeline_create_info.renderPass = desc.render_pass->render_pass;
 
     VK_ASSERT(vkCreateGraphicsPipelines(
-        device.logical_device, VK_NULL_HANDLE, 1, &pipeline_create_info, device.vulkan_allocator,
-        &pipeline.pipeline));
+        device.logical_device, VK_NULL_HANDLE, 1, &pipeline_create_info, device.vulkan_allocator, &pipeline.pipeline));
 
     return pipeline;
 }
@@ -1720,7 +1715,7 @@ void destroy_pipeline(const Device& device, Pipeline& pipeline)
     vkDestroyPipeline(device.logical_device, pipeline.pipeline, device.vulkan_allocator);
 }
 
-void cmd_begin_render_pass(const CommandBuffer& command_buffer, const RenderPassBeginDesc& desc)
+void cmd_begin_render_pass(const CommandBuffer& cmd, const RenderPassBeginDesc& desc)
 {
     FT_ASSERT(desc.render_pass);
 
@@ -1758,17 +1753,17 @@ void cmd_begin_render_pass(const CommandBuffer& command_buffer, const RenderPass
     render_pass_begin_info.clearValueCount = clear_value_count;
     render_pass_begin_info.pClearValues = clear_values;
 
-    vkCmdBeginRenderPass(command_buffer.command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(cmd.command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 }
 
-void cmd_end_render_pass(const CommandBuffer& command_buffer)
+void cmd_end_render_pass(const CommandBuffer& cmd)
 {
-    vkCmdEndRenderPass(command_buffer.command_buffer);
+    vkCmdEndRenderPass(cmd.command_buffer);
 }
 
 void cmd_barrier(
-    const CommandBuffer& command_buffer, u32 buffer_barriers_count, const BufferBarrier* buffer_barriers,
-    u32 image_barriers_count, const ImageBarrier* image_barriers)
+    const CommandBuffer& cmd, u32 buffer_barriers_count, const BufferBarrier* buffer_barriers, u32 image_barriers_count,
+    const ImageBarrier* image_barriers)
 {
     VkBufferMemoryBarrier* buffer_memory_barriers =
         buffer_barriers_count ? ( VkBufferMemoryBarrier* ) alloca(buffer_barriers_count * sizeof(VkBufferMemoryBarrier))
@@ -1777,7 +1772,7 @@ void cmd_barrier(
         image_barriers_count ? ( VkImageMemoryBarrier* ) alloca(image_barriers_count * sizeof(VkImageMemoryBarrier))
                              : nullptr;
 
-    // TODO: multi-queue barriers
+    // TODO: Queues
     VkAccessFlags src_access = VkAccessFlags(0);
     VkAccessFlags dst_access = VkAccessFlags(0);
 
@@ -1829,26 +1824,25 @@ void cmd_barrier(
         dst_access |= dst_access_mask;
     }
 
-    VkPipelineStageFlags src_stage = determine_pipeline_stage_flags(src_access, command_buffer.queue_type);
-    VkPipelineStageFlags dst_stage = determine_pipeline_stage_flags(dst_access, command_buffer.queue_type);
+    VkPipelineStageFlags src_stage = determine_pipeline_stage_flags(src_access, cmd.queue->type);
+    VkPipelineStageFlags dst_stage = determine_pipeline_stage_flags(dst_access, cmd.queue->type);
 
     vkCmdPipelineBarrier(
-        command_buffer.command_buffer, src_stage, dst_stage, 0, 0, nullptr, buffer_barriers_count,
-        buffer_memory_barriers, image_barriers_count, image_memory_barriers);
+        cmd.command_buffer, src_stage, dst_stage, 0, 0, nullptr, buffer_barriers_count, buffer_memory_barriers,
+        image_barriers_count, image_memory_barriers);
 };
 
-void cmd_set_scissor(const CommandBuffer& command_buffer, i32 x, i32 y, u32 width, u32 height)
+void cmd_set_scissor(const CommandBuffer& cmd, i32 x, i32 y, u32 width, u32 height)
 {
     VkRect2D scissor{};
     scissor.offset.x = x;
     scissor.offset.y = y;
     scissor.extent.width = width;
     scissor.extent.height = height;
-    vkCmdSetScissor(command_buffer.command_buffer, 0, 1, &scissor);
+    vkCmdSetScissor(cmd.command_buffer, 0, 1, &scissor);
 }
 
-void cmd_set_viewport(
-    const CommandBuffer& command_buffer, f32 x, f32 y, f32 width, f32 height, f32 min_depth, f32 max_depth)
+void cmd_set_viewport(const CommandBuffer& cmd, f32 x, f32 y, f32 width, f32 height, f32 min_depth, f32 max_depth)
 {
     VkViewport viewport{};
     viewport.x = x;
@@ -1858,39 +1852,38 @@ void cmd_set_viewport(
     viewport.minDepth = min_depth;
     viewport.maxDepth = max_depth;
 
-    vkCmdSetViewport(command_buffer.command_buffer, 0, 1, &viewport);
+    vkCmdSetViewport(cmd.command_buffer, 0, 1, &viewport);
 }
 
-void cmd_bind_pipeline(const CommandBuffer& command_buffer, const Pipeline& pipeline)
+void cmd_bind_pipeline(const CommandBuffer& cmd, const Pipeline& pipeline)
 {
-    vkCmdBindPipeline(command_buffer.command_buffer, to_vk_pipeline_bind_point(pipeline.type), pipeline.pipeline);
+    vkCmdBindPipeline(cmd.command_buffer, to_vk_pipeline_bind_point(pipeline.type), pipeline.pipeline);
 }
 
 void cmd_draw(
-    const CommandBuffer& command_buffer, uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex,
+    const CommandBuffer& cmd, uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex,
     uint32_t first_instance)
 {
-    vkCmdDraw(command_buffer.command_buffer, vertex_count, instance_count, first_vertex, first_instance);
+    vkCmdDraw(cmd.command_buffer, vertex_count, instance_count, first_vertex, first_instance);
 }
 
-void cmd_bind_vertex_buffer(const CommandBuffer& command_buffer, const Buffer& buffer)
+void cmd_bind_vertex_buffer(const CommandBuffer& cmd, const Buffer& buffer)
 {
     static constexpr VkDeviceSize offset = 0;
-    vkCmdBindVertexBuffers(command_buffer.command_buffer, 0, 1, &buffer.buffer, &offset);
+    vkCmdBindVertexBuffers(cmd.command_buffer, 0, 1, &buffer.buffer, &offset);
 }
 
-void cmd_copy_buffer(
-    const CommandBuffer& command_buffer, const Buffer& src, u32 src_offset, Buffer& dst, u32 dst_offset, u32 size)
+void cmd_copy_buffer(const CommandBuffer& cmd, const Buffer& src, u32 src_offset, Buffer& dst, u32 dst_offset, u32 size)
 {
     VkBufferCopy buffer_copy{};
     buffer_copy.srcOffset = src_offset;
     buffer_copy.dstOffset = dst_offset;
     buffer_copy.size = size;
 
-    vkCmdCopyBuffer(command_buffer.command_buffer, src.buffer, dst.buffer, 1, &buffer_copy);
+    vkCmdCopyBuffer(cmd.command_buffer, src.buffer, dst.buffer, 1, &buffer_copy);
 }
 
-void cmd_copy_buffer_to_image(const CommandBuffer& command_buffer, const Buffer& src, u32 src_offset, Image& dst)
+void cmd_copy_buffer_to_image(const CommandBuffer& cmd, const Buffer& src, u32 src_offset, Image& dst)
 {
     auto dst_layers = get_image_subresource_layers(dst);
 
@@ -1903,92 +1896,89 @@ void cmd_copy_buffer_to_image(const CommandBuffer& command_buffer, const Buffer&
     buffer_to_image_copy_info.imageExtent = VkExtent3D{ dst.width, dst.height, 1 };
 
     vkCmdCopyBufferToImage(
-        command_buffer.command_buffer, src.buffer, dst.image, determine_image_layout(ResourceState::eTransferDst),
-        1, &buffer_to_image_copy_info);
+        cmd.command_buffer, src.buffer, dst.image, determine_image_layout(ResourceState::eTransferDst), 1,
+        &buffer_to_image_copy_info);
 }
 
-void cmd_dispatch(const CommandBuffer& command_buffer, u32 group_count_x, u32 group_count_y, u32 group_count_z)
+void cmd_dispatch(const CommandBuffer& cmd, u32 group_count_x, u32 group_count_y, u32 group_count_z)
 {
-    vkCmdDispatch(command_buffer.command_buffer, group_count_x, group_count_y, group_count_z);
+    vkCmdDispatch(cmd.command_buffer, group_count_x, group_count_y, group_count_z);
 }
 
-void cmd_push_constants(
-    const CommandBuffer& command_buffer, const Pipeline& pipeline, u32 offset, u32 size, const void* data)
+void cmd_push_constants(const CommandBuffer& cmd, const Pipeline& pipeline, u32 offset, u32 size, const void* data)
 {
     vkCmdPushConstants(
-        command_buffer.command_buffer, pipeline.pipeline_layout,
+        cmd.command_buffer, pipeline.pipeline_layout,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, offset, size, data);
 }
 
 void cmd_blit_image(
-    const CommandBuffer& command_buffer, const Image& src, ResourceState src_state, const Image& dst,
-    ResourceState dst_state, Filter filter)
+    const CommandBuffer& cmd, const Image& src, ResourceState src_state, Image& dst, ResourceState dst_state,
+    Filter filter)
 {
-    auto sourceRange = get_image_subresource_range(src);
-    auto distanceRange = get_image_subresource_range(dst);
+    auto src_range = get_image_subresource_range(src);
+    auto dst_range = get_image_subresource_range(dst);
 
-    VkImageMemoryBarrier barriers[ 2 ] = {};
-    size_t barrierCount = 0;
+    u32 barrier_count = 0;
+    u32 index = 0;
 
-    VkImageMemoryBarrier toTransferSrcBarrier{};
-    toTransferSrcBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    toTransferSrcBarrier.srcAccessMask = determine_access_flags(src_state);
-    toTransferSrcBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    toTransferSrcBarrier.oldLayout = determine_image_layout(src_state);
-    toTransferSrcBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    toTransferSrcBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    toTransferSrcBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    toTransferSrcBarrier.image = src.image;
-    toTransferSrcBarrier.subresourceRange = sourceRange;
-
-    VkImageMemoryBarrier toTransferDstBarrier{};
-    toTransferDstBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    toTransferDstBarrier.srcAccessMask = determine_access_flags(dst_state);
-    toTransferDstBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    toTransferDstBarrier.oldLayout = determine_image_layout(dst_state);
-    toTransferDstBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    toTransferDstBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    toTransferDstBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    toTransferDstBarrier.image = dst.image;
-    toTransferDstBarrier.subresourceRange = distanceRange;
+    ImageBarrier barriers[ 2 ] = {};
+    // To transfer src
+    barriers[ 0 ].src_queue = cmd.queue;
+    barriers[ 0 ].dst_queue = cmd.queue;
+    barriers[ 0 ].image = &src;
+    barriers[ 0 ].old_state = src_state;
+    barriers[ 0 ].new_state = ResourceState::eTransferSrc;
+    // To transfer dst
+    barriers[ 1 ].src_queue = cmd.queue;
+    barriers[ 1 ].dst_queue = cmd.queue;
+    barriers[ 1 ].image = &dst;
+    barriers[ 1 ].old_state = dst_state;
+    barriers[ 1 ].new_state = ResourceState::eTransferDst;
 
     if (src_state != ResourceState::eTransferSrc)
-        barriers[ barrierCount++ ] = toTransferSrcBarrier;
-    if (dst_state != ResourceState::eTransferDst)
-        barriers[ barrierCount++ ] = toTransferDstBarrier;
-
-    if (barrierCount > 0)
     {
-        vkCmdPipelineBarrier(
-            command_buffer.command_buffer,
-            determine_pipeline_stage_flags(src_state, command_buffer.queue_type) |
-                determine_pipeline_stage_flags(dst_state, command_buffer.queue_type),
-            VK_PIPELINE_STAGE_TRANSFER_BIT, {}, 0, nullptr, 0, nullptr, static_cast<u32>(barrierCount), barriers);
+        barrier_count++;
     }
 
-    auto srcLayers = get_image_subresource_layers(src);
-    auto dstLayers = get_image_subresource_layers(dst);
+    if (dst_state != ResourceState::eTransferDst)
+    {
+        if (barrier_count == 0)
+        {
+            index = 1;
+        }
 
-    VkImageBlit imageBlitInfo{};
-    imageBlitInfo.srcOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
-    imageBlitInfo.srcOffsets[ 1 ] = VkOffset3D{ ( i32 ) src.width, ( i32 ) src.height, 1 };
-    imageBlitInfo.dstOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
-    imageBlitInfo.dstOffsets[ 1 ] = VkOffset3D{ ( i32 ) dst.width, ( i32 ) dst.height, 1 };
-    imageBlitInfo.srcSubresource = srcLayers;
-    imageBlitInfo.dstSubresource = dstLayers;
+        barrier_count++;
+    }
+
+    if (barrier_count > 0)
+    {
+        cmd_barrier(cmd, 0, nullptr, barrier_count, &barriers[ index ]);
+    }
+
+    auto src_layers = get_image_subresource_layers(src);
+    auto dst_layers = get_image_subresource_layers(dst);
+
+    VkImageBlit image_blit_info{};
+    image_blit_info.srcOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
+    image_blit_info.srcOffsets[ 1 ] = VkOffset3D{ ( i32 ) src.width, ( i32 ) src.height, 1 };
+    image_blit_info.dstOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
+    image_blit_info.dstOffsets[ 1 ] = VkOffset3D{ ( i32 ) dst.width, ( i32 ) dst.height, 1 };
+    image_blit_info.srcSubresource = src_layers;
+    image_blit_info.dstSubresource = dst_layers;
 
     vkCmdBlitImage(
-        command_buffer.command_buffer, src.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst.image,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlitInfo, to_vk_filter(filter));
+        cmd.command_buffer, src.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst.image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &image_blit_info, to_vk_filter(filter));
 }
 
-void immediate_submit(const Queue& queue, const CommandBuffer& command_buffer)
+void immediate_submit(const Queue& queue, const CommandBuffer& cmd)
 {
     QueueSubmitDesc submit_desc{};
     submit_desc.wait_semaphore_count = 0;
     submit_desc.wait_semaphores = nullptr;
     submit_desc.command_buffer_count = 1;
-    submit_desc.command_buffers = &command_buffer;
+    submit_desc.command_buffers = &cmd;
     submit_desc.signal_semaphore_count = 0;
     submit_desc.signal_semaphores = 0;
     submit_desc.signal_fence = nullptr;
@@ -2071,8 +2061,8 @@ void update_buffer(const Device& device, BufferUpdateDesc& desc)
         begin_command_buffer(device.upload_command_buffer);
 
         cmd_copy_buffer(
-            device.upload_command_buffer, device.staging_buffer.buffer, device.staging_buffer.memory_used,
-            *desc.buffer, desc.offset, desc.size);
+            device.upload_command_buffer, device.staging_buffer.buffer, device.staging_buffer.memory_used, *desc.buffer,
+            desc.offset, desc.size);
 
         end_command_buffer(device.upload_command_buffer);
 
@@ -2080,10 +2070,10 @@ void update_buffer(const Device& device, BufferUpdateDesc& desc)
     }
 }
 
-void cmd_bind_descriptor_set(const CommandBuffer& command_buffer, const DescriptorSet& set, const Pipeline& pipeline)
+void cmd_bind_descriptor_set(const CommandBuffer& cmd, const DescriptorSet& set, const Pipeline& pipeline)
 {
     vkCmdBindDescriptorSets(
-        command_buffer.command_buffer, to_vk_pipeline_bind_point(pipeline.type), pipeline.pipeline_layout, 0, 1,
+        cmd.command_buffer, to_vk_pipeline_bind_point(pipeline.type), pipeline.pipeline_layout, 0, 1,
         &set.descriptor_set, 0, nullptr);
 }
 
@@ -2110,8 +2100,7 @@ Sampler create_sampler(const Device& device, const SamplerDesc& desc)
     sampler_create_info.maxLod = desc.max_lod;
     sampler_create_info.unnormalizedCoordinates = false;
 
-    VK_ASSERT(
-        vkCreateSampler(device.logical_device, &sampler_create_info, device.vulkan_allocator, &sampler.sampler));
+    VK_ASSERT(vkCreateSampler(device.logical_device, &sampler_create_info, device.vulkan_allocator, &sampler.sampler));
 
     return sampler;
 }
@@ -2202,8 +2191,8 @@ Image create_image(const Device& device, const ImageDesc& desc)
     image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
     image_view_create_info.subresourceRange = get_image_subresource_range(image);
 
-    VK_ASSERT(vkCreateImageView(
-        device.logical_device, &image_view_create_info, device.vulkan_allocator, &image.image_view));
+    VK_ASSERT(
+        vkCreateImageView(device.logical_device, &image_view_create_info, device.vulkan_allocator, &image.image_view));
 
     return image;
 }
@@ -2260,8 +2249,7 @@ void update_image(const Device& device, const ImageUpdateDesc& desc)
     }
 
     cmd_copy_buffer_to_image(
-        device.upload_command_buffer, device.staging_buffer.buffer, device.staging_buffer.memory_used,
-        *desc.image);
+        device.upload_command_buffer, device.staging_buffer.buffer, device.staging_buffer.memory_used, *desc.image);
 
     image_barrier.old_state = ResourceState::eTransferDst;
     image_barrier.new_state = desc.resource_state;
@@ -2290,8 +2278,8 @@ DescriptorSet create_descriptor_set(const Device& device, const DescriptorSetDes
     descriptor_set_allocate_info.descriptorSetCount = 1;
     descriptor_set_allocate_info.pSetLayouts = &desc.descriptor_set_layout->descriptor_set_layout;
 
-    VK_ASSERT(vkAllocateDescriptorSets(
-        device.logical_device, &descriptor_set_allocate_info, &descriptor_set.descriptor_set));
+    VK_ASSERT(
+        vkAllocateDescriptorSets(device.logical_device, &descriptor_set_allocate_info, &descriptor_set.descriptor_set));
 
     return descriptor_set;
 }

@@ -40,4 +40,7 @@ const Window* get_app_window();
 const std::string& get_app_shaders_directory();
 const std::string& get_app_textures_directory();
 
+f32 get_time();
+f32 get_delta_time();
+
 } // namespace fluent

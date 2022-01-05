@@ -20,7 +20,7 @@ struct ApplicationState
     UpdateCallback m_on_update;
     ShutdownCallback m_on_shutdown;
     ResizeCallback m_on_resize;
-    f64 m_delta_time;
+    f32 m_delta_time;
 };
 
 static ApplicationState app_state{};
@@ -78,13 +78,13 @@ void app_run()
 
     SDL_Event e;
 
-    f64 lastTick = SDL_GetTicks64();
+    f32 last_tick = get_time();
     app_state.m_delta_time = 0.0;
 
     while (app_state.m_is_running)
     {
-        app_state.m_delta_time = (static_cast<f64>(SDL_GetTicks64()) - lastTick);
-        lastTick = SDL_GetTicks64();
+        app_state.m_delta_time = (get_time() - last_tick);
+        last_tick = get_time();
 
         while (SDL_PollEvent(&e) != 0)
         {
@@ -138,6 +138,16 @@ const std::string& get_app_shaders_directory()
 const std::string& get_app_textures_directory()
 {
     return app_state.m_textures_directory;
+}
+
+f32 get_time()
+{
+    return static_cast<f32>(SDL_GetTicks64());
+}
+
+f32 get_delta_time()
+{
+    return app_state.m_delta_time;
 }
 
 } // namespace fluent
