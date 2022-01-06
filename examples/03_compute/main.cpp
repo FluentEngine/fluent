@@ -111,11 +111,7 @@ void on_init()
 
     Shader shader = create_shader(device, shader_desc);
 
-    DescriptorSetLayoutDesc descriptor_set_layout_desc{};
-    descriptor_set_layout_desc.shader_count = 1;
-    descriptor_set_layout_desc.shaders = &shader;
-
-    descriptor_set_layout = create_descriptor_set_layout(device, descriptor_set_layout_desc);
+    descriptor_set_layout = create_descriptor_set_layout(device, 1, &shader);
 
     PipelineDesc pipeline_desc{};
     pipeline_desc.descriptor_set_layout = &descriptor_set_layout;

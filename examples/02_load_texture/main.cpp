@@ -90,11 +90,7 @@ void on_init()
     shaders[ 0 ] = create_shader(device, vert_shader_desc);
     shaders[ 1 ] = create_shader(device, frag_shader_desc);
 
-    DescriptorSetLayoutDesc descriptor_set_layout_desc{};
-    descriptor_set_layout_desc.shader_count = 2;
-    descriptor_set_layout_desc.shaders = shaders;
-
-    descriptor_set_layout = create_descriptor_set_layout(device, descriptor_set_layout_desc);
+    descriptor_set_layout = create_descriptor_set_layout(device, 2, shaders);
 
     PipelineDesc pipeline_desc{};
     pipeline_desc.binding_desc_count = 1;
@@ -139,7 +135,7 @@ void on_init()
 
     sampler = create_sampler(device, sampler_desc);
 
-    texture = load_image_from_file(device, "statue.jpg", ResourceState::eShaderReadOnly);
+    texture = load_image_from_file(device, "statue.jpg", ResourceState::eShaderReadOnly, true);
 
     DescriptorImageDesc descriptor_image_desc{};
     descriptor_image_desc.image = &texture;

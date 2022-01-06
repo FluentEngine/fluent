@@ -266,12 +266,6 @@ struct Shader
     ReflectionData reflect_data;
 };
 
-struct DescriptorSetLayoutDesc
-{
-    u32 shader_count;
-    Shader* shaders;
-};
-
 struct DescriptorSetLayout
 {
     u32 shader_count;
@@ -431,9 +425,10 @@ RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc);
 void destroy_render_pass(const Device& device, RenderPass& render_pass);
 
 Shader create_shader(const Device& device, const ShaderDesc& desc);
+Shader create_shader(const Device& device, const char* filename, ShaderStage shader_stage);
 void destroy_shader(const Device& device, Shader& shader);
 
-DescriptorSetLayout create_descriptor_set_layout(const Device& device, const DescriptorSetLayoutDesc& desc);
+DescriptorSetLayout create_descriptor_set_layout(const Device& device, u32 shader_count, Shader* shaders);
 void destroy_descriptor_set_layout(const Device& device, DescriptorSetLayout& layout);
 
 Pipeline create_compute_pipeline(const Device& device, const PipelineDesc& desc);
@@ -485,8 +480,8 @@ void destroy_sampler(const Device& device, Sampler& sampler);
 
 Image create_image(const Device& device, const ImageDesc& desc);
 void destroy_image(const Device& device, Image& image);
-Image load_image_from_dds_file(const Device& device, const char* filename, ResourceState resource_state);
-Image load_image_from_file(const Device& device, const char* filename, ResourceState resource_state);
+Image load_image_from_dds_file(const Device& device, const char* filename, ResourceState resource_state, b32 flip);
+Image load_image_from_file(const Device& device, const char* filename, ResourceState resource_state, b32 flip);
 
 void update_image(const Device& device, const ImageUpdateDesc& desc);
 

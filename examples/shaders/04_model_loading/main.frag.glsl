@@ -13,9 +13,7 @@ layout(set = 0, binding = 2) uniform texture2D uTextures[100];
 layout (push_constant) uniform constants
 {
     layout(offset = 96) int diffuse;
-    int specular;
     int normal;
-    int height;
 } PushConstants;
 
 void main()

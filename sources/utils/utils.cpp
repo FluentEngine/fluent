@@ -12,11 +12,10 @@ std::vector<u32> read_file_binary(const std::string& filename)
     FT_ASSERT(file.is_open() && "Failed to open file");
 
     std::vector<char> res = { std::istreambuf_iterator(file), std::istreambuf_iterator<char>() };
-    return std::vector<uint32_t>(
-        reinterpret_cast<uint32_t*>(res.data()), reinterpret_cast<uint32_t*>(res.data() + res.size()));
+    return std::vector<u32>(reinterpret_cast<u32*>(res.data()), reinterpret_cast<u32*>(res.data() + res.size()));
 }
 
-ImageDesc read_image_desc_from_dds(const char* filename)
+ImageDesc read_image_desc_from_dds(const char* filename, b32 flip)
 {
     using namespace tinyddsloader;
 
@@ -26,7 +25,10 @@ ImageDesc read_image_desc_from_dds(const char* filename)
     auto ret = dds.Load(filename);
     FT_ASSERT(ret == Result::Success);
 
-    dds.Flip();
+    if (flip)
+    {
+        dds.Flip();
+    }
 
     // TODO: mip levels
     auto image_data = dds.GetImageData();
@@ -51,15 +53,15 @@ void release_image_desc_dds(ImageDesc& desc)
     delete[](u8*) desc.data;
 }
 
-ImageDesc read_image_desc(const char* filename)
+ImageDesc read_image_desc(const char* filename, b32 flip)
 {
     ImageDesc image_desc{};
 
-    stbi_set_flip_vertically_on_load(true);
+    stbi_set_flip_vertically_on_load(flip);
     int tex_width, tex_height, tex_channels;
     image_desc.data = stbi_load(filename, &tex_width, &tex_height, &tex_channels, STBI_rgb_alpha);
     image_desc.data_size = tex_width * tex_height * 4;
-    stbi_set_flip_vertically_on_load(false);
+    stbi_set_flip_vertically_on_load(!flip);
 
     image_desc.width = tex_width;
     image_desc.height = tex_height;

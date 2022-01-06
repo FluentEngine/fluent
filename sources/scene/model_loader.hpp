@@ -12,17 +12,16 @@
 namespace fluent
 {
 
-struct TextureIndices
+struct Material
 {
     i32 diffuse = -1;
     i32 specular = -1;
     i32 normal = -1;
     i32 height = -1;
-};
-
-struct Material
-{
-    TextureIndices texture_indices;
+    i32 ambient = -1;
+    i32 ambient_occlusion = -1;
+    i32 emissive = -1;
+    i32 metal_roughness = -1;
 };
 
 struct Mesh
@@ -52,6 +51,7 @@ struct LoadModelDescription
     b32 load_tex_coords;
     b32 load_tangents;
     b32 load_bitangents;
+    b32 flip_uvs;
 };
 
 class ModelLoader
@@ -66,6 +66,8 @@ private:
     i32 texcoord_offset = -1;
     i32 tangents_offset = -1;
     i32 bitangents_offset = -1;
+
+    b32 flip_uvs;
 
     struct LoadedTexture
     {

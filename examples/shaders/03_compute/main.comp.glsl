@@ -83,7 +83,7 @@ vec3 toGray(in vec3 color)
     return vec3((color.r+color.g+color.b)/3.0);
 }
 
-void main() 
+void main()
 {
 	ivec2 size = imageSize(uOutputImage);
 	ivec2 coord = ivec2(gl_GlobalInvocationID.xy);

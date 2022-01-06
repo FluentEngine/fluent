@@ -20,6 +20,12 @@ struct PushConstantBlock
     Vector4 lightPosition = Vector4(1.0, 2.0, 2.0, 0.0);
 };
 
+struct TextureIndices
+{
+    i32 diffuse = -1;
+    i32 normal = -1;
+};
+
 Renderer renderer;
 Device device;
 Queue queue;
@@ -40,6 +46,7 @@ Sampler sampler;
 
 DescriptorSet descriptor_set;
 Model model;
+TextureIndices texture_indices;
 
 CameraUBO camera_ubo;
 
@@ -96,11 +103,7 @@ void on_init()
     shaders[ 0 ] = create_shader(device, vert_shader_desc);
     shaders[ 1 ] = create_shader(device, frag_shader_desc);
 
-    DescriptorSetLayoutDesc descriptor_set_layout_desc{};
-    descriptor_set_layout_desc.shader_count = 2;
-    descriptor_set_layout_desc.shaders = shaders;
-
-    descriptor_set_layout = create_descriptor_set_layout(device, descriptor_set_layout_desc);
+    descriptor_set_layout = create_descriptor_set_layout(device, 2, shaders);
 
     LoadModelDescription load_model_desc{};
     load_model_desc.filename = "backpack/backpack.obj";
@@ -108,6 +111,7 @@ void on_init()
     load_model_desc.load_normals = true;
     load_model_desc.load_tangents = true;
     load_model_desc.load_tex_coords = true;
+    load_model_desc.flip_uvs = true;
 
     ModelLoader model_loader;
     model = model_loader.load(&device, load_model_desc);
@@ -251,9 +255,10 @@ void on_update(f64 delta_time)
 
     for (auto& mesh : model.meshes)
     {
+        texture_indices.diffuse = mesh.material.diffuse;
+        texture_indices.normal = mesh.material.normal;
         cmd_push_constants(cmd, pipeline, 0, sizeof(PushConstantBlock), &pcb);
-        cmd_push_constants(
-            cmd, pipeline, sizeof(PushConstantBlock), sizeof(TextureIndices), &mesh.material.texture_indices);
+        cmd_push_constants(cmd, pipeline, sizeof(PushConstantBlock), sizeof(TextureIndices), &texture_indices);
         cmd_bind_vertex_buffer(cmd, mesh.vertex_buffer);
         cmd_bind_index_buffer_u32(cmd, mesh.index_buffer);
         cmd_draw_indexed(cmd, mesh.indices.size(), 1, 0, 0, 0);

@@ -61,6 +61,7 @@ void ModelLoader::count_stride(const LoadModelDescription& desc)
 Model ModelLoader::load(const Device* device, const LoadModelDescription& desc)
 {
     this->device = device;
+    flip_uvs = desc.flip_uvs;
     directory = std::string(desc.filename.substr(0, desc.filename.find_last_of('/')));
     count_stride(desc);
     return load(desc.filename);
@@ -175,23 +176,52 @@ Mesh ModelLoader::process_mesh(aiMesh* mesh, const aiScene* scene)
     int prevTexSize = textures.size();
     std::vector<LoadedTexture> diffuseMaps = load_material_textures(material, aiTextureType_DIFFUSE, "texture_diffuse");
     textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-    meshMaterial.texture_indices.diffuse = prevTexSize != textures.size() ? textures.size() - 1 : -1;
+    meshMaterial.diffuse = prevTexSize != textures.size() ? textures.size() - 1 : -1;
+    prevTexSize = textures.size();
+
+    std::vector<LoadedTexture> normalMaps = load_material_textures(material, aiTextureType_NORMALS, "texture_normal");
+    textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
+    meshMaterial.normal = prevTexSize != textures.size() ? textures.size() - 1 : -1;
     prevTexSize = textures.size();
 
     std::vector<LoadedTexture> specularMaps =
         load_material_textures(material, aiTextureType_SPECULAR, "texture_specular");
     textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
-    meshMaterial.texture_indices.specular = prevTexSize != textures.size() ? textures.size() - 1 : -1;
+    meshMaterial.specular = prevTexSize != textures.size() ? textures.size() - 1 : -1;
     prevTexSize = textures.size();
 
-    std::vector<LoadedTexture> normalMaps = load_material_textures(material, aiTextureType_HEIGHT, "texture_normal");
-    textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
-    meshMaterial.texture_indices.normal = prevTexSize != textures.size() ? textures.size() - 1 : -1;
-    prevTexSize = textures.size();
-
-    std::vector<LoadedTexture> heightMaps = load_material_textures(material, aiTextureType_AMBIENT, "texture_height");
+    std::vector<LoadedTexture> heightMaps = load_material_textures(material, aiTextureType_HEIGHT, "texture_height");
     textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
-    meshMaterial.texture_indices.height = prevTexSize != textures.size() ? textures.size() - 1 : -1;
+    meshMaterial.height = prevTexSize != textures.size() ? textures.size() - 1 : -1;
+    prevTexSize = textures.size();
+
+    std::vector<LoadedTexture> ambientMaps = load_material_textures(material, aiTextureType_AMBIENT, "texture_ambient");
+    textures.insert(textures.end(), ambientMaps.begin(), ambientMaps.end());
+    meshMaterial.ambient = prevTexSize != textures.size() ? textures.size() - 1 : -1;
+    prevTexSize = textures.size();
+
+    // TODO:
+    std::vector<LoadedTexture> aoMaps = load_material_textures(material, aiTextureType_LIGHTMAP, "texture_ao");
+    textures.insert(textures.end(), aoMaps.begin(), aoMaps.end());
+    meshMaterial.ambient_occlusion = prevTexSize != textures.size() ? textures.size() - 1 : -1;
+    prevTexSize = textures.size();
+
+    std::vector<LoadedTexture> emissiveMaps =
+        load_material_textures(material, aiTextureType_EMISSIVE, "texture_emissive");
+    textures.insert(textures.end(), emissiveMaps.begin(), emissiveMaps.end());
+    meshMaterial.emissive = prevTexSize != textures.size() ? textures.size() - 1 : -1;
+    prevTexSize = textures.size();
+
+    std::vector<LoadedTexture> metalness_maps =
+        load_material_textures(material, aiTextureType_METALNESS, "texture_metalness");
+    textures.insert(textures.end(), metalness_maps.begin(), metalness_maps.end());
+    // meshMaterial.metalness = prevTexSize != textures.size() ? textures.size() - 1 : -1;
+    prevTexSize = textures.size();
+
+    std::vector<LoadedTexture> metal_roughness_maps =
+        load_material_textures(material, aiTextureType_UNKNOWN, "texture_metal_roughness");
+    textures.insert(textures.end(), metal_roughness_maps.begin(), metal_roughness_maps.end());
+    meshMaterial.metal_roughness = prevTexSize != textures.size() ? textures.size() - 1 : -1;
     prevTexSize = textures.size();
 
     return Mesh(*device, vertices, indices, meshMaterial);
@@ -223,8 +253,8 @@ std::vector<ModelLoader::LoadedTexture> ModelLoader::load_material_textures(
 
             LoadedTexture texture{};
             texture.name = type_name;
-            texture.texture =
-                load_image_from_file(*device, (directory + "/" + texName).c_str(), ResourceState::eShaderReadOnly);
+            texture.texture = load_image_from_file(
+                *device, (directory + "/" + texName).c_str(), ResourceState::eShaderReadOnly, flip_uvs);
             textures.push_back(texture);
             textures_loaded.push_back(texture);
         }

@@ -1484,19 +1484,27 @@ Shader create_shader(const Device& device, const ShaderDesc& desc)
     return shader;
 }
 
+Shader create_shader(const Device& device, const char* filename, ShaderStage shader_stage)
+{
+    ShaderDesc shader_desc{};
+    shader_desc.filename = filename;
+    shader_desc.stage = shader_stage;
+    return create_shader(device, shader_desc);
+}
+
 void destroy_shader(const Device& device, Shader& shader)
 {
     FT_ASSERT(shader.shader);
     vkDestroyShaderModule(device.logical_device, shader.shader, device.vulkan_allocator);
 }
 
-DescriptorSetLayout create_descriptor_set_layout(const Device& device, const DescriptorSetLayoutDesc& desc)
+DescriptorSetLayout create_descriptor_set_layout(const Device& device, u32 shader_count, Shader* shaders)
 {
-    FT_ASSERT(desc.shader_count);
+    FT_ASSERT(shader_count);
 
     DescriptorSetLayout descriptor_set_layout{};
-    descriptor_set_layout.shader_count = desc.shader_count;
-    descriptor_set_layout.shaders = desc.shaders;
+    descriptor_set_layout.shader_count = shader_count;
+    descriptor_set_layout.shaders = shaders;
 
     // count bindings in all shaders
     u32 binding_count = 0;
@@ -2189,6 +2197,11 @@ Image create_image(const Device& device, const ImageDesc& desc)
     image_create_info.pQueueFamilyIndices = nullptr;
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
+    if (desc.layer_count == 6)
+    {
+        image_create_info.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    }
+
     VK_ASSERT(vmaCreateImage(
         device.memory_allocator, &image_create_info, &allocation_create_info, &image.image, &image.allocation,
         nullptr));
@@ -2235,6 +2248,10 @@ Image create_image(const Device& device, const ImageDesc& desc)
     image_view_create_info.flags = 0;
     image_view_create_info.image = image.image;
     image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    if (image.layer_count == 6)
+    {
+        image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+    }
     image_view_create_info.format = image_create_info.format;
     image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
     image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -2257,10 +2274,10 @@ void destroy_image(const Device& device, Image& image)
     vmaDestroyImage(device.memory_allocator, image.image, image.allocation);
 }
 
-Image load_image_from_dds_file(const Device& device, const char* filename, ResourceState resource_state)
+Image load_image_from_dds_file(const Device& device, const char* filename, ResourceState resource_state, b32 flip)
 {
     std::string filepath = std::string(get_app_textures_directory()) + std::string(filename);
-    ImageDesc image_desc = read_image_desc_from_dds(filepath.c_str());
+    ImageDesc image_desc = read_image_desc_from_dds(filepath.c_str(), flip);
     image_desc.descriptor_type = DescriptorType::eSampledImage;
     image_desc.resource_state = ResourceState(ResourceState::eTransferDst | resource_state);
     Image image = create_image(device, image_desc);
@@ -2269,10 +2286,10 @@ Image load_image_from_dds_file(const Device& device, const char* filename, Resou
     return image;
 }
 
-Image load_image_from_file(const Device& device, const char* filename, ResourceState resource_state)
+Image load_image_from_file(const Device& device, const char* filename, ResourceState resource_state, b32 flip)
 {
     std::string filepath = std::string(get_app_textures_directory()) + std::string(filename);
-    ImageDesc image_desc = read_image_desc(filepath.c_str());
+    ImageDesc image_desc = read_image_desc(filepath.c_str(), flip);
     image_desc.descriptor_type = DescriptorType::eSampledImage;
     image_desc.resource_state = ResourceState(ResourceState::eTransferDst | resource_state);
     Image image = create_image(device, image_desc);
@@ -2393,6 +2410,7 @@ void update_descriptor_set(const Device& device, DescriptorSet& set, u32 count, 
                 {
                     ids[ j ].imageLayout = determine_image_layout(image_write.resource_state);
                     ids[ j ].imageView = image_write.image->image_view;
+                    ids[ j ].sampler = image_write.sampler ? image_write.sampler->sampler : nullptr;
                 }
                 else
                 {
