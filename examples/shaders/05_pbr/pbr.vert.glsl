@@ -37,8 +37,8 @@ void main()
 	mat3 TBN = transpose(mat3(T, B, N));
 	TexCoord = iTexCoord;
 	CameraPosition = PushConstants.viewPosition.xyz;
-	WorldPosition = FragmentPosition;
-	Normal = iNormal;
+	WorldPosition = mat3(PushConstants.model) * FragmentPosition;
+	Normal = mat3(PushConstants.model) * iNormal;
 	
     gl_Position = ubo.projection * ubo.view * PushConstants.model * vec4(iPosition, 1.0);
 }

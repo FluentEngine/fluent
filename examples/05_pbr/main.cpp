@@ -23,6 +23,7 @@ struct TextureIndices
     i32 normal = -1;
     i32 metallic_roughness = -1;
     i32 ao = -1;
+    i32 emissive = -1;
 };
 
 static constexpr u32 FRAME_COUNT = 2;
@@ -69,9 +70,9 @@ void compute_pbr_maps()
     static const u32 skybox_size = 1024;
     // TODO: mip levels
     static const u32 skybox_mips = /* ( u32 ) log2(skybox_size) + */ 1;
-    static const u32 irradiance_size = 32;
-    static const u32 specular_size = 128;
-    static const u32 brdf_integration_size = 512;
+    static const u32 irradiance_size = 1024;
+    static const u32 specular_size = 1024;
+    static const u32 brdf_integration_size = 1024;
 
     SamplerDesc sampler_desc{};
     sampler_desc.min_filter = Filter::eLinear;
@@ -129,7 +130,7 @@ void compute_pbr_maps()
     brdf_integration_image_desc.descriptor_type = DescriptorType::eSampledImage | DescriptorType::eStorageImage;
 
     Sampler skybox_sampler = create_sampler(device, sampler_desc);
-    Image pano_skybox = load_image_from_dds_file(device, "LA_Helipad.dds", ResourceState::eShaderReadOnly, true);
+    Image pano_skybox = load_image_from_dds_file(device, "NewportLoft.dds", ResourceState::eShaderReadOnly, false);
     Shader pano_to_cube_shader = create_shader(device, "pano_to_cube.comp.glsl.spv", ShaderStage::eCompute);
 
     // precomputed skybox
@@ -289,7 +290,7 @@ void compute_pbr_maps()
 
     struct PrecomputeSkySpecularData
     {
-        uint mipSize;
+        u32 mipSize;
         f32 roughness;
     } specular_data = { specular_size >> 0, 0 };
 
@@ -445,6 +446,7 @@ void load_skybox()
         destroy_shader(device, shaders[ i ]);
     }
 }
+
 void draw_skybox(const CommandBuffer& cmd)
 {
     cmd_bind_pipeline(cmd, skybox_pipeline);
@@ -467,7 +469,7 @@ void load_model()
     load_model_desc.load_normals = true;
     load_model_desc.load_tangents = true;
     load_model_desc.load_tex_coords = true;
-    load_model_desc.flip_uvs = false;
+    load_model_desc.flip_uvs = true;
 
     ModelLoader model_loader;
     model = model_loader.load(&device, load_model_desc);
@@ -504,7 +506,7 @@ void load_model()
     pbr_descriptor_set = create_descriptor_set(device, descriptor_set_desc);
 
     std::vector<DescriptorImageDesc> descriptor_image_descs(model.textures.size() + 3);
-    for (uint32_t i = 0; i < descriptor_image_descs.size(); ++i)
+    for (uint32_t i = 0; i < descriptor_image_descs.size() - 3; ++i)
     {
         descriptor_image_descs[ i ] = {};
         descriptor_image_descs[ i ].image = &model.textures[ i ];
@@ -594,6 +596,7 @@ void draw_model(const CommandBuffer& cmd)
         texture_indices.normal = mesh.material.normal;
         texture_indices.metallic_roughness = mesh.material.metal_roughness;
         texture_indices.ao = mesh.material.ambient_occlusion;
+        texture_indices.emissive = mesh.material.emissive;
 
         cmd_push_constants(cmd, pbr_pipeline, 0, sizeof(PushConstantBlock), &pcb);
         cmd_push_constants(cmd, pbr_pipeline, sizeof(PushConstantBlock), sizeof(TextureIndices), &texture_indices);
@@ -674,6 +677,17 @@ void on_resize(u32 width, u32 height)
     swapchain_desc.builtin_depth = true;
 
     swapchain = create_swapchain(renderer, device, swapchain_desc);
+
+    ubo.projection = create_perspective_matrix(radians(45.0f), window_get_aspect(get_app_window()), 0.1f, 100.f);
+    ubo.view = create_look_at_matrix(Vector3(0.0f, 0.0, 2.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));
+
+    BufferUpdateDesc buffer_update{};
+    buffer_update.buffer = &ubo_buffer;
+    buffer_update.offset = 0;
+    buffer_update.size = sizeof(CameraUBO);
+    buffer_update.data = &ubo;
+
+    update_buffer(device, buffer_update);
 }
 
 void on_update(f64 delta_time)

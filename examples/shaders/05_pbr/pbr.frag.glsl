@@ -19,6 +19,7 @@ layout (push_constant) uniform constants
     int normal;
     int metallic_roughness;
     int ao;
+    int emissive;
 } PushConstants;
 
 const float PI = 3.14159265359;
@@ -61,8 +62,8 @@ void main()
 
     if (PushConstants.metallic_roughness != -1)
     {
-        metalness  = clamp(texture(sampler2D(uTextures[PushConstants.metallic_roughness], uSampler), TexCoord).b, 0.0, 1.0);
-        roughness  = clamp(texture(sampler2D(uTextures[PushConstants.metallic_roughness], uSampler), TexCoord).g, 0.04, 1.0);
+        metalness  = texture(sampler2D(uTextures[PushConstants.metallic_roughness], uSampler), coord).g;
+        roughness  = texture(sampler2D(uTextures[PushConstants.metallic_roughness], uSampler), coord).b;
     }
 
     float ao = 0;
@@ -93,7 +94,10 @@ void main()
     }
 
     vec3 color = Lo + ComputeEnvironmentBRDF(N, V, albedo, roughness, metalness) * ao;
-
+    if (PushConstants.emissive != -1)
+    {
+        color += texture(sampler2D(uTextures[PushConstants.emissive], uSampler), coord).rgb;
+    }
     FragColor = vec4(pow(color / (color + 1.0), vec3(1.0 / 2.2)), 1.0);
 }
 
