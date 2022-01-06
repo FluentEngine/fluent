@@ -597,6 +597,8 @@ void draw_model(const CommandBuffer& cmd)
         texture_indices.metallic_roughness = mesh.material.metal_roughness;
         texture_indices.ao = mesh.material.ambient_occlusion;
         texture_indices.emissive = mesh.material.emissive;
+        pcb.model = pcb.model * mesh.transform;
+        pcb.viewPosition = Vector4(0.0, 0.0, 2.0, 0.0);
 
         cmd_push_constants(cmd, pbr_pipeline, 0, sizeof(PushConstantBlock), &pcb);
         cmd_push_constants(cmd, pbr_pipeline, sizeof(PushConstantBlock), sizeof(TextureIndices), &texture_indices);
