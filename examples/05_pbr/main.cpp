@@ -69,8 +69,8 @@ void compute_pbr_maps()
     static const u32 skybox_size = 1024;
     // TODO: mip levels
     static const u32 skybox_mips = /* ( u32 ) log2(skybox_size) */ +1;
-    static const u32 irradiance_size = 512;
-    static const u32 specular_size = 512;
+    static const u32 irradiance_size = 128;
+    static const u32 specular_size = 128;
     static const u32 brdf_integration_size = 512;
     static const u32 specular_mips = /* ( u32 ) log2(specular_size) + */ 1;
 
@@ -409,6 +409,8 @@ void load_skybox()
     skybox_descriptor_set_layout = create_descriptor_set_layout(device, 2, shaders);
 
     PipelineDesc pipeline_desc{};
+    pipeline_desc.binding_desc_count = 0;
+    pipeline_desc.attribute_desc_count = 0;
     pipeline_desc.depth_state_desc.depth_test = false;
     pipeline_desc.depth_state_desc.depth_test = false;
     pipeline_desc.depth_state_desc.compare_op = CompareOp::eLessOrEqual;
