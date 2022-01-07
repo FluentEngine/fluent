@@ -231,6 +231,36 @@ void compute_pbr_maps()
 
     Pipeline irradiance_pipeline = create_compute_pipeline(device, irradiance_pipeline_desc);
 
+    Shader specular_shader = create_shader(device, "specular.comp.glsl.spv", ShaderStage::eCompute);
+
+    DescriptorSetLayout specular_set_layout = create_descriptor_set_layout(device, 1, &specular_shader);
+    DescriptorSetDesc specular_set_desc{};
+    specular_set_desc.descriptor_set_layout = &specular_set_layout;
+    DescriptorSet specular_set = create_descriptor_set(device, specular_set_desc);
+
+    DescriptorImageDesc specular_set_images[ 2 ] = {};
+    specular_set_images[ 0 ].image = &environment_map;
+    specular_set_images[ 0 ].sampler = &skybox_sampler;
+    specular_set_images[ 0 ].resource_state = ResourceState::eStorage;
+    specular_set_images[ 1 ].image = &specular_map;
+    specular_set_images[ 1 ].resource_state = ResourceState::eStorage;
+
+    descriptor_write_descs[ 0 ].binding = 0;
+    descriptor_write_descs[ 0 ].descriptor_count = 1;
+    descriptor_write_descs[ 0 ].descriptor_type = DescriptorType::eCombinedImageSampler;
+    descriptor_write_descs[ 0 ].descriptor_image_descs = &specular_set_images[ 0 ];
+    descriptor_write_descs[ 1 ].binding = 1;
+    descriptor_write_descs[ 1 ].descriptor_count = 1;
+    descriptor_write_descs[ 1 ].descriptor_type = DescriptorType::eStorageImage;
+    descriptor_write_descs[ 1 ].descriptor_image_descs = &specular_set_images[ 1 ];
+
+    update_descriptor_set(device, specular_set, 2, descriptor_write_descs);
+
+    PipelineDesc specular_pipeline_desc{};
+    specular_pipeline_desc.descriptor_set_layout = &specular_set_layout;
+
+    Pipeline specular_pipeline = create_compute_pipeline(device, specular_pipeline_desc);
+
     auto& cmd = command_buffers[ 0 ];
 
     begin_command_buffer(cmd);
@@ -257,6 +287,17 @@ void compute_pbr_maps()
     cmd_bind_descriptor_set(cmd, irradiance_set, irradiance_pipeline);
     cmd_dispatch(cmd, irradiance_size / 16, irradiance_size / 16, 1);
 
+    struct PrecomputeSkySpecularData
+    {
+        uint mipSize;
+        f32 roughness;
+    } specular_data = { specular_size >> 0, 0 };
+
+    cmd_bind_pipeline(cmd, specular_pipeline);
+    cmd_bind_descriptor_set(cmd, specular_set, specular_pipeline);
+    cmd_push_constants(cmd, specular_pipeline, 0, sizeof(specular_data), &specular_data);
+    cmd_dispatch(cmd, specular_size / 16, specular_size / 16, 1);
+
     ImageBarrier to_sampled_barrier{};
     to_sampled_barrier.image = &environment_map;
     to_sampled_barrier.old_state = ResourceState::eStorage;
@@ -275,6 +316,10 @@ void compute_pbr_maps()
 
     immediate_submit(queue, cmd);
 
+    destroy_descriptor_set(device, specular_set);
+    destroy_descriptor_set_layout(device, specular_set_layout);
+    destroy_pipeline(device, specular_pipeline);
+    destroy_shader(device, specular_shader);
     destroy_descriptor_set(device, irradiance_set);
     destroy_descriptor_set_layout(device, irradiance_dsl);
     destroy_pipeline(device, irradiance_pipeline);

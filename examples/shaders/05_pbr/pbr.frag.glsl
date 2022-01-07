@@ -61,8 +61,8 @@ void main()
 
     if (PushConstants.metallic_roughness != -1)
     {
-        metalness = texture(sampler2D(uTextures[PushConstants.metallic_roughness], uSampler), coord).r;
-        roughness = texture(sampler2D(uTextures[PushConstants.metallic_roughness], uSampler), coord).g;
+        metalness  = clamp(texture(sampler2D(uTextures[PushConstants.metallic_roughness], uSampler), TexCoord).b, 0.0, 1.0);
+        roughness  = clamp(texture(sampler2D(uTextures[PushConstants.metallic_roughness], uSampler), TexCoord).g, 0.04, 1.0);
     }
 
     float ao = 0;
