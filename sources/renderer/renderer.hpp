@@ -138,7 +138,7 @@ struct Buffer
     u32 size;
     ResourceState resource_state;
     DescriptorType descriptor_type;
-    void* mapped_memory;
+    void* mapped_memory = nullptr;
 };
 
 struct StagingBuffer

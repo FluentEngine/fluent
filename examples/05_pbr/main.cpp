@@ -13,8 +13,7 @@ struct CameraUBO
 struct PushConstantBlock
 {
     Matrix4 model;
-    Vector4 viewPosition = Vector4(0.0, 0.0, 2.0, 0.0);
-    Vector4 lightPosition = Vector4(1.0, 2.0, 2.0, 0.0);
+    Vector4 view_position = Vector4(0.0, 0.0, 2.0, 0.0);
 };
 
 struct TextureIndices
@@ -69,10 +68,11 @@ void compute_pbr_maps()
 {
     static const u32 skybox_size = 1024;
     // TODO: mip levels
-    static const u32 skybox_mips = /* ( u32 ) log2(skybox_size) + */ 1;
-    static const u32 irradiance_size = 1024;
-    static const u32 specular_size = 1024;
-    static const u32 brdf_integration_size = 1024;
+    static const u32 skybox_mips = /* ( u32 ) log2(skybox_size) */ +1;
+    static const u32 irradiance_size = 512;
+    static const u32 specular_size = 512;
+    static const u32 brdf_integration_size = 512;
+    static const u32 specular_mips = /* ( u32 ) log2(specular_size) + */ 1;
 
     SamplerDesc sampler_desc{};
     sampler_desc.min_filter = Filter::eLinear;
@@ -112,7 +112,7 @@ void compute_pbr_maps()
     specular_image_desc.format = Format::eR32G32B32A32Sfloat;
     specular_image_desc.width = specular_size;
     specular_image_desc.height = specular_size;
-    specular_image_desc.mip_levels = 1; // TODO
+    specular_image_desc.mip_levels = specular_mips; // TODO
     specular_image_desc.sample_count = SampleCount::e1;
     specular_image_desc.resource_state = ResourceState::eStorage;
     specular_image_desc.descriptor_type = DescriptorType::eSampledImage | DescriptorType::eStorageImage;
@@ -130,7 +130,7 @@ void compute_pbr_maps()
     brdf_integration_image_desc.descriptor_type = DescriptorType::eSampledImage | DescriptorType::eStorageImage;
 
     Sampler skybox_sampler = create_sampler(device, sampler_desc);
-    Image pano_skybox = load_image_from_dds_file(device, "NewportLoft.dds", ResourceState::eShaderReadOnly, false);
+    Image pano_skybox = load_image_from_dds_file(device, "LA_Helipad.dds", ResourceState::eShaderReadOnly, false);
     Shader pano_to_cube_shader = create_shader(device, "pano_to_cube.comp.glsl.spv", ShaderStage::eCompute);
 
     // precomputed skybox
@@ -265,6 +265,12 @@ void compute_pbr_maps()
     auto& cmd = command_buffers[ 0 ];
 
     begin_command_buffer(cmd);
+    // BRDF
+    cmd_bind_pipeline(cmd, brdf_integration_pipeline);
+    cmd_bind_descriptor_set(cmd, brdf_integration_set, brdf_integration_pipeline);
+    cmd_dispatch(cmd, brdf_integration_size / 16, brdf_integration_size / 16, 1);
+
+    // Environment map
     cmd_bind_pipeline(cmd, pano_to_cube_pipeline);
     cmd_bind_descriptor_set(cmd, ds_pano_to_cube, pano_to_cube_pipeline);
     struct
@@ -277,17 +283,17 @@ void compute_pbr_maps()
     {
         root_constant_data.mip = i;
         cmd_push_constants(cmd, pano_to_cube_pipeline, 0, sizeof(root_constant_data), &root_constant_data);
-        cmd_dispatch(cmd, skybox_size / 16, skybox_size / 16, 6);
+        cmd_dispatch(
+            cmd, std::max(1u, ( u32 ) (root_constant_data.textureSize >> i) / 16),
+            std::max(1u, ( u32 ) (root_constant_data.textureSize >> i) / 16), 6);
     }
 
-    cmd_bind_pipeline(cmd, brdf_integration_pipeline);
-    cmd_bind_descriptor_set(cmd, brdf_integration_set, brdf_integration_pipeline);
-    cmd_dispatch(cmd, brdf_integration_size / 16, brdf_integration_size / 16, 1);
-
+    // Irradiance map
     cmd_bind_pipeline(cmd, irradiance_pipeline);
     cmd_bind_descriptor_set(cmd, irradiance_set, irradiance_pipeline);
-    cmd_dispatch(cmd, irradiance_size / 16, irradiance_size / 16, 1);
+    cmd_dispatch(cmd, irradiance_size / 16, irradiance_size / 16, 6);
 
+    // Specular map
     struct PrecomputeSkySpecularData
     {
         u32 mipSize;
@@ -297,7 +303,7 @@ void compute_pbr_maps()
     cmd_bind_pipeline(cmd, specular_pipeline);
     cmd_bind_descriptor_set(cmd, specular_set, specular_pipeline);
     cmd_push_constants(cmd, specular_pipeline, 0, sizeof(specular_data), &specular_data);
-    cmd_dispatch(cmd, specular_size / 16, specular_size / 16, 1);
+    cmd_dispatch(cmd, specular_size / 16, specular_size / 16, 6);
 
     ImageBarrier to_sampled_barrier{};
     to_sampled_barrier.image = &environment_map;
@@ -395,7 +401,6 @@ void load_skybox()
     sampler_desc.max_lod = 16;
 
     skybox_sampler = create_sampler(device, sampler_desc);
-    // pano_skybox = load_image_from_dds_file(device, "NewportLoft.dds", ResourceState::eShaderReadOnly, true);
 
     Shader shaders[ 2 ] = {};
     shaders[ 0 ] = create_shader(device, "skybox.vert.glsl.spv", ShaderStage::eVertex);
@@ -453,6 +458,7 @@ void draw_skybox(const CommandBuffer& cmd)
     cmd_bind_descriptor_set(cmd, skybox_descriptor_set, skybox_pipeline);
     cmd_draw(cmd, 36, 1, 0, 0);
 }
+
 void release_skybox()
 {
     destroy_pipeline(device, skybox_pipeline);
@@ -598,7 +604,7 @@ void draw_model(const CommandBuffer& cmd)
         texture_indices.ao = mesh.material.ambient_occlusion;
         texture_indices.emissive = mesh.material.emissive;
         pcb.model = pcb.model * mesh.transform;
-        pcb.viewPosition = Vector4(0.0, 0.0, 2.0, 0.0);
+        pcb.view_position = Vector4(0.0, 0.0, 2.0, 0.0);
 
         cmd_push_constants(cmd, pbr_pipeline, 0, sizeof(PushConstantBlock), &pcb);
         cmd_push_constants(cmd, pbr_pipeline, sizeof(PushConstantBlock), sizeof(TextureIndices), &texture_indices);

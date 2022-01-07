@@ -773,6 +773,7 @@ void unmap_memory(const Device& device, Buffer& buffer)
 {
     FT_ASSERT(buffer.mapped_memory);
     vmaUnmapMemory(device.memory_allocator, buffer.allocation);
+    buffer.mapped_memory = nullptr;
 }
 
 Device create_device(const Renderer& renderer, const DeviceDesc& desc)

@@ -1,83 +1,84 @@
 #version 450
 
-layout (location = 0) in vec2 iTexCoord;
-layout (location = 1) in vec3 CameraPosition;
-layout (location = 2) in vec3 WorldPosition;
-layout (location = 3) in vec3 Normal;
+layout (location = 0) in vec2 i_texcoord;
+layout (location = 1) in vec3 i_normal;
+layout (location = 2) in vec3 i_world_position;
+layout (location = 3) in vec3 i_camera_position;
 
-layout(location = 0) out vec4 FragColor;
+layout(location = 0) out vec4 frag_color;
 
-layout(set = 0, binding = 1) uniform sampler uSampler;
-layout(set = 0, binding = 2) uniform texture2D uTextures[100];
-layout(set = 0, binding = 3) uniform samplerCube uIrradianceMap;
-layout(set = 0, binding = 4) uniform samplerCube uSpecularMap;
-layout(set = 0, binding = 5) uniform texture2D uBRDFIntegrationMap;
+layout(set = 0, binding = 1) uniform sampler u_sampler;
+layout(set = 0, binding = 2) uniform texture2D u_textures[100];
+layout(set = 0, binding = 3) uniform samplerCube u_irradiance_map;
+layout(set = 0, binding = 4) uniform samplerCube u_specular_map;
+layout(set = 0, binding = 5) uniform texture2D u_brdf_integration_map;
 
 layout (push_constant) uniform constants
 {
-    layout(offset = 96) int albedo;
+    layout(offset = 80) int albedo;
     int normal;
     int metallic_roughness;
     int ao;
     int emissive;
-} PushConstants;
+} pc;
 
 const float PI = 3.14159265359;
 
 // In future it will be a uniform
 const int LIGHTS_COUNT = 1;
-vec3 lightPositions[LIGHTS_COUNT];
-vec3 lightColors[LIGHTS_COUNT];
+vec3 light_positions[LIGHTS_COUNT];
+vec3 light_colors[LIGHTS_COUNT];
 
-float DistributionGGX(vec3 N, vec3 H, float roughness);
-float GeometrySchlickGGX(float NdotV, float roughness);
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness);
-vec3 FresnelSchlick(float cosTheta, vec3 F0);
-vec3 FresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness);
+float distribution_ggx(vec3 N, vec3 H, float roughness);
+float geometry_schlick_ggx(float N_dot_V, float roughness);
+float geometry_smith(vec3 N, vec3 V, vec3 L, float roughness);
+vec3 fresnel_schlick(float cos_theta, vec3 F0);
+vec3 fresnel_schlick_roughness(float cos_theta, vec3 F0, float roughness);
 
 // We have r and g channel b channel equals 1 - r ^ 2 + g ^ 2;
-vec3 ReconstructNormal(vec4 sampleNormal);
-vec3 GetNormalFromMap(vec3 Normal, vec3 WorldPos, vec2 TexCoord);
+vec3 reconstruct_normal(vec4 sample_normal);
+vec3 get_normal_from_map(vec3 normal, vec3 world_position, vec2 texcoord);
 
 // BRDF for all imported lights
-vec3 ComputeBRDF(vec3 N, vec3 V, vec3 L, vec3 albedo, float roughness, float metalness);
+vec3 compute_brdf(vec3 N, vec3 V, vec3 L, vec3 albedo, float roughness, float metalness);
 // IBL
-vec3 ComputeEnvironmentBRDF(vec3 N, vec3 V, vec3 albedo, float roughness, float metalness);
+vec3 compute_environment_brdf(vec3 N, vec3 V, vec3 albedo, float roughness, float metalness);
 
 void main()
 {
-    vec2 coord = iTexCoord;
+    vec2 coord = i_texcoord;
     vec3 albedo = vec3(1.0, 0.0, 1.0);
     vec3 normal = vec3(0.0, 0.0, 1.0);
 
     // Import
-    if (PushConstants.albedo != -1)
+    if (pc.albedo != -1)
     {
-        albedo = texture(sampler2D(uTextures[PushConstants.albedo], uSampler), coord).rgb;
+        albedo = texture(sampler2D(u_textures[pc.albedo], u_sampler), coord).rgb;
     }
     
     albedo = pow(albedo, vec3(2.2));
+
     float metalness = 0.0;
     float roughness = 0.0;
 
-    if (PushConstants.metallic_roughness != -1)
+    if (pc.metallic_roughness != -1)
     {
-        metalness  = texture(sampler2D(uTextures[PushConstants.metallic_roughness], uSampler), coord).b;
-        roughness  = texture(sampler2D(uTextures[PushConstants.metallic_roughness], uSampler), coord).g;
+        metalness  = clamp(texture(sampler2D(u_textures[pc.metallic_roughness], u_sampler), coord).b, 0.01, 1.0);
+        roughness  = clamp(texture(sampler2D(u_textures[pc.metallic_roughness], u_sampler), coord).g, 0.04, 1.0);
     }
 
-    float ao = 0;
-    if (PushConstants.ao != -1)
+    float ao = 1.0;
+    if (pc.ao != -1)
     {
-        ao = texture(sampler2D(uTextures[PushConstants.ao], uSampler), coord).r;
+        ao = texture(sampler2D(u_textures[pc.ao], u_sampler), coord).r;
     }
 
     // Just give values by hand. I want one red light
-    lightPositions[0] = vec3(1.25, 0.0, 2.0);
-    lightColors[0] = vec3(1.0, 1.0, 1.0);
+    light_positions[0] = vec3(1.25, 0.0, 2.0);
+    light_colors[0] = vec3(1.0, 1.0, 1.0);
 
-    vec3 N = GetNormalFromMap(Normal, WorldPosition, coord);
-    vec3 V = normalize(CameraPosition - WorldPosition);
+    vec3 N = get_normal_from_map(i_normal, i_world_position, coord);
+    vec3 V = normalize(i_camera_position - i_world_position);
 
     // Accumulate color
     vec3 Lo = vec3(0.0);
@@ -85,33 +86,37 @@ void main()
     for (int i = 0; i < LIGHTS_COUNT; ++i)
     {
         // I wan't spot light
-        vec3 L = normalize(lightPositions[i] - WorldPosition);
+        vec3 L = normalize(light_positions[i] - i_world_position);
         float distance = length(L);
         float attenuation = 1.0 / (distance * distance);
-        vec3 radiance = lightColors[i] * attenuation;
+        vec3 radiance = light_colors[i] * attenuation;
         
-        Lo += ComputeBRDF(N, V, L, albedo, roughness, metalness) * radiance;
+        Lo += compute_brdf(N, V, L, albedo, roughness, metalness) * radiance;
     }
 
-    vec3 color = Lo + ComputeEnvironmentBRDF(N, V, albedo, roughness, metalness) * ao;
-    if (PushConstants.emissive != -1)
+    vec3 color = Lo + compute_environment_brdf(N, V, albedo, roughness, metalness) * ao;
+
+    vec3 result_color = pow(color / (color + 1.0), vec3(1.0 / 2.2));
+
+    if (pc.emissive != -1)
     {
-        color += texture(sampler2D(uTextures[PushConstants.emissive], uSampler), coord).rgb;
+        result_color += texture(sampler2D(u_textures[pc.emissive], u_sampler), coord).rgb;
     }
-    FragColor = vec4(pow(color / (color + 1.0), vec3(1.0 / 2.2)), 1.0);
+
+    frag_color = vec4(result_color, 1.0);
 }
 
-vec3 ReconstructNormal(vec4 sampleNormal)
+vec3 reconstruct_normal(vec4 sampleNormal)
 {
 	vec3 tangentNormal;
-	tangentNormal.xy = (sampleNormal.rg * 2 - 1);
-	tangentNormal.z = sqrt(1 - clamp(dot(tangentNormal.xy, tangentNormal.xy), 0.0, 1.0));
+    tangentNormal.xy = (sampleNormal.rg * 2.0 - 1.0);
+    tangentNormal.z = sqrt(1 - clamp(dot(tangentNormal.xy, tangentNormal.xy), 0.0, 1.0));
 	return tangentNormal;
 }
 
-vec3 GetNormalFromMap(vec3 Normal, vec3 WorldPos, vec2 TexCoord)
+vec3 get_normal_from_map(vec3 Normal, vec3 WorldPos, vec2 TexCoord)
 {
-    vec3 tangentNormal = ReconstructNormal(texture(sampler2D(uTextures[PushConstants.normal], uSampler), TexCoord));
+    vec3 tangentNormal = reconstruct_normal(texture(sampler2D(u_textures[pc.normal], u_sampler), TexCoord));
     vec3 Q1  = dFdx(WorldPos);
     vec3 Q2  = dFdy(WorldPos);
     vec2 st1 = dFdx(TexCoord);
@@ -122,10 +127,10 @@ vec3 GetNormalFromMap(vec3 Normal, vec3 WorldPos, vec2 TexCoord)
     vec3 B  = normalize(cross(T, N));
     mat3 TBN = mat3(T, B, N);
 
-    return normalize(tangentNormal * TBN);
+    return normalize(TBN * tangentNormal);
 }
 
-float DistributionGGX(vec3 N, vec3 H, float roughness)
+float distribution_ggx(vec3 N, vec3 H, float roughness)
 {
     float a2    = roughness * roughness * roughness * roughness;
     float NdotH = max(dot(N, H), 0.0);
@@ -140,31 +145,31 @@ float GeometrySchlickGGX(float NdotV, float roughness)
     return NdotV / (NdotV * (1.0 - k) + k);
 }
 
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+float geometry_smith(vec3 N, vec3 V, vec3 L, float roughness)
 {
     return GeometrySchlickGGX(max(dot(N, L), 0.0), roughness) * 
            GeometrySchlickGGX(max(dot(N, V), 0.0), roughness);
 }
 
-vec3 FresnelSchlick(float cosTheta, vec3 F0)
+vec3 fresnel_schlick(float cosTheta, vec3 F0)
 {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
-vec3 FresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
+vec3 fresnel_schlick_roughness(float cosTheta, vec3 F0, float roughness)
 {
     return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
-vec3 ComputeBRDF(vec3 N, vec3 V, vec3 L, vec3 albedo, float roughness, float metalness)
+vec3 compute_brdf(vec3 N, vec3 V, vec3 L, vec3 albedo, float roughness, float metalness)
 {
     vec3 F0 = mix(vec3(0.04), albedo, metalness);
 
     vec3 H = normalize(V + L);
 
-    float NDF = DistributionGGX(N, H, roughness);
-    float G = GeometrySmith(N, V, L, 1.0);
-    vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
+    float NDF = distribution_ggx(N, H, roughness);
+    float G = geometry_smith(N, V, L, 1.0);
+    vec3 F = fresnel_schlick(max(dot(H, V), 0.0), F0);
 
     float NdotL = max(dot(N, L), 0.0);
 
@@ -179,20 +184,20 @@ vec3 ComputeBRDF(vec3 N, vec3 V, vec3 L, vec3 albedo, float roughness, float met
     return (kD * albedo / PI + specular) * NdotL;
 }
 
-vec3 ComputeEnvironmentBRDF(vec3 N, vec3 V, vec3 albedo, float roughness, float metalness)
+vec3 compute_environment_brdf(vec3 N, vec3 V, vec3 albedo, float roughness, float metalness)
 {
     vec3 F0 = mix(vec3(0.04), albedo, metalness);
-    vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+    vec3 F = fresnel_schlick_roughness(max(dot(N, V), 0.0), F0, roughness);
 
     vec3 kS = F;
     vec3 kD = (vec3(1.0) - kS) * (1.0 - metalness);
 
-    vec3 irradiance = texture(uIrradianceMap, N).rgb;
+    vec3 irradiance = texture(u_irradiance_map, N).rgb;
     vec3 diffuse = irradiance * albedo;
 
     const float MAX_REFLECTION_LOD = 4.0;
-    vec3 prefilteredColor = texture(uSpecularMap, reflect(-V, N), roughness * MAX_REFLECTION_LOD).rgb;
-    vec2 brdf = texture(sampler2D(uBRDFIntegrationMap, uSampler), vec2(max(dot(N, V), 0.0), roughness)).rg;
+    vec3 prefilteredColor = texture(u_specular_map, reflect(-V, N), roughness * MAX_REFLECTION_LOD).rgb;
+    vec2 brdf = texture(sampler2D(u_brdf_integration_map, u_sampler), vec2(max(dot(N, V), 0.0), roughness)).rg;
     vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
 
     // Ambient

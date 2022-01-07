@@ -1,15 +1,15 @@
 #version 450
 
-layout (location = 0) in vec3 iPosition;
-layout (location = 1) in vec3 iNormal;
-layout (location = 2) in vec2 iTexCoord;
-layout (location = 3) in vec3 iTangent;
-layout (location = 4) in vec3 iBitangent;
+layout (location = 0) in vec3 i_position;
+layout (location = 1) in vec3 i_normal;
+layout (location = 2) in vec2 i_texcoord;
+layout (location = 3) in vec3 i_tangent;
+layout (location = 4) in vec3 i_bitangent;
 
-layout (location = 0) out vec2 TexCoord;
-layout (location = 1) out vec3 CameraPosition;
-layout (location = 2) out vec3 WorldPosition;
-layout (location = 3) out vec3 Normal;
+layout (location = 0) out vec2 texcoord;
+layout (location = 1) out vec3 normal;
+layout (location = 2) out vec3 world_position;
+layout (location = 3) out vec3 camera_position;
 
 layout (set = 0, binding = 0) uniform uCameraBuffer
 {
@@ -20,25 +20,15 @@ layout (set = 0, binding = 0) uniform uCameraBuffer
 layout (push_constant) uniform constants
 {
 	mat4 model;
-	vec4 lightPosition;
-	vec4 viewPosition;
-} PushConstants;
+	vec4 camera_position;
+} pc;
 
 void main()
 {
-	vec3 FragmentPosition = vec3(PushConstants.model * vec4(iPosition, 1.0));
+	normal = normalize(mat3(pc.model) * i_normal);
+	texcoord = i_texcoord;
+	world_position = vec3(pc.model * vec4(i_position, 1.0));
+	camera_position = vec3(pc.camera_position);
 
-	vec3 T = normalize(vec3(PushConstants.model * vec4(iTangent, 0.0)));
-	vec3 N = normalize(vec3(PushConstants.model * vec4(iNormal, 0.0)));
-
-	T = normalize(T - dot(T, N) * N);
-	vec3 B = cross(N, T);
-
-	mat3 TBN = mat3(T, B, N);
-	TexCoord = iTexCoord;
-	CameraPosition = PushConstants.viewPosition.xyz;
-	WorldPosition = FragmentPosition;
-	Normal = normalize(mat3(PushConstants.model) * iNormal);
-	
-    gl_Position = ubo.projection * ubo.view * PushConstants.model * vec4(iPosition, 1.0);
+    gl_Position = ubo.projection * ubo.view * vec4(world_position, 1.0);
 }
