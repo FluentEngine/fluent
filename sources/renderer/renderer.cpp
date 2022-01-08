@@ -1,5 +1,8 @@
 #include <algorithm>
 #include <SDL_vulkan.h>
+#include "imgui.h"
+#include "imgui_impl_vulkan.h"
+#include "imgui_impl_sdl.h"
 #include "tinyimageformat_apis.h"
 #include "utils/utils.hpp"
 #include "core/window.hpp"
@@ -2416,6 +2419,101 @@ void update_descriptor_set(const Device& device, DescriptorSet& set, u32 count, 
     }
 
     vkUpdateDescriptorSets(device.logical_device, descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
+}
+
+UiContext create_ui_context(const UiDesc& desc)
+{
+    UiContext context{};
+
+    VkDescriptorPoolSize pool_sizes[] = { { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+                                          { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+                                          { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+                                          { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+                                          { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+                                          { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+                                          { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+                                          { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+                                          { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+                                          { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+                                          { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 } };
+
+    VkDescriptorPoolCreateInfo pool_info = {};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    pool_info.maxSets = 1000;
+    pool_info.poolSizeCount = std::size(pool_sizes);
+    pool_info.pPoolSizes = pool_sizes;
+
+    VK_ASSERT(vkCreateDescriptorPool(desc.device->logical_device, &pool_info, nullptr, &context.desriptor_pool));
+
+    ImGui::CreateContext();
+    auto& io = ImGui::GetIO();
+    ( void ) io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+    if (desc.docking)
+    {
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    }
+
+    if (desc.viewports)
+    {
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    }
+
+    ImGui_ImplVulkan_InitInfo init_info{};
+    init_info.Instance = desc.renderer->instance;
+    init_info.PhysicalDevice = desc.device->physical_device;
+    init_info.Device = desc.device->logical_device;
+    init_info.QueueFamily = desc.queue->family_index;
+    init_info.Queue = desc.queue->queue;
+    init_info.PipelineCache = VkPipelineCache{};
+    init_info.Allocator = nullptr;
+    init_info.MinImageCount = desc.image_count;
+    init_info.ImageCount = desc.image_count;
+    init_info.InFlyFrameCount = desc.image_count;
+    init_info.CheckVkResultFn = nullptr;
+    init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+
+    ImGui_ImplSDL2_InitForVulkan(( SDL_Window* ) desc.window->handle);
+    ImGui_ImplVulkan_Init(&init_info, desc.render_pass->render_pass);
+
+    begin_command_buffer(desc.device->upload_command_buffer);
+    ImGui_ImplVulkan_CreateFontsTexture(desc.device->upload_command_buffer.command_buffer);
+    end_command_buffer(desc.device->upload_command_buffer);
+    immediate_submit(desc.device->upload_queue, desc.device->upload_command_buffer);
+
+    ImGui_ImplVulkan_DestroyFontUploadObjects();
+
+    return context;
+}
+
+void destroy_ui_context(const Device& device, const UiContext& context)
+{
+    vkDestroyDescriptorPool(device.logical_device, context.desriptor_pool, nullptr);
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+}
+
+void ui_begin_frame()
+{
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+}
+
+void ui_end_frame(const CommandBuffer& cmd)
+{
+    ImGui::Render();
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd.command_buffer);
+
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+    }
 }
 
 } // namespace fluent

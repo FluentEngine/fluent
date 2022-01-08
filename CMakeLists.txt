@@ -17,6 +17,7 @@ add_subdirectory(third_party/stb_image)
 add_subdirectory(third_party/glm)
 add_subdirectory(third_party/tinygltf)
 add_subdirectory(third_party/assimp)
+add_subdirectory(third_party/imgui)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -47,7 +48,7 @@ set(scene_sources
 
 set(sources ${core_sources} ${renderer_sources} ${util_sources} ${math_sources} ${scene_sources})
 set(includes ${CMAKE_CURRENT_SOURCE_DIR}/sources)
-set(libs spdlog volk vma_allocator SDL2::SDL2-static tiny_image_format spirv_reflect tinyddsloader stb_image glm tinygltf assimp)
+set(libs spdlog volk vma_allocator SDL2::SDL2-static tiny_image_format spirv_reflect tinyddsloader stb_image glm tinygltf assimp imgui)
 
 add_library(${target} ${sources})
 

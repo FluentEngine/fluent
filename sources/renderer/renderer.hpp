@@ -9,6 +9,7 @@
 namespace fluent
 {
 // Forward declares
+struct Window;
 struct RenderPass;
 struct Buffer;
 struct StagingBuffer;
@@ -385,6 +386,23 @@ struct DescriptorWriteDesc
     DescriptorBufferDesc* descriptor_buffer_descs;
 };
 
+struct UiDesc
+{
+    const Window* window;
+    const Renderer* renderer;
+    const Device* device;
+    const Queue* queue;
+    const RenderPass* render_pass;
+    u32 image_count;
+    b32 docking = false;
+    b32 viewports = false;
+};
+
+struct UiContext
+{
+    VkDescriptorPool desriptor_pool;
+};
+
 Renderer create_renderer(const RendererDesc& desc);
 void destroy_renderer(Renderer& renderer);
 
@@ -487,5 +505,10 @@ void update_image(const Device& device, const ImageUpdateDesc& desc);
 DescriptorSet create_descriptor_set(const Device& device, const DescriptorSetDesc& desc);
 void destroy_descriptor_set(const Device& device, DescriptorSet& set);
 void update_descriptor_set(const Device& device, DescriptorSet& set, u32 count, const DescriptorWriteDesc* descs);
+
+UiContext create_ui_context(const UiDesc& desc);
+void destroy_ui_context(const Device& device, const UiContext& context);
+void ui_begin_frame();
+void ui_end_frame(const CommandBuffer& cmd);
 
 } // namespace fluent

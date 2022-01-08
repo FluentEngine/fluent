@@ -75,7 +75,7 @@ void main()
 
     // Just give values by hand. I want one red light
     light_positions[0] = vec3(1.25, 0.0, 2.0);
-    light_colors[0] = vec3(1.0, 1.0, 1.0);
+    light_colors[0] = vec3(0.0, 1.0, 1.0);
 
     vec3 N = get_normal_from_map(i_normal, i_world_position, coord);
     vec3 V = normalize(i_camera_position - i_world_position);

@@ -64,7 +64,9 @@ Sampler pbr_sampler;
 
 CameraUBO ubo;
 
-void compute_pbr_maps()
+UiContext ui_context{};
+
+void compute_pbr_maps(const std::string& skybox_name)
 {
     static const u32 skybox_size = 1024;
     // TODO: mip levels
@@ -130,7 +132,7 @@ void compute_pbr_maps()
     brdf_integration_image_desc.descriptor_type = DescriptorType::eSampledImage | DescriptorType::eStorageImage;
 
     Sampler skybox_sampler = create_sampler(device, sampler_desc);
-    Image pano_skybox = load_image_from_dds_file(device, "LA_Helipad.dds", ResourceState::eShaderReadOnly, false);
+    Image pano_skybox = load_image_from_dds_file(device, skybox_name.c_str(), ResourceState::eShaderReadOnly, false);
     Shader pano_to_cube_shader = create_shader(device, "pano_to_cube.comp.glsl.spv", ShaderStage::eCompute);
 
     // precomputed skybox
@@ -342,6 +344,7 @@ void compute_pbr_maps()
     destroy_image(device, pano_skybox);
     destroy_sampler(device, skybox_sampler);
 }
+
 void destroy_pbr_maps()
 {
     destroy_image(device, environment_map);
@@ -361,6 +364,7 @@ void begin_frame(u32& image_index)
 
     acquire_next_image(device, swapchain, image_available_semaphores[ frame_index ], {}, image_index);
 }
+
 void end_frame(u32 image_index)
 {
     auto& cmd = command_buffers[ frame_index ];
@@ -657,7 +661,7 @@ void on_init()
 
     swapchain = create_swapchain(renderer, device, swapchain_desc);
 
-    compute_pbr_maps();
+    compute_pbr_maps("LA_Helipad.dds");
 
     ubo.projection = create_perspective_matrix(radians(45.0f), window_get_aspect(get_app_window()), 0.1f, 100.f);
     ubo.view = create_look_at_matrix(Vector3(0.0f, 0.0, 2.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));
@@ -672,6 +676,16 @@ void on_init()
 
     load_skybox();
     load_model();
+
+    UiDesc ui_desc{};
+    ui_desc.window = get_app_window();
+    ui_desc.renderer = &renderer;
+    ui_desc.device = &device;
+    ui_desc.queue = &queue;
+    ui_desc.image_count = FRAME_COUNT;
+    ui_desc.render_pass = &swapchain.render_passes[ 0 ];
+
+    ui_context = create_ui_context(ui_desc);
 }
 
 void on_resize(u32 width, u32 height)
@@ -734,6 +748,43 @@ void on_update(f64 delta_time)
     cmd_set_scissor(cmd, 0, 0, swapchain.width, swapchain.height);
     draw_skybox(cmd);
     draw_model(cmd);
+    ui_begin_frame();
+
+    ImGuiWindowFlags window_flags = 0;
+    window_flags |= ImGuiWindowFlags_NoBackground;
+    window_flags |= ImGuiWindowFlags_NoTitleBar;
+    window_flags |= ImGuiWindowFlags_NoResize;
+    window_flags |= ImGuiWindowFlags_NoMove;
+
+    bool open_ptr = true;
+
+    ImGui::Begin("Performance", &open_ptr, window_flags);
+    ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
+    ImGui::End();
+
+    if (ImGui::BeginTable("material", 5))
+    {
+
+        ImGui::TableSetupColumn("albedo");
+        ImGui::TableSetupColumn("normal");
+        ImGui::TableSetupColumn("metallic roughness");
+        ImGui::TableSetupColumn("emissive");
+        ImGui::TableSetupColumn("ao");
+        ImGui::TableHeadersRow();
+
+        ImGui::TableNextColumn();
+        ImGui::Image(model.textures[ texture_indices.albedo ].image_view, { 128.0f, 128.0f });
+        ImGui::TableNextColumn();
+        ImGui::Image(model.textures[ texture_indices.normal ].image_view, { 128.0f, 128.0f });
+        ImGui::TableNextColumn();
+        ImGui::Image(model.textures[ texture_indices.metallic_roughness ].image_view, { 128.0f, 128.0f });
+        ImGui::TableNextColumn();
+        ImGui::Image(model.textures[ texture_indices.emissive ].image_view, { 128.0f, 128.0f });
+        ImGui::TableNextColumn();
+        ImGui::Image(model.textures[ texture_indices.ao ].image_view, { 128.0f, 128.0f });
+        ImGui::EndTable();
+    }
+    ui_end_frame(cmd);
     cmd_end_render_pass(cmd);
 
     ImageBarrier to_present_barrier{};
@@ -753,6 +804,7 @@ void on_update(f64 delta_time)
 void on_shutdown()
 {
     device_wait_idle(device);
+    destroy_ui_context(device, ui_context);
     destroy_pbr_maps();
     release_skybox();
     release_model();
