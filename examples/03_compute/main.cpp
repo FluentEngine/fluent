@@ -105,11 +105,7 @@ void on_init()
 
     swapchain = create_swapchain(renderer, device, swapchain_desc);
 
-    ShaderDesc shader_desc{};
-    shader_desc.filename = "main.comp.glsl.spv";
-    shader_desc.stage = ShaderStage::eCompute;
-
-    Shader shader = create_shader(device, shader_desc);
+    Shader shader = create_shader(device, "main.comp.glsl.spv", ShaderStage::eCompute);
 
     descriptor_set_layout = create_descriptor_set_layout(device, 1, &shader);
 

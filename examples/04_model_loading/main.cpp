@@ -91,17 +91,9 @@ void on_init()
 
     swapchain = create_swapchain(renderer, device, swapchain_desc);
 
-    ShaderDesc vert_shader_desc{};
-    vert_shader_desc.filename = "main.vert.glsl.spv";
-    vert_shader_desc.stage = ShaderStage::eVertex;
-
-    ShaderDesc frag_shader_desc{};
-    frag_shader_desc.filename = "main.frag.glsl.spv";
-    frag_shader_desc.stage = ShaderStage::eFragment;
-
     Shader shaders[ 2 ];
-    shaders[ 0 ] = create_shader(device, vert_shader_desc);
-    shaders[ 1 ] = create_shader(device, frag_shader_desc);
+    shaders[ 0 ] = create_shader(device, "main.vert.glsl.spv", ShaderStage::eVertex);
+    shaders[ 1 ] = create_shader(device, "main.frag.glsl.spv", ShaderStage::eFragment);
 
     descriptor_set_layout = create_descriptor_set_layout(device, 2, shaders);
 
@@ -205,6 +197,17 @@ void on_resize(u32 width, u32 height)
     swapchain_desc.builtin_depth = true;
 
     swapchain = create_swapchain(renderer, device, swapchain_desc);
+
+    camera_ubo.projection = create_perspective_matrix(radians(45.0f), window_get_aspect(get_app_window()), 0.1f, 100.f);
+    camera_ubo.view = create_look_at_matrix(Vector3(0.0f, 0.0, 2.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));
+
+    BufferUpdateDesc buffer_update{};
+    buffer_update.buffer = &uniform_buffer;
+    buffer_update.offset = 0;
+    buffer_update.size = sizeof(CameraUBO);
+    buffer_update.data = &camera_ubo;
+
+    update_buffer(device, buffer_update);
 }
 
 void on_update(f64 delta_time)

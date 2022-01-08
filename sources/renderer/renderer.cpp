@@ -1463,12 +1463,12 @@ void destroy_render_pass(const Device& device, RenderPass& render_pass)
     vkDestroyRenderPass(device.logical_device, render_pass.render_pass, device.vulkan_allocator);
 }
 
-Shader create_shader(const Device& device, const ShaderDesc& desc)
+Shader create_shader(const Device& device, const char* filename, ShaderStage shader_stage)
 {
     Shader shader{};
-    shader.stage = desc.stage;
+    shader.stage = shader_stage;
 
-    auto byte_code = read_file_binary(get_app_shaders_directory() + desc.filename);
+    auto byte_code = read_file_binary(get_app_shaders_directory() + filename);
 
     VkShaderModuleCreateInfo shader_create_info{};
     shader_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -1483,14 +1483,6 @@ Shader create_shader(const Device& device, const ShaderDesc& desc)
     shader.reflect_data = reflect(byte_code.size() * sizeof(u32), byte_code.data());
 
     return shader;
-}
-
-Shader create_shader(const Device& device, const char* filename, ShaderStage shader_stage)
-{
-    ShaderDesc shader_desc{};
-    shader_desc.filename = filename;
-    shader_desc.stage = shader_stage;
-    return create_shader(device, shader_desc);
 }
 
 void destroy_shader(const Device& device, Shader& shader)

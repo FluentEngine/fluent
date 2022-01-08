@@ -78,17 +78,9 @@ void on_init()
 
     swapchain = create_swapchain(renderer, device, swapchain_desc);
 
-    ShaderDesc vert_shader_desc{};
-    vert_shader_desc.filename = "main.vert.glsl.spv";
-    vert_shader_desc.stage = ShaderStage::eVertex;
-
-    ShaderDesc frag_shader_desc{};
-    frag_shader_desc.filename = "main.frag.glsl.spv";
-    frag_shader_desc.stage = ShaderStage::eFragment;
-
     Shader shaders[ 2 ];
-    shaders[ 0 ] = create_shader(device, vert_shader_desc);
-    shaders[ 1 ] = create_shader(device, frag_shader_desc);
+    shaders[ 0 ] = create_shader(device, "main.vert.glsl.spv", ShaderStage::eVertex);
+    shaders[ 1 ] = create_shader(device, "main.frag.glsl.spv", ShaderStage::eFragment);
 
     descriptor_set_layout = create_descriptor_set_layout(device, 2, shaders);
 
@@ -145,7 +137,7 @@ void on_init()
     descriptor_sampler_desc.sampler = &sampler;
     descriptor_sampler_desc.image = nullptr;
 
-    DescriptorWriteDesc descriptor_writes[ 2 ];
+    DescriptorWriteDesc descriptor_writes[ 2 ] = {};
     descriptor_writes[ 0 ].descriptor_type = DescriptorType::eSampler;
     descriptor_writes[ 0 ].binding = 0;
     descriptor_writes[ 0 ].descriptor_count = 1;

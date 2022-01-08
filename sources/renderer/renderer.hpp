@@ -424,7 +424,6 @@ void acquire_next_image(
 RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc);
 void destroy_render_pass(const Device& device, RenderPass& render_pass);
 
-Shader create_shader(const Device& device, const ShaderDesc& desc);
 Shader create_shader(const Device& device, const char* filename, ShaderStage shader_stage);
 void destroy_shader(const Device& device, Shader& shader);
 
