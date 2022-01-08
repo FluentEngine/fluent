@@ -1,6 +1,8 @@
 build/
 .vscode/
 
+*.spv
+
 # MacOS generated files #
 ######################
 .DS_Store?
