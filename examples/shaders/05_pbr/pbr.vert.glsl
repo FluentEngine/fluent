@@ -15,12 +15,12 @@ layout (set = 0, binding = 0) uniform uCameraBuffer
 {
 	mat4 projection;
 	mat4 view;
+	vec4 camera_position;
 } ubo;
 
 layout (push_constant) uniform constants
 {
 	mat4 model;
-	vec4 camera_position;
 } pc;
 
 void main()
@@ -28,7 +28,7 @@ void main()
 	normal = normalize(mat3(pc.model) * i_normal);
 	texcoord = i_texcoord;
 	world_position = vec3(pc.model * vec4(i_position, 1.0));
-	camera_position = vec3(pc.camera_position);
+	camera_position = vec3(ubo.camera_position);
 
     gl_Position = ubo.projection * ubo.view * vec4(world_position, 1.0);
 }

@@ -3,6 +3,7 @@
 #include "volk.h"
 #include "vk_mem_alloc.h"
 #include "core/base.hpp"
+#include "math/math.hpp"
 #include "renderer/renderer_enums.hpp"
 #include "renderer/shader_reflection.hpp"
 
@@ -484,6 +485,8 @@ void cmd_push_constants(const CommandBuffer& cmd, const Pipeline& pipeline, u32 
 void cmd_blit_image(
     const CommandBuffer& cmd, const Image& src, ResourceState src_state, Image& dst, ResourceState dst_state,
     Filter filter);
+
+void cmd_clear_color_image(const CommandBuffer& cmd, Image& image, ResourceState image_state, Vector4 color);
 
 void immediate_submit(const Queue& queue, const CommandBuffer& cmd);
 

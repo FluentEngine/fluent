@@ -4,25 +4,30 @@
 
 using namespace fluent;
 
+struct DummyResources
+{
+    Image black_texture;
+} dummy_resources;
+
 struct CameraUBO
 {
     Matrix4 projection;
     Matrix4 view;
+    Vector4 camera_position = Vector4(0.0, 0.0, 2.0, 0.0);
 };
 
 struct PushConstantBlock
 {
     Matrix4 model;
-    Vector4 view_position = Vector4(0.0, 0.0, 2.0, 0.0);
 };
 
 struct TextureIndices
 {
-    i32 albedo = -1;
-    i32 normal = -1;
-    i32 metallic_roughness = -1;
-    i32 ao = -1;
-    i32 emissive = -1;
+    u32 albedo = 0;
+    u32 normal = 0;
+    u32 metallic_roughness = 0;
+    u32 ao = 0;
+    u32 emissive = 0;
 };
 
 static constexpr u32 FRAME_COUNT = 2;
@@ -65,6 +70,44 @@ Sampler pbr_sampler;
 CameraUBO ubo;
 
 UiContext ui_context{};
+
+void create_dummy_resources()
+{
+    // create magenta texture (if some textures doesn't provided I will use it)
+    ImageDesc image_desc{};
+    image_desc.width = 512;
+    image_desc.height = 512;
+    image_desc.depth = 1;
+    image_desc.format = Format::eR8G8B8A8Unorm;
+    image_desc.sample_count = SampleCount::e1;
+    image_desc.layer_count = 1;
+    image_desc.mip_levels = 1;
+    image_desc.resource_state = ResourceState::eTransferDst;
+    image_desc.descriptor_type = DescriptorType::eSampledImage;
+
+    dummy_resources.black_texture = create_image(device, image_desc);
+
+    auto& cmd = command_buffers[ 0 ];
+
+    begin_command_buffer(cmd);
+    cmd_clear_color_image(cmd, dummy_resources.black_texture, ResourceState::eTransferDst, Vector4(0.0, 0.0, 0.0, 1.0));
+    ImageBarrier image_barrier{};
+    image_barrier.image = &dummy_resources.black_texture;
+    image_barrier.old_state = ResourceState::eTransferDst;
+    image_barrier.new_state = ResourceState::eShaderReadOnly;
+    image_barrier.src_queue = &queue;
+    image_barrier.dst_queue = &queue;
+    cmd_barrier(cmd, 0, nullptr, 1, &image_barrier);
+
+    end_command_buffer(cmd);
+
+    immediate_submit(queue, cmd);
+}
+
+void destroy_dummy_resources()
+{
+    destroy_image(device, dummy_resources.black_texture);
+}
 
 void compute_pbr_maps(const std::string& skybox_name)
 {
@@ -517,16 +560,6 @@ void load_model()
 
     pbr_descriptor_set = create_descriptor_set(device, descriptor_set_desc);
 
-    std::vector<DescriptorImageDesc> descriptor_image_descs(model.textures.size() + 3);
-    for (uint32_t i = 0; i < descriptor_image_descs.size() - 3; ++i)
-    {
-        descriptor_image_descs[ i ] = {};
-        descriptor_image_descs[ i ].image = &model.textures[ i ];
-        descriptor_image_descs[ i ].resource_state = ResourceState::eShaderReadOnly;
-    }
-
-    u32 descriptors_count = model.textures.size();
-
     DescriptorBufferDesc descriptor_buffer_desc{};
     descriptor_buffer_desc.offset = 0;
     descriptor_buffer_desc.range = sizeof(CameraUBO);
@@ -544,35 +577,60 @@ void load_model()
     descriptor_write_descs[ 1 ].descriptor_count = 1;
     descriptor_write_descs[ 1 ].descriptor_image_descs = &descriptor_sampler_desc;
     descriptor_write_descs[ 1 ].descriptor_type = DescriptorType::eSampler;
+
+    // Model textures (material)
+    std::vector<DescriptorImageDesc> material_descriptor_descs(model.textures.size() + 1);
+
+    // set dummy texture to 0 in case some textures doesn't exists
+    material_descriptor_descs[ 0 ] = {};
+    material_descriptor_descs[ 0 ].image = &dummy_resources.black_texture;
+    material_descriptor_descs[ 0 ].resource_state = ResourceState::eShaderReadOnly;
+
+    for (u32 i = 1; i < material_descriptor_descs.size(); ++i)
+    {
+        material_descriptor_descs[ i ] = {};
+        material_descriptor_descs[ i ].image = &model.textures[ i - 1 ];
+        material_descriptor_descs[ i ].resource_state = ResourceState::eShaderReadOnly;
+    }
+
+    u32 descriptors_count = model.textures.size();
     descriptor_write_descs[ 2 ].binding = 2;
-    descriptor_write_descs[ 2 ].descriptor_count = descriptor_image_descs.size();
-    descriptor_write_descs[ 2 ].descriptor_image_descs = descriptor_image_descs.data();
+    descriptor_write_descs[ 2 ].descriptor_count = material_descriptor_descs.size();
+    descriptor_write_descs[ 2 ].descriptor_image_descs = material_descriptor_descs.data();
     descriptor_write_descs[ 2 ].descriptor_type = DescriptorType::eSampledImage;
-    auto& irradiance_map_desc = descriptor_image_descs[ descriptors_count++ ];
-    irradiance_map_desc = {};
-    irradiance_map_desc.image = &irradiance_map;
-    irradiance_map_desc.sampler = &skybox_sampler; // TODO:
-    irradiance_map_desc.resource_state = ResourceState::eShaderReadOnly;
+
+    DescriptorImageDesc ibl_descriptor_descs[ 3 ] = {};
+
+    // irradiance map
+    ibl_descriptor_descs[ 0 ] = {};
+    ibl_descriptor_descs[ 0 ].image = &irradiance_map;
+    ibl_descriptor_descs[ 0 ].sampler = &skybox_sampler;
+    ibl_descriptor_descs[ 0 ].resource_state = ResourceState::eShaderReadOnly;
+
     descriptor_write_descs[ 3 ].binding = 3;
     descriptor_write_descs[ 3 ].descriptor_count = 1;
-    descriptor_write_descs[ 3 ].descriptor_image_descs = &irradiance_map_desc;
+    descriptor_write_descs[ 3 ].descriptor_image_descs = &ibl_descriptor_descs[ 0 ];
     descriptor_write_descs[ 3 ].descriptor_type = DescriptorType::eCombinedImageSampler;
-    auto& specular_map_desc = descriptor_image_descs[ descriptors_count++ ];
-    specular_map_desc = {};
-    specular_map_desc.image = &specular_map;
-    specular_map_desc.sampler = &skybox_sampler; // TODO:
-    specular_map_desc.resource_state = ResourceState::eShaderReadOnly;
+
+    // specular map
+    ibl_descriptor_descs[ 1 ] = {};
+    ibl_descriptor_descs[ 1 ].image = &specular_map;
+    ibl_descriptor_descs[ 1 ].sampler = &skybox_sampler;
+    ibl_descriptor_descs[ 1 ].resource_state = ResourceState::eShaderReadOnly;
+
     descriptor_write_descs[ 4 ].binding = 4;
     descriptor_write_descs[ 4 ].descriptor_count = 1;
-    descriptor_write_descs[ 4 ].descriptor_image_descs = &specular_map_desc;
+    descriptor_write_descs[ 4 ].descriptor_image_descs = &ibl_descriptor_descs[ 1 ];
     descriptor_write_descs[ 4 ].descriptor_type = DescriptorType::eCombinedImageSampler;
-    auto& brdf_map_desc = descriptor_image_descs[ descriptors_count++ ];
-    brdf_map_desc = {};
-    brdf_map_desc.image = &brdf_integration_map;
-    brdf_map_desc.resource_state = ResourceState::eShaderReadOnly;
+
+    // brdf integration map
+    ibl_descriptor_descs[ 2 ] = {};
+    ibl_descriptor_descs[ 2 ].image = &brdf_integration_map;
+    ibl_descriptor_descs[ 2 ].resource_state = ResourceState::eShaderReadOnly;
+
     descriptor_write_descs[ 5 ].binding = 5;
     descriptor_write_descs[ 5 ].descriptor_count = 1;
-    descriptor_write_descs[ 5 ].descriptor_image_descs = &brdf_map_desc;
+    descriptor_write_descs[ 5 ].descriptor_image_descs = &ibl_descriptor_descs[ 2 ];
     descriptor_write_descs[ 5 ].descriptor_type = DescriptorType::eSampledImage;
     update_descriptor_set(device, pbr_descriptor_set, 6, descriptor_write_descs);
 
@@ -604,13 +662,12 @@ void draw_model(const CommandBuffer& cmd)
 
     for (auto& mesh : model.meshes)
     {
-        texture_indices.albedo = mesh.material.diffuse;
-        texture_indices.normal = mesh.material.normal;
-        texture_indices.metallic_roughness = mesh.material.metal_roughness;
-        texture_indices.ao = mesh.material.ambient_occlusion;
-        texture_indices.emissive = mesh.material.emissive;
+        texture_indices.albedo = mesh.material.diffuse + 1;
+        texture_indices.normal = mesh.material.normal + 1;
+        texture_indices.metallic_roughness = mesh.material.metal_roughness + 1;
+        texture_indices.ao = mesh.material.ambient_occlusion + 1;
+        texture_indices.emissive = mesh.material.emissive + 1;
         pcb.model = pcb.model * mesh.transform;
-        pcb.view_position = Vector4(0.0, 0.0, 2.0, 0.0);
 
         cmd_push_constants(cmd, pbr_pipeline, 0, sizeof(PushConstantBlock), &pcb);
         cmd_push_constants(cmd, pbr_pipeline, sizeof(PushConstantBlock), sizeof(TextureIndices), &texture_indices);
@@ -660,6 +717,8 @@ void on_init()
     swapchain_desc.builtin_depth = true;
 
     swapchain = create_swapchain(renderer, device, swapchain_desc);
+
+    create_dummy_resources();
 
     compute_pbr_maps("LA_Helipad.dds");
 
@@ -764,7 +823,6 @@ void on_update(f64 delta_time)
 
     if (ImGui::BeginTable("material", 5))
     {
-
         ImGui::TableSetupColumn("albedo");
         ImGui::TableSetupColumn("normal");
         ImGui::TableSetupColumn("metallic roughness");
@@ -773,15 +831,26 @@ void on_update(f64 delta_time)
         ImGui::TableHeadersRow();
 
         ImGui::TableNextColumn();
-        ImGui::Image(model.textures[ texture_indices.albedo ].image_view, { 128.0f, 128.0f });
+        auto& albedo = texture_indices.albedo != 0 ? model.textures[ texture_indices.albedo - 1 ].image_view
+                                                   : dummy_resources.black_texture.image_view;
+        ImGui::Image(albedo, { 128.0f, 128.0f });
         ImGui::TableNextColumn();
-        ImGui::Image(model.textures[ texture_indices.normal ].image_view, { 128.0f, 128.0f });
+        auto& normal = texture_indices.normal != 0 ? model.textures[ texture_indices.normal - 1 ].image_view
+                                                   : dummy_resources.black_texture.image_view;
+        ImGui::Image(normal, { 128.0f, 128.0f });
         ImGui::TableNextColumn();
-        ImGui::Image(model.textures[ texture_indices.metallic_roughness ].image_view, { 128.0f, 128.0f });
+        auto& mr = texture_indices.metallic_roughness != 0
+                       ? model.textures[ texture_indices.metallic_roughness - 1 ].image_view
+                       : dummy_resources.black_texture.image_view;
+        ImGui::Image(mr, { 128.0f, 128.0f });
         ImGui::TableNextColumn();
-        ImGui::Image(model.textures[ texture_indices.emissive ].image_view, { 128.0f, 128.0f });
+        auto& emissive = texture_indices.emissive != 0 ? model.textures[ texture_indices.emissive - 1 ].image_view
+                                                       : dummy_resources.black_texture.image_view;
+        ImGui::Image(emissive, { 128.0f, 128.0f });
         ImGui::TableNextColumn();
-        ImGui::Image(model.textures[ texture_indices.ao ].image_view, { 128.0f, 128.0f });
+        auto& ao = texture_indices.ao != 0 ? model.textures[ texture_indices.ao - 1 ].image_view
+                                           : dummy_resources.black_texture.image_view;
+        ImGui::Image(ao, { 128.0f, 128.0f });
         ImGui::EndTable();
     }
     ui_end_frame(cmd);
@@ -809,6 +878,7 @@ void on_shutdown()
     release_skybox();
     release_model();
     destroy_buffer(device, ubo_buffer);
+    destroy_dummy_resources();
     destroy_swapchain(device, swapchain);
     for (u32 i = 0; i < FRAME_COUNT; ++i)
     {

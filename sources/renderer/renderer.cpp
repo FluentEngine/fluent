@@ -2027,6 +2027,19 @@ void cmd_blit_image(
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &image_blit_info, to_vk_filter(filter));
 }
 
+void cmd_clear_color_image(const CommandBuffer& cmd, Image& image, ResourceState image_state, Vector4 color)
+{
+    VkClearColorValue clear_color{};
+    clear_color.float32[ 0 ] = color.r;
+    clear_color.float32[ 1 ] = color.g;
+    clear_color.float32[ 2 ] = color.b;
+    clear_color.float32[ 3 ] = color.a;
+
+    VkImageSubresourceRange range = get_image_subresource_range(image);
+
+    vkCmdClearColorImage(cmd.command_buffer, image.image, determine_image_layout(image_state), &clear_color, 1, &range);
+}
+
 void immediate_submit(const Queue& queue, const CommandBuffer& cmd)
 {
     QueueSubmitDesc submit_desc{};

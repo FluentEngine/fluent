@@ -15,11 +15,11 @@ layout(set = 0, binding = 5) uniform texture2D u_brdf_integration_map;
 
 layout (push_constant) uniform constants
 {
-    layout(offset = 80) int albedo;
-    int normal;
-    int metallic_roughness;
-    int ao;
-    int emissive;
+    layout(offset = 64) uint albedo;
+    layout(offset = 68) uint normal;
+    layout(offset = 72) uint metallic_roughness;
+    layout(offset = 76) uint ao;
+    layout(offset = 80) uint emissive;
 } pc;
 
 const float PI = 3.14159265359;
@@ -51,31 +51,18 @@ void main()
     vec3 normal = vec3(0.0, 0.0, 1.0);
 
     // Import
-    if (pc.albedo != -1)
-    {
-        albedo = texture(sampler2D(u_textures[pc.albedo], u_sampler), coord).rgb;
-    }
+    albedo = texture(sampler2D(u_textures[pc.albedo], u_sampler), coord).rgb;
     
     albedo = pow(albedo, vec3(2.2));
 
-    float metalness = 0.0;
-    float roughness = 0.0;
+    float metalness = texture(sampler2D(u_textures[pc.metallic_roughness], u_sampler), coord).b;
+    float roughness = texture(sampler2D(u_textures[pc.metallic_roughness], u_sampler), coord).g;
 
-    if (pc.metallic_roughness != -1)
-    {
-        metalness  = clamp(texture(sampler2D(u_textures[pc.metallic_roughness], u_sampler), coord).b, 0.01, 1.0);
-        roughness  = clamp(texture(sampler2D(u_textures[pc.metallic_roughness], u_sampler), coord).g, 0.04, 1.0);
-    }
-
-    float ao = 1.0;
-    if (pc.ao != -1)
-    {
-        ao = texture(sampler2D(u_textures[pc.ao], u_sampler), coord).r;
-    }
+    float ao = texture(sampler2D(u_textures[pc.ao], u_sampler), coord).r;
 
     // Just give values by hand. I want one red light
     light_positions[0] = vec3(1.25, 0.0, 2.0);
-    light_colors[0] = vec3(0.0, 1.0, 1.0);
+    light_colors[0] = vec3(1.0, 1.0, 1.0);
 
     vec3 N = get_normal_from_map(i_normal, i_world_position, coord);
     vec3 V = normalize(i_camera_position - i_world_position);
@@ -98,7 +85,7 @@ void main()
 
     vec3 result_color = pow(color / (color + 1.0), vec3(1.0 / 2.2));
 
-    if (pc.emissive != -1)
+    if (pc.emissive != 0)
     {
         result_color += texture(sampler2D(u_textures[pc.emissive], u_sampler), coord).rgb;
     }
