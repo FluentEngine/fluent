@@ -7,6 +7,7 @@ namespace fluent
 
 struct Window;
 struct InputSystem;
+struct UiContext;
 
 using InitCallback     = void (*)();
 using UpdateCallback   = void (*)(f64 deltaTime);
@@ -33,6 +34,7 @@ void app_init(const ApplicationConfig* state);
 void app_run();
 void app_shutdown();
 
+void app_set_ui_context(const UiContext& context);
 void app_set_shaders_directory(const std::string& path);
 void app_set_textures_directory(const std::string& path);
 void app_set_models_directory(const std::string& path);

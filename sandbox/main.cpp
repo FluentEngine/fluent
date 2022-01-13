@@ -236,6 +236,8 @@ void init_ui()
     ui_desc.render_pass = &swapchain.render_passes[ 0 ];
 
     ui_context = create_ui_context(ui_desc);
+
+    app_set_ui_context(ui_context);
 }
 
 void shutdown_ui()
@@ -392,8 +394,6 @@ void update_noise_texture(CommandBuffer& cmd)
 
 void draw_noise_settings()
 {
-    ImGui::ShowDemoWindow();
-
     ImGui::Begin("Noise settings");
     bool need_update = false;
 

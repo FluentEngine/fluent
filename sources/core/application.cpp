@@ -1,12 +1,15 @@
 #include <chrono>
 #include <filesystem>
 #include <SDL.h>
+#include "imgui_impl_sdl.h"
 #include "core/window.hpp"
 #include "core/application.hpp"
 #include "core/input.hpp"
 
 namespace fluent
 {
+
+using ImGuiCallback = bool (*)(const SDL_Event* e);
 
 struct ApplicationState
 {
@@ -24,6 +27,7 @@ struct ApplicationState
     ResizeCallback   on_resize;
     f32              delta_time;
     InputSystem      input_system;
+    ImGuiCallback    imgui_callback;
 };
 
 static ApplicationState app_state{};
@@ -64,13 +68,13 @@ void app_init(const ApplicationConfig* config)
 
     app_state.window = fluent::create_window(config->title, config->x, config->y, config->width, config->height);
 
-    app_state.exec_path   = get_exec_path(config->argc, config->argv[ 0 ]);
-    app_state.title       = config->title;
-    app_state.on_init     = config->on_init;
-    app_state.on_update   = config->on_update;
-    app_state.on_shutdown = config->on_shutdown;
-    app_state.on_resize   = config->on_resize;
-
+    app_state.exec_path      = get_exec_path(config->argc, config->argv[ 0 ]);
+    app_state.title          = config->title;
+    app_state.on_init        = config->on_init;
+    app_state.on_update      = config->on_update;
+    app_state.on_shutdown    = config->on_shutdown;
+    app_state.on_resize      = config->on_resize;
+    app_state.imgui_callback = [](const SDL_Event* e) -> bool { return false; };
     spdlog::set_level(to_spdlog_level(config->log_level));
 
     init_input_system(&app_state.input_system);
@@ -98,6 +102,7 @@ void app_run()
 
         while (SDL_PollEvent(&e) != 0)
         {
+            app_state.imgui_callback(&e);
             switch (e.type)
             {
             case SDL_QUIT:
@@ -165,6 +170,12 @@ const std::string& get_app_textures_directory()
 const std::string& get_app_models_directory()
 {
     return app_state.models_directory;
+}
+
+void app_set_ui_context(const UiContext& context)
+{
+    // Bad but ok for now
+    app_state.imgui_callback = ImGui_ImplSDL2_ProcessEvent;
 }
 
 f32 get_time()

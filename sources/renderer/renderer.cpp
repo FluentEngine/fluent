@@ -2463,8 +2463,6 @@ UiContext create_ui_context(const UiDesc& desc)
     ImGui::CreateContext();
     auto& io = ImGui::GetIO();
     ( void ) io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-
     if (desc.docking)
     {
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
