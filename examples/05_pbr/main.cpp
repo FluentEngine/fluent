@@ -23,35 +23,35 @@ struct PushConstantBlock
 
 struct TextureIndices
 {
-    u32 albedo = 0;
-    u32 normal = 0;
+    u32 albedo             = 0;
+    u32 normal             = 0;
     u32 metallic_roughness = 0;
-    u32 ao = 0;
-    u32 emissive = 0;
+    u32 ao                 = 0;
+    u32 emissive           = 0;
 };
 
 static constexpr u32 FRAME_COUNT = 2;
-u32 frame_index = 0;
+u32                  frame_index = 0;
 
-Renderer renderer;
-Device device;
-Queue queue;
+Renderer    renderer;
+Device      device;
+Queue       queue;
 CommandPool command_pool;
-Semaphore image_available_semaphores[ FRAME_COUNT ];
-Semaphore rendering_finished_semaphores[ FRAME_COUNT ];
-Fence in_flight_fences[ FRAME_COUNT ];
-bool command_buffers_recorded[ FRAME_COUNT ];
+Semaphore   image_available_semaphores[ FRAME_COUNT ];
+Semaphore   rendering_finished_semaphores[ FRAME_COUNT ];
+Fence       in_flight_fences[ FRAME_COUNT ];
+bool        command_buffers_recorded[ FRAME_COUNT ];
 
-Swapchain swapchain;
+Swapchain     swapchain;
 CommandBuffer command_buffers[ FRAME_COUNT ];
 
 // skybox
 DescriptorSetLayout skybox_descriptor_set_layout;
-DescriptorSet skybox_descriptor_set;
-Sampler skybox_sampler;
+DescriptorSet       skybox_descriptor_set;
+Sampler             skybox_sampler;
 // Image pano_skybox;
 Pipeline skybox_pipeline;
-Buffer ubo_buffer;
+Buffer   ubo_buffer;
 
 // IBL
 Image environment_map;
@@ -60,12 +60,12 @@ Image irradiance_map;
 Image specular_map;
 
 // model
-TextureIndices texture_indices;
-Model model;
+TextureIndices      texture_indices;
+Model               model;
 DescriptorSetLayout pbr_descriptor_set_layout;
-DescriptorSet pbr_descriptor_set;
-Pipeline pbr_pipeline;
-Sampler pbr_sampler;
+DescriptorSet       pbr_descriptor_set;
+Pipeline            pbr_pipeline;
+Sampler             pbr_sampler;
 
 CameraUBO ubo;
 
@@ -75,14 +75,14 @@ void create_dummy_resources()
 {
     // create magenta texture (if some textures doesn't provided I will use it)
     ImageDesc image_desc{};
-    image_desc.width = 512;
-    image_desc.height = 512;
-    image_desc.depth = 1;
-    image_desc.format = Format::eR8G8B8A8Unorm;
-    image_desc.sample_count = SampleCount::e1;
-    image_desc.layer_count = 1;
-    image_desc.mip_levels = 1;
-    image_desc.resource_state = ResourceState::eTransferDst;
+    image_desc.width           = 512;
+    image_desc.height          = 512;
+    image_desc.depth           = 1;
+    image_desc.format          = Format::eR8G8B8A8Unorm;
+    image_desc.sample_count    = SampleCount::e1;
+    image_desc.layer_count     = 1;
+    image_desc.mip_levels      = 1;
+    image_desc.resource_state  = ResourceState::eTransferDst;
     image_desc.descriptor_type = DescriptorType::eSampledImage;
 
     dummy_resources.black_texture = create_image(device, image_desc);
@@ -90,9 +90,9 @@ void create_dummy_resources()
     auto& cmd = command_buffers[ 0 ];
 
     begin_command_buffer(cmd);
-    cmd_clear_color_image(cmd, dummy_resources.black_texture, ResourceState::eTransferDst, Vector4(0.0, 0.0, 0.0, 1.0));
+    cmd_clear_color_image(cmd, dummy_resources.black_texture, Vector4(0.0, 0.0, 0.0, 1.0));
     ImageBarrier image_barrier{};
-    image_barrier.image = &dummy_resources.black_texture;
+    image_barrier.image     = &dummy_resources.black_texture;
     image_barrier.old_state = ResourceState::eTransferDst;
     image_barrier.new_state = ResourceState::eShaderReadOnly;
     image_barrier.src_queue = &queue;
@@ -113,75 +113,75 @@ void compute_pbr_maps(const std::string& skybox_name)
 {
     static const u32 skybox_size = 1024;
     // TODO: mip levels
-    static const u32 skybox_mips = /* ( u32 ) log2(skybox_size) */ +1;
-    static const u32 irradiance_size = 128;
-    static const u32 specular_size = 128;
+    static const u32 skybox_mips           = /* ( u32 ) log2(skybox_size) */ +1;
+    static const u32 irradiance_size       = 128;
+    static const u32 specular_size         = 128;
     static const u32 brdf_integration_size = 512;
-    static const u32 specular_mips = /* ( u32 ) log2(specular_size) + */ 1;
+    static const u32 specular_mips         = /* ( u32 ) log2(specular_size) + */ 1;
 
     SamplerDesc sampler_desc{};
-    sampler_desc.min_filter = Filter::eLinear;
-    sampler_desc.mag_filter = Filter::eLinear;
-    sampler_desc.mipmap_mode = SamplerMipmapMode::eLinear;
+    sampler_desc.min_filter     = Filter::eLinear;
+    sampler_desc.mag_filter     = Filter::eLinear;
+    sampler_desc.mipmap_mode    = SamplerMipmapMode::eLinear;
     sampler_desc.address_mode_u = SamplerAddressMode::eRepeat;
     sampler_desc.address_mode_v = SamplerAddressMode::eRepeat;
     sampler_desc.address_mode_w = SamplerAddressMode::eRepeat;
-    sampler_desc.min_lod = 0;
-    sampler_desc.max_lod = 16;
+    sampler_desc.min_lod        = 0;
+    sampler_desc.max_lod        = 16;
 
     ImageDesc skybox_image_desc{};
-    skybox_image_desc.layer_count = 6;
-    skybox_image_desc.depth = 1;
-    skybox_image_desc.format = Format::eR32G32B32A32Sfloat;
-    skybox_image_desc.height = skybox_size;
-    skybox_image_desc.width = skybox_size;
-    skybox_image_desc.mip_levels = skybox_mips;
-    skybox_image_desc.sample_count = SampleCount::e1;
-    skybox_image_desc.resource_state = ResourceState::eStorage;
+    skybox_image_desc.layer_count     = 6;
+    skybox_image_desc.depth           = 1;
+    skybox_image_desc.format          = Format::eR32G32B32A32Sfloat;
+    skybox_image_desc.height          = skybox_size;
+    skybox_image_desc.width           = skybox_size;
+    skybox_image_desc.mip_levels      = skybox_mips;
+    skybox_image_desc.sample_count    = SampleCount::e1;
+    skybox_image_desc.resource_state  = ResourceState::eStorage;
     skybox_image_desc.descriptor_type = DescriptorType::eStorageImage | DescriptorType::eSampledImage;
 
     ImageDesc irr_image_desc{};
-    irr_image_desc.layer_count = 6;
-    irr_image_desc.depth = 1;
-    irr_image_desc.format = Format::eR32G32B32A32Sfloat;
-    irr_image_desc.width = irradiance_size;
-    irr_image_desc.height = irradiance_size;
-    irr_image_desc.mip_levels = 1;
-    irr_image_desc.sample_count = SampleCount::e1;
-    irr_image_desc.resource_state = ResourceState::eStorage;
+    irr_image_desc.layer_count     = 6;
+    irr_image_desc.depth           = 1;
+    irr_image_desc.format          = Format::eR32G32B32A32Sfloat;
+    irr_image_desc.width           = irradiance_size;
+    irr_image_desc.height          = irradiance_size;
+    irr_image_desc.mip_levels      = 1;
+    irr_image_desc.sample_count    = SampleCount::e1;
+    irr_image_desc.resource_state  = ResourceState::eStorage;
     irr_image_desc.descriptor_type = DescriptorType::eSampledImage | DescriptorType::eStorageImage;
 
     ImageDesc specular_image_desc{};
-    specular_image_desc.layer_count = 6;
-    specular_image_desc.depth = 1;
-    specular_image_desc.format = Format::eR32G32B32A32Sfloat;
-    specular_image_desc.width = specular_size;
-    specular_image_desc.height = specular_size;
-    specular_image_desc.mip_levels = specular_mips; // TODO
-    specular_image_desc.sample_count = SampleCount::e1;
-    specular_image_desc.resource_state = ResourceState::eStorage;
+    specular_image_desc.layer_count     = 6;
+    specular_image_desc.depth           = 1;
+    specular_image_desc.format          = Format::eR32G32B32A32Sfloat;
+    specular_image_desc.width           = specular_size;
+    specular_image_desc.height          = specular_size;
+    specular_image_desc.mip_levels      = specular_mips; // TODO
+    specular_image_desc.sample_count    = SampleCount::e1;
+    specular_image_desc.resource_state  = ResourceState::eStorage;
     specular_image_desc.descriptor_type = DescriptorType::eSampledImage | DescriptorType::eStorageImage;
 
     // Create empty texture for BRDF integration map.
     ImageDesc brdf_integration_image_desc{};
-    brdf_integration_image_desc.width = brdf_integration_size;
-    brdf_integration_image_desc.height = brdf_integration_size;
-    brdf_integration_image_desc.depth = 1;
-    brdf_integration_image_desc.layer_count = 1;
-    brdf_integration_image_desc.mip_levels = 1;
-    brdf_integration_image_desc.format = Format::eR32G32Sfloat;
-    brdf_integration_image_desc.sample_count = SampleCount::e1;
-    brdf_integration_image_desc.resource_state = ResourceState::eStorage;
+    brdf_integration_image_desc.width           = brdf_integration_size;
+    brdf_integration_image_desc.height          = brdf_integration_size;
+    brdf_integration_image_desc.depth           = 1;
+    brdf_integration_image_desc.layer_count     = 1;
+    brdf_integration_image_desc.mip_levels      = 1;
+    brdf_integration_image_desc.format          = Format::eR32G32Sfloat;
+    brdf_integration_image_desc.sample_count    = SampleCount::e1;
+    brdf_integration_image_desc.resource_state  = ResourceState::eStorage;
     brdf_integration_image_desc.descriptor_type = DescriptorType::eSampledImage | DescriptorType::eStorageImage;
 
     Sampler skybox_sampler = create_sampler(device, sampler_desc);
-    Image pano_skybox = load_image_from_dds_file(device, skybox_name.c_str(), ResourceState::eShaderReadOnly, false);
-    Shader pano_to_cube_shader = create_shader(device, "pano_to_cube.comp.glsl.spv", ShaderStage::eCompute);
+    Image   pano_skybox = load_image_from_dds_file(device, skybox_name.c_str(), ResourceState::eShaderReadOnly, false);
+    Shader  pano_to_cube_shader = create_shader(device, "pano_to_cube.comp.glsl.spv", ShaderStage::eCompute);
 
     // precomputed skybox
-    environment_map = create_image(device, skybox_image_desc);
-    irradiance_map = create_image(device, irr_image_desc);
-    specular_map = create_image(device, specular_image_desc);
+    environment_map      = create_image(device, skybox_image_desc);
+    irradiance_map       = create_image(device, irr_image_desc);
+    specular_map         = create_image(device, specular_image_desc);
     brdf_integration_map = create_image(device, brdf_integration_image_desc);
 
     DescriptorSetLayout pano_to_cube_dsl = create_descriptor_set_layout(device, 1, &pano_to_cube_shader);
@@ -200,25 +200,25 @@ void compute_pbr_maps(const std::string& skybox_name)
     descriptor_sampler_desc.sampler = &skybox_sampler;
 
     DescriptorImageDesc descriptor_image_desc{};
-    descriptor_image_desc.image = &pano_skybox;
+    descriptor_image_desc.image          = &pano_skybox;
     descriptor_image_desc.resource_state = ResourceState::eShaderReadOnly;
 
     DescriptorImageDesc descriptor_output_image_desc{};
-    descriptor_output_image_desc.image = &environment_map;
+    descriptor_output_image_desc.image          = &environment_map;
     descriptor_output_image_desc.resource_state = ResourceState::eStorage;
 
-    DescriptorWriteDesc descriptor_write_descs[ 3 ] = {};
-    descriptor_write_descs[ 0 ].binding = 0;
-    descriptor_write_descs[ 0 ].descriptor_count = 1;
-    descriptor_write_descs[ 0 ].descriptor_type = DescriptorType::eSampledImage;
+    DescriptorWriteDesc descriptor_write_descs[ 3 ]    = {};
+    descriptor_write_descs[ 0 ].binding                = 0;
+    descriptor_write_descs[ 0 ].descriptor_count       = 1;
+    descriptor_write_descs[ 0 ].descriptor_type        = DescriptorType::eSampledImage;
     descriptor_write_descs[ 0 ].descriptor_image_descs = &descriptor_image_desc;
-    descriptor_write_descs[ 1 ].binding = 1;
-    descriptor_write_descs[ 1 ].descriptor_count = 1;
-    descriptor_write_descs[ 1 ].descriptor_type = DescriptorType::eSampler;
+    descriptor_write_descs[ 1 ].binding                = 1;
+    descriptor_write_descs[ 1 ].descriptor_count       = 1;
+    descriptor_write_descs[ 1 ].descriptor_type        = DescriptorType::eSampler;
     descriptor_write_descs[ 1 ].descriptor_image_descs = &descriptor_sampler_desc;
-    descriptor_write_descs[ 2 ].binding = 2;
-    descriptor_write_descs[ 2 ].descriptor_count = 1;
-    descriptor_write_descs[ 2 ].descriptor_type = DescriptorType::eStorageImage;
+    descriptor_write_descs[ 2 ].binding                = 2;
+    descriptor_write_descs[ 2 ].descriptor_count       = 1;
+    descriptor_write_descs[ 2 ].descriptor_type        = DescriptorType::eStorageImage;
     descriptor_write_descs[ 2 ].descriptor_image_descs = &descriptor_output_image_desc;
     update_descriptor_set(device, ds_pano_to_cube, 3, descriptor_write_descs);
 
@@ -233,12 +233,12 @@ void compute_pbr_maps(const std::string& skybox_name)
 
     DescriptorImageDesc brdf_integration_image_set_desc{};
     brdf_integration_image_set_desc.resource_state = ResourceState::eStorage;
-    brdf_integration_image_set_desc.image = &brdf_integration_map;
+    brdf_integration_image_set_desc.image          = &brdf_integration_map;
 
     DescriptorWriteDesc descriptor_write_desc{};
-    descriptor_write_desc.binding = 0;
-    descriptor_write_desc.descriptor_count = 1;
-    descriptor_write_desc.descriptor_type = DescriptorType::eStorageImage;
+    descriptor_write_desc.binding                = 0;
+    descriptor_write_desc.descriptor_count       = 1;
+    descriptor_write_desc.descriptor_type        = DescriptorType::eStorageImage;
     descriptor_write_desc.descriptor_image_descs = &brdf_integration_image_set_desc;
 
     update_descriptor_set(device, brdf_integration_set, 1, &descriptor_write_desc);
@@ -248,26 +248,26 @@ void compute_pbr_maps(const std::string& skybox_name)
 
     Pipeline brdf_integration_pipeline = create_compute_pipeline(device, brdf_integration_pipeline_desc);
 
-    Shader irradiance_shader = create_shader(device, "irradiance.comp.glsl.spv", ShaderStage::eCompute);
-    DescriptorSetLayout irradiance_dsl = create_descriptor_set_layout(device, 1, &irradiance_shader);
-    DescriptorSetDesc irradiance_set_desc{};
+    Shader              irradiance_shader = create_shader(device, "irradiance.comp.glsl.spv", ShaderStage::eCompute);
+    DescriptorSetLayout irradiance_dsl    = create_descriptor_set_layout(device, 1, &irradiance_shader);
+    DescriptorSetDesc   irradiance_set_desc{};
     irradiance_set_desc.descriptor_set_layout = &irradiance_dsl;
-    DescriptorSet irradiance_set = create_descriptor_set(device, irradiance_set_desc);
+    DescriptorSet irradiance_set              = create_descriptor_set(device, irradiance_set_desc);
 
     DescriptorImageDesc irradiance_set_images[ 2 ] = {};
-    irradiance_set_images[ 0 ].image = &environment_map;
-    irradiance_set_images[ 0 ].sampler = &skybox_sampler;
-    irradiance_set_images[ 0 ].resource_state = ResourceState::eStorage;
-    irradiance_set_images[ 1 ].image = &irradiance_map;
-    irradiance_set_images[ 1 ].resource_state = ResourceState::eStorage;
+    irradiance_set_images[ 0 ].image               = &environment_map;
+    irradiance_set_images[ 0 ].sampler             = &skybox_sampler;
+    irradiance_set_images[ 0 ].resource_state      = ResourceState::eStorage;
+    irradiance_set_images[ 1 ].image               = &irradiance_map;
+    irradiance_set_images[ 1 ].resource_state      = ResourceState::eStorage;
 
-    descriptor_write_descs[ 0 ].binding = 0;
-    descriptor_write_descs[ 0 ].descriptor_count = 1;
-    descriptor_write_descs[ 0 ].descriptor_type = DescriptorType::eCombinedImageSampler;
+    descriptor_write_descs[ 0 ].binding                = 0;
+    descriptor_write_descs[ 0 ].descriptor_count       = 1;
+    descriptor_write_descs[ 0 ].descriptor_type        = DescriptorType::eCombinedImageSampler;
     descriptor_write_descs[ 0 ].descriptor_image_descs = &irradiance_set_images[ 0 ];
-    descriptor_write_descs[ 1 ].binding = 1;
-    descriptor_write_descs[ 1 ].descriptor_count = 1;
-    descriptor_write_descs[ 1 ].descriptor_type = DescriptorType::eStorageImage;
+    descriptor_write_descs[ 1 ].binding                = 1;
+    descriptor_write_descs[ 1 ].descriptor_count       = 1;
+    descriptor_write_descs[ 1 ].descriptor_type        = DescriptorType::eStorageImage;
     descriptor_write_descs[ 1 ].descriptor_image_descs = &irradiance_set_images[ 1 ];
 
     update_descriptor_set(device, irradiance_set, 2, descriptor_write_descs);
@@ -280,24 +280,24 @@ void compute_pbr_maps(const std::string& skybox_name)
     Shader specular_shader = create_shader(device, "specular.comp.glsl.spv", ShaderStage::eCompute);
 
     DescriptorSetLayout specular_set_layout = create_descriptor_set_layout(device, 1, &specular_shader);
-    DescriptorSetDesc specular_set_desc{};
+    DescriptorSetDesc   specular_set_desc{};
     specular_set_desc.descriptor_set_layout = &specular_set_layout;
-    DescriptorSet specular_set = create_descriptor_set(device, specular_set_desc);
+    DescriptorSet specular_set              = create_descriptor_set(device, specular_set_desc);
 
     DescriptorImageDesc specular_set_images[ 2 ] = {};
-    specular_set_images[ 0 ].image = &environment_map;
-    specular_set_images[ 0 ].sampler = &skybox_sampler;
-    specular_set_images[ 0 ].resource_state = ResourceState::eStorage;
-    specular_set_images[ 1 ].image = &specular_map;
-    specular_set_images[ 1 ].resource_state = ResourceState::eStorage;
+    specular_set_images[ 0 ].image               = &environment_map;
+    specular_set_images[ 0 ].sampler             = &skybox_sampler;
+    specular_set_images[ 0 ].resource_state      = ResourceState::eStorage;
+    specular_set_images[ 1 ].image               = &specular_map;
+    specular_set_images[ 1 ].resource_state      = ResourceState::eStorage;
 
-    descriptor_write_descs[ 0 ].binding = 0;
-    descriptor_write_descs[ 0 ].descriptor_count = 1;
-    descriptor_write_descs[ 0 ].descriptor_type = DescriptorType::eCombinedImageSampler;
+    descriptor_write_descs[ 0 ].binding                = 0;
+    descriptor_write_descs[ 0 ].descriptor_count       = 1;
+    descriptor_write_descs[ 0 ].descriptor_type        = DescriptorType::eCombinedImageSampler;
     descriptor_write_descs[ 0 ].descriptor_image_descs = &specular_set_images[ 0 ];
-    descriptor_write_descs[ 1 ].binding = 1;
-    descriptor_write_descs[ 1 ].descriptor_count = 1;
-    descriptor_write_descs[ 1 ].descriptor_type = DescriptorType::eStorageImage;
+    descriptor_write_descs[ 1 ].binding                = 1;
+    descriptor_write_descs[ 1 ].descriptor_count       = 1;
+    descriptor_write_descs[ 1 ].descriptor_type        = DescriptorType::eStorageImage;
     descriptor_write_descs[ 1 ].descriptor_image_descs = &specular_set_images[ 1 ];
 
     update_descriptor_set(device, specular_set, 2, descriptor_write_descs);
@@ -351,7 +351,7 @@ void compute_pbr_maps(const std::string& skybox_name)
     cmd_dispatch(cmd, specular_size / 16, specular_size / 16, 6);
 
     ImageBarrier to_sampled_barrier{};
-    to_sampled_barrier.image = &environment_map;
+    to_sampled_barrier.image     = &environment_map;
     to_sampled_barrier.old_state = ResourceState::eStorage;
     to_sampled_barrier.new_state = ResourceState::eShaderReadOnly;
     to_sampled_barrier.src_queue = &queue;
@@ -413,58 +413,58 @@ void end_frame(u32 image_index)
     auto& cmd = command_buffers[ frame_index ];
 
     QueueSubmitDesc queue_submit_desc{};
-    queue_submit_desc.wait_semaphore_count = 1;
-    queue_submit_desc.wait_semaphores = &image_available_semaphores[ frame_index ];
-    queue_submit_desc.command_buffer_count = 1;
-    queue_submit_desc.command_buffers = &cmd;
+    queue_submit_desc.wait_semaphore_count   = 1;
+    queue_submit_desc.wait_semaphores        = &image_available_semaphores[ frame_index ];
+    queue_submit_desc.command_buffer_count   = 1;
+    queue_submit_desc.command_buffers        = &cmd;
     queue_submit_desc.signal_semaphore_count = 1;
-    queue_submit_desc.signal_semaphores = &rendering_finished_semaphores[ frame_index ];
-    queue_submit_desc.signal_fence = &in_flight_fences[ frame_index ];
+    queue_submit_desc.signal_semaphores      = &rendering_finished_semaphores[ frame_index ];
+    queue_submit_desc.signal_fence           = &in_flight_fences[ frame_index ];
 
     queue_submit(queue, queue_submit_desc);
 
     QueuePresentDesc queue_present_desc{};
     queue_present_desc.wait_semaphore_count = 1;
-    queue_present_desc.wait_semaphores = &rendering_finished_semaphores[ frame_index ];
-    queue_present_desc.swapchain = &swapchain;
-    queue_present_desc.image_index = image_index;
+    queue_present_desc.wait_semaphores      = &rendering_finished_semaphores[ frame_index ];
+    queue_present_desc.swapchain            = &swapchain;
+    queue_present_desc.image_index          = image_index;
 
     queue_present(queue, queue_present_desc);
 
     command_buffers_recorded[ frame_index ] = false;
-    frame_index = (frame_index + 1) % FRAME_COUNT;
+    frame_index                             = (frame_index + 1) % FRAME_COUNT;
 }
 
 void load_skybox()
 {
     SamplerDesc sampler_desc{};
-    sampler_desc.min_filter = Filter::eLinear;
-    sampler_desc.mag_filter = Filter::eLinear;
-    sampler_desc.mipmap_mode = SamplerMipmapMode::eLinear;
+    sampler_desc.min_filter     = Filter::eLinear;
+    sampler_desc.mag_filter     = Filter::eLinear;
+    sampler_desc.mipmap_mode    = SamplerMipmapMode::eLinear;
     sampler_desc.address_mode_u = SamplerAddressMode::eRepeat;
     sampler_desc.address_mode_v = SamplerAddressMode::eRepeat;
     sampler_desc.address_mode_w = SamplerAddressMode::eRepeat;
-    sampler_desc.min_lod = 0;
-    sampler_desc.max_lod = 16;
+    sampler_desc.min_lod        = 0;
+    sampler_desc.max_lod        = 16;
 
     skybox_sampler = create_sampler(device, sampler_desc);
 
     Shader shaders[ 2 ] = {};
-    shaders[ 0 ] = create_shader(device, "skybox.vert.glsl.spv", ShaderStage::eVertex);
-    shaders[ 1 ] = create_shader(device, "skybox.frag.glsl.spv", ShaderStage::eFragment);
+    shaders[ 0 ]        = create_shader(device, "skybox.vert.glsl.spv", ShaderStage::eVertex);
+    shaders[ 1 ]        = create_shader(device, "skybox.frag.glsl.spv", ShaderStage::eFragment);
 
     skybox_descriptor_set_layout = create_descriptor_set_layout(device, 2, shaders);
 
     PipelineDesc pipeline_desc{};
-    pipeline_desc.binding_desc_count = 0;
-    pipeline_desc.attribute_desc_count = 0;
+    pipeline_desc.binding_desc_count          = 0;
+    pipeline_desc.attribute_desc_count        = 0;
     pipeline_desc.depth_state_desc.depth_test = false;
     pipeline_desc.depth_state_desc.depth_test = false;
     pipeline_desc.depth_state_desc.compare_op = CompareOp::eLessOrEqual;
-    pipeline_desc.rasterizer_desc.cull_mode = CullMode::eNone;
-    pipeline_desc.rasterizer_desc.front_face = FrontFace::eCounterClockwise;
-    pipeline_desc.render_pass = &swapchain.render_passes[ 0 ];
-    pipeline_desc.descriptor_set_layout = &skybox_descriptor_set_layout;
+    pipeline_desc.rasterizer_desc.cull_mode   = CullMode::eNone;
+    pipeline_desc.rasterizer_desc.front_face  = FrontFace::eCounterClockwise;
+    pipeline_desc.render_pass                 = &swapchain.render_passes[ 0 ];
+    pipeline_desc.descriptor_set_layout       = &skybox_descriptor_set_layout;
 
     skybox_pipeline = create_graphics_pipeline(device, pipeline_desc);
 
@@ -475,23 +475,23 @@ void load_skybox()
 
     DescriptorBufferDesc descriptor_buffer_desc{};
     descriptor_buffer_desc.offset = 0;
-    descriptor_buffer_desc.range = sizeof(CameraUBO);
+    descriptor_buffer_desc.range  = sizeof(CameraUBO);
     descriptor_buffer_desc.buffer = &ubo_buffer;
 
     DescriptorImageDesc descriptor_image_desc{};
-    descriptor_image_desc.image = &environment_map;
-    descriptor_image_desc.sampler = &skybox_sampler;
+    descriptor_image_desc.image          = &environment_map;
+    descriptor_image_desc.sampler        = &skybox_sampler;
     descriptor_image_desc.resource_state = ResourceState::eShaderReadOnly;
 
-    DescriptorWriteDesc descriptor_write_descs[ 2 ] = {};
-    descriptor_write_descs[ 0 ].binding = 0;
-    descriptor_write_descs[ 0 ].descriptor_count = 1;
+    DescriptorWriteDesc descriptor_write_descs[ 2 ]     = {};
+    descriptor_write_descs[ 0 ].binding                 = 0;
+    descriptor_write_descs[ 0 ].descriptor_count        = 1;
     descriptor_write_descs[ 0 ].descriptor_buffer_descs = &descriptor_buffer_desc;
-    descriptor_write_descs[ 0 ].descriptor_type = DescriptorType::eUniformBuffer;
-    descriptor_write_descs[ 1 ].binding = 1;
-    descriptor_write_descs[ 1 ].descriptor_count = 1;
-    descriptor_write_descs[ 1 ].descriptor_image_descs = &descriptor_image_desc;
-    descriptor_write_descs[ 1 ].descriptor_type = DescriptorType::eCombinedImageSampler;
+    descriptor_write_descs[ 0 ].descriptor_type         = DescriptorType::eUniformBuffer;
+    descriptor_write_descs[ 1 ].binding                 = 1;
+    descriptor_write_descs[ 1 ].descriptor_count        = 1;
+    descriptor_write_descs[ 1 ].descriptor_image_descs  = &descriptor_image_desc;
+    descriptor_write_descs[ 1 ].descriptor_type         = DescriptorType::eCombinedImageSampler;
 
     update_descriptor_set(device, skybox_descriptor_set, 2, descriptor_write_descs);
 
@@ -519,39 +519,39 @@ void release_skybox()
 void load_model()
 {
     LoadModelDescription load_model_desc{};
-    load_model_desc.filename = "damaged-helmet/DamagedHelmet.gltf";
+    load_model_desc.filename        = "damaged-helmet/DamagedHelmet.gltf";
     load_model_desc.load_bitangents = true;
-    load_model_desc.load_normals = true;
-    load_model_desc.load_tangents = true;
+    load_model_desc.load_normals    = true;
+    load_model_desc.load_tangents   = true;
     load_model_desc.load_tex_coords = true;
-    load_model_desc.flip_uvs = true;
+    load_model_desc.flip_uvs        = true;
 
     ModelLoader model_loader;
     model = model_loader.load(&device, load_model_desc);
 
     SamplerDesc sampler_desc{};
     sampler_desc.mipmap_mode = SamplerMipmapMode::eLinear;
-    sampler_desc.min_lod = 0;
-    sampler_desc.max_lod = 1000;
+    sampler_desc.min_lod     = 0;
+    sampler_desc.max_lod     = 1000;
 
     pbr_sampler = create_sampler(device, sampler_desc);
 
     Shader shaders[ 2 ] = {};
-    shaders[ 0 ] = create_shader(device, "pbr.vert.glsl.spv", ShaderStage::eVertex);
-    shaders[ 1 ] = create_shader(device, "pbr.frag.glsl.spv", ShaderStage::eFragment);
+    shaders[ 0 ]        = create_shader(device, "pbr.vert.glsl.spv", ShaderStage::eVertex);
+    shaders[ 1 ]        = create_shader(device, "pbr.frag.glsl.spv", ShaderStage::eFragment);
 
     pbr_descriptor_set_layout = create_descriptor_set_layout(device, 2, shaders);
 
     PipelineDesc pipeline_desc{};
     model_loader.get_vertex_binding_description(pipeline_desc.binding_desc_count, pipeline_desc.binding_descs);
     model_loader.get_vertex_attribute_description(pipeline_desc.attribute_desc_count, pipeline_desc.attribute_descs);
-    pipeline_desc.depth_state_desc.depth_test = true;
+    pipeline_desc.depth_state_desc.depth_test  = true;
     pipeline_desc.depth_state_desc.depth_write = true;
-    pipeline_desc.depth_state_desc.compare_op = CompareOp::eLess;
-    pipeline_desc.rasterizer_desc.cull_mode = CullMode::eBack;
-    pipeline_desc.rasterizer_desc.front_face = FrontFace::eCounterClockwise;
-    pipeline_desc.render_pass = &swapchain.render_passes[ 0 ];
-    pipeline_desc.descriptor_set_layout = &pbr_descriptor_set_layout;
+    pipeline_desc.depth_state_desc.compare_op  = CompareOp::eLess;
+    pipeline_desc.rasterizer_desc.cull_mode    = CullMode::eBack;
+    pipeline_desc.rasterizer_desc.front_face   = FrontFace::eCounterClockwise;
+    pipeline_desc.render_pass                  = &swapchain.render_passes[ 0 ];
+    pipeline_desc.descriptor_set_layout        = &pbr_descriptor_set_layout;
 
     pbr_pipeline = create_graphics_pipeline(device, pipeline_desc);
 
@@ -562,76 +562,76 @@ void load_model()
 
     DescriptorBufferDesc descriptor_buffer_desc{};
     descriptor_buffer_desc.offset = 0;
-    descriptor_buffer_desc.range = sizeof(CameraUBO);
+    descriptor_buffer_desc.range  = sizeof(CameraUBO);
     descriptor_buffer_desc.buffer = &ubo_buffer;
 
     DescriptorImageDesc descriptor_sampler_desc{};
     descriptor_sampler_desc.sampler = &pbr_sampler;
 
-    DescriptorWriteDesc descriptor_write_descs[ 6 ] = {};
-    descriptor_write_descs[ 0 ].binding = 0;
-    descriptor_write_descs[ 0 ].descriptor_count = 1;
+    DescriptorWriteDesc descriptor_write_descs[ 6 ]     = {};
+    descriptor_write_descs[ 0 ].binding                 = 0;
+    descriptor_write_descs[ 0 ].descriptor_count        = 1;
     descriptor_write_descs[ 0 ].descriptor_buffer_descs = &descriptor_buffer_desc;
-    descriptor_write_descs[ 0 ].descriptor_type = DescriptorType::eUniformBuffer;
-    descriptor_write_descs[ 1 ].binding = 1;
-    descriptor_write_descs[ 1 ].descriptor_count = 1;
-    descriptor_write_descs[ 1 ].descriptor_image_descs = &descriptor_sampler_desc;
-    descriptor_write_descs[ 1 ].descriptor_type = DescriptorType::eSampler;
+    descriptor_write_descs[ 0 ].descriptor_type         = DescriptorType::eUniformBuffer;
+    descriptor_write_descs[ 1 ].binding                 = 1;
+    descriptor_write_descs[ 1 ].descriptor_count        = 1;
+    descriptor_write_descs[ 1 ].descriptor_image_descs  = &descriptor_sampler_desc;
+    descriptor_write_descs[ 1 ].descriptor_type         = DescriptorType::eSampler;
 
     // Model textures (material)
     std::vector<DescriptorImageDesc> material_descriptor_descs(model.textures.size() + 1);
 
     // set dummy texture to 0 in case some textures doesn't exists
-    material_descriptor_descs[ 0 ] = {};
-    material_descriptor_descs[ 0 ].image = &dummy_resources.black_texture;
+    material_descriptor_descs[ 0 ]                = {};
+    material_descriptor_descs[ 0 ].image          = &dummy_resources.black_texture;
     material_descriptor_descs[ 0 ].resource_state = ResourceState::eShaderReadOnly;
 
     for (u32 i = 1; i < material_descriptor_descs.size(); ++i)
     {
-        material_descriptor_descs[ i ] = {};
-        material_descriptor_descs[ i ].image = &model.textures[ i - 1 ];
+        material_descriptor_descs[ i ]                = {};
+        material_descriptor_descs[ i ].image          = &model.textures[ i - 1 ];
         material_descriptor_descs[ i ].resource_state = ResourceState::eShaderReadOnly;
     }
 
-    u32 descriptors_count = model.textures.size();
-    descriptor_write_descs[ 2 ].binding = 2;
-    descriptor_write_descs[ 2 ].descriptor_count = material_descriptor_descs.size();
+    u32 descriptors_count                              = model.textures.size();
+    descriptor_write_descs[ 2 ].binding                = 2;
+    descriptor_write_descs[ 2 ].descriptor_count       = material_descriptor_descs.size();
     descriptor_write_descs[ 2 ].descriptor_image_descs = material_descriptor_descs.data();
-    descriptor_write_descs[ 2 ].descriptor_type = DescriptorType::eSampledImage;
+    descriptor_write_descs[ 2 ].descriptor_type        = DescriptorType::eSampledImage;
 
     DescriptorImageDesc ibl_descriptor_descs[ 3 ] = {};
 
     // irradiance map
-    ibl_descriptor_descs[ 0 ] = {};
-    ibl_descriptor_descs[ 0 ].image = &irradiance_map;
-    ibl_descriptor_descs[ 0 ].sampler = &skybox_sampler;
+    ibl_descriptor_descs[ 0 ]                = {};
+    ibl_descriptor_descs[ 0 ].image          = &irradiance_map;
+    ibl_descriptor_descs[ 0 ].sampler        = &skybox_sampler;
     ibl_descriptor_descs[ 0 ].resource_state = ResourceState::eShaderReadOnly;
 
-    descriptor_write_descs[ 3 ].binding = 3;
-    descriptor_write_descs[ 3 ].descriptor_count = 1;
+    descriptor_write_descs[ 3 ].binding                = 3;
+    descriptor_write_descs[ 3 ].descriptor_count       = 1;
     descriptor_write_descs[ 3 ].descriptor_image_descs = &ibl_descriptor_descs[ 0 ];
-    descriptor_write_descs[ 3 ].descriptor_type = DescriptorType::eCombinedImageSampler;
+    descriptor_write_descs[ 3 ].descriptor_type        = DescriptorType::eCombinedImageSampler;
 
     // specular map
-    ibl_descriptor_descs[ 1 ] = {};
-    ibl_descriptor_descs[ 1 ].image = &specular_map;
-    ibl_descriptor_descs[ 1 ].sampler = &skybox_sampler;
+    ibl_descriptor_descs[ 1 ]                = {};
+    ibl_descriptor_descs[ 1 ].image          = &specular_map;
+    ibl_descriptor_descs[ 1 ].sampler        = &skybox_sampler;
     ibl_descriptor_descs[ 1 ].resource_state = ResourceState::eShaderReadOnly;
 
-    descriptor_write_descs[ 4 ].binding = 4;
-    descriptor_write_descs[ 4 ].descriptor_count = 1;
+    descriptor_write_descs[ 4 ].binding                = 4;
+    descriptor_write_descs[ 4 ].descriptor_count       = 1;
     descriptor_write_descs[ 4 ].descriptor_image_descs = &ibl_descriptor_descs[ 1 ];
-    descriptor_write_descs[ 4 ].descriptor_type = DescriptorType::eCombinedImageSampler;
+    descriptor_write_descs[ 4 ].descriptor_type        = DescriptorType::eCombinedImageSampler;
 
     // brdf integration map
-    ibl_descriptor_descs[ 2 ] = {};
-    ibl_descriptor_descs[ 2 ].image = &brdf_integration_map;
+    ibl_descriptor_descs[ 2 ]                = {};
+    ibl_descriptor_descs[ 2 ].image          = &brdf_integration_map;
     ibl_descriptor_descs[ 2 ].resource_state = ResourceState::eShaderReadOnly;
 
-    descriptor_write_descs[ 5 ].binding = 5;
-    descriptor_write_descs[ 5 ].descriptor_count = 1;
+    descriptor_write_descs[ 5 ].binding                = 5;
+    descriptor_write_descs[ 5 ].descriptor_count       = 1;
     descriptor_write_descs[ 5 ].descriptor_image_descs = &ibl_descriptor_descs[ 2 ];
-    descriptor_write_descs[ 5 ].descriptor_type = DescriptorType::eSampledImage;
+    descriptor_write_descs[ 5 ].descriptor_type        = DescriptorType::eSampledImage;
     update_descriptor_set(device, pbr_descriptor_set, 6, descriptor_write_descs);
 
     for (u32 i = 0; i < 2; ++i)
@@ -662,12 +662,12 @@ void draw_model(const CommandBuffer& cmd)
 
     for (auto& mesh : model.meshes)
     {
-        texture_indices.albedo = mesh.material.diffuse + 1;
-        texture_indices.normal = mesh.material.normal + 1;
+        texture_indices.albedo             = mesh.material.diffuse + 1;
+        texture_indices.normal             = mesh.material.normal + 1;
         texture_indices.metallic_roughness = mesh.material.metal_roughness + 1;
-        texture_indices.ao = mesh.material.ambient_occlusion + 1;
-        texture_indices.emissive = mesh.material.emissive + 1;
-        pcb.model = pcb.model * mesh.transform;
+        texture_indices.ao                 = mesh.material.ambient_occlusion + 1;
+        texture_indices.emissive           = mesh.material.emissive + 1;
+        pcb.model                          = pcb.model * mesh.transform;
 
         cmd_push_constants(cmd, pbr_pipeline, 0, sizeof(PushConstantBlock), &pcb);
         cmd_push_constants(cmd, pbr_pipeline, sizeof(PushConstantBlock), sizeof(TextureIndices), &texture_indices);
@@ -677,136 +677,8 @@ void draw_model(const CommandBuffer& cmd)
     }
 }
 
-void on_init()
+void draw_ui(const CommandBuffer& cmd)
 {
-    app_set_shaders_directory("../../../examples/shaders/05_pbr");
-    app_set_textures_directory("../../../examples/textures");
-    app_set_models_directory("../../../examples/models");
-
-    RendererDesc renderer_desc{};
-    renderer_desc.vulkan_allocator = nullptr;
-    renderer = create_renderer(renderer_desc);
-
-    DeviceDesc device_desc{};
-    device_desc.frame_in_use_count = 2;
-    device = create_device(renderer, device_desc);
-
-    QueueDesc queue_desc{};
-    queue_desc.queue_type = QueueType::eGraphics;
-    queue = get_queue(device, queue_desc);
-
-    CommandPoolDesc command_pool_desc{};
-    command_pool_desc.queue = &queue;
-    command_pool = create_command_pool(device, command_pool_desc);
-
-    allocate_command_buffers(device, command_pool, FRAME_COUNT, command_buffers);
-
-    for (u32 i = 0; i < FRAME_COUNT; ++i)
-    {
-        image_available_semaphores[ i ] = create_semaphore(device);
-        rendering_finished_semaphores[ i ] = create_semaphore(device);
-        in_flight_fences[ i ] = create_fence(device);
-        command_buffers_recorded[ i ] = false;
-    }
-
-    SwapchainDesc swapchain_desc{};
-    swapchain_desc.width = window_get_width(get_app_window());
-    swapchain_desc.height = window_get_height(get_app_window());
-    swapchain_desc.queue = &queue;
-    swapchain_desc.image_count = FRAME_COUNT;
-    swapchain_desc.builtin_depth = true;
-
-    swapchain = create_swapchain(renderer, device, swapchain_desc);
-
-    create_dummy_resources();
-
-    compute_pbr_maps("LA_Helipad.dds");
-
-    ubo.projection = create_perspective_matrix(radians(45.0f), window_get_aspect(get_app_window()), 0.1f, 100.f);
-    ubo.view = create_look_at_matrix(Vector3(0.0f, 0.0, 2.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));
-
-    BufferDesc ubo_buffer_desc{};
-    ubo_buffer_desc.data = &ubo;
-    ubo_buffer_desc.size = sizeof(CameraUBO);
-    ubo_buffer_desc.resource_state = ResourceState::eTransferSrc | ResourceState::eTransferDst;
-    ubo_buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
-
-    ubo_buffer = create_buffer(device, ubo_buffer_desc);
-
-    load_skybox();
-    load_model();
-
-    UiDesc ui_desc{};
-    ui_desc.window = get_app_window();
-    ui_desc.renderer = &renderer;
-    ui_desc.device = &device;
-    ui_desc.queue = &queue;
-    ui_desc.image_count = FRAME_COUNT;
-    ui_desc.render_pass = &swapchain.render_passes[ 0 ];
-
-    ui_context = create_ui_context(ui_desc);
-}
-
-void on_resize(u32 width, u32 height)
-{
-    queue_wait_idle(queue);
-    destroy_swapchain(device, swapchain);
-
-    SwapchainDesc swapchain_desc{};
-    swapchain_desc.width = window_get_width(get_app_window());
-    swapchain_desc.height = window_get_height(get_app_window());
-    swapchain_desc.queue = &queue;
-    swapchain_desc.image_count = FRAME_COUNT;
-    swapchain_desc.builtin_depth = true;
-
-    swapchain = create_swapchain(renderer, device, swapchain_desc);
-
-    ubo.projection = create_perspective_matrix(radians(45.0f), window_get_aspect(get_app_window()), 0.1f, 100.f);
-    ubo.view = create_look_at_matrix(Vector3(0.0f, 0.0, 2.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));
-
-    BufferUpdateDesc buffer_update{};
-    buffer_update.buffer = &ubo_buffer;
-    buffer_update.offset = 0;
-    buffer_update.size = sizeof(CameraUBO);
-    buffer_update.data = &ubo;
-
-    update_buffer(device, buffer_update);
-}
-
-void on_update(f64 delta_time)
-{
-    u32 image_index = 0;
-
-    begin_frame(image_index);
-
-    auto& cmd = command_buffers[ frame_index ];
-
-    begin_command_buffer(cmd);
-
-    ImageBarrier to_clear_barrier{};
-    to_clear_barrier.src_queue = &queue;
-    to_clear_barrier.dst_queue = &queue;
-    to_clear_barrier.image = &swapchain.images[ image_index ];
-    to_clear_barrier.old_state = ResourceState::eUndefined;
-    to_clear_barrier.new_state = ResourceState::eColorAttachment;
-
-    cmd_barrier(cmd, 0, nullptr, 1, &to_clear_barrier);
-
-    RenderPassBeginDesc render_pass_begin_desc{};
-    render_pass_begin_desc.render_pass = get_swapchain_render_pass(swapchain, image_index);
-    render_pass_begin_desc.clear_values[ 0 ].color[ 0 ] = 1.0f;
-    render_pass_begin_desc.clear_values[ 0 ].color[ 1 ] = 0.8f;
-    render_pass_begin_desc.clear_values[ 0 ].color[ 2 ] = 0.4f;
-    render_pass_begin_desc.clear_values[ 0 ].color[ 3 ] = 1.0f;
-
-    render_pass_begin_desc.clear_values[ 1 ].depth = 1.0f;
-    render_pass_begin_desc.clear_values[ 1 ].stencil = 0.0;
-
-    cmd_begin_render_pass(cmd, render_pass_begin_desc);
-    cmd_set_viewport(cmd, 0, 0, swapchain.width, swapchain.height, 0.0f, 1.0f);
-    cmd_set_scissor(cmd, 0, 0, swapchain.width, swapchain.height);
-    draw_skybox(cmd);
-    draw_model(cmd);
     ui_begin_frame();
 
     ImGuiWindowFlags window_flags = 0;
@@ -854,12 +726,145 @@ void on_update(f64 delta_time)
         ImGui::EndTable();
     }
     ui_end_frame(cmd);
+}
+
+void on_init()
+{
+    app_set_shaders_directory("../../../examples/shaders/05_pbr");
+    app_set_textures_directory("../../../examples/textures");
+    app_set_models_directory("../../../examples/models");
+
+    RendererDesc renderer_desc{};
+    renderer_desc.vulkan_allocator = nullptr;
+    renderer                       = create_renderer(renderer_desc);
+
+    DeviceDesc device_desc{};
+    device_desc.frame_in_use_count = 2;
+    device                         = create_device(renderer, device_desc);
+
+    QueueDesc queue_desc{};
+    queue_desc.queue_type = QueueType::eGraphics;
+    queue                 = get_queue(device, queue_desc);
+
+    CommandPoolDesc command_pool_desc{};
+    command_pool_desc.queue = &queue;
+    command_pool            = create_command_pool(device, command_pool_desc);
+
+    allocate_command_buffers(device, command_pool, FRAME_COUNT, command_buffers);
+
+    for (u32 i = 0; i < FRAME_COUNT; ++i)
+    {
+        image_available_semaphores[ i ]    = create_semaphore(device);
+        rendering_finished_semaphores[ i ] = create_semaphore(device);
+        in_flight_fences[ i ]              = create_fence(device);
+        command_buffers_recorded[ i ]      = false;
+    }
+
+    SwapchainDesc swapchain_desc{};
+    swapchain_desc.width         = window_get_width(get_app_window());
+    swapchain_desc.height        = window_get_height(get_app_window());
+    swapchain_desc.queue         = &queue;
+    swapchain_desc.image_count   = FRAME_COUNT;
+    swapchain_desc.builtin_depth = true;
+
+    swapchain = create_swapchain(renderer, device, swapchain_desc);
+
+    create_dummy_resources();
+
+    compute_pbr_maps("LA_Helipad.dds");
+
+    ubo.projection = create_perspective_matrix(radians(45.0f), window_get_aspect(get_app_window()), 0.1f, 100.f);
+    ubo.view       = create_look_at_matrix(Vector3(0.0f, 0.0, 2.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));
+
+    BufferDesc ubo_buffer_desc{};
+    ubo_buffer_desc.data            = &ubo;
+    ubo_buffer_desc.size            = sizeof(CameraUBO);
+    ubo_buffer_desc.resource_state  = ResourceState::eTransferSrc | ResourceState::eTransferDst;
+    ubo_buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
+
+    ubo_buffer = create_buffer(device, ubo_buffer_desc);
+
+    load_skybox();
+    load_model();
+
+    UiDesc ui_desc{};
+    ui_desc.window      = get_app_window();
+    ui_desc.renderer    = &renderer;
+    ui_desc.device      = &device;
+    ui_desc.queue       = &queue;
+    ui_desc.image_count = FRAME_COUNT;
+    ui_desc.render_pass = &swapchain.render_passes[ 0 ];
+
+    ui_context = create_ui_context(ui_desc);
+}
+
+void on_resize(u32 width, u32 height)
+{
+    queue_wait_idle(queue);
+    destroy_swapchain(device, swapchain);
+
+    SwapchainDesc swapchain_desc{};
+    swapchain_desc.width         = window_get_width(get_app_window());
+    swapchain_desc.height        = window_get_height(get_app_window());
+    swapchain_desc.queue         = &queue;
+    swapchain_desc.image_count   = FRAME_COUNT;
+    swapchain_desc.builtin_depth = true;
+
+    swapchain = create_swapchain(renderer, device, swapchain_desc);
+
+    ubo.projection = create_perspective_matrix(radians(45.0f), window_get_aspect(get_app_window()), 0.1f, 100.f);
+    ubo.view       = create_look_at_matrix(Vector3(0.0f, 0.0, 2.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));
+
+    BufferUpdateDesc buffer_update{};
+    buffer_update.buffer = &ubo_buffer;
+    buffer_update.offset = 0;
+    buffer_update.size   = sizeof(CameraUBO);
+    buffer_update.data   = &ubo;
+
+    update_buffer(device, buffer_update);
+}
+
+void on_update(f64 delta_time)
+{
+    u32 image_index = 0;
+
+    begin_frame(image_index);
+
+    auto& cmd = command_buffers[ frame_index ];
+
+    begin_command_buffer(cmd);
+
+    ImageBarrier to_clear_barrier{};
+    to_clear_barrier.src_queue = &queue;
+    to_clear_barrier.dst_queue = &queue;
+    to_clear_barrier.image     = &swapchain.images[ image_index ];
+    to_clear_barrier.old_state = ResourceState::eUndefined;
+    to_clear_barrier.new_state = ResourceState::eColorAttachment;
+
+    cmd_barrier(cmd, 0, nullptr, 1, &to_clear_barrier);
+
+    RenderPassBeginDesc render_pass_begin_desc{};
+    render_pass_begin_desc.render_pass                  = get_swapchain_render_pass(swapchain, image_index);
+    render_pass_begin_desc.clear_values[ 0 ].color[ 0 ] = 1.0f;
+    render_pass_begin_desc.clear_values[ 0 ].color[ 1 ] = 0.8f;
+    render_pass_begin_desc.clear_values[ 0 ].color[ 2 ] = 0.4f;
+    render_pass_begin_desc.clear_values[ 0 ].color[ 3 ] = 1.0f;
+
+    render_pass_begin_desc.clear_values[ 1 ].depth   = 1.0f;
+    render_pass_begin_desc.clear_values[ 1 ].stencil = 0.0;
+
+    cmd_begin_render_pass(cmd, render_pass_begin_desc);
+    cmd_set_viewport(cmd, 0, 0, swapchain.width, swapchain.height, 0.0f, 1.0f);
+    cmd_set_scissor(cmd, 0, 0, swapchain.width, swapchain.height);
+    draw_skybox(cmd);
+    draw_model(cmd);
+    draw_ui(cmd);
     cmd_end_render_pass(cmd);
 
     ImageBarrier to_present_barrier{};
     to_present_barrier.src_queue = &queue;
     to_present_barrier.dst_queue = &queue;
-    to_present_barrier.image = &swapchain.images[ image_index ];
+    to_present_barrier.image     = &swapchain.images[ image_index ];
     to_present_barrier.old_state = ResourceState::eColorAttachment;
     to_present_barrier.new_state = ResourceState::ePresent;
 
@@ -895,17 +900,17 @@ void on_shutdown()
 int main(int argc, char** argv)
 {
     ApplicationConfig config;
-    config.argc = argc;
-    config.argv = argv;
-    config.title = "TestApp";
-    config.x = 0;
-    config.y = 0;
-    config.width = 800;
-    config.height = 600;
-    config.log_level = LogLevel::eTrace;
-    config.on_init = on_init;
-    config.on_update = on_update;
-    config.on_resize = on_resize;
+    config.argc        = argc;
+    config.argv        = argv;
+    config.title       = "TestApp";
+    config.x           = 0;
+    config.y           = 0;
+    config.width       = 800;
+    config.height      = 600;
+    config.log_level   = LogLevel::eTrace;
+    config.on_init     = on_init;
+    config.on_update   = on_update;
+    config.on_resize   = on_resize;
     config.on_shutdown = on_shutdown;
 
     app_init(&config);

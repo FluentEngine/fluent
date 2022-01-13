@@ -14,24 +14,24 @@ namespace fluent
 
 struct Material
 {
-    i32 diffuse = -1;
-    i32 specular = -1;
-    i32 normal = -1;
-    i32 height = -1;
-    i32 ambient = -1;
+    i32 diffuse           = -1;
+    i32 specular          = -1;
+    i32 normal            = -1;
+    i32 height            = -1;
+    i32 ambient           = -1;
     i32 ambient_occlusion = -1;
-    i32 emissive = -1;
-    i32 metal_roughness = -1;
+    i32 emissive          = -1;
+    i32 metal_roughness   = -1;
 };
 
 struct Mesh
 {
     std::vector<f32> vertices;
     std::vector<u32> indices;
-    Buffer vertex_buffer;
-    Buffer index_buffer;
-    Matrix4 transform;
-    Material material;
+    Buffer           vertex_buffer;
+    Buffer           index_buffer;
+    Matrix4          transform;
+    Material         material;
 
     void InitMesh(const Device& device);
 
@@ -40,31 +40,31 @@ struct Mesh
 
 struct Model
 {
-    std::vector<Mesh> meshes;
+    std::vector<Mesh>  meshes;
     std::vector<Image> textures;
 };
 
 struct LoadModelDescription
 {
     std::string filename;
-    b32 load_normals;
-    b32 load_tex_coords;
-    b32 load_tangents;
-    b32 load_bitangents;
-    b32 flip_uvs;
+    b32         load_normals;
+    b32         load_tex_coords;
+    b32         load_tangents;
+    b32         load_bitangents;
+    b32         flip_uvs;
 };
 
 class ModelLoader
 {
 private:
-    static constexpr f32 NORMAL_COMPONENT_COUNT = 3;
-    static constexpr f32 TEXCOORD_COMPONENT_COUNT = 2;
-    static constexpr f32 TANGENTS_COMPONENT_COUNT = 3;
+    static constexpr f32 NORMAL_COMPONENT_COUNT     = 3;
+    static constexpr f32 TEXCOORD_COMPONENT_COUNT   = 2;
+    static constexpr f32 TANGENTS_COMPONENT_COUNT   = 3;
     static constexpr f32 BITANGENTS_COMPONENT_COUNT = 3;
 
-    i32 normal_offset = -1;
-    i32 texcoord_offset = -1;
-    i32 tangents_offset = -1;
+    i32 normal_offset     = -1;
+    i32 texcoord_offset   = -1;
+    i32 tangents_offset   = -1;
     i32 bitangents_offset = -1;
 
     b32 flip_uvs;
@@ -72,12 +72,12 @@ private:
     struct LoadedTexture
     {
         std::string name;
-        Image texture;
+        Image       texture;
     };
 
-    u32 stride = 0;
+    u32                        stride = 0;
     std::vector<LoadedTexture> textures_loaded;
-    std::string directory;
+    std::string                directory;
 
     const Device* device;
 

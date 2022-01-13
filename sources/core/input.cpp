@@ -19,8 +19,8 @@ void update_input_keyboard_state(InputSystem* input_system, KeyCode key, u32 pre
 
 void update_input_mouse_state(InputSystem* input_system, i32 x, i32 y)
 {
-    input_system->mouse_offsets[ 0 ] = input_system->mouse_position[ 0 ] - x;
-    input_system->mouse_offsets[ 1 ] = input_system->mouse_position[ 1 ] - y;
+    input_system->mouse_offsets[ 0 ]  = input_system->mouse_position[ 0 ] - x;
+    input_system->mouse_offsets[ 1 ]  = input_system->mouse_position[ 1 ] - y;
     input_system->mouse_position[ 0 ] = x;
     input_system->mouse_position[ 1 ] = y;
 }

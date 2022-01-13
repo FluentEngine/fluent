@@ -31,4 +31,20 @@ Vector3 normalize(const Vector3& x)
 {
     return glm::normalize(x);
 }
+
+f32 perlin_noise_2d(const Vector2& v)
+{
+    return glm::perlin(v);
+}
+
+f32 lerp(f32 a, f32 b, f32 t)
+{
+    return glm::mix(a, b, t);
+}
+
+f32 inverse_lerp(f32 a, f32 b, f32 v)
+{
+    return (v - a) / (b - a);
+}
+
 } // namespace fluent

@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/noise.hpp>
 #include "core/base.hpp"
 
 namespace fluent
@@ -25,4 +26,9 @@ Matrix4 create_perspective_matrix(f32 fov, f32 aspect, f32 z_near, f32 z_far);
 Matrix4 create_look_at_matrix(const Vector3& position, const Vector3& direction, const Vector3& up);
 Matrix4 rotate(const Matrix4& mat, f32 angle, Vector3 axis);
 Matrix4 translate(const Matrix4& mat, const Vector3& v);
+
+f32 perlin_noise_2d(const Vector2& v);
+f32 lerp(f32 a, f32 b, f32 t);
+f32 inverse_lerp(f32 a, f32 b, f32 v);
+
 } // namespace fluent

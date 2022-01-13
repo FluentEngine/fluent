@@ -2,6 +2,9 @@
 BasedOnStyle: Microsoft
 AccessModifierOffset: '-4'
 AlignAfterOpenBracket: AlwaysBreak
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+AlignConsecutiveMacros: false
 Cpp11BracedListStyle: 'false'
 PointerAlignment: Left
 SpaceAfterCStyleCast: 'true'

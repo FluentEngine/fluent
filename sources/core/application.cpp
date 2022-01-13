@@ -10,20 +10,20 @@ namespace fluent
 
 struct ApplicationState
 {
-    std::string exec_path;
-    std::string shaders_directory;
-    std::string textures_directory;
-    std::string models_directory;
-    b32 is_inited;
-    b32 is_running;
-    const char* title;
-    Window window;
-    InitCallback on_init;
-    UpdateCallback on_update;
+    std::string      exec_path;
+    std::string      shaders_directory;
+    std::string      textures_directory;
+    std::string      models_directory;
+    b32              is_inited;
+    b32              is_running;
+    const char*      title;
+    Window           window;
+    InitCallback     on_init;
+    UpdateCallback   on_update;
     ShutdownCallback on_shutdown;
-    ResizeCallback on_resize;
-    f32 delta_time;
-    InputSystem input_system;
+    ResizeCallback   on_resize;
+    f32              delta_time;
+    InputSystem      input_system;
 };
 
 static ApplicationState app_state{};
@@ -64,12 +64,12 @@ void app_init(const ApplicationConfig* config)
 
     app_state.window = fluent::create_window(config->title, config->x, config->y, config->width, config->height);
 
-    app_state.exec_path = get_exec_path(config->argc, config->argv[ 0 ]);
-    app_state.title = config->title;
-    app_state.on_init = config->on_init;
-    app_state.on_update = config->on_update;
+    app_state.exec_path   = get_exec_path(config->argc, config->argv[ 0 ]);
+    app_state.title       = config->title;
+    app_state.on_init     = config->on_init;
+    app_state.on_update   = config->on_update;
     app_state.on_shutdown = config->on_shutdown;
-    app_state.on_resize = config->on_resize;
+    app_state.on_resize   = config->on_resize;
 
     spdlog::set_level(to_spdlog_level(config->log_level));
 
@@ -88,13 +88,13 @@ void app_run()
 
     SDL_Event e;
 
-    f32 last_tick = get_time();
+    f32 last_tick        = get_time();
     app_state.delta_time = 0.0;
 
     while (app_state.is_running)
     {
         app_state.delta_time = (get_time() - last_tick);
-        last_tick = get_time();
+        last_tick            = get_time();
 
         while (SDL_PollEvent(&e) != 0)
         {
@@ -106,7 +106,7 @@ void app_run()
             case SDL_WINDOWEVENT:
                 if (e.window.event == SDL_WINDOWEVENT_RESIZED)
                 {
-                    app_state.window.data[ WindowParams::eWidth ] = e.window.data1;
+                    app_state.window.data[ WindowParams::eWidth ]  = e.window.data1;
                     app_state.window.data[ WindowParams::eHeight ] = e.window.data2;
 
                     app_state.on_resize(e.window.data1, e.window.data2);

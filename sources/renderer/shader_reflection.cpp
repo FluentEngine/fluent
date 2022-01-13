@@ -32,7 +32,7 @@ ShaderType get_type_by_reflection(const SpvReflectTypeDescription& type)
 
     FT_ASSERT(format != Format::eUndefined);
 
-    u32 byte_size = type.traits.numeric.scalar.width / 8;
+    u32 byte_size       = type.traits.numeric.scalar.width / 8;
     u32 component_count = 1;
 
     if (type.traits.numeric.vector.component_count > 0)
@@ -96,7 +96,7 @@ ReflectionData reflect(u32 byte_code_size, const u32* byte_code)
 {
     ReflectionData result{};
 
-    SpvReflectResult spv_result;
+    SpvReflectResult       spv_result;
     SpvReflectShaderModule reflected_shader;
     spv_result = spvReflectCreateShaderModule(byte_code_size, ( const void* ) byte_code, &reflected_shader);
     FT_ASSERT(spv_result == SPV_REFLECT_RESULT_SUCCESS);
@@ -115,7 +115,7 @@ ReflectionData reflect(u32 byte_code_size, const u32* byte_code)
     u32 i = 0;
     for (const auto& descriptor_binding : descriptor_bindings)
     {
-        result.bindings[ i ].binding = descriptor_binding->binding;
+        result.bindings[ i ].binding          = descriptor_binding->binding;
         result.bindings[ i ].descriptor_count = descriptor_binding->count;
         result.bindings[ i ].descriptor_type =
             to_desctriptor_type(( VkDescriptorType ) descriptor_binding->descriptor_type);

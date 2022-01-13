@@ -85,3 +85,5 @@ target_compile_options(${target} PUBLIC ${compile_options})
 if (FLUENT_BUILD_TESTS)
     add_subdirectory(examples)
 endif()
+
+add_subdirectory(sandbox)
