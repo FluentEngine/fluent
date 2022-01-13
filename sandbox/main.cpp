@@ -303,9 +303,12 @@ std::vector<u8> generate_noise_texture(
     f32 min_noise_height = std::numeric_limits<f32>::max();
     f32 max_noise_height = std::numeric_limits<f32>::min();
 
-    for (u32 y = 0; y < height; ++y)
+    i32 half_width  = width / 2;
+    i32 half_height = height / 2;
+
+    for (i32 y = 0; y < height; ++y)
     {
-        for (u32 x = 0; x < width; ++x)
+        for (i32 x = 0; x < width; ++x)
         {
             f32 amplitude    = 1.0f;
             f32 frequency    = 1.0f;
@@ -313,8 +316,8 @@ std::vector<u8> generate_noise_texture(
 
             for (u32 i = 0; i < octaves; ++i)
             {
-                f32 sample_x = ( f32 ) x / scale * frequency + octave_offsets[ i ].x;
-                f32 sample_y = ( f32 ) y / scale * frequency + octave_offsets[ i ].y;
+                f32 sample_x = ( f32 ) (x - half_width) / scale * frequency + octave_offsets[ i ].x;
+                f32 sample_y = ( f32 ) (y - half_height) / scale * frequency + octave_offsets[ i ].y;
 
                 f32 perlin_value = perlin_noise_2d(Vector2(sample_x, sample_y)) * 2.0 - 1.0;
 
