@@ -476,19 +476,21 @@ void draw_ui(CommandBuffer& cmd)
         ImGui::Begin("Noise texture");
         ImGui::Image(maps[ selected_map ].image_view, ImVec2(512, 512));
         ImGui::End();
-
         ImGui::Begin("Maps settings");
+        ImGui::SetNextItemOpen(true);
         if (ImGui::TreeNode("Render map"))
         {
             ImGui::RadioButton("Noise map", &selected_map, 0);
             ImGui::RadioButton("Terrain map", &selected_map, 1);
             ImGui::TreePop();
         }
+        ImGui::SetNextItemOpen(true);
         if (ImGui::TreeNode("Noise settings"))
         {
             draw_noise_settings();
             ImGui::TreePop();
         }
+        ImGui::SetNextItemOpen(true);
         if (ImGui::TreeNode("Terrain settings"))
         {
             draw_terrain_settings();
