@@ -1,6 +1,9 @@
 #include <functional>
-#include <random>
+#include <chrono>
+#include <thread>
 #include "fluent/fluent.hpp"
+#include "noise.hpp"
+#include "map_generator.hpp"
 
 using namespace fluent;
 
@@ -19,23 +22,31 @@ CommandBuffer        command_buffers[ FRAME_COUNT ];
 u32                  frame_index = 0;
 
 // debug gui
-UiContext                                            ui_context;
-std::vector<std::function<void(CommandBuffer& cmd)>> deffered_updates;
+UiContext ui_context;
 
 // scene
-struct
-{
-    u32     width       = 100;
-    u32     height      = 100;
-    f32     scale       = 27.6f;
-    i32     octaves     = 4;
-    f32     persistance = 0.5f;
-    f32     lacunarity  = 2.0f;
-    i32     seed        = 0.0f;
-    Vector2 offset      = Vector2(0.0f, 0.0f);
-} noise_settings;
+static constexpr u32 MAP_SIZE = 100;
+NoiseSettings        noise_settings;
+TerrainTypes         terrain_types;
+MapGenerator         map_generator;
 
-Image noise_texture;
+enum class MapType : u32
+{
+    eNoise   = 0,
+    eTerrain = 1,
+    eLast
+};
+
+static i32 selected_map = static_cast<i32>(MapType::eTerrain);
+
+Image maps[ 2 ];
+struct MapTextureUpdate
+{
+    const Map* map;
+    Image*     texture;
+};
+
+std::vector<MapTextureUpdate> map_texture_updates;
 
 // helpers
 ImageBarrier create_image_barrier(
@@ -46,19 +57,18 @@ void init_graphics();
 void shutdown_graphics();
 void init_ui();
 void shutdown_ui();
+void draw_ui(CommandBuffer& cmd);
 
 void begin_frame(u32& image_index);
 void end_frame(u32 image_index);
 
 // scene functions
-std::vector<u8> generate_noise_texture(
-    f32 width, f32 height, f32 scale, u32 octaves, f32 persistance, f32 lacunarity, int seed, Vector2 offset);
-Image create_noise_texture(
-    f32 width, f32 height, f32 scale, u32 octaves, f32 persistance, f32 lacunarity, int seed, Vector2 offset);
-void draw_noise_settings();
-void update_noise_texture(CommandBuffer& cmd);
-void create_scene();
-void destroy_scene();
+Image create_texture_from_map(const Map& map);
+void  update_map_texture(CommandBuffer& cmd, const Map& map, Image& texture);
+void  draw_noise_settings();
+void  draw_terrain_settings();
+void  create_scene();
+void  destroy_scene();
 
 void on_init()
 {
@@ -106,12 +116,7 @@ void on_update(f64 delta_time)
         rp_begin_desc.render_pass                  = &swapchain.render_passes[ image_index ];
 
         cmd_begin_render_pass(cmd, rp_begin_desc);
-        ui_begin_frame();
-        ImGui::Begin("Noise texture");
-        ImGui::Image(noise_texture.image_view, ImVec2(512, 512));
-        ImGui::End();
-        draw_noise_settings();
-        ui_end_frame(cmd);
+        draw_ui(cmd);
         cmd_end_render_pass(cmd);
 
         ImageBarrier to_present = create_image_barrier(
@@ -119,14 +124,17 @@ void on_update(f64 delta_time)
 
         cmd_barrier(cmd, 0, nullptr, 1, &to_present);
 
-        for (auto& update : deffered_updates)
+        for (auto& update : map_texture_updates)
         {
-            update(cmd);
+            update_map_texture(cmd, *update.map, *update.texture);
         }
-        deffered_updates.clear();
+
+        map_texture_updates.clear();
     }
     end_command_buffer(cmd);
     end_frame(image_index);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(( u64 ) (( f32 ) ImGui::GetIO().Framerate / 100.0f)));
 }
 
 void on_shutdown()
@@ -145,8 +153,8 @@ int main(int argc, char** argv)
     config.title       = "TestApp";
     config.x           = 0;
     config.y           = 0;
-    config.width       = 800;
-    config.height      = 600;
+    config.width       = 1400;
+    config.height      = 900;
     config.log_level   = LogLevel::eTrace;
     config.on_init     = on_init;
     config.on_update   = on_update;
@@ -234,6 +242,7 @@ void init_ui()
     ui_desc.queue       = &queue;
     ui_desc.image_count = FRAME_COUNT;
     ui_desc.render_pass = &swapchain.render_passes[ 0 ];
+    ui_desc.docking     = true;
 
     ui_context = create_ui_context(ui_desc);
 
@@ -284,91 +293,12 @@ void end_frame(u32 image_index)
     frame_index                             = (frame_index + 1) % FRAME_COUNT;
 }
 
-std::vector<u8> generate_noise_texture(
-    f32 width, f32 height, f32 scale, u32 octaves, f32 persistance, f32 lacunarity, int seed, Vector2 offset)
+Image create_texture_from_map(const Map& map)
 {
-    std::mt19937                        eng(seed);
-    std::uniform_real_distribution<f32> urd(-100000, 100000);
-
-    std::vector<Vector2> octave_offsets(octaves);
-    for (u32 i = 0; i < octaves; ++i)
-    {
-        octave_offsets[ i ].x = urd(eng) + offset.x;
-        octave_offsets[ i ].y = urd(eng) + offset.y;
-    }
-
     static constexpr u32 bpp = 4;
-    std::vector<f32>     image_data(width * height * bpp);
-
-    f32 min_noise_height = std::numeric_limits<f32>::max();
-    f32 max_noise_height = std::numeric_limits<f32>::min();
-
-    i32 half_width  = width / 2;
-    i32 half_height = height / 2;
-
-    for (i32 y = 0; y < height; ++y)
-    {
-        for (i32 x = 0; x < width; ++x)
-        {
-            f32 amplitude    = 1.0f;
-            f32 frequency    = 1.0f;
-            f32 noise_height = 0.0f;
-
-            for (u32 i = 0; i < octaves; ++i)
-            {
-                f32 sample_x = ( f32 ) (x - half_width) / scale * frequency + octave_offsets[ i ].x;
-                f32 sample_y = ( f32 ) (y - half_height) / scale * frequency + octave_offsets[ i ].y;
-
-                f32 perlin_value = perlin_noise_2d(Vector2(sample_x, sample_y)) * 2.0 - 1.0;
-
-                noise_height += perlin_value * amplitude;
-
-                amplitude *= persistance;
-                frequency *= lacunarity;
-            }
-
-            if (noise_height > max_noise_height)
-            {
-                max_noise_height = noise_height;
-            }
-            else if (noise_height < min_noise_height)
-            {
-                min_noise_height = noise_height;
-            }
-
-            u32 idx           = x * bpp + y * bpp * width;
-            image_data[ idx ] = noise_height;
-        }
-    }
-
-    std::vector<u8> result(image_data.size());
-
-    for (u32 y = 0; y < height; ++y)
-    {
-        for (u32 x = 0; x < width; ++x)
-        {
-            u32 idx           = x * bpp + y * bpp * width;
-            result[ idx ]     = inverse_lerp(min_noise_height, max_noise_height, image_data[ idx ]) * 255.0f;
-            result[ idx + 1 ] = result[ idx ];
-            result[ idx + 2 ] = result[ idx ];
-            result[ idx + 3 ] = 255;
-        }
-    }
-
-    return result;
-}
-
-Image create_noise_texture(
-    f32 width, f32 height, f32 scale, u32 octaves, f32 persistance, f32 lacunarity, int seed, Vector2 offset)
-{
-    static constexpr u32 noise_texture_size = 100;
-    static constexpr u32 bpp                = 4;
-
-    auto image_data = generate_noise_texture(width, height, scale, octaves, persistance, lacunarity, seed, offset);
-
-    ImageDesc desc{};
-    desc.width           = noise_texture_size;
-    desc.height          = noise_texture_size;
+    ImageDesc            desc{};
+    desc.width           = MAP_SIZE;
+    desc.height          = MAP_SIZE;
     desc.depth           = 1;
     desc.sample_count    = SampleCount::e1;
     desc.mip_levels      = 1;
@@ -376,29 +306,25 @@ Image create_noise_texture(
     desc.format          = Format::eR8G8B8A8Unorm;
     desc.descriptor_type = DescriptorType::eSampledImage;
     desc.resource_state  = ResourceState::eTransferDst | ResourceState::eShaderReadOnly;
-    desc.data_size       = noise_texture_size * noise_texture_size * bpp;
-    desc.data            = image_data.data();
+    desc.data_size       = map.size() * sizeof(map[ 0 ]);
+    desc.data            = map.data();
 
     return create_image(device, desc);
 }
 
-void update_noise_texture(CommandBuffer& cmd)
+void update_map_texture(CommandBuffer& cmd, const Map& map, Image& texture)
 {
-    auto image_data = generate_noise_texture(
-        noise_settings.width, noise_settings.height, noise_settings.scale, noise_settings.octaves,
-        noise_settings.persistance, noise_settings.lacunarity, noise_settings.seed, noise_settings.offset);
     ImageUpdateDesc desc{};
-    desc.data           = image_data.data();
-    desc.size           = image_data.size() * sizeof(image_data[ 0 ]);
-    desc.image          = &noise_texture;
+    desc.data           = map.data();
+    desc.size           = map.size() * sizeof(map[ 0 ]);
+    desc.image          = &texture;
     desc.resource_state = ResourceState::eShaderReadOnly;
     update_image(device, desc);
 }
 
 void draw_noise_settings()
 {
-    ImGui::Begin("Noise settings");
-    bool need_update = false;
+    b32 need_update = false;
 
     if (ImGui::SliderFloat("Scale", &noise_settings.scale, 0.001, 100.0f, nullptr, 0))
     {
@@ -432,19 +358,146 @@ void draw_noise_settings()
 
     if (need_update)
     {
-        deffered_updates.push_back(update_noise_texture);
+        map_generator.update_noise_map(noise_settings);
+        map_generator.update_terrain_map(terrain_types);
+        map_texture_updates.push_back(
+            MapTextureUpdate{ &map_generator.get_noise_map(), &maps[ ( u32 ) MapType::eNoise ] });
+        map_texture_updates.push_back({ &map_generator.get_terrain_map(), &maps[ ( u32 ) MapType::eTerrain ] });
     }
-    ImGui::End();
+}
+
+void draw_terrain_settings()
+{
+    for (u32 i = 0; i < terrain_types.size(); ++i)
+    {
+        std::string label        = "Terrain type " + std::to_string(i);
+        std::string height_label = "##Height" + std::to_string(i);
+        ImGui::ColorEdit3(label.c_str(), &terrain_types[ i ].color.r, ImGuiColorEditFlags_NoInputs);
+        ImGui::SliderFloat(height_label.c_str(), &terrain_types[ i ].height, 0, 255.0f, nullptr, 0);
+    }
+
+    if (ImGui::Button("Apply settings"))
+    {
+        map_generator.update_terrain_map(terrain_types);
+        map_texture_updates.push_back(
+            MapTextureUpdate{ &map_generator.get_terrain_map(), &maps[ ( u32 ) MapType::eTerrain ] });
+    }
 }
 
 void create_scene()
 {
-    noise_texture = create_noise_texture(
-        noise_settings.width, noise_settings.height, noise_settings.scale, noise_settings.octaves,
-        noise_settings.persistance, noise_settings.lacunarity, noise_settings.seed, noise_settings.offset);
+    terrain_types.push_back({ 23.0f, Vector3(0.214, 0.751, 0.925) });  // water
+    terrain_types.push_back({ 57.0f, Vector3(0.966, 0.965, 0.613) });  // sand
+    terrain_types.push_back({ 86.0f, Vector3(0.331, 1.0, 0.342) });    // ground
+    terrain_types.push_back({ 159.0f, Vector3(0.225, 0.225, 0.217) }); // mountains
+    terrain_types.push_back({ 210.0f, Vector3(1.0, 1.0, 1.0) });       // snow
+
+    map_generator.set_map_size(MAP_SIZE, MAP_SIZE);
+    map_generator.update_noise_map(noise_settings);
+    map_generator.update_terrain_map(terrain_types);
+
+    maps[ ( u32 ) MapType::eNoise ]   = create_texture_from_map(map_generator.get_noise_map());
+    maps[ ( u32 ) MapType::eTerrain ] = create_texture_from_map(map_generator.get_terrain_map());
 }
 
 void destroy_scene()
 {
-    destroy_image(device, noise_texture);
+    for (u32 i = 0; i < ( u32 ) MapType::eLast; ++i)
+    {
+        destroy_image(device, maps[ i ]);
+    }
+}
+
+// ---------------------------------- UI ----------------------------=== //
+
+void begin_dockspace()
+{
+    static bool               dockspace_open            = true;
+    static bool               opt_fullscreen_persistent = true;
+    bool                      opt_fullscreen            = opt_fullscreen_persistent;
+    static ImGuiDockNodeFlags dockspace_flags           = ImGuiDockNodeFlags_None;
+
+    // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
+    // because it would be confusing to have two docking targets within each others.
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+    if (opt_fullscreen)
+    {
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(viewport->Pos);
+        ImGui::SetNextWindowSize(viewport->Size);
+        ImGui::SetNextWindowViewport(viewport->ID);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+                        ImGuiWindowFlags_NoMove;
+        window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+    }
+
+    // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background and handle the
+    // pass-thru hole, so we ask Begin() to not render a background.
+    if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
+        window_flags |= ImGuiWindowFlags_NoBackground;
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::Begin("DockSpace Demo", &dockspace_open, window_flags);
+    ImGui::PopStyleVar();
+
+    if (opt_fullscreen)
+        ImGui::PopStyleVar(2);
+
+    // DockSpace
+    ImGuiIO&    io          = ImGui::GetIO();
+    ImGuiStyle& style       = ImGui::GetStyle();
+    float       minWinSizeX = style.WindowMinSize.x;
+    style.WindowMinSize.x   = 100.0f;
+    if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
+    {
+        ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+    }
+
+    style.WindowMinSize.x = minWinSizeX;
+}
+
+void end_dockspace()
+{
+}
+
+void draw_ui(CommandBuffer& cmd)
+{
+    ui_begin_frame();
+
+    begin_dockspace();
+    {
+        ImGui::Begin("Performance");
+        ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
+        ImGui::End();
+
+        ImGui::Begin("Noise texture");
+        ImGui::Image(maps[ selected_map ].image_view, ImVec2(512, 512));
+        ImGui::End();
+
+        ImGui::Begin("Maps settings");
+        if (ImGui::TreeNode("Render map"))
+        {
+            ImGui::RadioButton("Noise map", &selected_map, 0);
+            ImGui::RadioButton("Terrain map", &selected_map, 1);
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("Noise settings"))
+        {
+            draw_noise_settings();
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("Terrain settings"))
+        {
+            draw_terrain_settings();
+            ImGui::TreePop();
+        }
+        ImGui::End();
+
+        ImGui::End();
+    }
+    end_dockspace();
+    ui_end_frame(cmd);
 }

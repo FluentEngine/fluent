@@ -2286,24 +2286,31 @@ void destroy_image(const Device& device, Image& image)
 
 Image load_image_from_dds_file(const Device& device, const char* filename, ResourceState resource_state, b32 flip)
 {
-    std::string filepath       = std::string(get_app_textures_directory()) + std::string(filename);
-    ImageDesc   image_desc     = read_image_desc_from_dds(filepath.c_str(), flip);
+    std::string filepath = std::string(get_app_textures_directory()) + std::string(filename);
+
+    void* data = nullptr;
+
+    ImageDesc image_desc       = read_dds_image(filepath.c_str(), flip, &data);
     image_desc.descriptor_type = DescriptorType::eSampledImage;
     image_desc.resource_state  = ResourceState(ResourceState::eTransferDst | resource_state);
+    image_desc.data            = data;
     Image image                = create_image(device, image_desc);
-    release_image_desc_dds(image_desc);
-
+    release_dds_image(data);
     return image;
 }
 
 Image load_image_from_file(const Device& device, const char* filename, ResourceState resource_state, b32 flip)
 {
-    std::string filepath       = std::string(get_app_textures_directory()) + std::string(filename);
-    ImageDesc   image_desc     = read_image_desc(filepath.c_str(), flip);
+    std::string filepath = std::string(get_app_textures_directory()) + std::string(filename);
+
+    void* data = nullptr;
+
+    ImageDesc image_desc       = read_image(filepath.c_str(), flip, &data);
     image_desc.descriptor_type = DescriptorType::eSampledImage;
     image_desc.resource_state  = ResourceState(ResourceState::eTransferDst | resource_state);
+    image_desc.data            = data;
     Image image                = create_image(device, image_desc);
-    release_image_desc(image_desc);
+    release_image(data);
 
     return image;
 }

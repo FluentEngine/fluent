@@ -1,5 +1,7 @@
 set(target sandbox)
 
+set(CMAKE_CXX_STANDARD 20)
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${target})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/${target})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/${target})
@@ -18,5 +20,5 @@ set(COMPILED_SHADERS
 
 compile_shaders(${SHADERS})
 
-add_executable(${target} main.cpp ${SHADERS} ${COMPILED_SHADERS})
+add_executable(${target} main.cpp noise.cpp map_generator.cpp ${SHADERS} ${COMPILED_SHADERS})
 target_link_libraries(${target} fluent-engine)

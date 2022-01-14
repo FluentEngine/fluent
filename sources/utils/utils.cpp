@@ -15,7 +15,7 @@ std::vector<u32> read_file_binary(const std::string& filename)
     return std::vector<u32>(reinterpret_cast<u32*>(res.data()), reinterpret_cast<u32*>(res.data() + res.size()));
 }
 
-ImageDesc read_image_desc_from_dds(const char* filename, b32 flip)
+ImageDesc read_dds_image(const char* filename, b32 flip, void** data)
 {
     using namespace tinyddsloader;
 
@@ -42,24 +42,26 @@ ImageDesc read_image_desc_from_dds(const char* filename, b32 flip)
     image_desc.mip_levels = dds.GetMipCount();
     image_desc.layer_count = dds.GetArraySize();
     image_desc.data_size   = image_data->m_memSlicePitch;
-    image_desc.data        = new u8[ image_data->m_memSlicePitch ];
-    std::memcpy(image_desc.data, image_data->m_mem, image_data->m_memSlicePitch);
+
+    *data = new u8[ image_data->m_memSlicePitch ];
+    std::memcpy((*data), image_data->m_mem, image_data->m_memSlicePitch);
 
     return image_desc;
 }
 
-void release_image_desc_dds(ImageDesc& desc)
+void release_dds_image(void* data)
 {
-    delete[](u8*) desc.data;
+    delete[](u8*) data;
 }
 
-ImageDesc read_image_desc(const char* filename, b32 flip)
+ImageDesc read_image(const char* filename, b32 flip, void** data)
 {
     ImageDesc image_desc{};
 
     stbi_set_flip_vertically_on_load(flip);
     int tex_width, tex_height, tex_channels;
-    image_desc.data      = stbi_load(filename, &tex_width, &tex_height, &tex_channels, STBI_rgb_alpha);
+    *data = stbi_load(filename, &tex_width, &tex_height, &tex_channels, STBI_rgb_alpha);
+
     image_desc.data_size = tex_width * tex_height * 4;
     stbi_set_flip_vertically_on_load(!flip);
 
@@ -73,9 +75,9 @@ ImageDesc read_image_desc(const char* filename, b32 flip)
     return image_desc;
 }
 
-void release_image_desc(ImageDesc& desc)
+void release_image(void* data)
 {
-    stbi_image_free(desc.data);
+    stbi_image_free(data);
 }
 
 } // namespace fluent

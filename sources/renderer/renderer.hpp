@@ -80,18 +80,18 @@ struct Sampler
 
 struct ImageDesc
 {
-    u32            width;
-    u32            height;
-    u32            depth;
-    Format         format;
-    SampleCount    sample_count;
-    u32            layer_count = 1;
-    u32            mip_levels  = 1;
-    ResourceState  resource_state;
-    DescriptorType descriptor_type;
-    const char*    filename;
-    u32            data_size;
-    void*          data;
+    u32                 width;
+    u32                 height;
+    u32                 depth;
+    Format              format;
+    SampleCount         sample_count;
+    u32                 layer_count = 1;
+    u32                 mip_levels  = 1;
+    ResourceState       resource_state;
+    DescriptorType      descriptor_type;
+    const char*         filename;
+    u32                 data_size;
+    mutable const void* data; // TODO:
 };
 
 struct ImageUpdateDesc
