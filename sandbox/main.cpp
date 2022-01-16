@@ -2,7 +2,6 @@
 #include <chrono>
 #include <thread>
 #include "fluent/fluent.hpp"
-#include "noise.hpp"
 #include "map_generator.hpp"
 #include "mesh_generator.hpp"
 #include "mesh.hpp"
@@ -42,15 +41,6 @@ struct
 
 Buffer camera_buffer;
 
-enum class MapType : u32
-{
-    eNoise   = 0,
-    eTerrain = 1,
-    eLast
-};
-
-static i32 selected_map = static_cast<i32>(MapType::eNoise);
-
 Sampler sampler;
 Image   maps[ 2 ];
 struct MapTextureUpdate
@@ -65,7 +55,7 @@ struct MeshUpdate
     Mesh*      mesh;
 };
 
-f32                 height_multiplier = 20.0f;
+f32                 height_multiplier = 40.0f;
 Mesh                mesh;
 DescriptorSetLayout mesh_dsl;
 Pipeline            mesh_pipeline;
@@ -74,11 +64,12 @@ DescriptorSet       scene_set;
 std::vector<MapTextureUpdate> map_texture_updates;
 std::vector<MeshUpdate>       mesh_updates;
 
-static constexpr u32 MAP_SIZE = 100;
 NoiseSettings        noise_settings;
 TerrainTypes         terrain_types;
 MapGenerator         map_generator;
 MeshGenerator        mesh_generator;
+u32                  lod         = 1;
+static constexpr f32 WATER_LEVEL = 0.289f;
 
 // helpers
 ImageBarrier create_image_barrier(
@@ -96,7 +87,7 @@ ImageBarrier create_image_barrier(
 
 void update_map_texture(CommandBuffer& cmd, const Map& map, Image& texture)
 {
-    std::vector<u8> data(map.width * map.height * map.bpp);
+    std::vector<u8> data(map.data.size());
 
     for (u32 i = 0; i < data.size(); ++i)
     {
@@ -113,16 +104,15 @@ void update_map_texture(CommandBuffer& cmd, const Map& map, Image& texture)
 
 Image create_texture_from_map(const Map& map)
 {
-    std::vector<u8> map_data(map.width * map.height * map.bpp);
+    std::vector<u8> map_data(MapGenerator::get_map_size() * MapGenerator::get_map_size() * MapGenerator::get_bpp());
     for (u32 i = 0; i < map_data.size(); ++i)
     {
         map_data[ i ] = map.data[ i ] * 255.0f;
     }
 
-    static constexpr u32 bpp = 4;
-    ImageDesc            desc{};
-    desc.width           = MAP_SIZE;
-    desc.height          = MAP_SIZE;
+    ImageDesc desc{};
+    desc.width           = MapGenerator::get_map_size();
+    desc.height          = MapGenerator::get_map_size();
     desc.depth           = 1;
     desc.sample_count    = SampleCount::e1;
     desc.mip_levels      = 1;
@@ -130,7 +120,7 @@ Image create_texture_from_map(const Map& map)
     desc.format          = Format::eR8G8B8A8Unorm;
     desc.descriptor_type = DescriptorType::eSampledImage;
     desc.resource_state  = ResourceState::eTransferDst | ResourceState::eShaderReadOnly;
-    desc.data_size       = map_data.size() * sizeof(map.data[ 0 ]);
+    desc.data_size       = map_data.size() * sizeof(map_data[ 0 ]);
     desc.data            = map_data.data();
 
     return create_image(device, desc);
@@ -146,7 +136,8 @@ void destroy_terrain_mesh();
 
 void create_terrain_mesh()
 {
-    auto mesh_data = mesh_generator.generate_mesh(map_generator.get_noise_map(), height_multiplier);
+    mesh_generator.set_min_height(WATER_LEVEL);
+    auto mesh_data = mesh_generator.generate_mesh(map_generator.get_noise_map(), height_multiplier, lod);
 
     MeshDesc mesh_desc{};
     mesh_desc.vertices_size = mesh_data.vertices.size() * 3;
@@ -208,7 +199,7 @@ void destroy_terrain_mesh()
 
 void update_terrain_mesh(Mesh& mesh, const Map& height_map)
 {
-    auto mesh_data = mesh_generator.generate_mesh(height_map, height_multiplier);
+    auto mesh_data = mesh_generator.generate_mesh(height_map, height_multiplier, lod);
 
     MeshDesc mesh_desc{};
     mesh_desc.vertices_size = mesh_data.vertices.size() * 3;
@@ -312,16 +303,13 @@ void destroy_descriptor_sets()
 
 void create_scene()
 {
-    terrain_types.push_back({ 0.081f, Vector3(0.214, 0.751, 0.925) }); // water
-    terrain_types.push_back({ 0.230f, Vector3(0.966, 0.965, 0.613) }); // sand
-    terrain_types.push_back({ 0.323f, Vector3(0.331, 1.0, 0.342) });   // ground
-    terrain_types.push_back({ 0.473f, Vector3(0.225, 0.225, 0.217) }); // mountains
-    terrain_types.push_back({ 0.806f, Vector3(1.0, 1.0, 1.0) });       // snow
+    terrain_types.push_back({ 0, Vector3(0.214, 0.751, 0.925) });           // water
+    terrain_types.push_back({ WATER_LEVEL, Vector3(0.966, 0.965, 0.613) }); // sand
+    terrain_types.push_back({ 0.323f, Vector3(0.331, 1.0, 0.342) });        // ground
+    terrain_types.push_back({ 0.473f, Vector3(0.225, 0.225, 0.217) });      // mountains
+    terrain_types.push_back({ 0.806f, Vector3(1.0, 1.0, 1.0) });            // snow
 
-    noise_settings.width  = MAP_SIZE;
-    noise_settings.height = MAP_SIZE;
-
-    map_generator.set_map_size(MAP_SIZE, MAP_SIZE);
+    map_generator.init();
     map_generator.update_noise_map(noise_settings);
     map_generator.update_terrain_map(terrain_types);
 
@@ -347,7 +335,6 @@ void destroy_scene()
 }
 
 // ui
-
 void begin_dockspace()
 {
     static bool               dockspace_open            = true;
@@ -468,7 +455,6 @@ void draw_terrain_settings()
 void draw_ui(CommandBuffer& cmd)
 {
     ui_begin_frame();
-
     begin_dockspace();
     {
         ImGui::Begin("Performance");
@@ -476,7 +462,13 @@ void draw_ui(CommandBuffer& cmd)
         ImGui::SetNextItemOpen(true);
         if (ImGui::TreeNode("Noise texture"))
         {
-            ImGui::Image(maps[ selected_map ].image_view, ImVec2(128, 128));
+            ImGui::Image(maps[ static_cast<u32>(MapType::eNoise) ].image_view, ImVec2(128, 128));
+            ImGui::TreePop();
+        }
+        ImGui::SetNextItemOpen(true);
+        if (ImGui::TreeNode("Terrain texture"))
+        {
+            ImGui::Image(maps[ static_cast<u32>(MapType::eTerrain) ].image_view, ImVec2(128, 128));
             ImGui::TreePop();
         }
         ImGui::End();
@@ -486,13 +478,6 @@ void draw_ui(CommandBuffer& cmd)
         ImGui::End();
 
         ImGui::Begin("Maps settings");
-        ImGui::SetNextItemOpen(true);
-        if (ImGui::TreeNode("Render map"))
-        {
-            ImGui::RadioButton("Noise map", &selected_map, 0);
-            ImGui::RadioButton("Terrain map", &selected_map, 1);
-            ImGui::TreePop();
-        }
         ImGui::SetNextItemOpen(true);
         if (ImGui::TreeNode("Noise settings"))
         {

@@ -1,34 +1,47 @@
 #include "mesh_generator.hpp"
 
-MeshData MeshGenerator::generate_mesh(const Map& map, f32 height_multiplier)
+void MeshGenerator::set_min_height(f32 value)
+{
+    m_min_height = value;
+}
+
+MeshData MeshGenerator::generate_mesh(const Map& map, f32 height_multiplier, u32 lod)
 {
     using namespace fluent;
 
-    u32 width  = map.width;
-    u32 height = map.height;
+    static constexpr u32 MAP_SIZE = MapGenerator::get_map_size();
+    static constexpr u32 BPP      = MapGenerator::get_bpp();
 
-    f32 top_left_x = (( f32 ) width - 1.0f) / -2.0f;
-    f32 top_left_z = (( f32 ) height - 1.0f) / 2.0f;
+    f32 top_left_x = (( f32 ) MAP_SIZE - 1.0f) / -2.0f;
+    f32 top_left_z = (( f32 ) MAP_SIZE - 1.0f) / 2.0f;
+
+    u32 mesh_simplification_increment = lod;
+    u32 vertices_per_line             = (MAP_SIZE - 1) / mesh_simplification_increment + 1;
 
     MeshData mesh_data;
-    mesh_data.create_mesh(width, height);
+    mesh_data.create_mesh(vertices_per_line, vertices_per_line);
 
     u32 vertex_index = 0;
 
-    for (u32 y = 0; y < height; ++y)
+    for (u32 y = 0; y < MAP_SIZE; y += mesh_simplification_increment)
     {
-        for (u32 x = 0; x < width; ++x)
+        for (u32 x = 0; x < MAP_SIZE; x += mesh_simplification_increment)
         {
-            f32 map_height = map.data[ x * map.bpp + y * map.bpp * width ];
+            f32 height = map.data[ x * BPP + y * BPP * MAP_SIZE ];
+            if (height < m_min_height)
+            {
+                height = m_min_height;
+            }
 
             mesh_data.vertices[ vertex_index ] =
-                Vector3(( f32 ) (top_left_x + x), map_height * height_multiplier, ( f32 ) (top_left_z - y));
-            mesh_data.uvs[ vertex_index ] = Vector2(( f32 ) x / ( f32 ) width, ( f32 ) y / ( f32 ) height);
+                Vector3(( f32 ) (top_left_x + x), height * height_multiplier, ( f32 ) (top_left_z - y));
+            mesh_data.uvs[ vertex_index ] = Vector2(( f32 ) x / ( f32 ) MAP_SIZE, ( f32 ) y / ( f32 ) MAP_SIZE);
 
-            if ((x < (width - 1)) && (y < (height - 1)))
+            if ((x < (MAP_SIZE - 1)) && (y < (MAP_SIZE - 1)))
             {
-                mesh_data.add_triangle(vertex_index, vertex_index + width + 1, vertex_index + width);
-                mesh_data.add_triangle(vertex_index, vertex_index + 1, vertex_index + width + 1);
+                mesh_data.add_triangle(
+                    vertex_index, vertex_index + vertices_per_line + 1, vertex_index + vertices_per_line);
+                mesh_data.add_triangle(vertex_index, vertex_index + 1, vertex_index + vertices_per_line + 1);
             }
 
             vertex_index++;

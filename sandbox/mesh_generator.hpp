@@ -2,7 +2,7 @@
 
 #include <vector>
 #include "fluent/fluent.hpp"
-#include "map.hpp"
+#include "map_generator.hpp"
 
 struct MeshData
 {
@@ -30,6 +30,10 @@ struct MeshData
 class MeshGenerator
 {
 private:
+    f32 m_min_height = 0.0f;
+
 public:
-    [[nodiscard]] MeshData generate_mesh(const Map& map, f32 height_multiplier);
+    void set_min_height(f32 min_value);
+
+    [[nodiscard]] MeshData generate_mesh(const Map& map, f32 height_multiplier, u32 lod);
 };

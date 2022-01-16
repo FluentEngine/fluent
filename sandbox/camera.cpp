@@ -7,7 +7,7 @@ void Camera::init_camera(fluent::Vector3 position, fluent::Vector3 direction, fl
     m_fov    = radians(45.0f);
     m_aspect = 1400.0f / 900.0f;
     m_near   = 0.1f;
-    m_far    = 1000.0f;
+    m_far    = 10000.0f;
     m_yaw    = -90.0f;
     m_pitch  = 0.0f;
 
