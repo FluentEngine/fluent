@@ -761,13 +761,13 @@ void on_init()
     }
 
     SwapchainDesc swapchain_desc{};
-    swapchain_desc.width         = window_get_width(get_app_window());
-    swapchain_desc.height        = window_get_height(get_app_window());
-    swapchain_desc.queue         = &queue;
-    swapchain_desc.image_count   = FRAME_COUNT;
-    swapchain_desc.builtin_depth = true;
+    swapchain_desc.width           = window_get_width(get_app_window());
+    swapchain_desc.height          = window_get_height(get_app_window());
+    swapchain_desc.queue           = &queue;
+    swapchain_desc.min_image_count = FRAME_COUNT;
+    swapchain_desc.builtin_depth   = true;
 
-    swapchain = create_swapchain(renderer, device, swapchain_desc);
+    swapchain = create_swapchain(device, swapchain_desc);
 
     create_dummy_resources();
 
@@ -788,12 +788,14 @@ void on_init()
     load_model();
 
     UiDesc ui_desc{};
-    ui_desc.window      = get_app_window();
-    ui_desc.renderer    = &renderer;
-    ui_desc.device      = &device;
-    ui_desc.queue       = &queue;
-    ui_desc.image_count = FRAME_COUNT;
-    ui_desc.render_pass = &swapchain.render_passes[ 0 ];
+    ui_desc.window             = get_app_window();
+    ui_desc.renderer           = &renderer;
+    ui_desc.device             = &device;
+    ui_desc.queue              = &queue;
+    ui_desc.min_image_count    = swapchain.min_image_count;
+    ui_desc.image_count        = swapchain.image_count;
+    ui_desc.in_fly_frame_count = FRAME_COUNT;
+    ui_desc.render_pass        = &swapchain.render_passes[ 0 ];
 
     ui_context = create_ui_context(ui_desc);
 }
@@ -801,16 +803,7 @@ void on_init()
 void on_resize(u32 width, u32 height)
 {
     queue_wait_idle(queue);
-    destroy_swapchain(device, swapchain);
-
-    SwapchainDesc swapchain_desc{};
-    swapchain_desc.width         = window_get_width(get_app_window());
-    swapchain_desc.height        = window_get_height(get_app_window());
-    swapchain_desc.queue         = &queue;
-    swapchain_desc.image_count   = FRAME_COUNT;
-    swapchain_desc.builtin_depth = true;
-
-    swapchain = create_swapchain(renderer, device, swapchain_desc);
+    resize_swapchain(device, swapchain, width, height);
 
     ubo.projection = create_perspective_matrix(radians(45.0f), window_get_aspect(get_app_window()), 0.1f, 100.f);
     ubo.view       = create_look_at_matrix(Vector3(0.0f, 0.0, 2.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));

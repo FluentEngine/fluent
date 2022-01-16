@@ -475,7 +475,7 @@ void draw_ui(CommandBuffer& cmd)
         ImGui::SetNextItemOpen(true);
         if (ImGui::TreeNode("Noise texture"))
         {
-            ImGui::Image(maps[ selected_map ].image_view, ImVec2(512, 512));
+            ImGui::Image(maps[ selected_map ].image_view, ImVec2(128, 128));
             ImGui::TreePop();
         }
         ImGui::End();
@@ -623,13 +623,13 @@ void init_graphics()
     }
 
     SwapchainDesc swapchain_desc{};
-    swapchain_desc.width         = window_get_width(get_app_window());
-    swapchain_desc.height        = window_get_height(get_app_window());
-    swapchain_desc.queue         = &queue;
-    swapchain_desc.image_count   = FRAME_COUNT;
-    swapchain_desc.builtin_depth = true;
+    swapchain_desc.width           = window_get_width(get_app_window());
+    swapchain_desc.height          = window_get_height(get_app_window());
+    swapchain_desc.queue           = &queue;
+    swapchain_desc.min_image_count = FRAME_COUNT;
+    swapchain_desc.builtin_depth   = true;
 
-    swapchain = create_swapchain(renderer, device, swapchain_desc);
+    swapchain = create_swapchain(device, swapchain_desc);
 }
 
 void shutdown_graphics()
@@ -650,13 +650,15 @@ void shutdown_graphics()
 void init_ui()
 {
     UiDesc ui_desc{};
-    ui_desc.window      = get_app_window();
-    ui_desc.renderer    = &renderer;
-    ui_desc.device      = &device;
-    ui_desc.queue       = &queue;
-    ui_desc.image_count = FRAME_COUNT;
-    ui_desc.render_pass = &swapchain.render_passes[ 0 ];
-    ui_desc.docking     = true;
+    ui_desc.window             = get_app_window();
+    ui_desc.renderer           = &renderer;
+    ui_desc.device             = &device;
+    ui_desc.queue              = &queue;
+    ui_desc.min_image_count    = swapchain.min_image_count;
+    ui_desc.image_count        = swapchain.image_count;
+    ui_desc.in_fly_frame_count = FRAME_COUNT;
+    ui_desc.render_pass        = &swapchain.render_passes[ 0 ];
+    ui_desc.docking            = true;
 
     ui_context = create_ui_context(ui_desc);
 
@@ -722,16 +724,7 @@ void on_init()
 void on_resize(u32 width, u32 height)
 {
     queue_wait_idle(queue);
-    destroy_swapchain(device, swapchain);
-
-    SwapchainDesc swapchain_desc{};
-    swapchain_desc.width       = window_get_width(get_app_window());
-    swapchain_desc.height      = window_get_height(get_app_window());
-    swapchain_desc.queue       = &queue;
-    swapchain_desc.image_count = FRAME_COUNT;
-
-    swapchain = create_swapchain(renderer, device, swapchain_desc);
-
+    resize_swapchain(device, swapchain, width, height);
     camera.on_resize(width, height);
 }
 

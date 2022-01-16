@@ -1072,9 +1072,9 @@ void reset_fences(const Device& device, u32 count, Fence* fences)
     vkResetFences(device.logical_device, count, vk_fences);
 }
 
-Swapchain create_swapchain(const Renderer& renderer, const Device& device, const SwapchainDesc& desc)
+void configure_swapchain(const Device& device, Swapchain& swapchain, const SwapchainDesc& desc)
 {
-    Swapchain swapchain{};
+    swapchain.queue = desc.queue;
 
     SDL_Vulkan_CreateSurface(( SDL_Window* ) get_app_window()->handle, device.instance, &swapchain.surface);
 
@@ -1112,8 +1112,8 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
     swapchain.height =
         std::clamp(desc.height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
 
-    swapchain.image_count =
-        std::clamp(desc.image_count, surface_capabilities.minImageCount, surface_capabilities.maxImageCount);
+    swapchain.min_image_count =
+        std::clamp(desc.min_image_count, surface_capabilities.minImageCount, surface_capabilities.maxImageCount);
 
     /// find best surface format
     u32 surface_format_count = 0;
@@ -1132,7 +1132,8 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
             surface_format = surface_formats[ i ];
     }
 
-    swapchain.format = from_vk_format(surface_format.format);
+    swapchain.format      = from_vk_format(surface_format.format);
+    swapchain.color_space = surface_format.colorSpace;
 
     /// fins swapchain pretransform
     VkSurfaceTransformFlagBitsKHR pre_transform;
@@ -1144,23 +1145,44 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
     {
         pre_transform = surface_capabilities.currentTransform;
     }
+    swapchain.pre_transform = pre_transform;
+}
 
+void create_configured_swapchain(const Device& device, Swapchain& swapchain, b32 resize, b32 builtin_depth)
+{
+    // destroy old resources if it is resize
+    if (resize)
+    {
+        if (builtin_depth)
+        {
+            destroy_image(device, swapchain.depth_image);
+        }
+
+        FT_ASSERT(swapchain.image_count);
+        for (u32 i = 0; i < swapchain.image_count; ++i)
+        {
+            FT_ASSERT(swapchain.images[ i ].image_view);
+            vkDestroyImageView(device.logical_device, swapchain.images[ i ].image_view, device.vulkan_allocator);
+        }
+    }
+
+    // create new
     VkSwapchainCreateInfoKHR swapchain_create_info{};
     swapchain_create_info.sType                 = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchain_create_info.pNext                 = nullptr;
     swapchain_create_info.flags                 = 0;
     swapchain_create_info.surface               = swapchain.surface;
-    swapchain_create_info.minImageCount         = swapchain.image_count;
-    swapchain_create_info.imageFormat           = surface_format.format;
-    swapchain_create_info.imageColorSpace       = surface_format.colorSpace;
+    swapchain_create_info.minImageCount         = swapchain.min_image_count;
+    swapchain_create_info.imageFormat           = to_vk_format(swapchain.format);
+    swapchain_create_info.imageColorSpace       = swapchain.color_space;
     swapchain_create_info.imageExtent.width     = swapchain.width;
     swapchain_create_info.imageExtent.height    = swapchain.height;
     swapchain_create_info.imageArrayLayers      = 1;
     swapchain_create_info.imageUsage            = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     swapchain_create_info.imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_create_info.queueFamilyIndexCount = 1;
-    swapchain_create_info.pQueueFamilyIndices   = &desc.queue->family_index;
-    swapchain_create_info.preTransform          = pre_transform;
+    swapchain_create_info.pQueueFamilyIndices   = &swapchain.queue->family_index;
+    swapchain_create_info.preTransform          = swapchain.pre_transform;
     // TODO: choose composite alpha according to caps
     swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     swapchain_create_info.presentMode    = swapchain.present_mode;
@@ -1173,13 +1195,17 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
     vkGetSwapchainImagesKHR(device.logical_device, swapchain.swapchain, &swapchain.image_count, nullptr);
     VkImage* swapchain_images = ( VkImage* ) alloca(swapchain.image_count * sizeof(VkImage));
     vkGetSwapchainImagesKHR(device.logical_device, swapchain.swapchain, &swapchain.image_count, swapchain_images);
+    if (!resize)
+    {
+        swapchain.images = new Image[ swapchain.image_count ];
+    }
 
     VkImageViewCreateInfo image_view_create_info{};
     image_view_create_info.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     image_view_create_info.pNext                           = nullptr;
     image_view_create_info.flags                           = 0;
     image_view_create_info.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
-    image_view_create_info.format                          = surface_format.format;
+    image_view_create_info.format                          = to_vk_format(swapchain.format);
     image_view_create_info.components.r                    = VK_COMPONENT_SWIZZLE_IDENTITY;
     image_view_create_info.components.g                    = VK_COMPONENT_SWIZZLE_IDENTITY;
     image_view_create_info.components.b                    = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -1190,7 +1216,6 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
     image_view_create_info.subresourceRange.baseArrayLayer = 0;
     image_view_create_info.subresourceRange.layerCount     = 1;
 
-    swapchain.images = new Image[ swapchain.image_count ];
     for (u32 i = 0; i < swapchain.image_count; ++i)
     {
         image_view_create_info.image = swapchain_images[ i ];
@@ -1203,13 +1228,15 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
         swapchain.images[ i ].sample_count    = SampleCount::e1;
         swapchain.images[ i ].mip_level_count = 1;
         swapchain.images[ i ].layer_count     = 1;
+        swapchain.images[ i ].descriptor_type = DescriptorType::eSampledImage;
+        swapchain.images[ i ].resource_state  = ResourceState::eTransferDst;
 
         VK_ASSERT(vkCreateImageView(
             device.logical_device, &image_view_create_info, device.vulkan_allocator,
             &swapchain.images[ i ].image_view));
     }
 
-    if (desc.builtin_depth)
+    if (builtin_depth)
     {
         ImageDesc image_desc{};
         image_desc.width          = swapchain.width;
@@ -1229,21 +1256,45 @@ Swapchain create_swapchain(const Renderer& renderer, const Device& device, const
     render_pass_desc.color_attachment_count         = 1;
     render_pass_desc.color_attachment_load_ops[ 0 ] = AttachmentLoadOp::eClear;
     render_pass_desc.color_image_states[ 0 ]        = ResourceState::eColorAttachment;
-    render_pass_desc.depth_stencil                  = desc.builtin_depth ? &swapchain.depth_image : nullptr;
+    render_pass_desc.depth_stencil                  = builtin_depth ? &swapchain.depth_image : nullptr;
     render_pass_desc.depth_stencil_load_op          = AttachmentLoadOp::eClear;
     render_pass_desc.depth_stencil_state            = ResourceState::eDepthStencilAttachment;
     render_pass_desc.width                          = swapchain.width;
     render_pass_desc.height                         = swapchain.height;
 
-    swapchain.render_passes = new RenderPass[ swapchain.image_count ];
-
-    for (u32 i = 0; i < swapchain.image_count; ++i)
+    if (!resize)
     {
-        render_pass_desc.color_attachments[ 0 ] = &swapchain.images[ i ];
-        swapchain.render_passes[ i ]            = create_render_pass(device, render_pass_desc);
-    }
+        swapchain.render_passes = new RenderPass[ swapchain.image_count ];
 
+        for (u32 i = 0; i < swapchain.image_count; ++i)
+        {
+            render_pass_desc.color_attachments[ 0 ] = &swapchain.images[ i ];
+            swapchain.render_passes[ i ]            = create_render_pass(device, render_pass_desc);
+        }
+    }
+    else
+    {
+        for (u32 i = 0; i < swapchain.image_count; ++i)
+        {
+            render_pass_desc.color_attachments[ 0 ] = &swapchain.images[ i ];
+            update_render_pass(device, swapchain.render_passes[ i ], render_pass_desc);
+        }
+    }
+}
+
+Swapchain create_swapchain(const Device& device, const SwapchainDesc& desc)
+{
+    Swapchain swapchain{};
+    configure_swapchain(device, swapchain, desc);
+    create_configured_swapchain(device, swapchain, false, desc.builtin_depth);
     return swapchain;
+}
+
+void resize_swapchain(const Device& device, Swapchain& swapchain, u32 width, u32 height)
+{
+    swapchain.width  = width;
+    swapchain.height = height;
+    create_configured_swapchain(device, swapchain, true, swapchain.depth_image.image != VK_NULL_HANDLE);
 }
 
 void destroy_swapchain(const Device& device, Swapchain& swapchain)
@@ -1485,6 +1536,9 @@ void update_render_pass(const Device& device, RenderPass& render_pass, const Ren
     FT_ASSERT(render_pass.render_pass);
     FT_ASSERT(render_pass.framebuffer);
     FT_ASSERT(desc.width > 0 && desc.height > 0);
+
+    render_pass.width  = desc.width;
+    render_pass.height = desc.height;
 
     vkDestroyFramebuffer(device.logical_device, render_pass.framebuffer, device.vulkan_allocator);
 
@@ -2522,10 +2576,10 @@ UiContext create_ui_context(const UiDesc& desc)
     init_info.QueueFamily     = desc.queue->family_index;
     init_info.Queue           = desc.queue->queue;
     init_info.PipelineCache   = VkPipelineCache{};
-    init_info.Allocator       = nullptr;
-    init_info.MinImageCount   = desc.image_count;
+    init_info.Allocator       = desc.device->vulkan_allocator;
+    init_info.MinImageCount   = desc.min_image_count;
     init_info.ImageCount      = desc.image_count;
-    init_info.InFlyFrameCount = desc.image_count;
+    init_info.InFlyFrameCount = desc.in_fly_frame_count;
     init_info.CheckVkResultFn = nullptr;
     init_info.MSAASamples     = VK_SAMPLE_COUNT_1_BIT;
 

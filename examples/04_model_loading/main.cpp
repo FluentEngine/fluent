@@ -83,13 +83,13 @@ void on_init()
     }
 
     SwapchainDesc swapchain_desc{};
-    swapchain_desc.width         = window_get_width(get_app_window());
-    swapchain_desc.height        = window_get_height(get_app_window());
-    swapchain_desc.queue         = &queue;
-    swapchain_desc.image_count   = FRAME_COUNT;
-    swapchain_desc.builtin_depth = true;
+    swapchain_desc.width           = window_get_width(get_app_window());
+    swapchain_desc.height          = window_get_height(get_app_window());
+    swapchain_desc.queue           = &queue;
+    swapchain_desc.min_image_count = FRAME_COUNT;
+    swapchain_desc.builtin_depth   = true;
 
-    swapchain = create_swapchain(renderer, device, swapchain_desc);
+    swapchain = create_swapchain(device, swapchain_desc);
 
     Shader shaders[ 2 ];
     shaders[ 0 ] = create_shader(device, "main.vert.glsl.spv", ShaderStage::eVertex);
@@ -187,16 +187,7 @@ void on_init()
 void on_resize(u32 width, u32 height)
 {
     queue_wait_idle(queue);
-    destroy_swapchain(device, swapchain);
-
-    SwapchainDesc swapchain_desc{};
-    swapchain_desc.width         = window_get_width(get_app_window());
-    swapchain_desc.height        = window_get_height(get_app_window());
-    swapchain_desc.queue         = &queue;
-    swapchain_desc.image_count   = FRAME_COUNT;
-    swapchain_desc.builtin_depth = true;
-
-    swapchain = create_swapchain(renderer, device, swapchain_desc);
+    resize_swapchain(device, swapchain, width, height);
 
     camera_ubo.projection = create_perspective_matrix(radians(45.0f), window_get_aspect(get_app_window()), 0.1f, 100.f);
     camera_ubo.view = create_look_at_matrix(Vector3(0.0f, 0.0, 2.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));

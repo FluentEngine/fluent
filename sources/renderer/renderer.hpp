@@ -52,7 +52,7 @@ struct SwapchainDesc
     Queue* queue;
     u32    width;
     u32    height;
-    u32    image_count;
+    u32    min_image_count;
     b32    builtin_depth;
 };
 
@@ -151,16 +151,20 @@ struct StagingBuffer
 
 struct Swapchain
 {
-    VkPresentModeKHR present_mode;
-    u32              image_count;
-    u32              width;
-    u32              height;
-    VkSurfaceKHR     surface;
-    VkSwapchainKHR   swapchain;
-    Format           format;
-    Image*           images;
-    Image            depth_image;
-    RenderPass*      render_passes;
+    VkPresentModeKHR              present_mode;
+    VkColorSpaceKHR               color_space;
+    VkSurfaceTransformFlagBitsKHR pre_transform;
+    u32                           min_image_count;
+    u32                           image_count;
+    u32                           width;
+    u32                           height;
+    VkSurfaceKHR                  surface;
+    VkSwapchainKHR                swapchain;
+    Format                        format;
+    Image*                        images;
+    Image                         depth_image;
+    RenderPass*                   render_passes;
+    Queue*                        queue;
 };
 
 struct CommandPoolDesc
@@ -395,7 +399,9 @@ struct UiDesc
     const Device*     device;
     const Queue*      queue;
     const RenderPass* render_pass;
+    u32               min_image_count;
     u32               image_count;
+    u32               in_fly_frame_count;
     b32               docking   = false;
     b32               viewports = false;
 };
@@ -424,8 +430,8 @@ void      destroy_fence(const Device& device, Fence& fence);
 void      wait_for_fences(const Device& device, u32 count, Fence* fences);
 void      reset_fences(const Device& device, u32 count, Fence* fences);
 
-Swapchain         create_swapchain(const Renderer& renderer, const Device& device, const SwapchainDesc& desc);
-void              resize_swapchain(const Renderer& renderer, const Device& device, Swapchain& swapchain);
+Swapchain         create_swapchain(const Device& device, const SwapchainDesc& desc);
+void              resize_swapchain(const Device& device, Swapchain& swapchain, u32 width, u32 height);
 void              destroy_swapchain(const Device& device, Swapchain& swapchain);
 const RenderPass* get_swapchain_render_pass(const Swapchain& swapchain, u32 image_index);
 
