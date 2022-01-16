@@ -281,6 +281,20 @@ VkSamplerAddressMode to_vk_sampler_address_mode(SamplerAddressMode mode)
     }
 }
 
+VkPolygonMode to_vk_polygon_mode(PolygonMode mode)
+{
+    switch (mode)
+    {
+    case PolygonMode::eFill:
+        return VK_POLYGON_MODE_FILL;
+    case PolygonMode::eLine:
+        return VK_POLYGON_MODE_LINE;
+    default:
+        FT_ASSERT(false);
+        return VkPolygonMode(-1);
+    }
+};
+
 static inline VkAccessFlags determine_access_flags(ResourceState resource_state)
 {
     VkAccessFlags access_flags = 0;
@@ -813,6 +827,9 @@ Device create_device(const Renderer& renderer, const DeviceDesc& desc)
                                                                 VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME };
 
     // TODO: check support
+    VkPhysicalDeviceFeatures used_features{};
+    used_features.fillModeNonSolid = true;
+
     VkPhysicalDeviceDescriptorIndexingFeatures descriptor_indexing_features{};
     descriptor_indexing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
     descriptor_indexing_features.descriptorBindingPartiallyBound = true;
@@ -832,7 +849,7 @@ Device create_device(const Renderer& renderer, const DeviceDesc& desc)
     device_create_info.ppEnabledLayerNames     = nullptr;
     device_create_info.enabledExtensionCount   = device_extension_count;
     device_create_info.ppEnabledExtensionNames = device_extensions;
-    device_create_info.pEnabledFeatures        = nullptr;
+    device_create_info.pEnabledFeatures        = &used_features;
 
     VK_ASSERT(
         vkCreateDevice(device.physical_device, &device_create_info, device.vulkan_allocator, &device.logical_device));
@@ -1348,6 +1365,39 @@ void acquire_next_image(
         &image_index);
 }
 
+void create_framebuffer(const Device& device, RenderPass& render_pass, const RenderPassDesc& desc)
+{
+    u32 attachment_count = desc.color_attachment_count;
+
+    VkImageView image_views[ MAX_ATTACHMENTS_COUNT + 1 ];
+    for (u32 i = 0; i < attachment_count; ++i)
+    {
+        image_views[ i ] = desc.color_attachments[ i ]->image_view;
+    }
+
+    if (desc.depth_stencil)
+    {
+        image_views[ attachment_count++ ] = desc.depth_stencil->image_view;
+    }
+
+    if (desc.width > 0 && desc.height > 0)
+    {
+        VkFramebufferCreateInfo framebuffer_create_info{};
+        framebuffer_create_info.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebuffer_create_info.pNext           = nullptr;
+        framebuffer_create_info.flags           = 0;
+        framebuffer_create_info.renderPass      = render_pass.render_pass;
+        framebuffer_create_info.attachmentCount = attachment_count;
+        framebuffer_create_info.pAttachments    = image_views;
+        framebuffer_create_info.width           = desc.width;
+        framebuffer_create_info.height          = desc.height;
+        framebuffer_create_info.layers          = 1;
+
+        VK_ASSERT(vkCreateFramebuffer(
+            device.logical_device, &framebuffer_create_info, device.vulkan_allocator, &render_pass.framebuffer));
+    }
+}
+
 RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc)
 {
     RenderPass render_pass{};
@@ -1425,35 +1475,20 @@ RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc)
     VK_ASSERT(vkCreateRenderPass(
         device.logical_device, &render_pass_create_info, device.vulkan_allocator, &render_pass.render_pass));
 
-    VkImageView image_views[ MAX_ATTACHMENTS_COUNT + 1 ];
-    for (u32 i = 0; i < desc.color_attachment_count; ++i)
-    {
-        image_views[ i ] = desc.color_attachments[ i ]->image_view;
-    }
-
-    if (desc.depth_stencil)
-    {
-        image_views[ desc.color_attachment_count ] = desc.depth_stencil->image_view;
-    }
-
-    if (desc.width > 0 && desc.height > 0)
-    {
-        VkFramebufferCreateInfo framebuffer_create_info{};
-        framebuffer_create_info.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebuffer_create_info.pNext           = nullptr;
-        framebuffer_create_info.flags           = 0;
-        framebuffer_create_info.renderPass      = render_pass.render_pass;
-        framebuffer_create_info.attachmentCount = attachments_count;
-        framebuffer_create_info.pAttachments    = image_views;
-        framebuffer_create_info.width           = desc.width;
-        framebuffer_create_info.height          = desc.height;
-        framebuffer_create_info.layers          = 1;
-
-        VK_ASSERT(vkCreateFramebuffer(
-            device.logical_device, &framebuffer_create_info, device.vulkan_allocator, &render_pass.framebuffer));
-    }
+    create_framebuffer(device, render_pass, desc);
 
     return render_pass;
+}
+
+void update_render_pass(const Device& device, RenderPass& render_pass, const RenderPassDesc& desc)
+{
+    FT_ASSERT(render_pass.render_pass);
+    FT_ASSERT(render_pass.framebuffer);
+    FT_ASSERT(desc.width > 0 && desc.height > 0);
+
+    vkDestroyFramebuffer(device.logical_device, render_pass.framebuffer, device.vulkan_allocator);
+
+    create_framebuffer(device, render_pass, desc);
 }
 
 void destroy_render_pass(const Device& device, RenderPass& render_pass)
@@ -1666,7 +1701,7 @@ Pipeline create_graphics_pipeline(const Device& device, const PipelineDesc& desc
 
     VkPipelineRasterizationStateCreateInfo rasterization_state_create_info{};
     rasterization_state_create_info.sType       = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterization_state_create_info.polygonMode = to_vk_polygon_mode(desc.rasterizer_desc.polygon_mode);
     rasterization_state_create_info.cullMode    = to_vk_cull_mode(desc.rasterizer_desc.cull_mode);
     rasterization_state_create_info.frontFace   = to_vk_front_face(desc.rasterizer_desc.front_face);
     rasterization_state_create_info.lineWidth   = 1.0f;

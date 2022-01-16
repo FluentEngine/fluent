@@ -456,15 +456,15 @@ void load_skybox()
     skybox_descriptor_set_layout = create_descriptor_set_layout(device, 2, shaders);
 
     PipelineDesc pipeline_desc{};
-    pipeline_desc.binding_desc_count          = 0;
-    pipeline_desc.attribute_desc_count        = 0;
-    pipeline_desc.depth_state_desc.depth_test = false;
-    pipeline_desc.depth_state_desc.depth_test = false;
-    pipeline_desc.depth_state_desc.compare_op = CompareOp::eLessOrEqual;
-    pipeline_desc.rasterizer_desc.cull_mode   = CullMode::eNone;
-    pipeline_desc.rasterizer_desc.front_face  = FrontFace::eCounterClockwise;
-    pipeline_desc.render_pass                 = &swapchain.render_passes[ 0 ];
-    pipeline_desc.descriptor_set_layout       = &skybox_descriptor_set_layout;
+    pipeline_desc.binding_desc_count           = 0;
+    pipeline_desc.attribute_desc_count         = 0;
+    pipeline_desc.depth_state_desc.depth_test  = true;
+    pipeline_desc.depth_state_desc.depth_write = true;
+    pipeline_desc.depth_state_desc.compare_op  = CompareOp::eLessOrEqual;
+    pipeline_desc.rasterizer_desc.cull_mode    = CullMode::eBack;
+    pipeline_desc.rasterizer_desc.front_face   = FrontFace::eCounterClockwise;
+    pipeline_desc.render_pass                  = &swapchain.render_passes[ 0 ];
+    pipeline_desc.descriptor_set_layout        = &skybox_descriptor_set_layout;
 
     skybox_pipeline = create_graphics_pipeline(device, pipeline_desc);
 

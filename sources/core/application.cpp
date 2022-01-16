@@ -97,8 +97,9 @@ void app_run()
 
     while (app_state.is_running)
     {
-        app_state.delta_time = (get_time() - last_tick);
+        app_state.delta_time = (get_time() - last_tick) / 60;
         last_tick            = get_time();
+        update_input_system(&app_state.input_system);
 
         while (SDL_PollEvent(&e) != 0)
         {
@@ -118,8 +119,11 @@ void app_run()
                 }
                 break;
             case SDL_KEYDOWN:
+                update_input_keyboard_state(&app_state.input_system, static_cast<KeyCode>(e.key.keysym.scancode), true);
                 break;
             case SDL_KEYUP:
+                update_input_keyboard_state(
+                    &app_state.input_system, static_cast<KeyCode>(e.key.keysym.scancode), false);
                 break;
             case SDL_MOUSEMOTION:
                 update_input_mouse_state(&app_state.input_system, e.motion.x, e.motion.y);
@@ -128,7 +132,6 @@ void app_run()
                 break;
             }
         }
-
         app_state.on_update(app_state.delta_time);
     }
 

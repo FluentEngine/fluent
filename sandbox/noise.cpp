@@ -1,7 +1,7 @@
 #include <random>
 #include "noise.hpp"
 
-NoiseMap generate_noise_map(const NoiseSettings& settings)
+Map generate_noise_map(const NoiseSettings& settings)
 {
     using namespace fluent;
 
@@ -59,17 +59,21 @@ NoiseMap generate_noise_map(const NoiseSettings& settings)
         }
     }
 
-    NoiseMap result(image_data.size());
+    Map result{};
+    result.width  = settings.width;
+    result.height = settings.height;
+    result.bpp    = 4;
+    result.data.resize(image_data.size());
 
     for (u32 y = 0; y < settings.height; ++y)
     {
         for (u32 x = 0; x < settings.width; ++x)
         {
-            u32 idx           = x * bpp + y * bpp * settings.width;
-            result[ idx ]     = inverse_lerp(min_noise_height, max_noise_height, image_data[ idx ]) * 255.0f;
-            result[ idx + 1 ] = result[ idx ];
-            result[ idx + 2 ] = result[ idx ];
-            result[ idx + 3 ] = 255;
+            u32 idx                = x * bpp + y * bpp * settings.width;
+            result.data[ idx ]     = inverse_lerp(min_noise_height, max_noise_height, image_data[ idx ]);
+            result.data[ idx + 1 ] = result.data[ idx ];
+            result.data[ idx + 2 ] = result.data[ idx ];
+            result.data[ idx + 3 ] = 1.0f;
         }
     }
 

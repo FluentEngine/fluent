@@ -24,22 +24,22 @@ struct Material
     i32 metal_roughness   = -1;
 };
 
-struct Mesh
-{
-    std::vector<f32> vertices;
-    std::vector<u32> indices;
-    Buffer           vertex_buffer;
-    Buffer           index_buffer;
-    Matrix4          transform;
-    Material         material;
-
-    void InitMesh(const Device& device);
-
-    Mesh(const Device& device, std::vector<f32> vertices, std::vector<u32> indices, Material material);
-};
-
 struct Model
 {
+    struct Mesh
+    {
+        std::vector<f32> vertices;
+        std::vector<u32> indices;
+        Buffer           vertex_buffer;
+        Buffer           index_buffer;
+        Matrix4          transform;
+        Material         material;
+
+        void InitMesh(const Device& device);
+
+        Mesh(const Device& device, std::vector<f32> vertices, std::vector<u32> indices, Material material);
+    };
+
     std::vector<Mesh>  meshes;
     std::vector<Image> textures;
 };
@@ -85,7 +85,7 @@ private:
 
     void process_node(Model& model, aiNode* node, const aiScene* scene);
 
-    Mesh process_mesh(aiMesh* mesh, const aiScene* scene);
+    Model::Mesh process_mesh(aiMesh* mesh, const aiScene* scene);
 
     std::vector<LoadedTexture> load_material_textures(aiMaterial* mat, aiTextureType type, std::string type_name);
 

@@ -3,44 +3,51 @@
 
 void MapGenerator::set_map_size(u32 width, u32 height)
 {
-    m_width  = width;
-    m_height = height;
+    m_noise_map.width  = width;
+    m_noise_map.height = height;
+    m_noise_map.bpp    = 4;
+
+    m_terrain_map.width  = width;
+    m_terrain_map.height = height;
+    m_terrain_map.bpp    = 4;
+
+    m_noise_map.data.resize(m_noise_map.width * m_noise_map.height * m_noise_map.bpp);
+    m_terrain_map.data.resize(m_terrain_map.width * m_terrain_map.height * m_terrain_map.bpp);
 }
 
 void MapGenerator::update_noise_map(const NoiseSettings& settings)
 {
-    FT_ASSERT(m_width != 0 && m_height != 0);
+    FT_ASSERT(m_noise_map.width != 0 && m_noise_map.height != 0 && m_noise_map.bpp != 0);
 
     m_noise_settings = settings;
 
     m_noise_map = generate_noise_map(settings);
-
-    // TODO: if bpp not 4?
-    m_terrain_map.resize(m_width * m_height * 4);
 }
 
 void MapGenerator::update_terrain_map(const TerrainTypes& types)
 {
-    FT_ASSERT(m_width != 0 && m_height != 0);
+    FT_ASSERT(m_terrain_map.width != 0 && m_terrain_map.height != 0 && m_terrain_map.bpp != 0);
 
     m_terrain_types = types;
     std::sort(m_terrain_types.begin(), m_terrain_types.end(), [](const auto& a, const auto& b) -> bool {
         return a.height > b.height;
     });
 
-    for (u32 i = 0; i < m_noise_map.size(); i += 4)
+    u32 terrain_type_count = m_terrain_types.size();
+
+    for (u32 i = 0; i < m_terrain_map.data.size(); i += 4)
     {
-        for (u32 j = 0; j < m_terrain_types.size(); ++j)
+        for (u32 j = 0; j < terrain_type_count; ++j)
         {
-            m_terrain_map[ i ]     = m_terrain_types[ 0 ].color.r * 255.0f;
-            m_terrain_map[ i + 1 ] = m_terrain_types[ 0 ].color.g * 255.0f;
-            m_terrain_map[ i + 2 ] = m_terrain_types[ 0 ].color.b * 255.0f;
-            m_terrain_map[ i + 3 ] = 255;
-            if (m_terrain_types[ j ].height <= m_noise_map[ i ])
+            m_terrain_map.data[ i ]     = m_terrain_types[ terrain_type_count - 1 ].color.r;
+            m_terrain_map.data[ i + 1 ] = m_terrain_types[ terrain_type_count - 1 ].color.g;
+            m_terrain_map.data[ i + 2 ] = m_terrain_types[ terrain_type_count - 1 ].color.b;
+            m_terrain_map.data[ i + 3 ] = 1.0f;
+            if (m_terrain_types[ j ].height <= m_noise_map.data[ i ])
             {
-                m_terrain_map[ i ]     = m_terrain_types[ j ].color.r * 255.0f;
-                m_terrain_map[ i + 1 ] = m_terrain_types[ j ].color.g * 255.0f;
-                m_terrain_map[ i + 2 ] = m_terrain_types[ j ].color.b * 255.0f;
+                m_terrain_map.data[ i ]     = m_terrain_types[ j ].color.r;
+                m_terrain_map.data[ i + 1 ] = m_terrain_types[ j ].color.g;
+                m_terrain_map.data[ i + 2 ] = m_terrain_types[ j ].color.b;
                 break;
             }
         }

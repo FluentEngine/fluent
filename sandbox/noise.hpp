@@ -2,9 +2,7 @@
 
 #include <vector>
 #include "fluent/fluent.hpp"
-
-using Map      = std::vector<u8>;
-using NoiseMap = Map;
+#include "map.hpp"
 
 struct NoiseSettings
 {
@@ -18,4 +16,4 @@ struct NoiseSettings
     fluent::Vector2 offset      = fluent::Vector2(0.0f, 0.0f);
 };
 
-NoiseMap generate_noise_map(const NoiseSettings& settings);
+Map generate_noise_map(const NoiseSettings& settings);

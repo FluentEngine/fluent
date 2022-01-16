@@ -9,16 +9,16 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/${target})
 project(${target} CXX)
 
 set(SHADERS
-#   ${CMAKE_CURRENT_SOURCE_DIR}/../shaders/${target}/main.vert.glsl
-#   ${CMAKE_CURRENT_SOURCE_DIR}/../shaders/${target}/main.frag.glsl
+    ${CMAKE_CURRENT_SOURCE_DIR}/data/shaders/main.vert.glsl
+    ${CMAKE_CURRENT_SOURCE_DIR}/data/shaders/main.frag.glsl
 )
 
 set(COMPILED_SHADERS
-#   ${CMAKE_CURRENT_SOURCE_DIR}/../shaders/${target}/main.vert.glsl.spv
-#   ${CMAKE_CURRENT_SOURCE_DIR}/../shaders/${target}/main.frag.glsl.spv
+    ${CMAKE_CURRENT_SOURCE_DIR}/data/shaders/main.vert.glsl.spv
+    ${CMAKE_CURRENT_SOURCE_DIR}/data/shaders/main.frag.glsl.spv
 )
 
 compile_shaders(${SHADERS})
 
-add_executable(${target} main.cpp noise.cpp map_generator.cpp ${SHADERS} ${COMPILED_SHADERS})
+add_executable(${target} main.cpp noise.cpp map_generator.cpp mesh_generator.cpp mesh.cpp camera.cpp ${SHADERS} ${COMPILED_SHADERS})
 target_link_libraries(${target} fluent-engine)

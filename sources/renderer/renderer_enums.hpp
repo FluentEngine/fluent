@@ -291,6 +291,12 @@ enum class FrontFace
     eCounterClockwise
 };
 
+enum class PolygonMode
+{
+    eFill,
+    eLine
+};
+
 enum class SamplerMipmapMode
 {
     eNearest,

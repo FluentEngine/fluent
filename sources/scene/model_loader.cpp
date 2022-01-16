@@ -4,7 +4,7 @@
 namespace fluent
 {
 
-void Mesh::InitMesh(const Device& device)
+void Model::Mesh::InitMesh(const Device& device)
 {
     BufferDesc bufferDesc{};
     bufferDesc.descriptor_type = DescriptorType::eVertexBuffer;
@@ -24,7 +24,7 @@ void Mesh::InitMesh(const Device& device)
     index_buffer = create_buffer(device, bufferDesc);
 }
 
-Mesh::Mesh(const Device& device, std::vector<float> vertices, std::vector<uint32_t> indices, Material material)
+Model::Mesh::Mesh(const Device& device, std::vector<float> vertices, std::vector<uint32_t> indices, Material material)
     : vertices(std::move(vertices)), indices(std::move(indices)), material(std::move(material))
 {
     InitMesh(device);
@@ -103,7 +103,7 @@ void ModelLoader::process_node(Model& model, aiNode* node, const aiScene* scene)
     }
 }
 
-Mesh ModelLoader::process_mesh(aiMesh* mesh, const aiScene* scene)
+Model::Mesh ModelLoader::process_mesh(aiMesh* mesh, const aiScene* scene)
 {
     // data to fill
     std::vector<f32>           vertices(mesh->mNumVertices * stride);
@@ -224,7 +224,7 @@ Mesh ModelLoader::process_mesh(aiMesh* mesh, const aiScene* scene)
     meshMaterial.metal_roughness = prevTexSize != textures.size() ? textures.size() - 1 : -1;
     prevTexSize                  = textures.size();
 
-    return Mesh(*device, vertices, indices, meshMaterial);
+    return Model::Mesh(*device, vertices, indices, meshMaterial);
 }
 
 std::vector<ModelLoader::LoadedTexture> ModelLoader::load_material_textures(

@@ -292,8 +292,9 @@ struct VertexAttributeDesc
 
 struct RasterizerStateDesc
 {
-    CullMode  cull_mode;
-    FrontFace front_face;
+    CullMode    cull_mode;
+    FrontFace   front_face;
+    PolygonMode polygon_mode = PolygonMode::eFill;
 };
 
 struct DepthStateDesc
@@ -424,6 +425,7 @@ void      wait_for_fences(const Device& device, u32 count, Fence* fences);
 void      reset_fences(const Device& device, u32 count, Fence* fences);
 
 Swapchain         create_swapchain(const Renderer& renderer, const Device& device, const SwapchainDesc& desc);
+void              resize_swapchain(const Renderer& renderer, const Device& device, Swapchain& swapchain);
 void              destroy_swapchain(const Device& device, Swapchain& swapchain);
 const RenderPass* get_swapchain_render_pass(const Swapchain& swapchain, u32 image_index);
 
@@ -441,6 +443,7 @@ void acquire_next_image(
     const Device& device, const Swapchain& swapchain, const Semaphore& semaphore, const Fence& fence, u32& image_index);
 
 RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc);
+void       update_render_pass(const Device& device, RenderPass& render_pass, const RenderPassDesc& desc);
 void       destroy_render_pass(const Device& device, RenderPass& render_pass);
 
 Shader create_shader(const Device& device, const char* filename, ShaderStage shader_stage);
