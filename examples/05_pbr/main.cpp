@@ -817,7 +817,7 @@ void on_resize(u32 width, u32 height)
     update_buffer(device, buffer_update);
 }
 
-void on_update(f64 delta_time)
+void on_update(f32 delta_time)
 {
     u32 image_index = 0;
 

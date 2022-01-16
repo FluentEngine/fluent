@@ -65,6 +65,7 @@ struct MeshUpdate
     Mesh*      mesh;
 };
 
+f32                 height_multiplier = 20.0f;
 Mesh                mesh;
 DescriptorSetLayout mesh_dsl;
 Pipeline            mesh_pipeline;
@@ -145,7 +146,7 @@ void destroy_terrain_mesh();
 
 void create_terrain_mesh()
 {
-    auto mesh_data = mesh_generator.generate_mesh(map_generator.get_noise_map());
+    auto mesh_data = mesh_generator.generate_mesh(map_generator.get_noise_map(), height_multiplier);
 
     MeshDesc mesh_desc{};
     mesh_desc.vertices_size = mesh_data.vertices.size() * 3;
@@ -207,7 +208,7 @@ void destroy_terrain_mesh()
 
 void update_terrain_mesh(Mesh& mesh, const Map& height_map)
 {
-    auto mesh_data = mesh_generator.generate_mesh(height_map);
+    auto mesh_data = mesh_generator.generate_mesh(height_map, height_multiplier);
 
     MeshDesc mesh_desc{};
     mesh_desc.vertices_size = mesh_data.vertices.size() * 3;
@@ -311,11 +312,11 @@ void destroy_descriptor_sets()
 
 void create_scene()
 {
-    terrain_types.push_back({ 0.15f, Vector3(0.214, 0.751, 0.925) }); // water
-    terrain_types.push_back({ 0.23f, Vector3(0.966, 0.965, 0.613) }); // sand
-    terrain_types.push_back({ 0.4f, Vector3(0.331, 1.0, 0.342) });    // ground
-    terrain_types.push_back({ 0.8f, Vector3(0.225, 0.225, 0.217) });  // mountains
-    terrain_types.push_back({ 0.9f, Vector3(1.0, 1.0, 1.0) });        // snow
+    terrain_types.push_back({ 0.081f, Vector3(0.214, 0.751, 0.925) }); // water
+    terrain_types.push_back({ 0.230f, Vector3(0.966, 0.965, 0.613) }); // sand
+    terrain_types.push_back({ 0.323f, Vector3(0.331, 1.0, 0.342) });   // ground
+    terrain_types.push_back({ 0.473f, Vector3(0.225, 0.225, 0.217) }); // mountains
+    terrain_types.push_back({ 0.806f, Vector3(1.0, 1.0, 1.0) });       // snow
 
     noise_settings.width  = MAP_SIZE;
     noise_settings.height = MAP_SIZE;
@@ -728,7 +729,7 @@ void on_resize(u32 width, u32 height)
     camera.on_resize(width, height);
 }
 
-void on_update(f64 delta_time)
+void on_update(f32 delta_time)
 {
     update_camera(delta_time);
 

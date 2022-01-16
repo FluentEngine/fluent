@@ -92,13 +92,18 @@ void app_run()
 
     SDL_Event e;
 
-    f32 last_tick        = get_time();
+    u32 last_frame       = 0.0f;
     app_state.delta_time = 0.0;
 
     while (app_state.is_running)
     {
-        app_state.delta_time = (get_time() - last_tick) / 60;
-        last_tick            = get_time();
+        while (!SDL_TICKS_PASSED(SDL_GetTicks(), last_frame + 16))
+            ;
+
+        u32 current_frame    = get_time();
+        app_state.delta_time = (current_frame - last_frame) / 1000.0f;
+        last_frame           = current_frame;
+
         update_input_system(&app_state.input_system);
 
         while (SDL_PollEvent(&e) != 0)
@@ -181,9 +186,9 @@ void app_set_ui_context(const UiContext& context)
     app_state.imgui_callback = ImGui_ImplSDL2_ProcessEvent;
 }
 
-f32 get_time()
+u32 get_time()
 {
-    return static_cast<f32>(SDL_GetTicks64());
+    return SDL_GetTicks();
 }
 
 f32 get_delta_time()

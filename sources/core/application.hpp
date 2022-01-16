@@ -10,7 +10,7 @@ struct InputSystem;
 struct UiContext;
 
 using InitCallback     = void (*)();
-using UpdateCallback   = void (*)(f64 deltaTime);
+using UpdateCallback   = void (*)(f32 deltaTime);
 using ShutdownCallback = void (*)();
 using ResizeCallback   = void (*)(u32 width, u32 height);
 
@@ -47,7 +47,7 @@ const std::string& get_app_shaders_directory();
 const std::string& get_app_textures_directory();
 const std::string& get_app_models_directory();
 
-f32 get_time();
+u32 get_time();
 f32 get_delta_time();
 
 } // namespace fluent

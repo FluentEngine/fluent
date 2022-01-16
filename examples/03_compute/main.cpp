@@ -152,7 +152,7 @@ void on_resize(u32 width, u32 height)
     resize_swapchain(device, swapchain, width, height);
 }
 
-void on_update(f64 delta_time)
+void on_update(f32 delta_time)
 {
     if (!command_buffers_recorded[ frame_index ])
     {

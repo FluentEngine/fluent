@@ -31,5 +31,5 @@ class MeshGenerator
 {
 private:
 public:
-    [[nodiscard]] MeshData generate_mesh(const Map& map);
+    [[nodiscard]] MeshData generate_mesh(const Map& map, f32 height_multiplier);
 };

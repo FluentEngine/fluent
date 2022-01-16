@@ -1,6 +1,6 @@
 #include "mesh_generator.hpp"
 
-MeshData MeshGenerator::generate_mesh(const Map& map)
+MeshData MeshGenerator::generate_mesh(const Map& map, f32 height_multiplier)
 {
     using namespace fluent;
 
@@ -22,7 +22,7 @@ MeshData MeshGenerator::generate_mesh(const Map& map)
             f32 map_height = map.data[ x * map.bpp + y * map.bpp * width ];
 
             mesh_data.vertices[ vertex_index ] =
-                Vector3(( f32 ) (top_left_x + x), map_height, ( f32 ) (top_left_z - y));
+                Vector3(( f32 ) (top_left_x + x), map_height * height_multiplier, ( f32 ) (top_left_z - y));
             mesh_data.uvs[ vertex_index ] = Vector2(( f32 ) x / ( f32 ) width, ( f32 ) y / ( f32 ) height);
 
             if ((x < (width - 1)) && (y < (height - 1)))
