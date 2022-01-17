@@ -808,18 +808,24 @@ Device create_device(const Renderer& renderer, const DeviceDesc& desc)
         ( VkQueueFamilyProperties* ) alloca(queue_family_count * sizeof(VkQueueFamilyProperties));
     vkGetPhysicalDeviceQueueFamilyProperties(device.physical_device, &queue_family_count, queue_families);
 
+    u32                     queue_create_info_count = 0;
     VkDeviceQueueCreateInfo queue_create_infos[ static_cast<int>(QueueType::eLast) ];
     f32                     queue_priority = 1.0f;
 
+    // TODO: Select queues
     for (u32 i = 0; i < queue_family_count; ++i)
     {
-        queue_create_infos[ i ]                  = {};
-        queue_create_infos[ i ].sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queue_create_infos[ i ].pNext            = nullptr;
-        queue_create_infos[ i ].flags            = 0;
-        queue_create_infos[ i ].queueCount       = 1;
-        queue_create_infos[ i ].pQueuePriorities = &queue_priority;
-        queue_create_infos[ i ].queueFamilyIndex = i;
+        queue_create_infos[ queue_create_info_count ]                  = {};
+        queue_create_infos[ queue_create_info_count ].sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queue_create_infos[ queue_create_info_count ].pNext            = nullptr;
+        queue_create_infos[ queue_create_info_count ].flags            = 0;
+        queue_create_infos[ queue_create_info_count ].queueCount       = 1;
+        queue_create_infos[ queue_create_info_count ].pQueuePriorities = &queue_priority;
+        queue_create_infos[ queue_create_info_count ].queueFamilyIndex = i;
+        queue_create_info_count++;
+
+        if (queue_create_info_count == static_cast<i32>(QueueType::eLast))
+            break;
     }
 
     static const u32 device_extension_count                      = 2;
@@ -843,7 +849,7 @@ Device create_device(const Renderer& renderer, const DeviceDesc& desc)
     device_create_info.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_create_info.pNext                   = &multiview_features;
     device_create_info.flags                   = 0;
-    device_create_info.queueCreateInfoCount    = queue_family_count;
+    device_create_info.queueCreateInfoCount    = queue_create_info_count;
     device_create_info.pQueueCreateInfos       = queue_create_infos;
     device_create_info.enabledLayerCount       = 0;
     device_create_info.ppEnabledLayerNames     = nullptr;
@@ -853,6 +859,8 @@ Device create_device(const Renderer& renderer, const DeviceDesc& desc)
 
     VK_ASSERT(
         vkCreateDevice(device.physical_device, &device_create_info, device.vulkan_allocator, &device.logical_device));
+
+    volkLoadDevice(device.logical_device);
 
     VmaAllocatorCreateInfo vma_allocator_create_info{};
     vma_allocator_create_info.instance             = device.instance;
