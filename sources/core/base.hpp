@@ -8,8 +8,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#ifndef __APPLE__
 #include <malloc.h>
-
+#else
+#include <stdlib.h>
+#endif
 using i8  = int8_t;
 using u8  = uint8_t;
 using i16 = int16_t;
