@@ -6,6 +6,7 @@
 #include "mesh_generator.hpp"
 #include "mesh.hpp"
 #include "camera.hpp"
+#include "endless_terrain.hpp"
 
 using namespace fluent;
 
@@ -70,6 +71,8 @@ MapGenerator         map_generator;
 MeshGenerator        mesh_generator;
 u32                  lod         = 1;
 static constexpr f32 WATER_LEVEL = 0.289f;
+
+EndlessTerrain endless_terrain;
 
 // helpers
 ImageBarrier create_image_barrier(
@@ -173,7 +176,7 @@ void create_terrain_mesh()
 
     pipeline_desc.rasterizer_desc.cull_mode    = CullMode::eBack;
     pipeline_desc.rasterizer_desc.front_face   = FrontFace::eCounterClockwise;
-    pipeline_desc.rasterizer_desc.polygon_mode = PolygonMode::eLine;
+    pipeline_desc.rasterizer_desc.polygon_mode = PolygonMode::eFill;
     pipeline_desc.depth_state_desc.depth_test  = true;
     pipeline_desc.depth_state_desc.depth_write = true;
     pipeline_desc.depth_state_desc.compare_op  = CompareOp::eLess;
@@ -186,8 +189,6 @@ void create_terrain_mesh()
     {
         destroy_shader(device, shaders[ i ]);
     }
-
-    pc.model = glm::scale(Matrix4(1.0f), Vector3(10.0f, 10.0f, 10.0f));
 }
 
 void destroy_terrain_mesh()
@@ -320,10 +321,14 @@ void create_scene()
     create_camera();
     create_map_sampler();
     create_descriptor_sets();
+
+    endless_terrain.create(device);
+    endless_terrain.set_test_mesh(&mesh);
 }
 
 void destroy_scene()
 {
+    endless_terrain.destroy();
     destroy_descriptor_sets();
     destroy_map_sampler();
     destroy_camera();
@@ -717,6 +722,7 @@ void on_resize(u32 width, u32 height)
 void on_update(f32 delta_time)
 {
     update_camera(delta_time);
+    endless_terrain.update(camera.get_position());
 
     u32 image_index = 0;
     begin_frame(image_index);
@@ -742,11 +748,16 @@ void on_update(f32 delta_time)
         cmd_set_viewport(cmd, 0, 0, swapchain.width, swapchain.height, 0, 1.0f);
         cmd_set_scissor(cmd, 0, 0, swapchain.width, swapchain.height);
         cmd_bind_pipeline(cmd, mesh_pipeline);
-        cmd_push_constants(cmd, mesh_pipeline, 0, sizeof(pc), &pc);
         cmd_bind_descriptor_set(cmd, scene_set, mesh_pipeline);
-        cmd_bind_vertex_buffer(cmd, mesh.get_vertex_buffer());
-        cmd_bind_index_buffer_u32(cmd, mesh.get_index_buffer());
-        cmd_draw_indexed(cmd, mesh.get_index_count(), 1, 0, 0, 0);
+
+        for (auto& [ pos, chunk ] : endless_terrain.get_chunks())
+        {
+            pc.model = chunk.get_transform();
+            cmd_push_constants(cmd, mesh_pipeline, 0, sizeof(pc), &pc);
+            cmd_bind_vertex_buffer(cmd, chunk.get_mesh().get_vertex_buffer());
+            cmd_bind_index_buffer_u32(cmd, chunk.get_mesh().get_index_buffer());
+            cmd_draw_indexed(cmd, chunk.get_mesh().get_index_count(), 1, 0, 0, 0);
+        }
         end_editor_render_pass(cmd);
 
         ImageBarrier to_color_attachment = create_image_barrier(

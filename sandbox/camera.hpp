@@ -51,6 +51,11 @@ public:
     {
         return m_data;
     }
+
+    const fluent::Vector3& get_position() const
+    {
+        return m_position;
+    }
 };
 
 class CameraController

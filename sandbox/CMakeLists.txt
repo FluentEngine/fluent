@@ -20,5 +20,5 @@ set(COMPILED_SHADERS
 
 compile_shaders(${SHADERS})
 
-add_executable(${target} main.cpp map_generator.cpp mesh_generator.cpp mesh.cpp camera.cpp ${SHADERS} ${COMPILED_SHADERS})
+add_executable(${target} main.cpp map_generator.cpp mesh_generator.cpp mesh.cpp camera.cpp endless_terrain.cpp ${SHADERS} ${COMPILED_SHADERS})
 target_link_libraries(${target} fluent-engine)
