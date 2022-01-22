@@ -30,10 +30,8 @@ struct MeshData
 class MeshGenerator
 {
 private:
-    f32 m_min_height = 0.0f;
+    static constexpr f32 WATER_LEVEL = 0.289;
 
 public:
-    void set_min_height(f32 min_value);
-
-    [[nodiscard]] MeshData generate_mesh(const Map& map, f32 height_multiplier, u32 lod);
+    [[nodiscard]] static MeshData generate_mesh(const Map& map, f32 height_multiplier, u32 lod);
 };

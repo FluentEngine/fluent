@@ -1,16 +1,10 @@
 #include "mesh_generator.hpp"
 
-void MeshGenerator::set_min_height(f32 value)
-{
-    m_min_height = value;
-}
-
 MeshData MeshGenerator::generate_mesh(const Map& map, f32 height_multiplier, u32 lod)
 {
     using namespace fluent;
 
     static constexpr u32 MAP_SIZE = MapGenerator::get_map_size();
-    static constexpr u32 BPP      = MapGenerator::get_bpp();
 
     f32 top_left_x = (( f32 ) MAP_SIZE - 1.0f) / -2.0f;
     f32 top_left_z = (( f32 ) MAP_SIZE - 1.0f) / 2.0f;
@@ -27,11 +21,7 @@ MeshData MeshGenerator::generate_mesh(const Map& map, f32 height_multiplier, u32
     {
         for (u32 x = 0; x < MAP_SIZE; x += mesh_simplification_increment)
         {
-            f32 height = map.data[ x * BPP + y * BPP * MAP_SIZE ];
-            if (height < m_min_height)
-            {
-                height = m_min_height;
-            }
+            f32 height = map.data[ x + y * MAP_SIZE ];
 
             mesh_data.vertices[ vertex_index ] =
                 Vector3(( f32 ) (top_left_x + x), height * height_multiplier, ( f32 ) (top_left_z - y));

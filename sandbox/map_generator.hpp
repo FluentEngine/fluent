@@ -3,19 +3,11 @@
 #include <vector>
 #include "fluent/fluent.hpp"
 
+struct MeshData;
+
 struct Map
 {
     std::vector<f32> data;
-};
-
-struct NoiseSettings
-{
-    f32             scale       = 100.0f;
-    i32             octaves     = 4;
-    f32             persistance = 0.5f;
-    f32             lacunarity  = 2.0f;
-    i32             seed        = 0.0f;
-    fluent::Vector2 offset      = fluent::Vector2(0.0f, 0.0f);
 };
 
 struct TerrainType
@@ -36,35 +28,24 @@ enum class MapType : u32
 class MapGenerator
 {
 private:
-    static constexpr u32 MAP_SIZE = 241;
-    static constexpr u32 BPP      = 4;
-    NoiseSettings        m_noise_settings;
-    Map                  m_noise_map;
-    Map                  m_terrain_map;
-    TerrainTypes         m_terrain_types;
+    static constexpr u32 MAP_SIZE = 31;
+
+    static struct NoiseSettings
+    {
+        f32 scale       = 200.0f;
+        i32 octaves     = 4;
+        f32 persistance = 0.5f;
+        f32 lacunarity  = 2.0f;
+        i32 seed        = 0;
+    } noise_settings;
 
 public:
-    void init();
-    void update_noise_map(const NoiseSettings& settings);
-    void update_terrain_map(const TerrainTypes& types);
-
-    const Map& get_noise_map() const
-    {
-        return m_noise_map;
-    }
-
-    const Map& get_terrain_map() const
-    {
-        return m_terrain_map;
-    }
+    static void init();
+    static void shutdown();
+    static Map  generate_noise_map(fluent::Vector2 const& offset);
 
     static constexpr u32 get_map_size()
     {
         return MAP_SIZE;
-    }
-
-    static constexpr u32 get_bpp()
-    {
-        return BPP;
     }
 };

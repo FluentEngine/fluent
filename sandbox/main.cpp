@@ -43,34 +43,11 @@ struct
 Buffer camera_buffer;
 
 Sampler sampler;
-Image   maps[ 2 ];
-struct MapTextureUpdate
-{
-    const Map* map;
-    Image*     texture;
-};
-
-struct MeshUpdate
-{
-    const Map* map;
-    Mesh*      mesh;
-};
 
 f32                 height_multiplier = 40.0f;
-Mesh                mesh;
 DescriptorSetLayout mesh_dsl;
 Pipeline            mesh_pipeline;
 DescriptorSet       scene_set;
-
-std::vector<MapTextureUpdate> map_texture_updates;
-std::vector<MeshUpdate>       mesh_updates;
-
-NoiseSettings        noise_settings;
-TerrainTypes         terrain_types;
-MapGenerator         map_generator;
-MeshGenerator        mesh_generator;
-u32                  lod         = 1;
-static constexpr f32 WATER_LEVEL = 0.289f;
 
 EndlessTerrain endless_terrain;
 
@@ -88,70 +65,13 @@ ImageBarrier create_image_barrier(
     return barrier;
 }
 
-void update_map_texture(CommandBuffer& cmd, const Map& map, Image& texture)
-{
-    std::vector<u8> data(map.data.size());
-
-    for (u32 i = 0; i < data.size(); ++i)
-    {
-        data[ i ] = map.data[ i ] * 255.0f;
-    }
-
-    ImageUpdateDesc desc{};
-    desc.data           = data.data();
-    desc.size           = data.size() * sizeof(data[ 0 ]);
-    desc.image          = &texture;
-    desc.resource_state = ResourceState::eShaderReadOnly;
-    update_image(device, desc);
-}
-
-Image create_texture_from_map(const Map& map)
-{
-    std::vector<u8> map_data(MapGenerator::get_map_size() * MapGenerator::get_map_size() * MapGenerator::get_bpp());
-    for (u32 i = 0; i < map_data.size(); ++i)
-    {
-        map_data[ i ] = map.data[ i ] * 255.0f;
-    }
-
-    ImageDesc desc{};
-    desc.width           = MapGenerator::get_map_size();
-    desc.height          = MapGenerator::get_map_size();
-    desc.depth           = 1;
-    desc.sample_count    = SampleCount::e1;
-    desc.mip_levels      = 1;
-    desc.layer_count     = 1;
-    desc.format          = Format::eR8G8B8A8Unorm;
-    desc.descriptor_type = DescriptorType::eSampledImage;
-    desc.resource_state  = ResourceState::eTransferDst | ResourceState::eShaderReadOnly;
-    desc.data_size       = map_data.size() * sizeof(map_data[ 0 ]);
-    desc.data            = map_data.data();
-
-    return create_image(device, desc);
-}
-
 // scene functions
 void create_scene();
 void destroy_scene();
 void update_camera(f32 delta_time);
-void create_terrain_mesh();
-void update_terrain_mesh(Mesh& mesh, const Map& height_map);
-void destroy_terrain_mesh();
 
-void create_terrain_mesh()
+void create_mesh_pipeline()
 {
-    mesh_generator.set_min_height(WATER_LEVEL);
-    auto mesh_data = mesh_generator.generate_mesh(map_generator.get_noise_map(), height_multiplier, lod);
-
-    MeshDesc mesh_desc{};
-    mesh_desc.vertices_size = mesh_data.vertices.size() * 3;
-    mesh_desc.vertices      = ( f32* ) mesh_data.vertices.data();
-    mesh_desc.uvs_size      = mesh_data.uvs.size() * 2;
-    mesh_desc.uvs           = ( f32* ) mesh_data.uvs.data();
-    mesh_desc.indices_size  = mesh_data.indices.size();
-    mesh_desc.indices       = ( u32* ) mesh_data.indices.data();
-
-    mesh.create(device, mesh_desc);
-
     Shader shaders[ 2 ] = {};
     shaders[ 0 ]        = create_shader(device, "main.vert.glsl.spv", ShaderStage::eVertex);
     shaders[ 1 ]        = create_shader(device, "main.frag.glsl.spv", ShaderStage::eFragment);
@@ -176,7 +96,7 @@ void create_terrain_mesh()
 
     pipeline_desc.rasterizer_desc.cull_mode    = CullMode::eBack;
     pipeline_desc.rasterizer_desc.front_face   = FrontFace::eCounterClockwise;
-    pipeline_desc.rasterizer_desc.polygon_mode = PolygonMode::eFill;
+    pipeline_desc.rasterizer_desc.polygon_mode = PolygonMode::eLine;
     pipeline_desc.depth_state_desc.depth_test  = true;
     pipeline_desc.depth_state_desc.depth_write = true;
     pipeline_desc.depth_state_desc.compare_op  = CompareOp::eLess;
@@ -191,27 +111,10 @@ void create_terrain_mesh()
     }
 }
 
-void destroy_terrain_mesh()
+void destroy_mesh_pipeline()
 {
     destroy_pipeline(device, mesh_pipeline);
     destroy_descriptor_set_layout(device, mesh_dsl);
-    mesh.destroy(device);
-}
-
-void update_terrain_mesh(Mesh& mesh, const Map& height_map)
-{
-    auto mesh_data = mesh_generator.generate_mesh(height_map, height_multiplier, lod);
-
-    MeshDesc mesh_desc{};
-    mesh_desc.vertices_size = mesh_data.vertices.size() * 3;
-    mesh_desc.vertices      = ( f32* ) mesh_data.vertices.data();
-    mesh_desc.uvs_size      = mesh_data.uvs.size() * 2;
-    mesh_desc.uvs           = ( f32* ) mesh_data.uvs.data();
-    mesh_desc.indices_size  = mesh_data.indices.size();
-    mesh_desc.indices       = ( u32* ) mesh_data.indices.data();
-
-    mesh.destroy(device);
-    mesh.create(device, mesh_desc);
 }
 
 void create_camera()
@@ -275,12 +178,10 @@ void create_descriptor_sets()
     buffer_desc.offset = 0;
     buffer_desc.range  = sizeof(CameraData);
 
-    DescriptorImageDesc image_descs[ 2 ] = {};
+    DescriptorImageDesc image_descs[ 1 ] = {};
     image_descs[ 0 ].sampler             = &sampler;
-    image_descs[ 1 ].image               = &maps[ static_cast<u32>(MapType::eTerrain) ];
-    image_descs[ 1 ].resource_state      = ResourceState::eShaderReadOnly;
 
-    DescriptorWriteDesc descriptor_write_descs[ 3 ]     = {};
+    DescriptorWriteDesc descriptor_write_descs[ 2 ]     = {};
     descriptor_write_descs[ 0 ].binding                 = 0;
     descriptor_write_descs[ 0 ].descriptor_type         = DescriptorType::eUniformBuffer;
     descriptor_write_descs[ 0 ].descriptor_count        = 1;
@@ -289,12 +190,8 @@ void create_descriptor_sets()
     descriptor_write_descs[ 1 ].descriptor_type         = DescriptorType::eSampler;
     descriptor_write_descs[ 1 ].descriptor_count        = 1;
     descriptor_write_descs[ 1 ].descriptor_image_descs  = &image_descs[ 0 ];
-    descriptor_write_descs[ 2 ].binding                 = 2;
-    descriptor_write_descs[ 2 ].descriptor_type         = DescriptorType::eSampledImage;
-    descriptor_write_descs[ 2 ].descriptor_count        = 1;
-    descriptor_write_descs[ 2 ].descriptor_image_descs  = &image_descs[ 1 ];
 
-    update_descriptor_set(device, scene_set, 3, descriptor_write_descs);
+    update_descriptor_set(device, scene_set, 2, descriptor_write_descs);
 }
 
 void destroy_descriptor_sets()
@@ -304,26 +201,12 @@ void destroy_descriptor_sets()
 
 void create_scene()
 {
-    terrain_types.push_back({ 0, Vector3(0.214, 0.751, 0.925) });           // water
-    terrain_types.push_back({ WATER_LEVEL, Vector3(0.966, 0.965, 0.613) }); // sand
-    terrain_types.push_back({ 0.323f, Vector3(0.331, 1.0, 0.342) });        // ground
-    terrain_types.push_back({ 0.473f, Vector3(0.225, 0.225, 0.217) });      // mountains
-    terrain_types.push_back({ 0.806f, Vector3(1.0, 1.0, 1.0) });            // snow
-
-    map_generator.init();
-    map_generator.update_noise_map(noise_settings);
-    map_generator.update_terrain_map(terrain_types);
-
-    maps[ ( u32 ) MapType::eNoise ]   = create_texture_from_map(map_generator.get_noise_map());
-    maps[ ( u32 ) MapType::eTerrain ] = create_texture_from_map(map_generator.get_terrain_map());
-
-    create_terrain_mesh();
+    create_mesh_pipeline();
     create_camera();
     create_map_sampler();
     create_descriptor_sets();
 
     endless_terrain.create(device);
-    endless_terrain.set_test_mesh(&mesh);
 }
 
 void destroy_scene()
@@ -332,11 +215,7 @@ void destroy_scene()
     destroy_descriptor_sets();
     destroy_map_sampler();
     destroy_camera();
-    destroy_terrain_mesh();
-    for (u32 i = 0; i < ( u32 ) MapType::eLast; ++i)
-    {
-        destroy_image(device, maps[ i ]);
-    }
+    destroy_mesh_pipeline();
 }
 
 // ui
@@ -394,69 +273,6 @@ void end_dockspace()
     ImGui::End();
 }
 
-void draw_noise_settings()
-{
-    b32 need_update = false;
-
-    if (ImGui::SliderFloat("Scale", &noise_settings.scale, 0.001, 100.0f, nullptr, 0))
-    {
-        need_update = true;
-    }
-
-    if (ImGui::SliderInt("Octaves", &noise_settings.octaves, 0, 32, nullptr, 0))
-    {
-        need_update = true;
-    }
-
-    if (ImGui::SliderFloat("Persistance", &noise_settings.persistance, 0.0f, 15.0f, nullptr, 0))
-    {
-        need_update = true;
-    }
-
-    if (ImGui::SliderFloat("Lacunarity", &noise_settings.lacunarity, 0.0f, 15.0f, nullptr, 0))
-    {
-        need_update = true;
-    }
-
-    if (ImGui::DragInt("Seed", &noise_settings.seed))
-    {
-        need_update = true;
-    }
-
-    if (ImGui::SliderFloat2("Offset", &noise_settings.offset.x, -20.0f, 20.0f, nullptr, 0))
-    {
-        need_update = true;
-    }
-
-    if (need_update)
-    {
-        map_generator.update_noise_map(noise_settings);
-        map_generator.update_terrain_map(terrain_types);
-        map_texture_updates.push_back(
-            MapTextureUpdate{ &map_generator.get_noise_map(), &maps[ ( u32 ) MapType::eNoise ] });
-        map_texture_updates.push_back({ &map_generator.get_terrain_map(), &maps[ ( u32 ) MapType::eTerrain ] });
-        mesh_updates.push_back({ &map_generator.get_noise_map(), &mesh });
-    }
-}
-
-void draw_terrain_settings()
-{
-    for (u32 i = 0; i < terrain_types.size(); ++i)
-    {
-        std::string label        = "Terrain type " + std::to_string(i);
-        std::string height_label = "##Height" + std::to_string(i);
-        ImGui::ColorEdit3(label.c_str(), &terrain_types[ i ].color.r, ImGuiColorEditFlags_NoInputs);
-        ImGui::SliderFloat(height_label.c_str(), &terrain_types[ i ].height, 0, 1.0f, nullptr, 0);
-    }
-
-    if (ImGui::Button("Apply settings"))
-    {
-        map_generator.update_terrain_map(terrain_types);
-        map_texture_updates.push_back(
-            MapTextureUpdate{ &map_generator.get_terrain_map(), &maps[ ( u32 ) MapType::eTerrain ] });
-    }
-}
-
 void draw_ui(CommandBuffer& cmd)
 {
     ui_begin_frame();
@@ -464,37 +280,10 @@ void draw_ui(CommandBuffer& cmd)
     {
         ImGui::Begin("Performance");
         ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
-        ImGui::SetNextItemOpen(true);
-        if (ImGui::TreeNode("Noise texture"))
-        {
-            ImGui::Image(maps[ static_cast<u32>(MapType::eNoise) ].image_view, ImVec2(128, 128));
-            ImGui::TreePop();
-        }
-        ImGui::SetNextItemOpen(true);
-        if (ImGui::TreeNode("Terrain texture"))
-        {
-            ImGui::Image(maps[ static_cast<u32>(MapType::eTerrain) ].image_view, ImVec2(128, 128));
-            ImGui::TreePop();
-        }
         ImGui::End();
 
         ImGui::Begin("Scene");
         ImGui::Image(editor_image.image_view, ImVec2(editor_image.width, editor_image.height));
-        ImGui::End();
-
-        ImGui::Begin("Maps settings");
-        ImGui::SetNextItemOpen(true);
-        if (ImGui::TreeNode("Noise settings"))
-        {
-            draw_noise_settings();
-            ImGui::TreePop();
-        }
-        ImGui::SetNextItemOpen(true);
-        if (ImGui::TreeNode("Terrain settings"))
-        {
-            draw_terrain_settings();
-            ImGui::TreePop();
-        }
         ImGui::End();
     }
     end_dockspace();
@@ -731,18 +520,6 @@ void on_update(f32 delta_time)
 
     begin_command_buffer(cmd);
     {
-        for (auto& update : map_texture_updates)
-        {
-            update_map_texture(cmd, *update.map, *update.texture);
-        }
-
-        for (auto& update : mesh_updates)
-        {
-            update_terrain_mesh(*update.mesh, *update.map);
-        }
-        map_texture_updates.clear();
-        mesh_updates.clear();
-
         begin_editor_render_pass(cmd);
 
         cmd_set_viewport(cmd, 0, 0, swapchain.width, swapchain.height, 0, 1.0f);
@@ -752,11 +529,14 @@ void on_update(f32 delta_time)
 
         for (auto& [ pos, chunk ] : endless_terrain.get_chunks())
         {
-            pc.model = chunk.get_transform();
-            cmd_push_constants(cmd, mesh_pipeline, 0, sizeof(pc), &pc);
-            cmd_bind_vertex_buffer(cmd, chunk.get_mesh().get_vertex_buffer());
-            cmd_bind_index_buffer_u32(cmd, chunk.get_mesh().get_index_buffer());
-            cmd_draw_indexed(cmd, chunk.get_mesh().get_index_count(), 1, 0, 0, 0);
+            if (chunk.is_visible())
+            {
+                pc.model = chunk.get_transform();
+                cmd_push_constants(cmd, mesh_pipeline, 0, sizeof(pc), &pc);
+                cmd_bind_vertex_buffer(cmd, chunk.get_mesh().get_vertex_buffer());
+                cmd_bind_index_buffer_u32(cmd, chunk.get_mesh().get_index_buffer());
+                cmd_draw_indexed(cmd, chunk.get_mesh().get_index_count(), 1, 0, 0, 0);
+            }
         }
         end_editor_render_pass(cmd);
 
