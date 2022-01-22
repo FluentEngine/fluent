@@ -97,7 +97,6 @@ void on_init()
     BufferDesc buffer_desc{};
     buffer_desc.size            = sizeof(vertices);
     buffer_desc.descriptor_type = DescriptorType::eVertexBuffer;
-    buffer_desc.resource_state  = ResourceState::eTransferDst;
     buffer_desc.data            = vertices;
 
     vertex_buffer = create_buffer(device, buffer_desc);

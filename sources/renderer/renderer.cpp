@@ -299,13 +299,13 @@ static inline VkAccessFlags determine_access_flags(ResourceState resource_state)
 {
     VkAccessFlags access_flags = 0;
 
-    if (b32(resource_state & ResourceState::eStorage))
+    if (b32(resource_state & ResourceState::eGeneral))
         access_flags |= (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
 
     if (b32(resource_state & ResourceState::eColorAttachment))
         access_flags |= (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
-    if (b32(resource_state & ResourceState::eDepthStencilAttachment))
+    if (b32(resource_state & ResourceState::eDepthStencilWrite))
         access_flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
     if (b32(resource_state & ResourceState::eDepthStencilReadOnly))
@@ -391,13 +391,13 @@ static inline VkPipelineStageFlags determine_pipeline_stage_flags(VkAccessFlags 
 
 static inline VkImageLayout determine_image_layout(ResourceState resource_state)
 {
-    if (b32(resource_state & ResourceState::eStorage))
+    if (b32(resource_state & ResourceState::eGeneral))
         return VK_IMAGE_LAYOUT_GENERAL;
 
     if (b32(resource_state & ResourceState::eColorAttachment))
         return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    if (b32(resource_state & ResourceState::eDepthStencilAttachment))
+    if (b32(resource_state & ResourceState::eDepthStencilWrite))
         return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     if (b32(resource_state & ResourceState::eDepthStencilReadOnly))
@@ -418,13 +418,18 @@ static inline VkImageLayout determine_image_layout(ResourceState resource_state)
     return VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
-static inline VmaMemoryUsage determine_vma_memory_usage(ResourceState resource_state)
+static inline VmaMemoryUsage determine_vma_memory_usage(DescriptorType descriptor_type)
 {
     // TODO: determine memory usage
     VmaMemoryUsage memory_usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
     // can be used as source in transfer operation
-    if (b32(resource_state & ResourceState::eTransferSrc))
+    if (b32(descriptor_type & DescriptorType::eHostVisibleBuffer))
+    {
+        memory_usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+    }
+
+    if (b32(descriptor_type & DescriptorType::eUniformBuffer))
     {
         memory_usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
     }
@@ -432,51 +437,52 @@ static inline VmaMemoryUsage determine_vma_memory_usage(ResourceState resource_s
     return memory_usage;
 }
 
-static inline VkBufferUsageFlags determine_vk_buffer_usage(ResourceState resource_state, DescriptorType descriptor_type)
+static inline VkBufferUsageFlags determine_vk_buffer_usage(DescriptorType descriptor_type)
 {
     // TODO: determine buffer usage flags
     VkBufferUsageFlags buffer_usage = VkBufferUsageFlags(0);
 
-    if (b32(descriptor_type & DescriptorType::eVertexBuffer))
-    {
-        buffer_usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    }
-
-    if (b32(descriptor_type & DescriptorType::eIndexBuffer))
-    {
-        buffer_usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    }
-
-    if (b32(descriptor_type & DescriptorType::eUniformBuffer))
-    {
-        buffer_usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    }
-
-    if (b32(resource_state & ResourceState::eTransferSrc))
+    if (b32(descriptor_type & DescriptorType::eHostVisibleBuffer))
     {
         buffer_usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     }
 
-    if (b32(resource_state & ResourceState::eTransferDst))
+    if (b32(descriptor_type & DescriptorType::eDeviceLocalBuffer))
     {
         buffer_usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    }
+
+    if (b32(descriptor_type & DescriptorType::eVertexBuffer))
+    {
+        buffer_usage |= (VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+    }
+
+    if (b32(descriptor_type & DescriptorType::eIndexBuffer))
+    {
+        buffer_usage |= (VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+    }
+
+    if (b32(descriptor_type & DescriptorType::eUniformBuffer))
+    {
+        buffer_usage |=
+            (VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
     }
 
     return buffer_usage;
 }
 
-static inline VkImageUsageFlags determine_vk_image_usage(ResourceState resource_state, DescriptorType descriptor_type)
+static inline VkImageUsageFlags determine_vk_image_usage(DescriptorType descriptor_type)
 {
     VkImageUsageFlags image_usage = VkImageUsageFlags(0);
 
     if (b32(descriptor_type & DescriptorType::eSampledImage))
     {
-        image_usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_usage |= VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
 
     if (b32(descriptor_type & DescriptorType::eStorageImage))
     {
-        image_usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+        image_usage |= VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
 
     if (b32(descriptor_type & DescriptorType::eInputAttachment))
@@ -484,30 +490,14 @@ static inline VkImageUsageFlags determine_vk_image_usage(ResourceState resource_
         image_usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
     }
 
-    if (b32(resource_state & ResourceState::eColorAttachment))
+    if (b32(descriptor_type & DescriptorType::eColorAttachment))
     {
         image_usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     }
 
-    if (b32(resource_state & ResourceState::eDepthStencilAttachment))
+    if (b32(descriptor_type & DescriptorType::eDepthStencilAttachment))
     {
         image_usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    }
-
-    if (b32(resource_state & ResourceState::eDepthStencilReadOnly))
-    {
-        // TODO: ?
-        image_usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    }
-
-    if (b32(resource_state & ResourceState::eTransferSrc))
-    {
-        image_usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    }
-
-    if (b32(resource_state & ResourceState::eTransferDst))
-    {
-        image_usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
 
     return image_usage;
@@ -875,8 +865,9 @@ Device create_device(const Renderer& renderer, const DeviceDesc& desc)
 
     // create staging buffer
     BufferDesc buffer_desc{};
-    buffer_desc.size                  = STAGING_BUFFER_SIZE;
-    buffer_desc.resource_state        = ResourceState::eTransferSrc;
+    buffer_desc.size            = STAGING_BUFFER_SIZE;
+    buffer_desc.descriptor_type = DescriptorType::eHostVisibleBuffer | DescriptorType::eDeviceLocalBuffer;
+
     device.staging_buffer.memory_used = 0;
     device.staging_buffer.buffer      = create_buffer(device, buffer_desc);
     map_memory(device, device.staging_buffer.buffer);
@@ -1237,7 +1228,6 @@ void create_configured_swapchain(const Device& device, Swapchain& swapchain, b32
         swapchain.images[ i ].mip_level_count = 1;
         swapchain.images[ i ].layer_count     = 1;
         swapchain.images[ i ].descriptor_type = DescriptorType::eSampledImage;
-        swapchain.images[ i ].resource_state  = ResourceState::eTransferDst;
 
         VK_ASSERT(vkCreateImageView(
             device.logical_device, &image_view_create_info, device.vulkan_allocator,
@@ -1247,16 +1237,28 @@ void create_configured_swapchain(const Device& device, Swapchain& swapchain, b32
     if (builtin_depth)
     {
         ImageDesc image_desc{};
-        image_desc.width          = swapchain.width;
-        image_desc.height         = swapchain.height;
-        image_desc.depth          = 1;
-        image_desc.layer_count    = 1;
-        image_desc.mip_levels     = 1;
-        image_desc.format         = Format::eD32Sfloat;
-        image_desc.resource_state = ResourceState(ResourceState::eTransferDst | ResourceState::eDepthStencilAttachment);
-        image_desc.descriptor_type = DescriptorType::eUndefined;
+        image_desc.width           = swapchain.width;
+        image_desc.height          = swapchain.height;
+        image_desc.depth           = 1;
+        image_desc.layer_count     = 1;
+        image_desc.mip_levels      = 1;
+        image_desc.format          = Format::eD32Sfloat;
+        image_desc.descriptor_type = DescriptorType::eDepthStencilAttachment;
 
         swapchain.depth_image = create_image(device, image_desc);
+
+        // TODO: Remove it from here
+        ImageBarrier image_barrier{};
+        image_barrier.image     = &swapchain.depth_image;
+        image_barrier.src_queue = &device.upload_queue;
+        image_barrier.dst_queue = &device.upload_queue;
+        image_barrier.old_state = ResourceState::eUndefined;
+        image_barrier.new_state = ResourceState::eDepthStencilWrite;
+
+        begin_command_buffer(device.upload_command_buffer);
+        cmd_barrier(device.upload_command_buffer, 0, nullptr, 1, &image_barrier);
+        end_command_buffer(device.upload_command_buffer);
+        immediate_submit(device.upload_queue, device.upload_command_buffer);
     }
 
     // create default render passes
@@ -1266,7 +1268,7 @@ void create_configured_swapchain(const Device& device, Swapchain& swapchain, b32
     render_pass_desc.color_image_states[ 0 ]        = ResourceState::eColorAttachment;
     render_pass_desc.depth_stencil                  = builtin_depth ? &swapchain.depth_image : nullptr;
     render_pass_desc.depth_stencil_load_op          = AttachmentLoadOp::eClear;
-    render_pass_desc.depth_stencil_state            = ResourceState::eDepthStencilAttachment;
+    render_pass_desc.depth_stencil_state            = ResourceState::eDepthStencilWrite;
     render_pass_desc.width                          = swapchain.width;
     render_pass_desc.height                         = swapchain.height;
 
@@ -2157,18 +2159,17 @@ Buffer create_buffer(const Device& device, const BufferDesc& desc)
 {
     Buffer buffer{};
     buffer.size            = desc.size;
-    buffer.resource_state  = desc.resource_state;
     buffer.descriptor_type = desc.descriptor_type;
 
     VmaAllocationCreateInfo allocation_create_info{};
-    allocation_create_info.usage = determine_vma_memory_usage(desc.resource_state);
+    allocation_create_info.usage = determine_vma_memory_usage(desc.descriptor_type);
 
     VkBufferCreateInfo buffer_create_info{};
     buffer_create_info.sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buffer_create_info.pNext                 = nullptr;
     buffer_create_info.flags                 = 0;
     buffer_create_info.size                  = desc.size;
-    buffer_create_info.usage                 = determine_vk_buffer_usage(desc.resource_state, desc.descriptor_type);
+    buffer_create_info.usage                 = determine_vk_buffer_usage(desc.descriptor_type);
     buffer_create_info.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
     buffer_create_info.queueFamilyIndexCount = 0;
     buffer_create_info.pQueueFamilyIndices   = nullptr;
@@ -2298,7 +2299,7 @@ Image create_image(const Device& device, const ImageDesc& desc)
     image_create_info.arrayLayers           = desc.layer_count;
     image_create_info.samples               = to_vk_sample_count(desc.sample_count);
     image_create_info.tiling                = VK_IMAGE_TILING_OPTIMAL;
-    image_create_info.usage                 = determine_vk_image_usage(desc.resource_state, desc.descriptor_type);
+    image_create_info.usage                 = determine_vk_image_usage(desc.descriptor_type);
     image_create_info.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
     image_create_info.queueFamilyIndexCount = 0;
     image_create_info.pQueueFamilyIndices   = nullptr;
@@ -2319,7 +2320,6 @@ Image create_image(const Device& device, const ImageDesc& desc)
     image.sample_count    = desc.sample_count;
     image.mip_level_count = desc.mip_levels;
     image.layer_count     = desc.layer_count;
-    image.resource_state  = desc.resource_state;
     image.descriptor_type = desc.descriptor_type;
 
     if (desc.data)
@@ -2333,20 +2333,21 @@ Image create_image(const Device& device, const ImageDesc& desc)
         update_image(device, image_update_desc);
     }
 
-    if (desc.resource_state != ResourceState::eUndefined)
-    {
-        ImageBarrier image_barrier{};
-        image_barrier.image     = &image;
-        image_barrier.old_state = ResourceState::eUndefined;
-        image_barrier.new_state = desc.resource_state;
-        image_barrier.src_queue = &device.upload_queue;
-        image_barrier.dst_queue = &device.upload_queue;
+    // TODO: It's very bad, I dont want to submit so often
+    // if (desc.resource_state != ResourceState::eUndefined)
+    // {
+    //     ImageBarrier image_barrier{};
+    //     image_barrier.image     = &image;
+    //     image_barrier.old_state = ResourceState::eUndefined;
+    //     image_barrier.new_state = desc.resource_state;
+    //     image_barrier.src_queue = &device.upload_queue;
+    //     image_barrier.dst_queue = &device.upload_queue;
 
-        begin_command_buffer(device.upload_command_buffer);
-        cmd_barrier(device.upload_command_buffer, 0, nullptr, 1, &image_barrier);
-        end_command_buffer(device.upload_command_buffer);
-        immediate_submit(device.upload_queue, device.upload_command_buffer);
-    }
+    //     begin_command_buffer(device.upload_command_buffer);
+    //     cmd_barrier(device.upload_command_buffer, 0, nullptr, 1, &image_barrier);
+    //     end_command_buffer(device.upload_command_buffer);
+    //     immediate_submit(device.upload_queue, device.upload_command_buffer);
+    // }
 
     // TODO: fill properly
     VkImageViewCreateInfo image_view_create_info{};
@@ -2389,9 +2390,22 @@ Image load_image_from_dds_file(const Device& device, const char* filename, Resou
 
     ImageDesc image_desc       = read_dds_image(filepath.c_str(), flip, &data);
     image_desc.descriptor_type = DescriptorType::eSampledImage;
-    image_desc.resource_state  = ResourceState(ResourceState::eTransferDst | resource_state);
     image_desc.data            = data;
     Image image                = create_image(device, image_desc);
+
+    // TODO: Remove it
+    ImageBarrier image_barrier{};
+    image_barrier.image     = &image;
+    image_barrier.src_queue = &device.upload_queue;
+    image_barrier.dst_queue = &device.upload_queue;
+    image_barrier.old_state = ResourceState::eUndefined;
+    image_barrier.new_state = ResourceState::eShaderReadOnly;
+
+    begin_command_buffer(device.upload_command_buffer);
+    cmd_barrier(device.upload_command_buffer, 0, nullptr, 1, &image_barrier);
+    end_command_buffer(device.upload_command_buffer);
+    immediate_submit(device.upload_queue, device.upload_command_buffer);
+
     release_dds_image(data);
     return image;
 }
@@ -2404,9 +2418,23 @@ Image load_image_from_file(const Device& device, const char* filename, ResourceS
 
     ImageDesc image_desc       = read_image(filepath.c_str(), flip, &data);
     image_desc.descriptor_type = DescriptorType::eSampledImage;
-    image_desc.resource_state  = ResourceState(ResourceState::eTransferDst | resource_state);
     image_desc.data            = data;
     Image image                = create_image(device, image_desc);
+
+    // TODO: Remove it
+
+    ImageBarrier image_barrier{};
+    image_barrier.image     = &image;
+    image_barrier.src_queue = &device.upload_queue;
+    image_barrier.dst_queue = &device.upload_queue;
+    image_barrier.old_state = ResourceState::eUndefined;
+    image_barrier.new_state = ResourceState::eShaderReadOnly;
+
+    begin_command_buffer(device.upload_command_buffer);
+    cmd_barrier(device.upload_command_buffer, 0, nullptr, 1, &image_barrier);
+    end_command_buffer(device.upload_command_buffer);
+    immediate_submit(device.upload_queue, device.upload_command_buffer);
+
     release_image(data);
 
     return image;

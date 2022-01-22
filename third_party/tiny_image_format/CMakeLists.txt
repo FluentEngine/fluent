@@ -1,7 +1,7 @@
 set(target tiny_image_format)
 project(${target})
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 17)
 
 set(srcs tinyimageformat.cpp)
 

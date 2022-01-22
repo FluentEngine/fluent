@@ -21,7 +21,7 @@ void Camera::init_camera(fluent::Vector3 position, fluent::Vector3 direction, fl
     recalculate_view_matrix();
 
     m_speed             = 200.0f;
-    m_mouse_sensitivity = 0.1f;
+    m_mouse_sensitivity = 0.4f;
 }
 
 void Camera::recalculate_projection_matrix()

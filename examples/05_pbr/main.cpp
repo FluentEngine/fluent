@@ -82,7 +82,6 @@ void create_dummy_resources()
     image_desc.sample_count    = SampleCount::e1;
     image_desc.layer_count     = 1;
     image_desc.mip_levels      = 1;
-    image_desc.resource_state  = ResourceState::eTransferDst;
     image_desc.descriptor_type = DescriptorType::eSampledImage;
 
     dummy_resources.black_texture = create_image(device, image_desc);
@@ -90,13 +89,18 @@ void create_dummy_resources()
     auto& cmd = command_buffers[ 0 ];
 
     begin_command_buffer(cmd);
-    cmd_clear_color_image(cmd, dummy_resources.black_texture, Vector4(0.0, 0.0, 0.0, 1.0));
     ImageBarrier image_barrier{};
     image_barrier.image     = &dummy_resources.black_texture;
-    image_barrier.old_state = ResourceState::eTransferDst;
-    image_barrier.new_state = ResourceState::eShaderReadOnly;
+    image_barrier.old_state = ResourceState::eUndefined;
+    image_barrier.new_state = ResourceState::eTransferDst;
     image_barrier.src_queue = &queue;
     image_barrier.dst_queue = &queue;
+    cmd_barrier(cmd, 0, nullptr, 1, &image_barrier);
+
+    cmd_clear_color_image(cmd, dummy_resources.black_texture, Vector4(0.0, 0.0, 0.0, 1.0));
+
+    image_barrier.old_state = ResourceState::eTransferDst;
+    image_barrier.new_state = ResourceState::eShaderReadOnly;
     cmd_barrier(cmd, 0, nullptr, 1, &image_barrier);
 
     end_command_buffer(cmd);
@@ -137,7 +141,6 @@ void compute_pbr_maps(const std::string& skybox_name)
     skybox_image_desc.width           = skybox_size;
     skybox_image_desc.mip_levels      = skybox_mips;
     skybox_image_desc.sample_count    = SampleCount::e1;
-    skybox_image_desc.resource_state  = ResourceState::eStorage;
     skybox_image_desc.descriptor_type = DescriptorType::eStorageImage | DescriptorType::eSampledImage;
 
     ImageDesc irr_image_desc{};
@@ -148,7 +151,6 @@ void compute_pbr_maps(const std::string& skybox_name)
     irr_image_desc.height          = irradiance_size;
     irr_image_desc.mip_levels      = 1;
     irr_image_desc.sample_count    = SampleCount::e1;
-    irr_image_desc.resource_state  = ResourceState::eStorage;
     irr_image_desc.descriptor_type = DescriptorType::eSampledImage | DescriptorType::eStorageImage;
 
     ImageDesc specular_image_desc{};
@@ -159,7 +161,6 @@ void compute_pbr_maps(const std::string& skybox_name)
     specular_image_desc.height          = specular_size;
     specular_image_desc.mip_levels      = specular_mips; // TODO
     specular_image_desc.sample_count    = SampleCount::e1;
-    specular_image_desc.resource_state  = ResourceState::eStorage;
     specular_image_desc.descriptor_type = DescriptorType::eSampledImage | DescriptorType::eStorageImage;
 
     // Create empty texture for BRDF integration map.
@@ -171,7 +172,6 @@ void compute_pbr_maps(const std::string& skybox_name)
     brdf_integration_image_desc.mip_levels      = 1;
     brdf_integration_image_desc.format          = Format::eR32G32Sfloat;
     brdf_integration_image_desc.sample_count    = SampleCount::e1;
-    brdf_integration_image_desc.resource_state  = ResourceState::eStorage;
     brdf_integration_image_desc.descriptor_type = DescriptorType::eSampledImage | DescriptorType::eStorageImage;
 
     Sampler skybox_sampler = create_sampler(device, sampler_desc);
@@ -205,7 +205,7 @@ void compute_pbr_maps(const std::string& skybox_name)
 
     DescriptorImageDesc descriptor_output_image_desc{};
     descriptor_output_image_desc.image          = &environment_map;
-    descriptor_output_image_desc.resource_state = ResourceState::eStorage;
+    descriptor_output_image_desc.resource_state = ResourceState::eGeneral;
 
     DescriptorWriteDesc descriptor_write_descs[ 3 ]    = {};
     descriptor_write_descs[ 0 ].binding                = 0;
@@ -232,7 +232,7 @@ void compute_pbr_maps(const std::string& skybox_name)
     DescriptorSet brdf_integration_set = create_descriptor_set(device, brdf_integration_set_desc);
 
     DescriptorImageDesc brdf_integration_image_set_desc{};
-    brdf_integration_image_set_desc.resource_state = ResourceState::eStorage;
+    brdf_integration_image_set_desc.resource_state = ResourceState::eGeneral;
     brdf_integration_image_set_desc.image          = &brdf_integration_map;
 
     DescriptorWriteDesc descriptor_write_desc{};
@@ -257,9 +257,9 @@ void compute_pbr_maps(const std::string& skybox_name)
     DescriptorImageDesc irradiance_set_images[ 2 ] = {};
     irradiance_set_images[ 0 ].image               = &environment_map;
     irradiance_set_images[ 0 ].sampler             = &skybox_sampler;
-    irradiance_set_images[ 0 ].resource_state      = ResourceState::eStorage;
+    irradiance_set_images[ 0 ].resource_state      = ResourceState::eGeneral;
     irradiance_set_images[ 1 ].image               = &irradiance_map;
-    irradiance_set_images[ 1 ].resource_state      = ResourceState::eStorage;
+    irradiance_set_images[ 1 ].resource_state      = ResourceState::eGeneral;
 
     descriptor_write_descs[ 0 ].binding                = 0;
     descriptor_write_descs[ 0 ].descriptor_count       = 1;
@@ -287,9 +287,9 @@ void compute_pbr_maps(const std::string& skybox_name)
     DescriptorImageDesc specular_set_images[ 2 ] = {};
     specular_set_images[ 0 ].image               = &environment_map;
     specular_set_images[ 0 ].sampler             = &skybox_sampler;
-    specular_set_images[ 0 ].resource_state      = ResourceState::eStorage;
+    specular_set_images[ 0 ].resource_state      = ResourceState::eGeneral;
     specular_set_images[ 1 ].image               = &specular_map;
-    specular_set_images[ 1 ].resource_state      = ResourceState::eStorage;
+    specular_set_images[ 1 ].resource_state      = ResourceState::eGeneral;
 
     descriptor_write_descs[ 0 ].binding                = 0;
     descriptor_write_descs[ 0 ].descriptor_count       = 1;
@@ -307,9 +307,32 @@ void compute_pbr_maps(const std::string& skybox_name)
 
     Pipeline specular_pipeline = create_compute_pipeline(device, specular_pipeline_desc);
 
+    ImageBarrier image_barriers[ 4 ] = {};
+    image_barriers[ 0 ].image        = &environment_map;
+    image_barriers[ 0 ].old_state    = ResourceState::eUndefined;
+    image_barriers[ 0 ].new_state    = ResourceState::eGeneral;
+    image_barriers[ 0 ].src_queue    = &queue;
+    image_barriers[ 0 ].dst_queue    = &queue;
+    image_barriers[ 1 ].image        = &brdf_integration_map;
+    image_barriers[ 1 ].old_state    = ResourceState::eUndefined;
+    image_barriers[ 1 ].new_state    = ResourceState::eGeneral;
+    image_barriers[ 1 ].src_queue    = &queue;
+    image_barriers[ 1 ].dst_queue    = &queue;
+    image_barriers[ 2 ].image        = &irradiance_map;
+    image_barriers[ 2 ].old_state    = ResourceState::eUndefined;
+    image_barriers[ 2 ].new_state    = ResourceState::eGeneral;
+    image_barriers[ 2 ].src_queue    = &queue;
+    image_barriers[ 2 ].dst_queue    = &queue;
+    image_barriers[ 3 ].image        = &specular_map;
+    image_barriers[ 3 ].old_state    = ResourceState::eUndefined;
+    image_barriers[ 3 ].new_state    = ResourceState::eGeneral;
+    image_barriers[ 3 ].src_queue    = &queue;
+    image_barriers[ 3 ].dst_queue    = &queue;
+
     auto& cmd = command_buffers[ 0 ];
 
     begin_command_buffer(cmd);
+    cmd_barrier(cmd, 0, nullptr, 4, image_barriers);
     // BRDF
     cmd_bind_pipeline(cmd, brdf_integration_pipeline);
     cmd_bind_descriptor_set(cmd, brdf_integration_set, brdf_integration_pipeline);
@@ -352,7 +375,7 @@ void compute_pbr_maps(const std::string& skybox_name)
 
     ImageBarrier to_sampled_barrier{};
     to_sampled_barrier.image     = &environment_map;
-    to_sampled_barrier.old_state = ResourceState::eStorage;
+    to_sampled_barrier.old_state = ResourceState::eGeneral;
     to_sampled_barrier.new_state = ResourceState::eShaderReadOnly;
     to_sampled_barrier.src_queue = &queue;
     to_sampled_barrier.dst_queue = &queue;
@@ -779,7 +802,6 @@ void on_init()
     BufferDesc ubo_buffer_desc{};
     ubo_buffer_desc.data            = &ubo;
     ubo_buffer_desc.size            = sizeof(CameraUBO);
-    ubo_buffer_desc.resource_state  = ResourceState::eTransferSrc | ResourceState::eTransferDst;
     ubo_buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
 
     ubo_buffer = create_buffer(device, ubo_buffer_desc);

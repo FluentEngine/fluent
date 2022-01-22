@@ -242,34 +242,38 @@ enum class AttachmentLoadOp
 
 enum class ResourceState : u32
 {
-    eUndefined              = BIT(0),
-    eStorage                = BIT(1),
-    eColorAttachment        = BIT(2),
-    eDepthStencilAttachment = BIT(3),
-    eDepthStencilReadOnly   = BIT(4),
-    eShaderReadOnly         = BIT(5),
-    eTransferSrc            = BIT(6),
-    eTransferDst            = BIT(7),
-    ePresent                = BIT(8)
+    eUndefined            = BIT(0),
+    eGeneral              = BIT(1),
+    eColorAttachment      = BIT(2),
+    eDepthStencilWrite    = BIT(3),
+    eDepthStencilReadOnly = BIT(4),
+    eShaderReadOnly       = BIT(5),
+    eTransferSrc          = BIT(6),
+    eTransferDst          = BIT(7),
+    ePresent              = BIT(8)
 };
 MAKE_ENUM_FLAG(u32, ResourceState);
 
 enum class DescriptorType : u32
 {
-    eUndefined            = BIT(0),
-    eVertexBuffer         = BIT(1),
-    eIndexBuffer          = BIT(2),
-    eUniformBuffer        = BIT(3),
-    eSampler              = BIT(4),
-    eCombinedImageSampler = BIT(5),
-    eSampledImage         = BIT(6),
-    eStorageImage         = BIT(7),
-    eUniformTexelBuffer   = BIT(8),
-    eStorageTexelBuffer   = BIT(9),
-    eStorageBuffer        = BIT(10),
-    eUniformBufferDynamic = BIT(11),
-    eStorageBufferDynamic = BIT(12),
-    eInputAttachment      = BIT(13)
+    eUndefined              = BIT(0),
+    eVertexBuffer           = BIT(1),
+    eIndexBuffer            = BIT(2),
+    eUniformBuffer          = BIT(3),
+    eSampler                = BIT(4),
+    eCombinedImageSampler   = BIT(5),
+    eSampledImage           = BIT(6),
+    eStorageImage           = BIT(7),
+    eUniformTexelBuffer     = BIT(8),
+    eStorageTexelBuffer     = BIT(9),
+    eStorageBuffer          = BIT(10),
+    eUniformBufferDynamic   = BIT(11),
+    eStorageBufferDynamic   = BIT(12),
+    eInputAttachment        = BIT(13),
+    eDepthStencilAttachment = BIT(14),
+    eColorAttachment        = BIT(15),
+    eHostVisibleBuffer      = BIT(16),
+    eDeviceLocalBuffer      = BIT(17)
 };
 MAKE_ENUM_FLAG(u32, DescriptorType);
 

@@ -29,11 +29,9 @@ void Mesh::create(const fluent::Device& device, const MeshDesc& desc)
 
     BufferDesc buffer_descs[ 2 ]      = {};
     buffer_descs[ 0 ].size            = converted_vertices.size() * sizeof(converted_vertices[ 0 ]);
-    buffer_descs[ 0 ].resource_state  = ResourceState::eTransferDst;
     buffer_descs[ 0 ].descriptor_type = DescriptorType::eVertexBuffer;
     buffer_descs[ 0 ].data            = converted_vertices.data();
     buffer_descs[ 1 ].size            = desc.indices_size * sizeof(desc.indices[ 0 ]);
-    buffer_descs[ 1 ].resource_state  = ResourceState::eTransferDst;
     buffer_descs[ 1 ].descriptor_type = DescriptorType::eIndexBuffer;
     buffer_descs[ 1 ].data            = desc.indices;
 

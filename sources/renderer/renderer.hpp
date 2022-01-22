@@ -87,7 +87,6 @@ struct ImageDesc
     SampleCount         sample_count;
     u32                 layer_count = 1;
     u32                 mip_levels  = 1;
-    ResourceState       resource_state;
     DescriptorType      descriptor_type;
     const char*         filename;
     u32                 data_size;
@@ -113,14 +112,12 @@ struct Image
     SampleCount    sample_count;
     u32            mip_level_count = 1;
     u32            layer_count     = 1;
-    ResourceState  resource_state;
     DescriptorType descriptor_type;
 };
 
 struct BufferDesc
 {
     u32            size;
-    ResourceState  resource_state;
     DescriptorType descriptor_type;
     const void*    data;
 };

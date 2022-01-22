@@ -124,7 +124,6 @@ void create_camera()
 
     BufferDesc buffer_desc{};
     buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
-    buffer_desc.resource_state  = ResourceState::eTransferSrc | ResourceState::eTransferDst;
     buffer_desc.data            = &camera.get_data();
     buffer_desc.size            = sizeof(CameraData);
 
@@ -293,29 +292,46 @@ void draw_ui(CommandBuffer& cmd)
 // app
 void create_editor_images(u32 width, u32 height)
 {
-    ImageDesc editor_image_descs[ 2 ]       = {};
-    editor_image_descs[ 0 ].width           = width;
-    editor_image_descs[ 0 ].height          = height;
-    editor_image_descs[ 0 ].depth           = 1.0f;
-    editor_image_descs[ 0 ].format          = Format::eR8G8B8A8Unorm;
-    editor_image_descs[ 0 ].layer_count     = 1;
-    editor_image_descs[ 0 ].mip_levels      = 1;
-    editor_image_descs[ 0 ].sample_count    = SampleCount::e1;
-    editor_image_descs[ 0 ].resource_state  = ResourceState::eTransferDst | ResourceState::eColorAttachment;
-    editor_image_descs[ 0 ].descriptor_type = DescriptorType::eSampledImage;
+    ImageDesc editor_image_descs[ 2 ]    = {};
+    editor_image_descs[ 0 ].width        = width;
+    editor_image_descs[ 0 ].height       = height;
+    editor_image_descs[ 0 ].depth        = 1.0f;
+    editor_image_descs[ 0 ].format       = Format::eR8G8B8A8Unorm;
+    editor_image_descs[ 0 ].layer_count  = 1;
+    editor_image_descs[ 0 ].mip_levels   = 1;
+    editor_image_descs[ 0 ].sample_count = SampleCount::e1;
+    // editor_image_descs[ 0 ].resource_state  = ResourceState::eTransferDst | ResourceState::eColorAttachment;
+    editor_image_descs[ 0 ].descriptor_type = DescriptorType::eColorAttachment | DescriptorType::eSampledImage;
 
-    editor_image_descs[ 1 ].width           = width;
-    editor_image_descs[ 1 ].height          = height;
-    editor_image_descs[ 1 ].depth           = 1.0f;
-    editor_image_descs[ 1 ].format          = Format::eD32Sfloat;
-    editor_image_descs[ 1 ].layer_count     = 1;
-    editor_image_descs[ 1 ].mip_levels      = 1;
-    editor_image_descs[ 1 ].sample_count    = SampleCount::e1;
-    editor_image_descs[ 1 ].resource_state  = ResourceState::eTransferDst | ResourceState::eDepthStencilAttachment;
-    editor_image_descs[ 1 ].descriptor_type = DescriptorType::eUndefined;
+    editor_image_descs[ 1 ].width        = width;
+    editor_image_descs[ 1 ].height       = height;
+    editor_image_descs[ 1 ].depth        = 1.0f;
+    editor_image_descs[ 1 ].format       = Format::eD32Sfloat;
+    editor_image_descs[ 1 ].layer_count  = 1;
+    editor_image_descs[ 1 ].mip_levels   = 1;
+    editor_image_descs[ 1 ].sample_count = SampleCount::e1;
+    // editor_image_descs[ 1 ].resource_state  = ResourceState::eTransferDst | ResourceState::eDepthStencilWrite;
+    editor_image_descs[ 1 ].descriptor_type = DescriptorType::eDepthStencilAttachment;
 
     editor_image       = create_image(device, editor_image_descs[ 0 ]);
     editor_depth_image = create_image(device, editor_image_descs[ 1 ]);
+
+    ImageBarrier image_barriers[ 2 ] = {};
+    image_barriers[ 0 ].image        = &editor_image;
+    image_barriers[ 0 ].src_queue    = &queue;
+    image_barriers[ 0 ].dst_queue    = &queue;
+    image_barriers[ 0 ].old_state    = ResourceState::eUndefined;
+    image_barriers[ 0 ].new_state    = ResourceState::eColorAttachment;
+    image_barriers[ 1 ].image        = &editor_depth_image;
+    image_barriers[ 1 ].src_queue    = &queue;
+    image_barriers[ 1 ].dst_queue    = &queue;
+    image_barriers[ 1 ].old_state    = ResourceState::eUndefined;
+    image_barriers[ 1 ].new_state    = ResourceState::eDepthStencilWrite;
+
+    begin_command_buffer(command_buffers[ 0 ]);
+    cmd_barrier(command_buffers[ 0 ], 0, nullptr, 2, image_barriers);
+    end_command_buffer(command_buffers[ 0 ]);
+    immediate_submit(queue, command_buffers[ 0 ]);
 }
 
 void destroy_editor_images()
@@ -335,7 +351,7 @@ void create_editor_render_pass(u32 width, u32 height)
     rp_desc.color_image_states[ 0 ]        = ResourceState::eColorAttachment;
     rp_desc.depth_stencil                  = &editor_depth_image;
     rp_desc.depth_stencil_load_op          = AttachmentLoadOp::eClear;
-    rp_desc.depth_stencil_state            = ResourceState::eDepthStencilAttachment;
+    rp_desc.depth_stencil_state            = ResourceState::eDepthStencilWrite;
 
     editor_render_pass = create_render_pass(device, rp_desc);
 }

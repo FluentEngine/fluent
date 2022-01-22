@@ -64,7 +64,7 @@ void app_init(const ApplicationConfig* config)
     FT_ASSERT(config->on_resize);
 
     int init_result = SDL_Init(SDL_INIT_VIDEO);
-    FT_ASSERT(init_result >= 0 && "SDL Init failed");
+    FT_ASSERT(init_result == 0 && "SDL Init failed");
 
     app_state.window = fluent::create_window(config->title, config->x, config->y, config->width, config->height);
 

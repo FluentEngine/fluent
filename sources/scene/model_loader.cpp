@@ -8,7 +8,6 @@ void Model::Mesh::InitMesh(const Device& device)
 {
     BufferDesc bufferDesc{};
     bufferDesc.descriptor_type = DescriptorType::eVertexBuffer;
-    bufferDesc.resource_state  = ResourceState::eTransferDst;
     bufferDesc.size            = vertices.size() * sizeof(vertices[ 0 ]);
     bufferDesc.data            = vertices.data();
 
@@ -17,7 +16,6 @@ void Model::Mesh::InitMesh(const Device& device)
     bufferDesc = {};
 
     bufferDesc.descriptor_type = DescriptorType::eIndexBuffer;
-    bufferDesc.resource_state  = ResourceState::eTransferDst;
     bufferDesc.size            = indices.size() * sizeof(indices[ 0 ]);
     bufferDesc.data            = indices.data();
 

@@ -138,7 +138,6 @@ void on_init()
 
     BufferDesc buffer_desc{};
     buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
-    buffer_desc.resource_state  = ResourceState(ResourceState::eTransferSrc | ResourceState::eTransferDst);
     buffer_desc.size            = sizeof(CameraUBO);
     buffer_desc.data            = &camera_ubo;
 
