@@ -36,11 +36,13 @@ void on_init()
 
     DeviceDesc device_desc{};
     device_desc.frame_in_use_count = 2;
-    device                         = create_device(renderer, device_desc);
+    create_device(renderer, device_desc, device);
+
+    init_resource_loader(device);
 
     QueueDesc queue_desc{};
     queue_desc.queue_type = QueueType::eGraphics;
-    queue                 = get_queue(device, queue_desc);
+    get_queue(device, queue_desc, queue);
 
     CommandPoolDesc command_pool_desc{};
     command_pool_desc.queue = &queue;
@@ -64,9 +66,9 @@ void on_init()
 
     swapchain = create_swapchain(device, swapchain_desc);
 
-    Shader shaders[ 2 ];
-    shaders[ 0 ] = create_shader(device, "main.vert.glsl.spv", ShaderStage::eVertex);
-    shaders[ 1 ] = create_shader(device, "main.frag.glsl.spv", ShaderStage::eFragment);
+    Shader shaders[ 2 ] = {};
+    shaders[ 0 ]        = load_shader(device, "main.vert");
+    shaders[ 1 ]        = load_shader(device, "main.frag");
 
     descriptor_set_layout = create_descriptor_set_layout(device, 2, shaders);
 
@@ -97,9 +99,18 @@ void on_init()
     BufferDesc buffer_desc{};
     buffer_desc.size            = sizeof(vertices);
     buffer_desc.descriptor_type = DescriptorType::eVertexBuffer;
-    buffer_desc.data            = vertices;
 
     vertex_buffer = create_buffer(device, buffer_desc);
+
+    BufferUpdateDesc buffer_update_desc{};
+    buffer_update_desc.buffer = &vertex_buffer;
+    buffer_update_desc.offset = 0;
+    buffer_update_desc.size   = sizeof(vertices);
+    buffer_update_desc.data   = vertices;
+
+    update_buffer(device, buffer_update_desc);
+
+    resource_loader_wait_idle();
 }
 
 void on_resize(u32 width, u32 height)
@@ -197,6 +208,7 @@ void on_shutdown()
     }
     free_command_buffers(device, command_pool, FRAME_COUNT, command_buffers);
     destroy_command_pool(device, command_pool);
+    shutdown_resource_loader(device);
     destroy_device(device);
     destroy_renderer(renderer);
 }

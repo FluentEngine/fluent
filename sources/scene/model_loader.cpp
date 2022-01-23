@@ -9,17 +9,29 @@ void Model::Mesh::InitMesh(const Device& device)
     BufferDesc bufferDesc{};
     bufferDesc.descriptor_type = DescriptorType::eVertexBuffer;
     bufferDesc.size            = vertices.size() * sizeof(vertices[ 0 ]);
-    bufferDesc.data            = vertices.data();
 
     vertex_buffer = create_buffer(device, bufferDesc);
+
+    BufferUpdateDesc buffer_update_desc{};
+    buffer_update_desc.buffer = &vertex_buffer;
+    buffer_update_desc.data   = vertices.data();
+    buffer_update_desc.offset = 0;
+    buffer_update_desc.size   = vertices.size() * sizeof(vertices[ 0 ]);
+    update_buffer(device, buffer_update_desc);
 
     bufferDesc = {};
 
     bufferDesc.descriptor_type = DescriptorType::eIndexBuffer;
     bufferDesc.size            = indices.size() * sizeof(indices[ 0 ]);
-    bufferDesc.data            = indices.data();
 
     index_buffer = create_buffer(device, bufferDesc);
+
+    buffer_update_desc        = {};
+    buffer_update_desc.buffer = &index_buffer;
+    buffer_update_desc.data   = indices.data();
+    buffer_update_desc.offset = 0;
+    buffer_update_desc.size   = indices.size() * sizeof(indices[ 0 ]);
+    update_buffer(device, buffer_update_desc);
 }
 
 Model::Mesh::Mesh(const Device& device, std::vector<float> vertices, std::vector<uint32_t> indices, Material material)

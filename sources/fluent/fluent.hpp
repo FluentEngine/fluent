@@ -9,6 +9,7 @@
 
 #include "renderer/renderer_enums.hpp"
 #include "renderer/renderer.hpp"
+#include "renderer/resource_loader.hpp"
 
 #include "math/math.hpp"
 

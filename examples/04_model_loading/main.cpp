@@ -62,11 +62,11 @@ void on_init()
 
     DeviceDesc device_desc{};
     device_desc.frame_in_use_count = 2;
-    device                         = create_device(renderer, device_desc);
+    create_device(renderer, device_desc, device);
 
     QueueDesc queue_desc{};
     queue_desc.queue_type = QueueType::eGraphics;
-    queue                 = get_queue(device, queue_desc);
+    get_queue(device, queue_desc, queue);
 
     CommandPoolDesc command_pool_desc{};
     command_pool_desc.queue = &queue;
@@ -92,8 +92,8 @@ void on_init()
     swapchain = create_swapchain(device, swapchain_desc);
 
     Shader shaders[ 2 ];
-    shaders[ 0 ] = create_shader(device, "main.vert.glsl.spv", ShaderStage::eVertex);
-    shaders[ 1 ] = create_shader(device, "main.frag.glsl.spv", ShaderStage::eFragment);
+    shaders[ 0 ] = load_shader(device, "main.vert");
+    shaders[ 1 ] = load_shader(device, "main.frag");
 
     descriptor_set_layout = create_descriptor_set_layout(device, 2, shaders);
 
@@ -139,7 +139,7 @@ void on_init()
     BufferDesc buffer_desc{};
     buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
     buffer_desc.size            = sizeof(CameraUBO);
-    buffer_desc.data            = &camera_ubo;
+    // buffer_desc.data            = &camera_ubo;
 
     uniform_buffer = create_buffer(device, buffer_desc);
 

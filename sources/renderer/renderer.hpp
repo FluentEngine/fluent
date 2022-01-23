@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include "volk.h"
 #include "vk_mem_alloc.h"
 #include "core/base.hpp"
@@ -32,9 +33,10 @@ struct QueueDesc
 
 struct Queue
 {
-    u32       family_index;
-    QueueType type;
-    VkQueue   queue;
+    u32                family_index;
+    QueueType          type;
+    VkQueue            queue;
+    mutable std::mutex submit_mutex;
 };
 
 struct Semaphore
@@ -80,25 +82,14 @@ struct Sampler
 
 struct ImageDesc
 {
-    u32                 width;
-    u32                 height;
-    u32                 depth;
-    Format              format;
-    SampleCount         sample_count;
-    u32                 layer_count = 1;
-    u32                 mip_levels  = 1;
-    DescriptorType      descriptor_type;
-    const char*         filename;
-    u32                 data_size;
-    mutable const void* data; // TODO:
-};
-
-struct ImageUpdateDesc
-{
-    Image*        image;
-    u32           size;
-    const void*   data;
-    ResourceState resource_state;
+    u32            width;
+    u32            height;
+    u32            depth;
+    Format         format;
+    SampleCount    sample_count;
+    u32            layer_count = 1;
+    u32            mip_levels  = 1;
+    DescriptorType descriptor_type;
 };
 
 struct Image
@@ -119,15 +110,6 @@ struct BufferDesc
 {
     u32            size;
     DescriptorType descriptor_type;
-    const void*    data;
-};
-
-struct BufferUpdateDesc
-{
-    u32         offset;
-    u32         size;
-    const void* data;
-    Buffer*     buffer;
 };
 
 struct Buffer
@@ -259,7 +241,8 @@ struct ImageBarrier
 struct ShaderDesc
 {
     ShaderStage stage;
-    const char* filename;
+    u32         bytecode_size;
+    const u32*  bytecode;
 };
 
 struct Shader
@@ -349,10 +332,6 @@ struct Device
     VkPhysicalDevice       physical_device;
     VkDevice               logical_device;
     VmaAllocator           memory_allocator;
-    Queue                  upload_queue;
-    CommandPool            command_pool;
-    CommandBuffer          upload_command_buffer;
-    StagingBuffer          staging_buffer;
     VkDescriptorPool       descriptor_pool;
 };
 
@@ -411,14 +390,14 @@ struct UiContext
 Renderer create_renderer(const RendererDesc& desc);
 void     destroy_renderer(Renderer& renderer);
 
-Device create_device(const Renderer& renderer, const DeviceDesc& desc);
-void   destroy_device(Device& device);
-void   device_wait_idle(const Device& device);
+void create_device(const Renderer& renderer, const DeviceDesc& desc, Device& device);
+void destroy_device(Device& device);
+void device_wait_idle(const Device& device);
 
-Queue get_queue(const Device& device, const QueueDesc& desc);
-void  queue_wait_idle(const Queue& queue);
-void  queue_submit(const Queue& queue, const QueueSubmitDesc& desc);
-void  queue_present(const Queue& queue, const QueuePresentDesc& desc);
+void get_queue(const Device& device, const QueueDesc& desc, Queue& queue);
+void queue_wait_idle(const Queue& queue);
+void queue_submit(const Queue& queue, const QueueSubmitDesc& desc);
+void queue_present(const Queue& queue, const QueuePresentDesc& desc);
 
 Semaphore create_semaphore(const Device& device);
 void      destroy_semaphore(const Device& device, Semaphore& semaphore);
@@ -449,7 +428,7 @@ RenderPass create_render_pass(const Device& device, const RenderPassDesc& desc);
 void       update_render_pass(const Device& device, RenderPass& render_pass, const RenderPassDesc& desc);
 void       destroy_render_pass(const Device& device, RenderPass& render_pass);
 
-Shader create_shader(const Device& device, const char* filename, ShaderStage shader_stage);
+Shader create_shader(const Device& device, ShaderDesc& desc);
 void   destroy_shader(const Device& device, Shader& shader);
 
 DescriptorSetLayout create_descriptor_set_layout(const Device& device, u32 shader_count, Shader* shaders);
@@ -494,22 +473,19 @@ void cmd_blit_image(
 
 void cmd_clear_color_image(const CommandBuffer& cmd, Image& image, Vector4 color);
 
-void immediate_submit(const Queue& queue, const CommandBuffer& cmd);
+void nolock_submit(const Queue& queue, const CommandBuffer& cmd, Fence* fence);
 
 Buffer create_buffer(const Device& device, const BufferDesc& desc);
 void   destroy_buffer(const Device& device, Buffer& buffer);
 
-void update_buffer(const Device& device, BufferUpdateDesc& buffer_update_desc);
+void map_memory(const Device& device, Buffer& buffer);
+void unmap_memory(const Device& device, Buffer& buffer);
 
 Sampler create_sampler(const Device& device, const SamplerDesc& desc);
 void    destroy_sampler(const Device& device, Sampler& sampler);
 
 Image create_image(const Device& device, const ImageDesc& desc);
 void  destroy_image(const Device& device, Image& image);
-Image load_image_from_dds_file(const Device& device, const char* filename, ResourceState resource_state, b32 flip);
-Image load_image_from_file(const Device& device, const char* filename, ResourceState resource_state, b32 flip);
-
-void update_image(const Device& device, const ImageUpdateDesc& desc);
 
 DescriptorSet create_descriptor_set(const Device& device, const DescriptorSetDesc& desc);
 void          destroy_descriptor_set(const Device& device, DescriptorSet& set);

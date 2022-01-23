@@ -8,6 +8,7 @@
 #include "core/base.hpp"
 #include "math/math.hpp"
 #include "renderer/renderer.hpp"
+#include "renderer/resource_loader.hpp"
 
 namespace fluent
 {

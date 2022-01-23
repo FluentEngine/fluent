@@ -762,14 +762,6 @@ void destroy_renderer(Renderer& renderer)
     vkDestroyInstance(renderer.instance, renderer.vulkan_allocator);
 }
 
-void write_to_staging_buffer(const Device& device, u32 size, const void* data)
-{
-    // TODO: decide what to do if no space left
-    FT_ASSERT(size < (device.staging_buffer.buffer.size - device.staging_buffer.memory_used));
-    u8* dst = ( u8* ) device.staging_buffer.buffer.mapped_memory + device.staging_buffer.memory_used;
-    std::memcpy(dst, data, size);
-}
-
 void map_memory(const Device& device, Buffer& buffer)
 {
     FT_ASSERT(buffer.mapped_memory == nullptr);
@@ -783,11 +775,10 @@ void unmap_memory(const Device& device, Buffer& buffer)
     buffer.mapped_memory = nullptr;
 }
 
-Device create_device(const Renderer& renderer, const DeviceDesc& desc)
+void create_device(const Renderer& renderer, const DeviceDesc& desc, Device& device)
 {
     FT_ASSERT(desc.frame_in_use_count > 0);
 
-    Device device{};
     device.vulkan_allocator = renderer.vulkan_allocator;
     device.instance         = renderer.instance;
     device.physical_device  = renderer.physical_device;
@@ -863,27 +854,6 @@ Device create_device(const Renderer& renderer, const DeviceDesc& desc)
 
     VK_ASSERT(vmaCreateAllocator(&vma_allocator_create_info, &device.memory_allocator));
 
-    // create staging buffer
-    BufferDesc buffer_desc{};
-    buffer_desc.size            = STAGING_BUFFER_SIZE;
-    buffer_desc.descriptor_type = DescriptorType::eHostVisibleBuffer | DescriptorType::eDeviceLocalBuffer;
-
-    device.staging_buffer.memory_used = 0;
-    device.staging_buffer.buffer      = create_buffer(device, buffer_desc);
-    map_memory(device, device.staging_buffer.buffer);
-
-    // TODO: move it to transfer queue
-    QueueDesc queue_desc{};
-    queue_desc.queue_type = QueueType::eGraphics;
-
-    device.upload_queue = get_queue(device, queue_desc);
-
-    CommandPoolDesc command_pool_desc{};
-    command_pool_desc.queue = &device.upload_queue;
-    device.command_pool     = create_command_pool(device, command_pool_desc);
-
-    allocate_command_buffers(device, device.command_pool, 1, &device.upload_command_buffer);
-
     static constexpr u32 pool_size_count               = 11;
     VkDescriptorPoolSize pool_sizes[ pool_size_count ] = {
         { VK_DESCRIPTOR_TYPE_SAMPLER, 1024 },
@@ -909,8 +879,6 @@ Device create_device(const Renderer& renderer, const DeviceDesc& desc)
 
     VK_ASSERT(vkCreateDescriptorPool(
         device.logical_device, &descriptor_pool_create_info, device.vulkan_allocator, &device.descriptor_pool));
-
-    return device;
 }
 
 void destroy_device(Device& device)
@@ -919,10 +887,6 @@ void destroy_device(Device& device)
     FT_ASSERT(device.memory_allocator);
     FT_ASSERT(device.logical_device);
     vkDestroyDescriptorPool(device.logical_device, device.descriptor_pool, device.vulkan_allocator);
-    free_command_buffers(device, device.command_pool, 1, &device.upload_command_buffer);
-    destroy_command_pool(device, device.command_pool);
-    unmap_memory(device, device.staging_buffer.buffer);
-    destroy_buffer(device, device.staging_buffer.buffer);
     vmaDestroyAllocator(device.memory_allocator);
     vkDestroyDevice(device.logical_device, device.vulkan_allocator);
 }
@@ -932,16 +896,13 @@ void device_wait_idle(const Device& device)
     vkDeviceWaitIdle(device.logical_device);
 }
 
-Queue get_queue(const Device& device, const QueueDesc& desc)
+void get_queue(const Device& device, const QueueDesc& desc, Queue& queue)
 {
-    Queue queue{};
-    u32   index = find_queue_family_index(device.physical_device, desc.queue_type);
+    u32 index = find_queue_family_index(device.physical_device, desc.queue_type);
 
     queue.family_index = index;
     queue.type         = desc.queue_type;
     vkGetDeviceQueue(device.logical_device, index, 0, &queue.queue);
-
-    return queue;
 }
 
 void queue_wait_idle(const Queue& queue)
@@ -982,7 +943,9 @@ void queue_submit(const Queue& queue, const QueueSubmitDesc& desc)
     submit_info.signalSemaphoreCount = desc.signal_semaphore_count;
     submit_info.pSignalSemaphores    = signal_semaphores;
 
+    queue.submit_mutex.lock();
     vkQueueSubmit(queue.queue, 1, &submit_info, desc.signal_fence ? desc.signal_fence->fence : VK_NULL_HANDLE);
+    queue.submit_mutex.unlock();
 }
 
 void queue_present(const Queue& queue, const QueuePresentDesc& desc)
@@ -1247,18 +1210,18 @@ void create_configured_swapchain(const Device& device, Swapchain& swapchain, b32
 
         swapchain.depth_image = create_image(device, image_desc);
 
-        // TODO: Remove it from here
-        ImageBarrier image_barrier{};
-        image_barrier.image     = &swapchain.depth_image;
-        image_barrier.src_queue = &device.upload_queue;
-        image_barrier.dst_queue = &device.upload_queue;
-        image_barrier.old_state = ResourceState::eUndefined;
-        image_barrier.new_state = ResourceState::eDepthStencilWrite;
+        // // TODO: Remove it from here
+        // ImageBarrier image_barrier{};
+        // image_barrier.image     = &swapchain.depth_image;
+        // image_barrier.src_queue = &device.upload_queue;
+        // image_barrier.dst_queue = &device.upload_queue;
+        // image_barrier.old_state = ResourceState::eUndefined;
+        // image_barrier.new_state = ResourceState::eDepthStencilWrite;
 
-        begin_command_buffer(device.upload_command_buffer);
-        cmd_barrier(device.upload_command_buffer, 0, nullptr, 1, &image_barrier);
-        end_command_buffer(device.upload_command_buffer);
-        immediate_submit(device.upload_queue, device.upload_command_buffer);
+        // begin_command_buffer(device.upload_command_buffer);
+        // cmd_barrier(device.upload_command_buffer, 0, nullptr, 1, &image_barrier);
+        // end_command_buffer(device.upload_command_buffer);
+        // immediate_submit(device.upload_queue, device.upload_command_buffer);
     }
 
     // create default render passes
@@ -1565,24 +1528,22 @@ void destroy_render_pass(const Device& device, RenderPass& render_pass)
     vkDestroyRenderPass(device.logical_device, render_pass.render_pass, device.vulkan_allocator);
 }
 
-Shader create_shader(const Device& device, const char* filename, ShaderStage shader_stage)
+Shader create_shader(const Device& device, ShaderDesc& desc)
 {
     Shader shader{};
-    shader.stage = shader_stage;
-
-    auto byte_code = read_file_binary(get_app_shaders_directory() + filename);
+    shader.stage = desc.stage;
 
     VkShaderModuleCreateInfo shader_create_info{};
     shader_create_info.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     shader_create_info.pNext    = nullptr;
     shader_create_info.flags    = 0;
-    shader_create_info.codeSize = byte_code.size() * sizeof(uint32_t);
-    shader_create_info.pCode    = byte_code.data();
+    shader_create_info.codeSize = desc.bytecode_size;
+    shader_create_info.pCode    = desc.bytecode;
 
     VK_ASSERT(
         vkCreateShaderModule(device.logical_device, &shader_create_info, device.vulkan_allocator, &shader.shader));
 
-    shader.reflect_data = reflect(byte_code.size() * sizeof(u32), byte_code.data());
+    shader.reflect_data = reflect(desc.bytecode_size, desc.bytecode);
 
     return shader;
 }
@@ -2140,7 +2101,22 @@ void cmd_clear_color_image(const CommandBuffer& cmd, Image& image, Vector4 color
         cmd.command_buffer, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
 }
 
-void immediate_submit(const Queue& queue, const CommandBuffer& cmd)
+// void immediate_submit(const Queue& queue, const CommandBuffer& cmd)
+// {
+//     QueueSubmitDesc submit_desc{};
+//     submit_desc.wait_semaphore_count   = 0;
+//     submit_desc.wait_semaphores        = nullptr;
+//     submit_desc.command_buffer_count   = 1;
+//     submit_desc.command_buffers        = &cmd;
+//     submit_desc.signal_semaphore_count = 0;
+//     submit_desc.signal_semaphores      = 0;
+//     submit_desc.signal_fence           = nullptr;
+
+//     queue_submit(queue, submit_desc);
+//     queue_wait_idle(queue);
+// }
+
+void nolock_submit(const Queue& queue, const CommandBuffer& cmd, Fence* fence)
 {
     QueueSubmitDesc submit_desc{};
     submit_desc.wait_semaphore_count   = 0;
@@ -2149,10 +2125,9 @@ void immediate_submit(const Queue& queue, const CommandBuffer& cmd)
     submit_desc.command_buffers        = &cmd;
     submit_desc.signal_semaphore_count = 0;
     submit_desc.signal_semaphores      = 0;
-    submit_desc.signal_fence           = nullptr;
+    submit_desc.signal_fence           = fence;
 
     queue_submit(queue, submit_desc);
-    queue_wait_idle(queue);
 }
 
 Buffer create_buffer(const Device& device, const BufferDesc& desc)
@@ -2178,16 +2153,16 @@ Buffer create_buffer(const Device& device, const BufferDesc& desc)
         device.memory_allocator, &buffer_create_info, &allocation_create_info, &buffer.buffer, &buffer.allocation,
         nullptr));
 
-    if (desc.data)
-    {
-        BufferUpdateDesc buffer_update_desc{};
-        buffer_update_desc.data   = desc.data;
-        buffer_update_desc.buffer = &buffer;
-        buffer_update_desc.offset = 0;
-        buffer_update_desc.size   = desc.size;
+    // if (desc.data)
+    // {
+    //     BufferUpdateDesc buffer_update_desc{};
+    //     buffer_update_desc.data   = desc.data;
+    //     buffer_update_desc.buffer = &buffer;
+    //     buffer_update_desc.offset = 0;
+    //     buffer_update_desc.size   = desc.size;
 
-        update_buffer(device, buffer_update_desc);
-    }
+    //     update_buffer(device, buffer_update_desc);
+    // }
 
     return buffer;
 }
@@ -2197,44 +2172,6 @@ void destroy_buffer(const Device& device, Buffer& buffer)
     FT_ASSERT(buffer.allocation);
     FT_ASSERT(buffer.buffer);
     vmaDestroyBuffer(device.memory_allocator, buffer.buffer, buffer.allocation);
-}
-
-void update_buffer(const Device& device, BufferUpdateDesc& desc)
-{
-    FT_ASSERT(desc.buffer);
-    FT_ASSERT(desc.offset + desc.size <= desc.buffer->size);
-
-    Buffer* buffer = desc.buffer;
-
-    if (b32(buffer->resource_state & ResourceState::eTransferSrc))
-    {
-        bool was_mapped = buffer->mapped_memory;
-        if (!was_mapped)
-        {
-            map_memory(device, *buffer);
-        }
-
-        std::memcpy(( u8* ) buffer->mapped_memory + desc.offset, desc.data, desc.size);
-
-        if (!was_mapped)
-        {
-            unmap_memory(device, *buffer);
-        }
-    }
-    else
-    {
-        write_to_staging_buffer(device, desc.size, desc.data);
-
-        begin_command_buffer(device.upload_command_buffer);
-
-        cmd_copy_buffer(
-            device.upload_command_buffer, device.staging_buffer.buffer, device.staging_buffer.memory_used, *desc.buffer,
-            desc.offset, desc.size);
-
-        end_command_buffer(device.upload_command_buffer);
-
-        immediate_submit(device.upload_queue, device.upload_command_buffer);
-    }
 }
 
 void cmd_bind_descriptor_set(const CommandBuffer& cmd, const DescriptorSet& set, const Pipeline& pipeline)
@@ -2322,16 +2259,16 @@ Image create_image(const Device& device, const ImageDesc& desc)
     image.layer_count     = desc.layer_count;
     image.descriptor_type = desc.descriptor_type;
 
-    if (desc.data)
-    {
-        ImageUpdateDesc image_update_desc{};
-        image_update_desc.image          = &image;
-        image_update_desc.size           = desc.data_size;
-        image_update_desc.data           = desc.data;
-        image_update_desc.resource_state = ResourceState::eUndefined;
+    // if (desc.data)
+    // {
+    //     ImageUpdateDesc image_update_desc{};
+    //     image_update_desc.image          = &image;
+    //     image_update_desc.size           = desc.data_size;
+    //     image_update_desc.data           = desc.data;
+    //     image_update_desc.resource_state = ResourceState::eUndefined;
 
-        update_image(device, image_update_desc);
-    }
+    //     update_image(device, image_update_desc);
+    // }
 
     // TODO: It's very bad, I dont want to submit so often
     // if (desc.resource_state != ResourceState::eUndefined)
@@ -2380,98 +2317,6 @@ void destroy_image(const Device& device, Image& image)
     FT_ASSERT(image.allocation);
     vkDestroyImageView(device.logical_device, image.image_view, device.vulkan_allocator);
     vmaDestroyImage(device.memory_allocator, image.image, image.allocation);
-}
-
-Image load_image_from_dds_file(const Device& device, const char* filename, ResourceState resource_state, b32 flip)
-{
-    std::string filepath = std::string(get_app_textures_directory()) + std::string(filename);
-
-    void* data = nullptr;
-
-    ImageDesc image_desc       = read_dds_image(filepath.c_str(), flip, &data);
-    image_desc.descriptor_type = DescriptorType::eSampledImage;
-    image_desc.data            = data;
-    Image image                = create_image(device, image_desc);
-
-    // TODO: Remove it
-    ImageBarrier image_barrier{};
-    image_barrier.image     = &image;
-    image_barrier.src_queue = &device.upload_queue;
-    image_barrier.dst_queue = &device.upload_queue;
-    image_barrier.old_state = ResourceState::eUndefined;
-    image_barrier.new_state = ResourceState::eShaderReadOnly;
-
-    begin_command_buffer(device.upload_command_buffer);
-    cmd_barrier(device.upload_command_buffer, 0, nullptr, 1, &image_barrier);
-    end_command_buffer(device.upload_command_buffer);
-    immediate_submit(device.upload_queue, device.upload_command_buffer);
-
-    release_dds_image(data);
-    return image;
-}
-
-Image load_image_from_file(const Device& device, const char* filename, ResourceState resource_state, b32 flip)
-{
-    std::string filepath = std::string(get_app_textures_directory()) + std::string(filename);
-
-    void* data = nullptr;
-
-    ImageDesc image_desc       = read_image(filepath.c_str(), flip, &data);
-    image_desc.descriptor_type = DescriptorType::eSampledImage;
-    image_desc.data            = data;
-    Image image                = create_image(device, image_desc);
-
-    // TODO: Remove it
-
-    ImageBarrier image_barrier{};
-    image_barrier.image     = &image;
-    image_barrier.src_queue = &device.upload_queue;
-    image_barrier.dst_queue = &device.upload_queue;
-    image_barrier.old_state = ResourceState::eUndefined;
-    image_barrier.new_state = ResourceState::eShaderReadOnly;
-
-    begin_command_buffer(device.upload_command_buffer);
-    cmd_barrier(device.upload_command_buffer, 0, nullptr, 1, &image_barrier);
-    end_command_buffer(device.upload_command_buffer);
-    immediate_submit(device.upload_queue, device.upload_command_buffer);
-
-    release_image(data);
-
-    return image;
-}
-
-void update_image(const Device& device, const ImageUpdateDesc& desc)
-{
-    write_to_staging_buffer(device, desc.size, desc.data);
-
-    begin_command_buffer(device.upload_command_buffer);
-
-    ImageBarrier image_barrier{};
-    image_barrier.image     = desc.image;
-    image_barrier.old_state = desc.resource_state;
-    image_barrier.new_state = ResourceState::eTransferDst;
-    image_barrier.src_queue = &device.upload_queue;
-    image_barrier.dst_queue = &device.upload_queue;
-
-    if (desc.resource_state != ResourceState::eTransferDst)
-    {
-        cmd_barrier(device.upload_command_buffer, 0, nullptr, 1, &image_barrier);
-    }
-
-    cmd_copy_buffer_to_image(
-        device.upload_command_buffer, device.staging_buffer.buffer, device.staging_buffer.memory_used, *desc.image);
-
-    image_barrier.old_state = ResourceState::eTransferDst;
-    image_barrier.new_state = desc.resource_state;
-
-    if (desc.resource_state != ResourceState::eTransferDst && desc.resource_state != ResourceState::eUndefined)
-    {
-        cmd_barrier(device.upload_command_buffer, 0, nullptr, 1, &image_barrier);
-    }
-
-    end_command_buffer(device.upload_command_buffer);
-
-    immediate_submit(device.upload_queue, device.upload_command_buffer);
 }
 
 DescriptorSet create_descriptor_set(const Device& device, const DescriptorSetDesc& desc)
@@ -2622,10 +2467,11 @@ UiContext create_ui_context(const UiDesc& desc)
     ImGui_ImplSDL2_InitForVulkan(( SDL_Window* ) desc.window->handle);
     ImGui_ImplVulkan_Init(&init_info, desc.render_pass->render_pass);
 
-    begin_command_buffer(desc.device->upload_command_buffer);
-    ImGui_ImplVulkan_CreateFontsTexture(desc.device->upload_command_buffer.command_buffer);
-    end_command_buffer(desc.device->upload_command_buffer);
-    immediate_submit(desc.device->upload_queue, desc.device->upload_command_buffer);
+    // TODO:
+    // begin_command_buffer(desc.device->upload_command_buffer);
+    // ImGui_ImplVulkan_CreateFontsTexture(desc.device->upload_command_buffer.command_buffer);
+    // end_command_buffer(desc.device->upload_command_buffer);
+    // immediate_submit(desc.device->upload_queue, desc.device->upload_command_buffer);
 
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 

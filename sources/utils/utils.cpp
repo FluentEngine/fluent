@@ -41,7 +41,7 @@ ImageDesc read_dds_image(const char* filename, b32 flip, void** data)
     image_desc.format     = ( Format ) TinyImageFormat_FromDXGI_FORMAT(( TinyImageFormat_DXGI_FORMAT ) dds.GetFormat());
     image_desc.mip_levels = dds.GetMipCount();
     image_desc.layer_count = dds.GetArraySize();
-    image_desc.data_size   = image_data->m_memSlicePitch;
+    // image_desc.data_size   = image_data->m_memSlicePitch;
 
     *data = new u8[ image_data->m_memSlicePitch ];
     std::memcpy((*data), image_data->m_mem, image_data->m_memSlicePitch);
@@ -62,7 +62,6 @@ ImageDesc read_image(const char* filename, b32 flip, void** data)
     int tex_width, tex_height, tex_channels;
     *data = stbi_load(filename, &tex_width, &tex_height, &tex_channels, STBI_rgb_alpha);
 
-    image_desc.data_size = tex_width * tex_height * 4;
     stbi_set_flip_vertically_on_load(!flip);
 
     image_desc.width       = tex_width;

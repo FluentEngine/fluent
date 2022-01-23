@@ -73,8 +73,8 @@ void update_camera(f32 delta_time);
 void create_mesh_pipeline()
 {
     Shader shaders[ 2 ] = {};
-    shaders[ 0 ]        = create_shader(device, "main.vert.glsl.spv", ShaderStage::eVertex);
-    shaders[ 1 ]        = create_shader(device, "main.frag.glsl.spv", ShaderStage::eFragment);
+    shaders[ 0 ]        = load_shader(device, "main.vert");
+    shaders[ 1 ]        = load_shader(device, "main.frag");
 
     mesh_dsl = create_descriptor_set_layout(device, 2, shaders);
 
@@ -124,8 +124,8 @@ void create_camera()
 
     BufferDesc buffer_desc{};
     buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
-    buffer_desc.data            = &camera.get_data();
-    buffer_desc.size            = sizeof(CameraData);
+    // buffer_desc.data            = &camera.get_data();
+    buffer_desc.size = sizeof(CameraData);
 
     camera_buffer = create_buffer(device, buffer_desc);
 }
@@ -292,25 +292,23 @@ void draw_ui(CommandBuffer& cmd)
 // app
 void create_editor_images(u32 width, u32 height)
 {
-    ImageDesc editor_image_descs[ 2 ]    = {};
-    editor_image_descs[ 0 ].width        = width;
-    editor_image_descs[ 0 ].height       = height;
-    editor_image_descs[ 0 ].depth        = 1.0f;
-    editor_image_descs[ 0 ].format       = Format::eR8G8B8A8Unorm;
-    editor_image_descs[ 0 ].layer_count  = 1;
-    editor_image_descs[ 0 ].mip_levels   = 1;
-    editor_image_descs[ 0 ].sample_count = SampleCount::e1;
-    // editor_image_descs[ 0 ].resource_state  = ResourceState::eTransferDst | ResourceState::eColorAttachment;
+    ImageDesc editor_image_descs[ 2 ]       = {};
+    editor_image_descs[ 0 ].width           = width;
+    editor_image_descs[ 0 ].height          = height;
+    editor_image_descs[ 0 ].depth           = 1.0f;
+    editor_image_descs[ 0 ].format          = Format::eR8G8B8A8Unorm;
+    editor_image_descs[ 0 ].layer_count     = 1;
+    editor_image_descs[ 0 ].mip_levels      = 1;
+    editor_image_descs[ 0 ].sample_count    = SampleCount::e1;
     editor_image_descs[ 0 ].descriptor_type = DescriptorType::eColorAttachment | DescriptorType::eSampledImage;
 
-    editor_image_descs[ 1 ].width        = width;
-    editor_image_descs[ 1 ].height       = height;
-    editor_image_descs[ 1 ].depth        = 1.0f;
-    editor_image_descs[ 1 ].format       = Format::eD32Sfloat;
-    editor_image_descs[ 1 ].layer_count  = 1;
-    editor_image_descs[ 1 ].mip_levels   = 1;
-    editor_image_descs[ 1 ].sample_count = SampleCount::e1;
-    // editor_image_descs[ 1 ].resource_state  = ResourceState::eTransferDst | ResourceState::eDepthStencilWrite;
+    editor_image_descs[ 1 ].width           = width;
+    editor_image_descs[ 1 ].height          = height;
+    editor_image_descs[ 1 ].depth           = 1.0f;
+    editor_image_descs[ 1 ].format          = Format::eD32Sfloat;
+    editor_image_descs[ 1 ].layer_count     = 1;
+    editor_image_descs[ 1 ].mip_levels      = 1;
+    editor_image_descs[ 1 ].sample_count    = SampleCount::e1;
     editor_image_descs[ 1 ].descriptor_type = DescriptorType::eDepthStencilAttachment;
 
     editor_image       = create_image(device, editor_image_descs[ 0 ]);
@@ -398,11 +396,11 @@ void init_graphics()
 
     DeviceDesc device_desc{};
     device_desc.frame_in_use_count = 2;
-    device                         = create_device(renderer, device_desc);
+    create_device(renderer, device_desc, device);
 
     QueueDesc queue_desc{};
     queue_desc.queue_type = QueueType::eGraphics;
-    queue                 = get_queue(device, queue_desc);
+    get_queue(device, queue_desc, queue);
 
     CommandPoolDesc command_pool_desc{};
     command_pool_desc.queue = &queue;

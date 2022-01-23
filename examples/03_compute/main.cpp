@@ -89,11 +89,11 @@ void on_init()
 
     DeviceDesc device_desc{};
     device_desc.frame_in_use_count = 2;
-    device                         = create_device(renderer, device_desc);
+    create_device(renderer, device_desc, device);
 
     QueueDesc queue_desc{};
     queue_desc.queue_type = QueueType::eGraphics;
-    queue                 = get_queue(device, queue_desc);
+    get_queue(device, queue_desc, queue);
 
     CommandPoolDesc command_pool_desc{};
     command_pool_desc.queue = &queue;
@@ -117,7 +117,7 @@ void on_init()
 
     swapchain = create_swapchain(device, swapchain_desc);
 
-    Shader shader = create_shader(device, "main.comp.glsl.spv", ShaderStage::eCompute);
+    Shader shader = load_shader(device, "main.comp");
 
     descriptor_set_layout = create_descriptor_set_layout(device, 1, &shader);
 

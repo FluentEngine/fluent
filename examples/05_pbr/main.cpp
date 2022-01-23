@@ -176,7 +176,7 @@ void compute_pbr_maps(const std::string& skybox_name)
 
     Sampler skybox_sampler = create_sampler(device, sampler_desc);
     Image   pano_skybox = load_image_from_dds_file(device, skybox_name.c_str(), ResourceState::eShaderReadOnly, false);
-    Shader  pano_to_cube_shader = create_shader(device, "pano_to_cube.comp.glsl.spv", ShaderStage::eCompute);
+    Shader  pano_to_cube_shader = load_shader(device, "pano_to_cube.comp");
 
     // precomputed skybox
     environment_map      = create_image(device, skybox_image_desc);
@@ -222,7 +222,7 @@ void compute_pbr_maps(const std::string& skybox_name)
     descriptor_write_descs[ 2 ].descriptor_image_descs = &descriptor_output_image_desc;
     update_descriptor_set(device, ds_pano_to_cube, 3, descriptor_write_descs);
 
-    Shader brdf_integration_shader = create_shader(device, "brdf_integration.comp.glsl.spv", ShaderStage::eCompute);
+    Shader brdf_integration_shader = load_shader(device, "brdf_integration.comp");
 
     DescriptorSetLayout brdf_integration_dsl = create_descriptor_set_layout(device, 1, &brdf_integration_shader);
 
@@ -248,7 +248,7 @@ void compute_pbr_maps(const std::string& skybox_name)
 
     Pipeline brdf_integration_pipeline = create_compute_pipeline(device, brdf_integration_pipeline_desc);
 
-    Shader              irradiance_shader = create_shader(device, "irradiance.comp.glsl.spv", ShaderStage::eCompute);
+    Shader              irradiance_shader = load_shader(device, "irradiance.comp");
     DescriptorSetLayout irradiance_dsl    = create_descriptor_set_layout(device, 1, &irradiance_shader);
     DescriptorSetDesc   irradiance_set_desc{};
     irradiance_set_desc.descriptor_set_layout = &irradiance_dsl;
@@ -277,7 +277,7 @@ void compute_pbr_maps(const std::string& skybox_name)
 
     Pipeline irradiance_pipeline = create_compute_pipeline(device, irradiance_pipeline_desc);
 
-    Shader specular_shader = create_shader(device, "specular.comp.glsl.spv", ShaderStage::eCompute);
+    Shader specular_shader = load_shader(device, "specular.comp");
 
     DescriptorSetLayout specular_set_layout = create_descriptor_set_layout(device, 1, &specular_shader);
     DescriptorSetDesc   specular_set_desc{};
@@ -473,8 +473,8 @@ void load_skybox()
     skybox_sampler = create_sampler(device, sampler_desc);
 
     Shader shaders[ 2 ] = {};
-    shaders[ 0 ]        = create_shader(device, "skybox.vert.glsl.spv", ShaderStage::eVertex);
-    shaders[ 1 ]        = create_shader(device, "skybox.frag.glsl.spv", ShaderStage::eFragment);
+    shaders[ 0 ]        = load_shader(device, "skybox.vert");
+    shaders[ 1 ]        = load_shader(device, "skybox.frag");
 
     skybox_descriptor_set_layout = create_descriptor_set_layout(device, 2, shaders);
 
@@ -560,8 +560,8 @@ void load_model()
     pbr_sampler = create_sampler(device, sampler_desc);
 
     Shader shaders[ 2 ] = {};
-    shaders[ 0 ]        = create_shader(device, "pbr.vert.glsl.spv", ShaderStage::eVertex);
-    shaders[ 1 ]        = create_shader(device, "pbr.frag.glsl.spv", ShaderStage::eFragment);
+    shaders[ 0 ]        = load_shader(device, "pbr.vert");
+    shaders[ 1 ]        = load_shader(device, "pbr.frag");
 
     pbr_descriptor_set_layout = create_descriptor_set_layout(device, 2, shaders);
 
@@ -763,11 +763,11 @@ void on_init()
 
     DeviceDesc device_desc{};
     device_desc.frame_in_use_count = 2;
-    device                         = create_device(renderer, device_desc);
+    create_device(renderer, device_desc, device);
 
     QueueDesc queue_desc{};
     queue_desc.queue_type = QueueType::eGraphics;
-    queue                 = get_queue(device, queue_desc);
+    get_queue(device, queue_desc, queue);
 
     CommandPoolDesc command_pool_desc{};
     command_pool_desc.queue = &queue;
@@ -800,7 +800,7 @@ void on_init()
     ubo.view       = create_look_at_matrix(Vector3(0.0f, 0.0, 2.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));
 
     BufferDesc ubo_buffer_desc{};
-    ubo_buffer_desc.data            = &ubo;
+    // ubo_buffer_desc.data            = &ubo;
     ubo_buffer_desc.size            = sizeof(CameraUBO);
     ubo_buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
 

@@ -35,7 +35,8 @@ set(core_sources
 
 set(renderer_sources
 	${src_dir}/renderer/shader_reflection.cpp
-	${src_dir}/renderer/renderer.cpp)
+	${src_dir}/renderer/renderer.cpp
+	${src_dir}/renderer/resource_loader.cpp)
 
 set(util_sources
 	${src_dir}/utils/utils.cpp)
@@ -86,4 +87,4 @@ if (FLUENT_BUILD_TESTS)
     add_subdirectory(examples)
 endif()
 
-add_subdirectory(sandbox)
+# add_subdirectory(sandbox)
