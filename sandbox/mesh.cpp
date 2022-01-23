@@ -37,6 +37,18 @@ void Mesh::create(const fluent::Device& device, const MeshDesc& desc)
 
     m_vertex_buffer = create_buffer(device, buffer_descs[ 0 ]);
     m_index_buffer  = create_buffer(device, buffer_descs[ 1 ]);
+
+    BufferUpdateDesc buffer_update_desc{};
+    buffer_update_desc.buffer = &m_vertex_buffer;
+    buffer_update_desc.data   = converted_vertices.data();
+    buffer_update_desc.offset = 0;
+    buffer_update_desc.size   = m_vertex_buffer.size;
+
+    update_buffer(device, buffer_update_desc);
+    buffer_update_desc.buffer = &m_index_buffer;
+    buffer_update_desc.data   = desc.indices;
+    buffer_update_desc.size   = m_index_buffer.size;
+    update_buffer(device, buffer_update_desc);
 }
 
 void Mesh::destroy(const fluent::Device& device)

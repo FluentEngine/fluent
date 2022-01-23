@@ -104,8 +104,8 @@ void create_dummy_resources()
     cmd_barrier(cmd, 0, nullptr, 1, &image_barrier);
 
     end_command_buffer(cmd);
-
-    immediate_submit(queue, cmd);
+    nolock_submit(queue, cmd, nullptr);
+    queue_wait_idle(queue);
 }
 
 void destroy_dummy_resources()
@@ -177,6 +177,8 @@ void compute_pbr_maps(const std::string& skybox_name)
     Sampler skybox_sampler = create_sampler(device, sampler_desc);
     Image   pano_skybox = load_image_from_dds_file(device, skybox_name.c_str(), ResourceState::eShaderReadOnly, false);
     Shader  pano_to_cube_shader = load_shader(device, "pano_to_cube.comp");
+
+    resource_loader_wait_idle();
 
     // precomputed skybox
     environment_map      = create_image(device, skybox_image_desc);
@@ -388,8 +390,8 @@ void compute_pbr_maps(const std::string& skybox_name)
     cmd_barrier(cmd, 0, nullptr, 1, &to_sampled_barrier);
 
     end_command_buffer(cmd);
-
-    immediate_submit(queue, cmd);
+    nolock_submit(queue, cmd, nullptr);
+    queue_wait_idle(queue);
 
     destroy_descriptor_set(device, specular_set);
     destroy_descriptor_set_layout(device, specular_set_layout);
@@ -765,6 +767,8 @@ void on_init()
     device_desc.frame_in_use_count = 2;
     create_device(renderer, device_desc, device);
 
+    init_resource_loader(device);
+
     QueueDesc queue_desc{};
     queue_desc.queue_type = QueueType::eGraphics;
     get_queue(device, queue_desc, queue);
@@ -837,6 +841,7 @@ void on_resize(u32 width, u32 height)
     buffer_update.data   = &ubo;
 
     update_buffer(device, buffer_update);
+    resource_loader_wait_idle();
 }
 
 void on_update(f32 delta_time)
@@ -908,6 +913,7 @@ void on_shutdown()
     }
     free_command_buffers(device, command_pool, FRAME_COUNT, command_buffers);
     destroy_command_pool(device, command_pool);
+    shutdown_resource_loader(device);
     destroy_device(device);
     destroy_renderer(renderer);
 }

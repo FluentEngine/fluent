@@ -879,6 +879,18 @@ void create_device(const Renderer& renderer, const DeviceDesc& desc, Device& dev
 
     VK_ASSERT(vkCreateDescriptorPool(
         device.logical_device, &descriptor_pool_create_info, device.vulkan_allocator, &device.descriptor_pool));
+
+    // TODO: move it to transfer queue
+    QueueDesc queue_desc{};
+    queue_desc.queue_type = QueueType::eGraphics;
+
+    get_queue(device, queue_desc, device.queue);
+
+    CommandPoolDesc command_pool_desc{};
+    command_pool_desc.queue = &device.queue;
+    device.command_pool     = create_command_pool(device, command_pool_desc);
+
+    allocate_command_buffers(device, device.command_pool, 1, &device.cmd);
 }
 
 void destroy_device(Device& device)
@@ -886,6 +898,7 @@ void destroy_device(Device& device)
     FT_ASSERT(device.descriptor_pool);
     FT_ASSERT(device.memory_allocator);
     FT_ASSERT(device.logical_device);
+    destroy_command_pool(device, device.command_pool);
     vkDestroyDescriptorPool(device.logical_device, device.descriptor_pool, device.vulkan_allocator);
     vmaDestroyAllocator(device.memory_allocator);
     vkDestroyDevice(device.logical_device, device.vulkan_allocator);
@@ -1210,18 +1223,18 @@ void create_configured_swapchain(const Device& device, Swapchain& swapchain, b32
 
         swapchain.depth_image = create_image(device, image_desc);
 
-        // // TODO: Remove it from here
-        // ImageBarrier image_barrier{};
-        // image_barrier.image     = &swapchain.depth_image;
-        // image_barrier.src_queue = &device.upload_queue;
-        // image_barrier.dst_queue = &device.upload_queue;
-        // image_barrier.old_state = ResourceState::eUndefined;
-        // image_barrier.new_state = ResourceState::eDepthStencilWrite;
+        ImageBarrier image_barrier{};
+        image_barrier.image     = &swapchain.depth_image;
+        image_barrier.src_queue = &device.queue;
+        image_barrier.dst_queue = &device.queue;
+        image_barrier.old_state = ResourceState::eUndefined;
+        image_barrier.new_state = ResourceState::eDepthStencilWrite;
 
-        // begin_command_buffer(device.upload_command_buffer);
-        // cmd_barrier(device.upload_command_buffer, 0, nullptr, 1, &image_barrier);
-        // end_command_buffer(device.upload_command_buffer);
-        // immediate_submit(device.upload_queue, device.upload_command_buffer);
+        begin_command_buffer(device.cmd);
+        cmd_barrier(device.cmd, 0, nullptr, 1, &image_barrier);
+        end_command_buffer(device.cmd);
+        nolock_submit(device.queue, device.cmd, nullptr);
+        queue_wait_idle(device.queue);
     }
 
     // create default render passes
@@ -2467,11 +2480,11 @@ UiContext create_ui_context(const UiDesc& desc)
     ImGui_ImplSDL2_InitForVulkan(( SDL_Window* ) desc.window->handle);
     ImGui_ImplVulkan_Init(&init_info, desc.render_pass->render_pass);
 
-    // TODO:
-    // begin_command_buffer(desc.device->upload_command_buffer);
-    // ImGui_ImplVulkan_CreateFontsTexture(desc.device->upload_command_buffer.command_buffer);
-    // end_command_buffer(desc.device->upload_command_buffer);
-    // immediate_submit(desc.device->upload_queue, desc.device->upload_command_buffer);
+    begin_command_buffer(desc.device->cmd);
+    ImGui_ImplVulkan_CreateFontsTexture(desc.device->cmd.command_buffer);
+    end_command_buffer(desc.device->cmd);
+    nolock_submit(desc.device->queue, desc.device->cmd, nullptr);
+    queue_wait_idle(desc.device->queue);
 
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 

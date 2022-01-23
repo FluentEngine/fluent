@@ -75,7 +75,8 @@ void create_output_texture()
     begin_command_buffer(command_buffers[ 0 ]);
     cmd_barrier(command_buffers[ 0 ], 0, nullptr, 1, &image_barrier);
     end_command_buffer(command_buffers[ 0 ]);
-    immediate_submit(queue, command_buffers[ 0 ]);
+    nolock_submit(queue, command_buffers[ 0 ], nullptr);
+    queue_wait_idle(queue);
 }
 
 void on_init()

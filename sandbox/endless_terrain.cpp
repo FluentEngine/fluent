@@ -104,6 +104,7 @@ void EndlessTerrain::update_visible_chunks()
             }
         }
     }
+    resource_loader_wait_idle();
 }
 
 void EndlessTerrain::update(const fluent::Vector3& viewer_position)

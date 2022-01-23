@@ -61,19 +61,19 @@ void resource_loader_begin_cmd()
 
 void resource_loader_end_cmd()
 {
-    if (resource_loader.cmd_record_in_process)
-    {
-        end_command_buffer(resource_loader.cmd);
-    }
+    end_command_buffer(resource_loader.cmd);
+    resource_loader.cmd_record_in_process = false;
 }
 
 void resource_loader_wait_idle()
 {
-    resource_loader_end_cmd();
-    nolock_submit(resource_loader.queue, resource_loader.cmd, nullptr);
-    queue_wait_idle(resource_loader.queue);
-    resource_loader.cmd_record_in_process      = false;
-    resource_loader.staging_buffer.memory_used = 0;
+    if (resource_loader.cmd_record_in_process)
+    {
+        resource_loader_end_cmd();
+        nolock_submit(resource_loader.queue, resource_loader.cmd, nullptr);
+        queue_wait_idle(resource_loader.queue);
+        resource_loader.staging_buffer.memory_used = 0;
+    }
 }
 
 void write_to_staging_buffer(const Device& device, u32 size, const void* data)
@@ -145,8 +145,6 @@ void update_buffer(const Device& device, BufferUpdateDesc const& desc, UpdateFen
         cmd_copy_buffer(
             resource_loader.cmd, resource_loader.staging_buffer.buffer,
             resource_loader.staging_buffer.memory_used - desc.size, *desc.buffer, desc.offset, desc.size);
-
-        FT_INFO("Offset after buffer write {}", resource_loader.staging_buffer.memory_used);
     }
 }
 
@@ -196,7 +194,8 @@ Image load_image_from_file(const Device& device, const char* filename, ResourceS
     image_update_desc.data           = data;
     image_update_desc.image          = &image;
     image_update_desc.resource_state = ResourceState::eUndefined;
-    image_update_desc.size           = image_desc.width * image_desc.height * 4;
+    image_update_desc.size =
+        image_desc.width * image_desc.height * TinyImageFormat_ChannelCount(( TinyImageFormat ) image_desc.format);
 
     // TODO: Remove it
     ImageBarrier image_barrier;
@@ -232,8 +231,6 @@ void update_image(const Device& device, ImageUpdateDesc const& desc, UpdateFence
         image_barrier.new_state = ResourceState::eTransferDst;
         cmd_barrier(resource_loader.cmd, 0, nullptr, 1, &image_barrier);
     }
-
-    FT_INFO("Offset {}", resource_loader.staging_buffer.memory_used);
 
     cmd_copy_buffer_to_image(
         resource_loader.cmd, resource_loader.staging_buffer.buffer,

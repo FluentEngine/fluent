@@ -87,4 +87,4 @@ if (FLUENT_BUILD_TESTS)
     add_subdirectory(examples)
 endif()
 
-# add_subdirectory(sandbox)
+add_subdirectory(sandbox)

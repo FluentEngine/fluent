@@ -64,6 +64,8 @@ void on_init()
     device_desc.frame_in_use_count = 2;
     create_device(renderer, device_desc, device);
 
+    init_resource_loader(device);
+
     QueueDesc queue_desc{};
     queue_desc.queue_type = QueueType::eGraphics;
     get_queue(device, queue_desc, queue);
@@ -139,9 +141,17 @@ void on_init()
     BufferDesc buffer_desc{};
     buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
     buffer_desc.size            = sizeof(CameraUBO);
-    // buffer_desc.data            = &camera_ubo;
 
     uniform_buffer = create_buffer(device, buffer_desc);
+
+    BufferUpdateDesc buffer_update_desc{};
+    buffer_update_desc.buffer = &uniform_buffer;
+    buffer_update_desc.data   = &camera_ubo;
+    buffer_update_desc.offset = 0;
+    buffer_update_desc.size   = sizeof(CameraUBO);
+
+    update_buffer(device, buffer_update_desc, nullptr);
+    resource_loader_wait_idle();
 
     DescriptorSetDesc descriptor_set_desc{};
     descriptor_set_desc.descriptor_set_layout = &descriptor_set_layout;
@@ -309,6 +319,7 @@ void on_shutdown()
     }
     free_command_buffers(device, command_pool, FRAME_COUNT, command_buffers);
     destroy_command_pool(device, command_pool);
+    shutdown_resource_loader(device);
     destroy_device(device);
     destroy_renderer(renderer);
 }

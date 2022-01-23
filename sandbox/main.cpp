@@ -146,6 +146,7 @@ void update_camera(f32 delta_time)
     buffer_update_desc.data   = &camera.get_data();
 
     update_buffer(device, buffer_update_desc);
+    resource_loader_wait_idle();
 }
 
 void create_map_sampler()
@@ -329,7 +330,8 @@ void create_editor_images(u32 width, u32 height)
     begin_command_buffer(command_buffers[ 0 ]);
     cmd_barrier(command_buffers[ 0 ], 0, nullptr, 2, image_barriers);
     end_command_buffer(command_buffers[ 0 ]);
-    immediate_submit(queue, command_buffers[ 0 ]);
+    nolock_submit(queue, command_buffers[ 0 ], nullptr);
+    queue_wait_idle(queue);
 }
 
 void destroy_editor_images()
@@ -398,6 +400,8 @@ void init_graphics()
     device_desc.frame_in_use_count = 2;
     create_device(renderer, device_desc, device);
 
+    init_resource_loader(device);
+
     QueueDesc queue_desc{};
     queue_desc.queue_type = QueueType::eGraphics;
     get_queue(device, queue_desc, queue);
@@ -437,6 +441,7 @@ void shutdown_graphics()
     }
     free_command_buffers(device, command_pool, FRAME_COUNT, command_buffers);
     destroy_command_pool(device, command_pool);
+    shutdown_resource_loader(device);
     destroy_device(device);
     destroy_renderer(renderer);
 }

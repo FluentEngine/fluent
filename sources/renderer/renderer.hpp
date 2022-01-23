@@ -333,6 +333,9 @@ struct Device
     VkDevice               logical_device;
     VmaAllocator           memory_allocator;
     VkDescriptorPool       descriptor_pool;
+    Queue                  queue;
+    CommandPool            command_pool;
+    CommandBuffer          cmd;
 };
 
 struct DescriptorSetDesc
