@@ -146,7 +146,6 @@ void update_camera(f32 delta_time)
     buffer_update_desc.data   = &camera.get_data();
 
     update_buffer(device, buffer_update_desc);
-    resource_loader_wait_idle();
 }
 
 void create_map_sampler()

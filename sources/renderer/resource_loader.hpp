@@ -6,7 +6,8 @@
 namespace fluent
 {
 
-using UpdateFence = Fence;
+// for future use
+using UpdateFence = void*;
 
 struct ImageUpdateDesc
 {

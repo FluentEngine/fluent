@@ -151,7 +151,6 @@ void on_init()
     buffer_update_desc.size   = sizeof(CameraUBO);
 
     update_buffer(device, buffer_update_desc, nullptr);
-    resource_loader_wait_idle();
 
     DescriptorSetDesc descriptor_set_desc{};
     descriptor_set_desc.descriptor_set_layout = &descriptor_set_layout;

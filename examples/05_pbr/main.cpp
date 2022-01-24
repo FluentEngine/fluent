@@ -178,8 +178,6 @@ void compute_pbr_maps(const std::string& skybox_name)
     Image   pano_skybox = load_image_from_dds_file(device, skybox_name.c_str(), ResourceState::eShaderReadOnly, false);
     Shader  pano_to_cube_shader = load_shader(device, "pano_to_cube.comp");
 
-    resource_loader_wait_idle();
-
     // precomputed skybox
     environment_map      = create_image(device, skybox_image_desc);
     irradiance_map       = create_image(device, irr_image_desc);
@@ -804,11 +802,18 @@ void on_init()
     ubo.view       = create_look_at_matrix(Vector3(0.0f, 0.0, 2.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));
 
     BufferDesc ubo_buffer_desc{};
-    // ubo_buffer_desc.data            = &ubo;
     ubo_buffer_desc.size            = sizeof(CameraUBO);
     ubo_buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
 
     ubo_buffer = create_buffer(device, ubo_buffer_desc);
+
+    BufferUpdateDesc buffer_update{};
+    buffer_update.buffer = &ubo_buffer;
+    buffer_update.offset = 0;
+    buffer_update.size   = sizeof(CameraUBO);
+    buffer_update.data   = &ubo;
+
+    update_buffer(device, buffer_update);
 
     load_skybox();
     load_model();
@@ -841,7 +846,6 @@ void on_resize(u32 width, u32 height)
     buffer_update.data   = &ubo;
 
     update_buffer(device, buffer_update);
-    resource_loader_wait_idle();
 }
 
 void on_update(f32 delta_time)

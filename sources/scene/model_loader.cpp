@@ -93,8 +93,6 @@ Model ModelLoader::load(const std::string& filename)
     for (uint32_t i = 0; i < textures_loaded.size(); ++i)
         model.textures[ i ] = textures_loaded[ i ].texture;
 
-    resource_loader_wait_idle();
-
     return model;
 }
 
@@ -267,7 +265,6 @@ std::vector<ModelLoader::LoadedTexture> ModelLoader::load_material_textures(
             texture.name    = type_name;
             texture.texture = load_image_from_file(
                 *device, (directory + "/" + texName).c_str(), ResourceState::eShaderReadOnly, flip_uvs);
-            resource_loader_wait_idle();
 
             textures.push_back(texture);
             textures_loaded.push_back(texture);

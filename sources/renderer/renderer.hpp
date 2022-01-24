@@ -17,7 +17,6 @@ struct Buffer;
 struct StagingBuffer;
 struct Image;
 
-static constexpr u32 STAGING_BUFFER_SIZE          = 10 * 1024 * 1024 * 8; // ~50 mb
 static constexpr u32 FLUENT_VULKAN_API_VERSION    = VK_API_VERSION_1_2;
 static constexpr u32 MAX_ATTACHMENTS_COUNT        = 10;
 static constexpr u32 MAX_PUSH_CONSTANT_RANGE      = 128;
@@ -120,12 +119,6 @@ struct Buffer
     ResourceState  resource_state;
     DescriptorType descriptor_type;
     void*          mapped_memory = nullptr;
-};
-
-struct StagingBuffer
-{
-    Buffer buffer;
-    u32    memory_used;
 };
 
 struct Swapchain

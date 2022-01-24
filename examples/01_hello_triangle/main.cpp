@@ -109,8 +109,6 @@ void on_init()
     buffer_update_desc.data   = vertices;
 
     update_buffer(device, buffer_update_desc);
-
-    resource_loader_wait_idle();
 }
 
 void on_resize(u32 width, u32 height)
