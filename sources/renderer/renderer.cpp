@@ -2114,20 +2114,20 @@ void cmd_clear_color_image(const CommandBuffer& cmd, Image& image, Vector4 color
         cmd.command_buffer, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
 }
 
-// void immediate_submit(const Queue& queue, const CommandBuffer& cmd)
-// {
-//     QueueSubmitDesc submit_desc{};
-//     submit_desc.wait_semaphore_count   = 0;
-//     submit_desc.wait_semaphores        = nullptr;
-//     submit_desc.command_buffer_count   = 1;
-//     submit_desc.command_buffers        = &cmd;
-//     submit_desc.signal_semaphore_count = 0;
-//     submit_desc.signal_semaphores      = 0;
-//     submit_desc.signal_fence           = nullptr;
+void immediate_submit(Queue const& queue, CommandBuffer const& cmd)
+{
+    QueueSubmitDesc submit_desc{};
+    submit_desc.wait_semaphore_count   = 0;
+    submit_desc.wait_semaphores        = nullptr;
+    submit_desc.command_buffer_count   = 1;
+    submit_desc.command_buffers        = &cmd;
+    submit_desc.signal_semaphore_count = 0;
+    submit_desc.signal_semaphores      = 0;
+    submit_desc.signal_fence           = nullptr;
 
-//     queue_submit(queue, submit_desc);
-//     queue_wait_idle(queue);
-// }
+    queue_submit(queue, submit_desc);
+    queue_wait_idle(queue);
+}
 
 void nolock_submit(const Queue& queue, const CommandBuffer& cmd, Fence* fence)
 {

@@ -135,7 +135,7 @@ void on_init()
 
     sampler = create_sampler(device, sampler_desc);
 
-    texture = load_image_from_file(device, "statue.jpg", ResourceState::eShaderReadOnly, true);
+    texture = load_image_from_file(device, "statue.jpg", true);
 
     DescriptorImageDesc descriptor_image_desc{};
     descriptor_image_desc.image          = &texture;

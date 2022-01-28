@@ -8,9 +8,17 @@ namespace fluent
 
 static constexpr b32 single_threaded = true;
 
+enum class RequestType
+{
+    eUpdateImage,
+    eUpdateBuffer
+};
+
 struct UpdateRequest
 {
-    Buffer staging_buffer;
+    RequestType             type;
+    BufferUpdateDesc const* buffer_update;
+    ImageUpdateDesc const*  image_update;
 };
 
 struct ResourceLoader
@@ -18,7 +26,6 @@ struct ResourceLoader
     Device const* device = nullptr;
     Queue         queue;
     CommandPool   cmd_pool;
-    u32           cmd_pending_record_count = 0;
     CommandBuffer cmd;
     Fence         fence;
     Buffer        staging_buffer;
@@ -51,16 +58,6 @@ void shutdown_resource_loader(Device const& device)
     destroy_fence(device, resource_loader.fence);
     free_command_buffers(device, resource_loader.cmd_pool, 1, &resource_loader.cmd);
     destroy_command_pool(device, resource_loader.cmd_pool);
-}
-
-CommandBuffer& acquire_cmd()
-{
-    if (resource_loader.cmd_pending_record_count == 0)
-    {
-        begin_command_buffer(resource_loader.cmd);
-    }
-    resource_loader.cmd_pending_record_count++;
-    return resource_loader.cmd;
 }
 
 void resource_loader_wait_idle()
@@ -98,22 +95,63 @@ void request_update(UpdateRequest&& request)
 
 void update_thread_function()
 {
-    if (resource_loader.cmd_pending_record_count > 0)
-    {
-        resource_loader.cmd_pending_record_count--;
-    }
+    std::vector<Buffer> staging_buffers(resource_loader.update_requests.size());
+    u32                 stage_index = 0;
 
-    if (resource_loader.cmd_pending_record_count == 0)
+    auto& cmd = resource_loader.cmd;
+
+    begin_command_buffer(cmd);
+    for (auto& request : resource_loader.update_requests)
     {
-        end_command_buffer(resource_loader.cmd);
-        nolock_submit(resource_loader.queue, resource_loader.cmd, nullptr);
-        queue_wait_idle(resource_loader.queue);
-        for (auto& request : resource_loader.update_requests)
+        switch (request.type)
         {
-            destroy_buffer(*resource_loader.device, request.staging_buffer);
+        case RequestType::eUpdateBuffer: {
+            staging_buffers[ stage_index ] = write_to_staging_buffer(
+                *resource_loader.device, request.buffer_update->size, request.buffer_update->data);
+            map_memory(*resource_loader.device, staging_buffers[ stage_index ]);
+            cmd_copy_buffer(
+                cmd, staging_buffers[ stage_index ], 0, *request.buffer_update->buffer, request.buffer_update->offset,
+                request.buffer_update->size);
+            unmap_memory(*resource_loader.device, staging_buffers[ stage_index ]);
+            stage_index++;
+            break;
         }
-        resource_loader.update_requests.clear();
+        case RequestType::eUpdateImage: {
+            ImageBarrier image_barrier{};
+            image_barrier.image     = request.image_update->image;
+            image_barrier.src_queue = &resource_loader.queue;
+            image_barrier.dst_queue = &resource_loader.queue;
+
+            if (request.image_update->resource_state != ResourceState::eTransferDst)
+            {
+                image_barrier.old_state = request.image_update->resource_state;
+                image_barrier.new_state = ResourceState::eTransferDst;
+                cmd_barrier(cmd, 0, nullptr, 1, &image_barrier);
+            }
+
+            staging_buffers[ stage_index ] = write_to_staging_buffer(
+                *resource_loader.device, request.image_update->size, request.image_update->data);
+
+            cmd_copy_buffer_to_image(cmd, staging_buffers[ stage_index ], 0, *request.image_update->image);
+
+            image_barrier.old_state = ResourceState::eTransferDst;
+            image_barrier.new_state = ResourceState::eShaderReadOnly;
+            cmd_barrier(cmd, 0, nullptr, 1, &image_barrier);
+
+            stage_index++;
+            break;
+        }
+        default:
+            break;
+        }
     }
+    end_command_buffer(cmd);
+    immediate_submit(resource_loader.queue, cmd);
+    for (u32 i = 0; i < stage_index; ++i)
+    {
+        destroy_buffer(*resource_loader.device, staging_buffers[ i ]);
+    }
+    resource_loader.update_requests.clear();
 };
 
 Shader load_shader(const Device& device, const std::string& filename)
@@ -170,12 +208,10 @@ void update_buffer(const Device& device, BufferUpdateDesc const& desc, UpdateFen
     }
     else
     {
-        auto& cmd = acquire_cmd();
-
         UpdateRequest request{};
-        request.staging_buffer = write_to_staging_buffer(device, desc.size, desc.data);
+        request.type          = RequestType::eUpdateBuffer;
+        request.buffer_update = &desc;
 
-        cmd_copy_buffer(cmd, request.staging_buffer, 0, *desc.buffer, desc.offset, desc.size);
         request_update(std::move(request));
 
         if (single_threaded)
@@ -185,10 +221,8 @@ void update_buffer(const Device& device, BufferUpdateDesc const& desc, UpdateFen
     }
 }
 
-Image load_image_from_dds_file(const Device& device, const char* filename, ResourceState resource_state, b32 flip)
+Image load_image_from_dds_file(const Device& device, const char* filename, b32 flip)
 {
-    auto& cmd = acquire_cmd();
-
     std::string filepath = std::string(get_app_textures_directory()) + std::string(filename);
 
     void* data = nullptr;
@@ -203,32 +237,15 @@ Image load_image_from_dds_file(const Device& device, const char* filename, Resou
     image_update_desc.resource_state = ResourceState::eUndefined;
     image_update_desc.size           = image_desc.width * image_desc.height;
 
-    // TODO: Remove it
-    ImageBarrier image_barrier{};
-    image_barrier.image     = &image;
-    image_barrier.src_queue = &resource_loader.queue;
-    image_barrier.dst_queue = &resource_loader.queue;
-    image_barrier.old_state = ResourceState::eUndefined;
-    image_barrier.new_state = ResourceState::eShaderReadOnly;
-
     update_image(device, image_update_desc);
 
-    cmd_barrier(cmd, 0, nullptr, 1, &image_barrier);
-
     release_dds_image(data);
-
-    if (single_threaded)
-    {
-        update_thread_function();
-    }
 
     return image;
 }
 
-Image load_image_from_file(const Device& device, const char* filename, ResourceState resource_state, b32 flip)
+Image load_image_from_file(const Device& device, const char* filename, b32 flip)
 {
-    auto& cmd = acquire_cmd();
-
     std::string filepath = std::string(get_app_textures_directory()) + std::string(filename);
 
     void* data = nullptr;
@@ -244,54 +261,18 @@ Image load_image_from_file(const Device& device, const char* filename, ResourceS
     image_update_desc.size =
         image_desc.width * image_desc.height * TinyImageFormat_ChannelCount(( TinyImageFormat ) image_desc.format);
 
-    // TODO: Remove it
-    ImageBarrier image_barrier;
-    image_barrier.image     = &image;
-    image_barrier.src_queue = &resource_loader.queue;
-    image_barrier.dst_queue = &resource_loader.queue;
-    image_barrier.old_state = ResourceState::eTransferDst;
-    image_barrier.new_state = ResourceState::eShaderReadOnly;
-
     update_image(device, image_update_desc);
 
-    cmd_barrier(cmd, 0, nullptr, 1, &image_barrier);
-
     release_image(data);
-
-    if (single_threaded)
-    {
-        update_thread_function();
-    }
 
     return image;
 }
 
 void update_image(const Device& device, ImageUpdateDesc const& desc, UpdateFence* fence /* = nullptr */)
 {
-    auto& cmd = acquire_cmd();
-
-    ImageBarrier image_barrier{};
-    image_barrier.image     = desc.image;
-    image_barrier.src_queue = &resource_loader.queue;
-    image_barrier.dst_queue = &resource_loader.queue;
-
-    if (desc.resource_state != ResourceState::eTransferDst)
-    {
-        image_barrier.old_state = desc.resource_state;
-        image_barrier.new_state = ResourceState::eTransferDst;
-        cmd_barrier(cmd, 0, nullptr, 1, &image_barrier);
-    }
-
     UpdateRequest request{};
-    request.staging_buffer = write_to_staging_buffer(device, desc.size, desc.data);
-    cmd_copy_buffer_to_image(resource_loader.cmd, request.staging_buffer, 0, *desc.image);
-
-    if (desc.resource_state != ResourceState::eTransferDst && desc.resource_state != ResourceState::eUndefined)
-    {
-        image_barrier.old_state = ResourceState::eTransferDst;
-        image_barrier.new_state = desc.resource_state;
-        cmd_barrier(resource_loader.cmd, 0, nullptr, 1, &image_barrier);
-    }
+    request.type         = RequestType::eUpdateImage;
+    request.image_update = &desc;
 
     request_update(std::move(request));
 

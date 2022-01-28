@@ -174,8 +174,8 @@ void compute_pbr_maps(const std::string& skybox_name)
     brdf_integration_image_desc.sample_count    = SampleCount::e1;
     brdf_integration_image_desc.descriptor_type = DescriptorType::eSampledImage | DescriptorType::eStorageImage;
 
-    Sampler skybox_sampler = create_sampler(device, sampler_desc);
-    Image   pano_skybox = load_image_from_dds_file(device, skybox_name.c_str(), ResourceState::eShaderReadOnly, false);
+    Sampler skybox_sampler      = create_sampler(device, sampler_desc);
+    Image   pano_skybox         = load_image_from_dds_file(device, skybox_name.c_str(), false);
     Shader  pano_to_cube_shader = load_shader(device, "pano_to_cube.comp");
 
     // precomputed skybox

@@ -35,7 +35,7 @@ Shader load_shader(const Device& device, const std::string& filename);
 void update_image(const Device& device, ImageUpdateDesc const& desc, UpdateFence* fence = nullptr);
 void update_buffer(const Device& device, BufferUpdateDesc const& desc, UpdateFence* fence = nullptr);
 
-Image load_image_from_dds_file(const Device& device, const char* filename, ResourceState resource_state, b32 flip);
-Image load_image_from_file(const Device& device, const char* filename, ResourceState resource_state, b32 flip);
+Image load_image_from_dds_file(const Device& device, const char* filename, b32 flip);
+Image load_image_from_file(const Device& device, const char* filename, b32 flip);
 
 } // namespace fluent

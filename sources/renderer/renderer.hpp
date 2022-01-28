@@ -470,6 +470,7 @@ void cmd_blit_image(
 void cmd_clear_color_image(const CommandBuffer& cmd, Image& image, Vector4 color);
 
 void nolock_submit(const Queue& queue, const CommandBuffer& cmd, Fence* fence);
+void immediate_submit(Queue const& queue, CommandBuffer const& cmd);
 
 Buffer create_buffer(const Device& device, const BufferDesc& desc);
 void   destroy_buffer(const Device& device, Buffer& buffer);

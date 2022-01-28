@@ -263,8 +263,7 @@ std::vector<ModelLoader::LoadedTexture> ModelLoader::load_material_textures(
 
             LoadedTexture texture{};
             texture.name    = type_name;
-            texture.texture = load_image_from_file(
-                *device, (directory + "/" + texName).c_str(), ResourceState::eShaderReadOnly, flip_uvs);
+            texture.texture = load_image_from_file(*device, (directory + "/" + texName).c_str(), flip_uvs);
 
             textures.push_back(texture);
             textures_loaded.push_back(texture);
