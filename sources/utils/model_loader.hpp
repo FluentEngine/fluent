@@ -8,15 +8,7 @@
 
 namespace fluent
 {
-struct LoadModelDesc
-{
-    std::string filename;
-    b32         load_normals;
-    b32         load_tex_coords;
-    b32         load_tangents;
-    b32         load_bitangents;
-    b32         flip_uvs;
-};
+struct GeometryLoadDesc;
 
 class ModelLoader
 {
@@ -44,10 +36,10 @@ private:
 
     std::vector<Image*> load_material_textures(aiMaterial* mat, aiTextureType type, std::string type_name);
 
-    void count_stride(const LoadModelDesc& desc);
+    void count_stride(const GeometryLoadDesc* desc);
     void fill_vertex_layout(VertexLayout* layout);
 
 public:
-    [[nodiscard]] GeometryData load(const LoadModelDesc& desc);
+    [[nodiscard]] GeometryData load(const GeometryLoadDesc* desc);
 };
 } // namespace fluent

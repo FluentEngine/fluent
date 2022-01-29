@@ -59,7 +59,8 @@ set(math
 	${src_dir}/math/math.cpp)
 
 set(scene
-	${src_dir}/scene/scene.cpp)
+	${src_dir}/scene/scene.cpp
+	${src_dir}/scene/camera.cpp)
 
 set(sources 
 	${core} 

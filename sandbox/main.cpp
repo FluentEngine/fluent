@@ -21,8 +21,15 @@ CommandBuffer* command_buffers[ FRAME_COUNT ];
 
 DescriptorSetLayout* descriptor_set_layout;
 Pipeline*            pipeline;
+DescriptorSet*       set = nullptr;
 
 Geometry* geometry = nullptr;
+
+Buffer* uniform_buffer = nullptr;
+
+Camera           camera;
+CameraController camera_controller;
+InputSystem*     input_system;
 
 void on_init()
 {
@@ -103,16 +110,61 @@ void on_init()
     {
         destroy_shader(device, shaders[ i ]);
     }
+
+    camera.init_camera(Vector3(0.0f, 1.0, 100.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));
+    camera_controller.init(get_app_input_system(), camera);
+
+    BufferLoadDesc ubo_load_desc{};
+    ubo_load_desc.size          = sizeof(camera.get_data());
+    ubo_load_desc.data          = &camera.get_data();
+    ubo_load_desc.offset        = 0;
+    ubo_load_desc.p_buffer      = &uniform_buffer;
+    BufferDesc& buffer_desc     = ubo_load_desc.buffer_desc;
+    buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
+    buffer_desc.size            = ubo_load_desc.size;
+
+    ResourceManager::load_buffer(&ubo_load_desc);
+
+    DescriptorSetDesc set_desc{};
+    set_desc.descriptor_set_layout = descriptor_set_layout;
+    create_descriptor_set(device, &set_desc, &set);
+
+    DescriptorBufferDesc set_buffer_desc{};
+    set_buffer_desc.offset = 0;
+    set_buffer_desc.range  = sizeof(camera.get_data());
+    set_buffer_desc.buffer = uniform_buffer;
+
+    DescriptorWriteDesc set_write{};
+    set_write.binding                 = 0;
+    set_write.descriptor_type         = DescriptorType::eUniformBuffer;
+    set_write.descriptor_count        = 1;
+    set_write.descriptor_buffer_descs = &set_buffer_desc;
+
+    update_descriptor_set(device, set, 1, &set_write);
 }
 
 void on_resize(u32 width, u32 height)
 {
     queue_wait_idle(queue);
     resize_swapchain(device, swapchain, width, height);
+    camera.on_resize(width, height);
 }
 
 void on_update(f32 delta_time)
 {
+    camera_controller.update(delta_time);
+
+    BufferLoadDesc ubo_load_desc{};
+    ubo_load_desc.size          = sizeof(camera.get_data());
+    ubo_load_desc.data          = &camera.get_data();
+    ubo_load_desc.offset        = 0;
+    ubo_load_desc.p_buffer      = &uniform_buffer;
+    BufferDesc& buffer_desc     = ubo_load_desc.buffer_desc;
+    buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
+    buffer_desc.size            = ubo_load_desc.size;
+
+    ResourceManager::load_buffer(&ubo_load_desc);
+
     if (!command_buffers_recorded[ frame_index ])
     {
         wait_for_fences(device, 1, in_flight_fences[ frame_index ]);
@@ -147,8 +199,11 @@ void on_update(f32 delta_time)
     cmd_set_viewport(cmd, 0, 0, swapchain->width, swapchain->height, 0.0f, 1.0f);
     cmd_set_scissor(cmd, 0, 0, swapchain->width, swapchain->height);
     cmd_bind_pipeline(cmd, pipeline);
+    cmd_bind_descriptor_set(cmd, set, pipeline);
     for (auto& node : geometry->nodes)
     {
+        Matrix4 model = Matrix4(1.0f);
+        cmd_push_constants(cmd, pipeline, 0, sizeof(Matrix4), &model);
         cmd_bind_vertex_buffer(cmd, node.vertex_buffer);
         cmd_bind_index_buffer_u32(cmd, node.index_buffer);
         cmd_draw_indexed(cmd, node.index_count, 1, 0, 0, 0);
@@ -193,6 +248,7 @@ void on_shutdown()
 {
     device_wait_idle(device);
     ResourceManager::free_geometry(geometry);
+    destroy_buffer(device, uniform_buffer);
     destroy_pipeline(device, pipeline);
     destroy_descriptor_set_layout(device, descriptor_set_layout);
     destroy_swapchain(device, swapchain);
@@ -215,7 +271,7 @@ int main(int argc, char** argv)
     ApplicationConfig config;
     config.argc        = argc;
     config.argv        = argv;
-    config.title       = "TestApp";
+    config.title       = "Sandbox";
     config.x           = 0;
     config.y           = 0;
     config.width       = 800;

@@ -14,4 +14,8 @@
 
 #include "math/math.hpp"
 
+#include "scene/scene.hpp"
+#include "scene/components.hpp"
+#include "scene/camera.hpp"
+
 #include "utils/utils.hpp"

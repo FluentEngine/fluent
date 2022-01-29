@@ -35,6 +35,10 @@ void ResourceManager::init(const Device* device)
 
 void ResourceManager::shutdown()
 {
+    for (auto& [ id, geometry ] : m_geometries)
+    {
+        free_geometry(geometry);
+    }
     destroy_command_buffers(m_device, m_command_pool, 1, &m_cmd);
     destroy_command_pool(m_device, m_command_pool);
     destroy_queue(m_queue);
@@ -89,11 +93,8 @@ void ResourceManager::load_geometry(const GeometryLoadDesc* desc)
         *desc->p_geometry  = new Geometry{};
         Geometry* geometry = *desc->p_geometry;
 
-        ModelLoader   model_loader;
-        LoadModelDesc load_model_desc{};
-        load_model_desc.filename = desc->filename;
-
-        GeometryData data = model_loader.load(load_model_desc);
+        ModelLoader  model_loader;
+        GeometryData data = model_loader.load(desc);
 
         geometry->vertex_layout = data.vertex_layout;
 
@@ -123,7 +124,10 @@ void ResourceManager::load_geometry(const GeometryLoadDesc* desc)
             geometry_node.index_count = data.nodes[ i ].indices.size();
         }
 
-        // TODO: hash
+        u32 id = std::hash<std::string>{}(desc->filename);
+
+        m_geometries[ id ] = geometry;
+        geometry->id       = id;
     }
     else if (desc->data)
     {
@@ -133,6 +137,7 @@ void ResourceManager::load_geometry(const GeometryLoadDesc* desc)
 
 void ResourceManager::free_geometry(Geometry* geometry)
 {
+    m_geometries.erase(geometry->id);
     for (auto& node : geometry->nodes)
     {
         destroy_buffer(m_device, node.vertex_buffer);

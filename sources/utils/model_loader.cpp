@@ -4,40 +4,40 @@
 
 namespace fluent
 {
-void ModelLoader::count_stride(const LoadModelDesc& desc)
+void ModelLoader::count_stride(const GeometryLoadDesc* desc)
 {
     m_stride += 3;
-    if (desc.load_normals)
+    if (desc->load_normals)
     {
         m_normal_offset = static_cast<i32>(m_stride);
         m_stride += NORMAL_COMPONENT_COUNT;
     }
 
-    if (desc.load_tex_coords)
+    if (desc->load_tex_coords)
     {
         m_texcoord_offset = static_cast<i32>(m_stride);
         m_stride += TEXCOORD_COMPONENT_COUNT;
     }
 
-    if (desc.load_tangents)
+    if (desc->load_tangents)
     {
         m_tangents_offset = static_cast<i32>(m_stride);
         m_stride += TANGENTS_COMPONENT_COUNT;
     }
 
-    if (desc.load_bitangents)
+    if (desc->load_bitangents)
     {
         m_bitangents_offset = static_cast<i32>(m_stride);
         m_stride += BITANGENTS_COMPONENT_COUNT;
     }
 }
 
-GeometryData ModelLoader::load(const LoadModelDesc& desc)
+GeometryData ModelLoader::load(const GeometryLoadDesc* desc)
 {
-    m_flip_uvs  = desc.flip_uvs;
-    m_directory = std::string(desc.filename.substr(0, desc.filename.find_last_of('/')));
+    m_flip_uvs  = desc->flip_uvs;
+    m_directory = std::string(desc->filename.substr(0, desc->filename.find_last_of('/')));
     count_stride(desc);
-    return load(desc.filename);
+    return load(desc->filename);
 }
 
 GeometryData ModelLoader::load(const std::string& filename)
@@ -61,9 +61,6 @@ void ModelLoader::process_node(GeometryData& model, aiNode* node, const aiScene*
     {
         aiMesh* mesh = scene->mMeshes[ node->mMeshes[ i ] ];
         model.nodes.push_back(process_mesh(mesh, scene));
-        // auto& t = node->mTransformation;
-        // model.nodes.back().transform =
-        //     Matrix4(t.a1, t.b1, t.c1, t.d1, t.a2, t.b2, t.c2, t.d2, t.a3, t.b3, t.c3, t.d3, t.a4, t.b4, t.c4, t.d4);
     }
 
     for (uint32_t i = 0; i < node->mNumChildren; i++)

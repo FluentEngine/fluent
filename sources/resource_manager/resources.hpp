@@ -26,6 +26,8 @@ struct GeometryData
 
 struct Geometry
 {
+    u32 id = 0;
+
     struct GeometryNode
     {
         Buffer* vertex_buffer;

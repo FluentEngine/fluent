@@ -21,6 +21,11 @@ struct GeometryLoadDesc
     std::string         filename;
     const GeometryData* data;
     Geometry**          p_geometry;
+    b32                 load_normals;
+    b32                 load_tex_coords;
+    b32                 load_tangents;
+    b32                 load_bitangents;
+    b32                 flip_uvs;
 };
 
 class ResourceManager
