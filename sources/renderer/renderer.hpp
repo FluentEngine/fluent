@@ -282,6 +282,14 @@ struct VertexAttributeDesc
     uint32_t offset;
 };
 
+struct VertexLayout
+{
+    u32                 binding_desc_count;
+    VertexBindingDesc   binding_descs[ MAX_VERTEX_BINDING_COUNT ];
+    u32                 attribute_desc_count;
+    VertexAttributeDesc attribute_descs[ MAX_VERTEX_ATTRIBUTE_COUNT ];
+};
+
 struct RasterizerStateDesc
 {
     CullMode    cull_mode;
@@ -298,10 +306,7 @@ struct DepthStateDesc
 
 struct PipelineDesc
 {
-    u32                  binding_desc_count;
-    VertexBindingDesc    binding_descs[ MAX_VERTEX_BINDING_COUNT ];
-    u32                  attribute_desc_count;
-    VertexAttributeDesc  attribute_descs[ MAX_VERTEX_ATTRIBUTE_COUNT ];
+    VertexLayout         vertex_layout;
     RasterizerStateDesc  rasterizer_desc;
     DepthStateDesc       depth_state_desc;
     DescriptorSetLayout* descriptor_set_layout;
@@ -409,6 +414,8 @@ void create_queue(const Device* device, const QueueDesc* desc, Queue** queue);
 void destroy_queue(Queue* queue);
 void queue_wait_idle(const Queue* queue);
 void queue_submit(const Queue* queue, const QueueSubmitDesc* desc);
+// TODO: Remove it
+void immediate_submit(const Queue* queue, const CommandBuffer* cmd);
 void queue_present(const Queue* queue, const QueuePresentDesc* desc);
 
 void create_semaphore(const Device* device, Semaphore** semaphore);

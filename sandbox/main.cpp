@@ -22,13 +22,12 @@ CommandBuffer* command_buffers[ FRAME_COUNT ];
 DescriptorSetLayout* descriptor_set_layout;
 Pipeline*            pipeline;
 
-Buffer* vertex_buffer;
-
-static const f32 vertices[] = { -0.5f, -0.5f, 0.5f, -0.5f, 0.0f, 0.5f };
+Geometry* geometry = nullptr;
 
 void on_init()
 {
-    app_set_shaders_directory("../../../examples/shaders/01_hello_triangle");
+    app_set_shaders_directory("../../sandbox/shaders/");
+    app_set_models_directory("../../sandbox/models/");
 
     RendererDesc renderer_desc{};
     renderer_desc.vulkan_allocator = nullptr;
@@ -37,6 +36,8 @@ void on_init()
     DeviceDesc device_desc{};
     device_desc.frame_in_use_count = 2;
     create_device(renderer, &device_desc, &device);
+
+    ResourceManager::init(device);
 
     QueueDesc queue_desc{};
     queue_desc.queue_type = QueueType::eGraphics;
@@ -81,23 +82,20 @@ void on_init()
 
     create_descriptor_set_layout(device, 2, shaders, &descriptor_set_layout);
 
-    PipelineDesc  pipeline_desc{};
-    VertexLayout& vertex_layout                 = pipeline_desc.vertex_layout;
-    vertex_layout.binding_desc_count            = 1;
-    vertex_layout.binding_descs[ 0 ].binding    = 0;
-    vertex_layout.binding_descs[ 0 ].input_rate = VertexInputRate::eVertex;
-    vertex_layout.binding_descs[ 0 ].stride     = 2 * sizeof(float);
-    vertex_layout.attribute_desc_count          = 1;
-    vertex_layout.attribute_descs[ 0 ].binding  = 0;
-    vertex_layout.attribute_descs[ 0 ].format   = Format::eR32G32Sfloat;
-    vertex_layout.attribute_descs[ 0 ].location = 0;
-    vertex_layout.attribute_descs[ 0 ].offset   = 0;
-    pipeline_desc.rasterizer_desc.cull_mode     = CullMode::eNone;
-    pipeline_desc.rasterizer_desc.front_face    = FrontFace::eCounterClockwise;
-    pipeline_desc.depth_state_desc.depth_test   = false;
-    pipeline_desc.depth_state_desc.depth_write  = false;
-    pipeline_desc.descriptor_set_layout         = descriptor_set_layout;
-    pipeline_desc.render_pass                   = swapchain->render_passes[ 0 ];
+    GeometryLoadDesc geom_load_desc{};
+    geom_load_desc.filename   = "cube.gltf";
+    geom_load_desc.p_geometry = &geometry;
+
+    ResourceManager::load_geometry(&geom_load_desc);
+
+    PipelineDesc pipeline_desc{};
+    pipeline_desc.vertex_layout                = geometry->vertex_layout;
+    pipeline_desc.rasterizer_desc.cull_mode    = CullMode::eNone;
+    pipeline_desc.rasterizer_desc.front_face   = FrontFace::eCounterClockwise;
+    pipeline_desc.depth_state_desc.depth_test  = false;
+    pipeline_desc.depth_state_desc.depth_write = false;
+    pipeline_desc.descriptor_set_layout        = descriptor_set_layout;
+    pipeline_desc.render_pass                  = swapchain->render_passes[ 0 ];
 
     create_graphics_pipeline(device, &pipeline_desc, &pipeline);
 
@@ -105,15 +103,6 @@ void on_init()
     {
         destroy_shader(device, shaders[ i ]);
     }
-
-    BufferDesc buffer_desc{};
-    buffer_desc.size            = sizeof(vertices);
-    buffer_desc.descriptor_type = DescriptorType::eVertexBuffer | DescriptorType::eHostVisibleBuffer;
-
-    create_buffer(device, &buffer_desc, &vertex_buffer);
-    map_memory(device, vertex_buffer);
-    std::memcpy(vertex_buffer->mapped_memory, vertices, sizeof(vertices));
-    unmap_memory(device, vertex_buffer);
 }
 
 void on_resize(u32 width, u32 height)
@@ -158,8 +147,12 @@ void on_update(f32 delta_time)
     cmd_set_viewport(cmd, 0, 0, swapchain->width, swapchain->height, 0.0f, 1.0f);
     cmd_set_scissor(cmd, 0, 0, swapchain->width, swapchain->height);
     cmd_bind_pipeline(cmd, pipeline);
-    cmd_bind_vertex_buffer(cmd, vertex_buffer);
-    cmd_draw(cmd, 3, 1, 0, 0);
+    for (auto& node : geometry->nodes)
+    {
+        cmd_bind_vertex_buffer(cmd, node.vertex_buffer);
+        cmd_bind_index_buffer_u32(cmd, node.index_buffer);
+        cmd_draw_indexed(cmd, node.index_count, 1, 0, 0, 0);
+    }
     cmd_end_render_pass(cmd);
 
     ImageBarrier to_present_barrier{};
@@ -199,7 +192,7 @@ void on_update(f32 delta_time)
 void on_shutdown()
 {
     device_wait_idle(device);
-    destroy_buffer(device, vertex_buffer);
+    ResourceManager::free_geometry(geometry);
     destroy_pipeline(device, pipeline);
     destroy_descriptor_set_layout(device, descriptor_set_layout);
     destroy_swapchain(device, swapchain);
@@ -212,6 +205,7 @@ void on_shutdown()
     destroy_command_buffers(device, command_pool, FRAME_COUNT, command_buffers);
     destroy_command_pool(device, command_pool);
     destroy_queue(queue);
+    ResourceManager::shutdown();
     destroy_device(device);
     destroy_renderer(renderer);
 }

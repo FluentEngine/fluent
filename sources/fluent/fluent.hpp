@@ -10,6 +10,8 @@
 #include "renderer/renderer_enums.hpp"
 #include "renderer/renderer.hpp"
 
+#include "resource_manager/resource_manager.hpp"
+
 #include "math/math.hpp"
 
 #include "utils/utils.hpp"

@@ -1768,28 +1768,30 @@ void create_graphics_pipeline(const Device* device, const PipelineDesc* desc, Pi
         shader_stage_create_infos[ i ].pSpecializationInfo = nullptr;
     }
 
+    const VertexLayout& vertex_layout = desc->vertex_layout;
+
     VkVertexInputBindingDescription binding_descriptions[ MAX_VERTEX_BINDING_COUNT ];
-    for (u32 i = 0; i < desc->binding_desc_count; ++i)
+    for (u32 i = 0; i < vertex_layout.binding_desc_count; ++i)
     {
-        binding_descriptions[ i ].binding   = desc->binding_descs[ i ].binding;
-        binding_descriptions[ i ].stride    = desc->binding_descs[ i ].stride;
-        binding_descriptions[ i ].inputRate = to_vk_vertex_input_rate(desc->binding_descs[ i ].input_rate);
+        binding_descriptions[ i ].binding   = vertex_layout.binding_descs[ i ].binding;
+        binding_descriptions[ i ].stride    = vertex_layout.binding_descs[ i ].stride;
+        binding_descriptions[ i ].inputRate = to_vk_vertex_input_rate(vertex_layout.binding_descs[ i ].input_rate);
     }
 
     VkVertexInputAttributeDescription attribute_descriptions[ MAX_VERTEX_ATTRIBUTE_COUNT ];
-    for (u32 i = 0; i < desc->attribute_desc_count; ++i)
+    for (u32 i = 0; i < vertex_layout.attribute_desc_count; ++i)
     {
-        attribute_descriptions[ i ].location = desc->attribute_descs[ i ].location;
-        attribute_descriptions[ i ].binding  = desc->attribute_descs[ i ].binding;
-        attribute_descriptions[ i ].format   = to_vk_format(desc->attribute_descs[ i ].format);
-        attribute_descriptions[ i ].offset   = desc->attribute_descs[ i ].offset;
+        attribute_descriptions[ i ].location = vertex_layout.attribute_descs[ i ].location;
+        attribute_descriptions[ i ].binding  = vertex_layout.attribute_descs[ i ].binding;
+        attribute_descriptions[ i ].format   = to_vk_format(vertex_layout.attribute_descs[ i ].format);
+        attribute_descriptions[ i ].offset   = vertex_layout.attribute_descs[ i ].offset;
     }
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info{};
     vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertex_input_state_create_info.vertexBindingDescriptionCount   = desc->binding_desc_count;
+    vertex_input_state_create_info.vertexBindingDescriptionCount   = vertex_layout.binding_desc_count;
     vertex_input_state_create_info.pVertexBindingDescriptions      = binding_descriptions;
-    vertex_input_state_create_info.vertexAttributeDescriptionCount = desc->attribute_desc_count;
+    vertex_input_state_create_info.vertexAttributeDescriptionCount = vertex_layout.attribute_desc_count;
     vertex_input_state_create_info.pVertexAttributeDescriptions    = attribute_descriptions;
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info{};

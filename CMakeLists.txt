@@ -1,3 +1,13 @@
+function(compile_shaders ${SHADERS})
+    foreach(SHADER ${SHADERS})
+        add_custom_command(OUTPUT ${SHADER}.spv
+        COMMAND glslangValidator -V ${SHADER} -o ${SHADER}.spv
+        DEPENDS ${SHADER}
+        COMMENT "Rebuilding ${SHADER}.spv" )
+        message(STATUS "Generating build commands for ${SHADER}.spv")
+    endforeach()
+endfunction()
+
 cmake_minimum_required(VERSION 3.16)
 cmake_policy(SET CMP0054 NEW) # ENABLE CMP0054: Only interpret if() arguments as variables or keywords when unquoted.
 cmake_policy(SET CMP0042 NEW) # ENABLE CMP0042: MACOSX_RPATH is enabled by default.
@@ -27,31 +37,37 @@ project(${target} CXX)
 
 set(src_dir ${CMAKE_CURRENT_SOURCE_DIR}/sources)
 
-set(core_sources 
+set(core
 	${src_dir}/core/log.cpp
     ${src_dir}/core/window.cpp
 	${src_dir}/core/input.cpp
 	${src_dir}/core/application.cpp
 	)
 
-set(renderer_sources
+set(renderer
 	${src_dir}/renderer/shader_reflection.cpp
 	${src_dir}/renderer/renderer.cpp)
 
-set(util_sources
-	${src_dir}/utils/utils.cpp)
+set(resource_manager
+	${src_dir}/resource_manager/resource_manager.cpp)
+	
+set(util
+	${src_dir}/utils/utils.cpp
+	${src_dir}/utils/model_loader.cpp)
 
-set(math_sources 
+set(math
 	${src_dir}/math/math.cpp)
 
-set(scene_sources
-	${src_dir}/scene/model_loader.cpp)
+set(scene
+	${src_dir}/scene/scene.cpp)
 
 set(sources 
-	${core_sources} 
-	${renderer_sources} 
-	${util_sources} 
-	${math_sources})
+	${core} 
+	${renderer}
+	${resource_manager}
+	${util} 
+	${math}
+	${scene})
 
 set(includes ${CMAKE_CURRENT_SOURCE_DIR}/sources)
 
@@ -106,4 +122,4 @@ if (FLUENT_BUILD_TESTS)
     add_subdirectory(examples)
 endif()
 
-# add_subdirectory(sandbox)
+add_subdirectory(sandbox)
