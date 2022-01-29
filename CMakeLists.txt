@@ -18,6 +18,7 @@ add_subdirectory(third_party/glm)
 add_subdirectory(third_party/tinygltf)
 add_subdirectory(third_party/assimp)
 add_subdirectory(third_party/imgui)
+add_subdirectory(third_party/entt)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -35,8 +36,7 @@ set(core_sources
 
 set(renderer_sources
 	${src_dir}/renderer/shader_reflection.cpp
-	${src_dir}/renderer/renderer.cpp
-	${src_dir}/renderer/resource_loader.cpp)
+	${src_dir}/renderer/renderer.cpp)
 
 set(util_sources
 	${src_dir}/utils/utils.cpp)
@@ -47,9 +47,28 @@ set(math_sources
 set(scene_sources
 	${src_dir}/scene/model_loader.cpp)
 
-set(sources ${core_sources} ${renderer_sources} ${util_sources} ${math_sources} ${scene_sources})
+set(sources 
+	${core_sources} 
+	${renderer_sources} 
+	${util_sources} 
+	${math_sources})
+
 set(includes ${CMAKE_CURRENT_SOURCE_DIR}/sources)
-set(libs spdlog volk vma_allocator SDL2::SDL2-static tiny_image_format spirv_reflect tinyddsloader stb_image glm tinygltf assimp imgui)
+
+set(libs 
+	spdlog 
+	volk 
+	vma_allocator 
+	SDL2::SDL2-static 
+	tiny_image_format
+	spirv_reflect 
+	tinyddsloader 
+	stb_image 
+	glm 
+	tinygltf 
+	assimp 
+	imgui
+	entt)
 
 add_library(${target} ${sources})
 
@@ -76,7 +95,7 @@ if (FLUENT_DEBUG_BUILD)
 else()
 	if (MSVC)
 	elseif (UNIX)
-		target_compile_options(${target} PUBLIC -O3)
+		target_compile_options(${target} PUBLIC -O3 -fsanitize=address)
 	endif()
 endif()
 
@@ -87,4 +106,4 @@ if (FLUENT_BUILD_TESTS)
     add_subdirectory(examples)
 endif()
 
-add_subdirectory(sandbox)
+# add_subdirectory(sandbox)
