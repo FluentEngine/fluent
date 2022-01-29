@@ -686,7 +686,7 @@ void create_renderer(const RendererDesc* desc, Renderer** p_renderer)
 {
     FT_ASSERT(p_renderer);
 
-    *p_renderer        = new Renderer{};
+    *p_renderer        = new (std::nothrow) Renderer{};
     Renderer* renderer = *p_renderer;
 
     renderer->vulkan_allocator = desc->vulkan_allocator;
@@ -784,7 +784,7 @@ void create_device(const Renderer* renderer, const DeviceDesc* desc, Device** p_
     FT_ASSERT(p_device);
     FT_ASSERT(desc->frame_in_use_count > 0);
 
-    *p_device      = new Device{};
+    *p_device      = new (std::nothrow) Device{};
     Device* device = *p_device;
 
     device->vulkan_allocator = renderer->vulkan_allocator;
@@ -924,7 +924,7 @@ void device_wait_idle(const Device* device)
 void create_queue(const Device* device, const QueueDesc* desc, Queue** p_queue)
 {
     FT_ASSERT(p_queue);
-    *p_queue     = new Queue{};
+    *p_queue     = new (std::nothrow) Queue{};
     Queue* queue = *p_queue;
 
     u32 index = find_queue_family_index(device->physical_device, desc->queue_type);
@@ -1017,7 +1017,7 @@ void queue_present(const Queue* queue, const QueuePresentDesc* desc)
 void create_semaphore(const Device* device, Semaphore** p_semaphore)
 {
     FT_ASSERT(p_semaphore);
-    *p_semaphore         = new Semaphore{};
+    *p_semaphore         = new (std::nothrow) Semaphore{};
     Semaphore* semaphore = *p_semaphore;
 
     VkSemaphoreCreateInfo semaphore_create_info{};
@@ -1040,7 +1040,7 @@ void destroy_semaphore(const Device* device, Semaphore* semaphore)
 void create_fence(const Device* device, Fence** p_fence)
 {
     FT_ASSERT(p_fence);
-    *p_fence     = new Fence{};
+    *p_fence     = new (std::nothrow) Fence{};
     Fence* fence = *p_fence;
 
     VkFenceCreateInfo fence_create_info{};
@@ -1208,7 +1208,7 @@ void create_configured_swapchain(const Device* device, Swapchain* swapchain, b32
     vkGetSwapchainImagesKHR(device->logical_device, swapchain->swapchain, &swapchain->image_count, swapchain_images);
     if (!resize)
     {
-        swapchain->images = new Image*[ swapchain->image_count ];
+        swapchain->images = new (std::nothrow) Image*[ swapchain->image_count ];
     }
 
     VkImageViewCreateInfo image_view_create_info{};
@@ -1231,7 +1231,7 @@ void create_configured_swapchain(const Device* device, Swapchain* swapchain, b32
     {
         image_view_create_info.image = swapchain_images[ i ];
 
-        swapchain->images[ i ]                  = new Image{};
+        swapchain->images[ i ]                  = new (std::nothrow) Image{};
         swapchain->images[ i ]->image           = swapchain_images[ i ];
         swapchain->images[ i ]->width           = swapchain->width;
         swapchain->images[ i ]->height          = swapchain->height;
@@ -1285,7 +1285,7 @@ void create_configured_swapchain(const Device* device, Swapchain* swapchain, b32
 
     if (!resize)
     {
-        swapchain->render_passes = new RenderPass*[ swapchain->image_count ];
+        swapchain->render_passes = new (std::nothrow) RenderPass*[ swapchain->image_count ];
 
         for (u32 i = 0; i < swapchain->image_count; ++i)
         {
@@ -1306,7 +1306,7 @@ void create_configured_swapchain(const Device* device, Swapchain* swapchain, b32
 void create_swapchain(const Device* device, const SwapchainDesc* desc, Swapchain** p_swapchain)
 {
     FT_ASSERT(p_swapchain);
-    *p_swapchain         = new Swapchain{};
+    *p_swapchain         = new (std::nothrow) Swapchain{};
     Swapchain* swapchain = *p_swapchain;
 
     configure_swapchain(device, swapchain, desc);
@@ -1360,7 +1360,7 @@ const RenderPass* get_swapchain_render_pass(const Swapchain* swapchain, u32 imag
 void create_command_pool(const Device* device, const CommandPoolDesc* desc, CommandPool** p_command_pool)
 {
     FT_ASSERT(p_command_pool);
-    *p_command_pool           = new CommandPool{};
+    *p_command_pool           = new (std::nothrow) CommandPool{};
     CommandPool* command_pool = *p_command_pool;
 
     command_pool->queue = desc->queue;
@@ -1401,7 +1401,7 @@ void create_command_buffers(
 
     for (u32 i = 0; i < count; ++i)
     {
-        command_buffers[ i ] = new CommandBuffer{};
+        command_buffers[ i ] = new (std::nothrow) CommandBuffer{};
         CommandBuffer* cmd   = command_buffers[ i ];
 
         cmd->command_buffer = buffers[ i ];
@@ -1494,7 +1494,7 @@ void create_framebuffer(const Device* device, RenderPass* render_pass, const Ren
 void create_render_pass(const Device* device, const RenderPassDesc* desc, RenderPass** p_render_pass)
 {
     FT_ASSERT(p_render_pass);
-    *p_render_pass          = new RenderPass{};
+    *p_render_pass          = new (std::nothrow) RenderPass{};
     RenderPass* render_pass = *p_render_pass;
 
     render_pass->color_attachment_count = desc->color_attachment_count;
@@ -1604,7 +1604,7 @@ void destroy_render_pass(const Device* device, RenderPass* render_pass)
 void create_shader(const Device* device, ShaderDesc* desc, Shader** p_shader)
 {
     FT_ASSERT(p_shader);
-    *p_shader      = new Shader{};
+    *p_shader      = new (std::nothrow) Shader{};
     Shader* shader = *p_shader;
 
     shader->stage = desc->stage;
@@ -1636,7 +1636,7 @@ void create_descriptor_set_layout(
     FT_ASSERT(p_descriptor_set_layout);
     FT_ASSERT(shader_count);
 
-    *p_descriptor_set_layout                   = new DescriptorSetLayout{};
+    *p_descriptor_set_layout                   = new (std::nothrow) DescriptorSetLayout{};
     DescriptorSetLayout* descriptor_set_layout = *p_descriptor_set_layout;
 
     descriptor_set_layout->shader_count = shader_count;
@@ -1706,7 +1706,7 @@ void create_compute_pipeline(const Device* device, const PipelineDesc* desc, Pip
     FT_ASSERT(p_pipeline);
     FT_ASSERT(desc->descriptor_set_layout);
 
-    *p_pipeline        = new Pipeline{};
+    *p_pipeline        = new (std::nothrow) Pipeline{};
     Pipeline* pipeline = *p_pipeline;
 
     pipeline->type = PipelineType::eCompute;
@@ -1750,7 +1750,7 @@ void create_graphics_pipeline(const Device* device, const PipelineDesc* desc, Pi
     FT_ASSERT(desc->descriptor_set_layout);
     FT_ASSERT(desc->render_pass);
 
-    *p_pipeline        = new Pipeline{};
+    *p_pipeline        = new (std::nothrow) Pipeline{};
     Pipeline* pipeline = *p_pipeline;
 
     pipeline->type = PipelineType::eGraphics;
@@ -2191,7 +2191,7 @@ void create_buffer(const Device* device, const BufferDesc* desc, Buffer** p_buff
 {
     FT_ASSERT(p_buffer);
 
-    *p_buffer      = new Buffer{};
+    *p_buffer      = new (std::nothrow) Buffer{};
     Buffer* buffer = *p_buffer;
 
     buffer->size            = desc->size;
@@ -2235,7 +2235,7 @@ void create_sampler(const Device* device, const SamplerDesc* desc, Sampler** p_s
 {
     FT_ASSERT(p_sampler);
 
-    *p_sampler       = new Sampler{};
+    *p_sampler       = new (std::nothrow) Sampler{};
     Sampler* sampler = *p_sampler;
 
     VkSamplerCreateInfo sampler_create_info{};
@@ -2273,7 +2273,7 @@ void create_image(const Device* device, const ImageDesc* desc, Image** p_image)
 {
     FT_ASSERT(p_image);
 
-    *p_image     = new Image{};
+    *p_image     = new (std::nothrow) Image{};
     Image* image = *p_image;
 
     VmaAllocationCreateInfo allocation_create_info{};
@@ -2355,7 +2355,7 @@ void create_descriptor_set(const Device* device, const DescriptorSetDesc* desc, 
     FT_ASSERT(desc->descriptor_set_layout);
     FT_ASSERT(desc->descriptor_set_layout->descriptor_set_layout != VK_NULL_HANDLE);
 
-    *p_descriptor_set             = new DescriptorSet{};
+    *p_descriptor_set             = new (std::nothrow) DescriptorSet{};
     DescriptorSet* descriptor_set = *p_descriptor_set;
 
     VkDescriptorSetAllocateInfo descriptor_set_allocate_info{};
@@ -2449,7 +2449,7 @@ void create_ui_context(const UiDesc* desc, UiContext** p_context)
 {
     FT_ASSERT(p_context);
 
-    *p_context         = new UiContext{};
+    *p_context         = new (std::nothrow) UiContext{};
     UiContext* context = *p_context;
 
     VkDescriptorPoolSize pool_sizes[] = { { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
