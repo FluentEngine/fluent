@@ -8,7 +8,7 @@
 #include "core/input.hpp"
 
 #include "renderer/renderer_enums.hpp"
-#include "renderer/renderer.hpp"
+#include "renderer/renderer_backend.hpp"
 
 #include "resource_manager/resource_manager.hpp"
 

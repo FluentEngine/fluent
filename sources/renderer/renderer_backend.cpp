@@ -7,7 +7,7 @@
 #include "utils/utils.hpp"
 #include "core/window.hpp"
 #include "core/application.hpp"
-#include "renderer/renderer.hpp"
+#include "renderer/renderer_backend.hpp"
 
 #ifdef FLUENT_DEBUG
 #define VK_ASSERT(x)                                                                                                   \
@@ -527,7 +527,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(
     return VK_FALSE;
 }
 
-void create_debug_messenger(Renderer* renderer)
+void create_debug_messenger(GraphicContext* renderer)
 {
     VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info{};
     debug_messenger_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -682,12 +682,12 @@ VkImageSubresourceLayers get_image_subresource_layers(const Image* image)
                                      subresourceRange.baseArrayLayer, subresourceRange.layerCount };
 }
 
-void create_renderer(const RendererDesc* desc, Renderer** p_renderer)
+void create_graphic_context(const GraphicContextDesc* desc, GraphicContext** p_renderer)
 {
     FT_ASSERT(p_renderer);
 
-    *p_renderer        = new (std::nothrow) Renderer{};
-    Renderer* renderer = *p_renderer;
+    *p_renderer              = new (std::nothrow) GraphicContext{};
+    GraphicContext* renderer = *p_renderer;
 
     renderer->vulkan_allocator = desc->vulkan_allocator;
 
@@ -756,7 +756,7 @@ void create_renderer(const RendererDesc* desc, Renderer** p_renderer)
     }
 }
 
-void destroy_renderer(Renderer* renderer)
+void destroy_graphic_context(GraphicContext* renderer)
 {
     FT_ASSERT(renderer);
 #ifdef FLUENT_DEBUG
@@ -779,7 +779,7 @@ void unmap_memory(const Device* device, Buffer* buffer)
     buffer->mapped_memory = nullptr;
 }
 
-void create_device(const Renderer* renderer, const DeviceDesc* desc, Device** p_device)
+void create_device(const GraphicContext* renderer, const DeviceDesc* desc, Device** p_device)
 {
     FT_ASSERT(p_device);
     FT_ASSERT(desc->frame_in_use_count > 0);

@@ -7,14 +7,14 @@ using namespace fluent;
 static constexpr u32 FRAME_COUNT = 2;
 u32                  frame_index = 0;
 
-Renderer*    renderer;
-Device*      device;
-Queue*       queue;
-CommandPool* command_pool;
-Semaphore*   image_available_semaphores[ FRAME_COUNT ];
-Semaphore*   rendering_finished_semaphores[ FRAME_COUNT ];
-Fence*       in_flight_fences[ FRAME_COUNT ];
-bool         command_buffers_recorded[ FRAME_COUNT ];
+GraphicContext* context;
+Device*         device;
+Queue*          queue;
+CommandPool*    command_pool;
+Semaphore*      image_available_semaphores[ FRAME_COUNT ];
+Semaphore*      rendering_finished_semaphores[ FRAME_COUNT ];
+Fence*          in_flight_fences[ FRAME_COUNT ];
+bool            command_buffers_recorded[ FRAME_COUNT ];
 
 Swapchain*     swapchain;
 CommandBuffer* command_buffers[ FRAME_COUNT ];
@@ -36,13 +36,13 @@ void on_init()
     app_set_shaders_directory("../../sandbox/shaders/");
     app_set_models_directory("../../sandbox/models/");
 
-    RendererDesc renderer_desc{};
-    renderer_desc.vulkan_allocator = nullptr;
-    create_renderer(&renderer_desc, &renderer);
+    GraphicContextDesc context_desc{};
+    context_desc.vulkan_allocator = nullptr;
+    create_graphic_context(&context_desc, &context);
 
     DeviceDesc device_desc{};
     device_desc.frame_in_use_count = 2;
-    create_device(renderer, &device_desc, &device);
+    create_device(context, &device_desc, &device);
 
     ResourceManager::init(device);
 
@@ -263,7 +263,7 @@ void on_shutdown()
     destroy_queue(queue);
     ResourceManager::shutdown();
     destroy_device(device);
-    destroy_renderer(renderer);
+    destroy_graphic_context(context);
 }
 
 int main(int argc, char** argv)

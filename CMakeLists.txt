@@ -46,7 +46,7 @@ set(core
 
 set(renderer
 	${src_dir}/renderer/shader_reflection.cpp
-	${src_dir}/renderer/renderer.cpp)
+	${src_dir}/renderer/renderer_backend.cpp)
 
 set(resource_manager
 	${src_dir}/resource_manager/resource_manager.cpp)

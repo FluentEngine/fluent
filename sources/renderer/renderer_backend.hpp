@@ -320,12 +320,12 @@ struct Pipeline
     VkPipeline       pipeline;
 };
 
-struct RendererDesc
+struct GraphicContextDesc
 {
     VkAllocationCallbacks* vulkan_allocator;
 };
 
-struct Renderer
+struct GraphicContext
 {
     VkAllocationCallbacks*   vulkan_allocator;
     VkInstance               instance;
@@ -386,16 +386,16 @@ struct DescriptorWriteDesc
 
 struct UiDesc
 {
-    const Window*     window;
-    const Renderer*   renderer;
-    const Device*     device;
-    const Queue*      queue;
-    const RenderPass* render_pass;
-    u32               min_image_count;
-    u32               image_count;
-    u32               in_fly_frame_count;
-    b32               docking   = false;
-    b32               viewports = false;
+    const Window*         window;
+    const GraphicContext* renderer;
+    const Device*         device;
+    const Queue*          queue;
+    const RenderPass*     render_pass;
+    u32                   min_image_count;
+    u32                   image_count;
+    u32                   in_fly_frame_count;
+    b32                   docking   = false;
+    b32                   viewports = false;
 };
 
 struct UiContext
@@ -403,10 +403,10 @@ struct UiContext
     VkDescriptorPool desriptor_pool;
 };
 
-void create_renderer(const RendererDesc* desc, Renderer** renderer);
-void destroy_renderer(Renderer* renderer);
+void create_graphic_context(const GraphicContextDesc* desc, GraphicContext** renderer);
+void destroy_graphic_context(GraphicContext* renderer);
 
-void create_device(const Renderer* renderer, const DeviceDesc* desc, Device** device);
+void create_device(const GraphicContext* renderer, const DeviceDesc* desc, Device** device);
 void destroy_device(Device* device);
 void device_wait_idle(const Device* device);
 
