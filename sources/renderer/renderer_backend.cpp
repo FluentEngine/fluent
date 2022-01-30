@@ -4,7 +4,6 @@
 #include "imgui_impl_vulkan.h"
 #include "imgui_impl_sdl.h"
 #include "tinyimageformat_apis.h"
-#include "utils/utils.hpp"
 #include "core/window.hpp"
 #include "core/application.hpp"
 #include "renderer/renderer_backend.hpp"
@@ -663,7 +662,7 @@ static inline VkImageAspectFlags get_aspect_mask(Format format)
     return aspect_mask;
 }
 
-static inline VkImageSubresourceRange get_image_subresource_range(const Image* image)
+static inline VkImageSubresourceRange get_image_subresource_range(const BaseImage* image)
 {
     VkImageSubresourceRange image_subresource_range{};
     image_subresource_range.aspectMask     = get_aspect_mask(image->format);
@@ -675,7 +674,7 @@ static inline VkImageSubresourceRange get_image_subresource_range(const Image* i
     return image_subresource_range;
 }
 
-VkImageSubresourceLayers get_image_subresource_layers(const Image* image)
+VkImageSubresourceLayers get_image_subresource_layers(const BaseImage* image)
 {
     auto subresourceRange = get_image_subresource_range(image);
     return VkImageSubresourceLayers{ subresourceRange.aspectMask, subresourceRange.baseMipLevel,
@@ -766,13 +765,13 @@ void destroy_graphic_context(GraphicContext* renderer)
     delete renderer;
 }
 
-void map_memory(const Device* device, Buffer* buffer)
+void map_memory(const Device* device, BaseBuffer* buffer)
 {
     FT_ASSERT(buffer->mapped_memory == nullptr);
     vmaMapMemory(device->memory_allocator, buffer->allocation, &buffer->mapped_memory);
 }
 
-void unmap_memory(const Device* device, Buffer* buffer)
+void unmap_memory(const Device* device, BaseBuffer* buffer)
 {
     FT_ASSERT(buffer->mapped_memory);
     vmaUnmapMemory(device->memory_allocator, buffer->allocation);
@@ -1208,7 +1207,7 @@ void create_configured_swapchain(const Device* device, Swapchain* swapchain, b32
     vkGetSwapchainImagesKHR(device->logical_device, swapchain->swapchain, &swapchain->image_count, swapchain_images);
     if (!resize)
     {
-        swapchain->images = new (std::nothrow) Image*[ swapchain->image_count ];
+        swapchain->images = new (std::nothrow) BaseImage*[ swapchain->image_count ];
     }
 
     VkImageViewCreateInfo image_view_create_info{};
@@ -1231,7 +1230,7 @@ void create_configured_swapchain(const Device* device, Swapchain* swapchain, b32
     {
         image_view_create_info.image = swapchain_images[ i ];
 
-        swapchain->images[ i ]                  = new (std::nothrow) Image{};
+        swapchain->images[ i ]                  = new (std::nothrow) BaseImage{};
         swapchain->images[ i ]->image           = swapchain_images[ i ];
         swapchain->images[ i ]->width           = swapchain->width;
         swapchain->images[ i ]->height          = swapchain->height;
@@ -2064,19 +2063,20 @@ void cmd_draw_indexed(
     vkCmdDrawIndexed(cmd->command_buffer, index_count, instance_count, first_index, vertex_offset, first_instance);
 }
 
-void cmd_bind_vertex_buffer(const CommandBuffer* cmd, const Buffer* buffer)
+void cmd_bind_vertex_buffer(const CommandBuffer* cmd, const BaseBuffer* buffer)
 {
     static constexpr VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(cmd->command_buffer, 0, 1, &buffer->buffer, &offset);
 }
 
-void cmd_bind_index_buffer_u32(const CommandBuffer* cmd, const Buffer* buffer)
+void cmd_bind_index_buffer_u32(const CommandBuffer* cmd, const BaseBuffer* buffer)
 {
     static constexpr VkDeviceSize offset = 0;
     vkCmdBindIndexBuffer(cmd->command_buffer, buffer->buffer, offset, VK_INDEX_TYPE_UINT32);
 }
 
-void cmd_copy_buffer(const CommandBuffer* cmd, const Buffer* src, u32 src_offset, Buffer* dst, u32 dst_offset, u32 size)
+void cmd_copy_buffer(
+    const CommandBuffer* cmd, const BaseBuffer* src, u32 src_offset, BaseBuffer* dst, u32 dst_offset, u32 size)
 {
     VkBufferCopy buffer_copy{};
     buffer_copy.srcOffset = src_offset;
@@ -2086,7 +2086,7 @@ void cmd_copy_buffer(const CommandBuffer* cmd, const Buffer* src, u32 src_offset
     vkCmdCopyBuffer(cmd->command_buffer, src->buffer, dst->buffer, 1, &buffer_copy);
 }
 
-void cmd_copy_buffer_to_image(const CommandBuffer* cmd, const Buffer* src, u32 src_offset, Image* dst)
+void cmd_copy_buffer_to_image(const CommandBuffer* cmd, const BaseBuffer* src, u32 src_offset, BaseImage* dst)
 {
     auto dst_layers = get_image_subresource_layers(dst);
 
@@ -2116,7 +2116,7 @@ void cmd_push_constants(const CommandBuffer* cmd, const Pipeline* pipeline, u32 
 }
 
 void cmd_blit_image(
-    const CommandBuffer* cmd, const Image* src, ResourceState src_state, Image* dst, ResourceState dst_state,
+    const CommandBuffer* cmd, const BaseImage* src, ResourceState src_state, BaseImage* dst, ResourceState dst_state,
     Filter filter)
 {
     auto src_range = get_image_subresource_range(src);
@@ -2175,7 +2175,7 @@ void cmd_blit_image(
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &image_blit_info, to_vk_filter(filter));
 }
 
-void cmd_clear_color_image(const CommandBuffer* cmd, Image* image, Vector4 color)
+void cmd_clear_color_image(const CommandBuffer* cmd, BaseImage* image, Vector4 color)
 {
     VkClearColorValue clear_color{};
     clear_color.float32[ 0 ] = color.r;
@@ -2189,12 +2189,12 @@ void cmd_clear_color_image(const CommandBuffer* cmd, Image* image, Vector4 color
         cmd->command_buffer, image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
 }
 
-void create_buffer(const Device* device, const BufferDesc* desc, Buffer** p_buffer)
+void create_buffer(const Device* device, const BufferDesc* desc, BaseBuffer** p_buffer)
 {
     FT_ASSERT(p_buffer);
 
-    *p_buffer      = new (std::nothrow) Buffer{};
-    Buffer* buffer = *p_buffer;
+    *p_buffer          = new (std::nothrow) BaseBuffer{};
+    BaseBuffer* buffer = *p_buffer;
 
     buffer->size            = desc->size;
     buffer->descriptor_type = desc->descriptor_type;
@@ -2217,7 +2217,7 @@ void create_buffer(const Device* device, const BufferDesc* desc, Buffer** p_buff
         nullptr));
 }
 
-void destroy_buffer(const Device* device, Buffer* buffer)
+void destroy_buffer(const Device* device, BaseBuffer* buffer)
 {
     FT_ASSERT(buffer);
     FT_ASSERT(buffer->allocation);
@@ -2271,12 +2271,12 @@ void destroy_sampler(const Device* device, Sampler* sampler)
     delete sampler;
 }
 
-void create_image(const Device* device, const ImageDesc* desc, Image** p_image)
+void create_image(const Device* device, const ImageDesc* desc, BaseImage** p_image)
 {
     FT_ASSERT(p_image);
 
-    *p_image     = new (std::nothrow) Image{};
-    Image* image = *p_image;
+    *p_image         = new (std::nothrow) BaseImage{};
+    BaseImage* image = *p_image;
 
     VmaAllocationCreateInfo allocation_create_info{};
     allocation_create_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -2340,7 +2340,7 @@ void create_image(const Device* device, const ImageDesc* desc, Image** p_image)
         device->logical_device, &image_view_create_info, device->vulkan_allocator, &image->image_view));
 }
 
-void destroy_image(const Device* device, Image* image)
+void destroy_image(const Device* device, BaseImage* image)
 {
     FT_ASSERT(image);
     FT_ASSERT(image->image_view);

@@ -11,6 +11,7 @@
 #include "renderer/renderer_backend.hpp"
 
 #include "resource_manager/resource_manager.hpp"
+#include "resource_manager/resources.hpp"
 
 #include "math/math.hpp"
 
@@ -18,4 +19,6 @@
 #include "scene/components.hpp"
 #include "scene/camera.hpp"
 
-#include "utils/utils.hpp"
+#include "utils/file_loader.hpp"
+#include "utils/image_loader.hpp"
+#include "utils/model_loader.hpp"

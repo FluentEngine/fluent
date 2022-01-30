@@ -23,9 +23,9 @@ DescriptorSetLayout* descriptor_set_layout;
 Pipeline*            pipeline;
 DescriptorSet*       set = nullptr;
 
-Geometry* geometry = nullptr;
-
-Buffer* uniform_buffer = nullptr;
+Ref<Geometry> geometry       = nullptr;
+Ref<Buffer>   uniform_buffer = nullptr;
+Ref<Image>    image          = nullptr;
 
 Camera           camera;
 CameraController camera_controller;
@@ -35,6 +35,7 @@ void on_init()
 {
     app_set_shaders_directory("../../sandbox/shaders/");
     app_set_models_directory("../../sandbox/models/");
+    app_set_textures_directory("../../sandbox/textures/");
 
     GraphicContextDesc context_desc{};
     context_desc.vulkan_allocator = nullptr;
@@ -90,13 +91,11 @@ void on_init()
     create_descriptor_set_layout(device, 2, shaders, &descriptor_set_layout);
 
     GeometryLoadDesc geom_load_desc{};
-    geom_load_desc.filename   = "cube.gltf";
-    geom_load_desc.p_geometry = &geometry;
-
-    ResourceManager::load_geometry(&geom_load_desc);
+    geom_load_desc.filename = "cube.gltf";
+    ResourceManager::load_geometry(geometry, &geom_load_desc);
 
     PipelineDesc pipeline_desc{};
-    pipeline_desc.vertex_layout                = geometry->vertex_layout;
+    pipeline_desc.vertex_layout                = geometry->vertex_layout();
     pipeline_desc.rasterizer_desc.cull_mode    = CullMode::eNone;
     pipeline_desc.rasterizer_desc.front_face   = FrontFace::eCounterClockwise;
     pipeline_desc.depth_state_desc.depth_test  = false;
@@ -118,12 +117,11 @@ void on_init()
     ubo_load_desc.size          = sizeof(camera.get_data());
     ubo_load_desc.data          = &camera.get_data();
     ubo_load_desc.offset        = 0;
-    ubo_load_desc.p_buffer      = &uniform_buffer;
     BufferDesc& buffer_desc     = ubo_load_desc.buffer_desc;
     buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
     buffer_desc.size            = ubo_load_desc.size;
 
-    ResourceManager::load_buffer(&ubo_load_desc);
+    ResourceManager::load_buffer(uniform_buffer, &ubo_load_desc);
 
     DescriptorSetDesc set_desc{};
     set_desc.descriptor_set_layout = descriptor_set_layout;
@@ -132,7 +130,7 @@ void on_init()
     DescriptorBufferDesc set_buffer_desc{};
     set_buffer_desc.offset = 0;
     set_buffer_desc.range  = sizeof(camera.get_data());
-    set_buffer_desc.buffer = uniform_buffer;
+    set_buffer_desc.buffer = uniform_buffer->get();
 
     DescriptorWriteDesc set_write{};
     set_write.binding                 = 0;
@@ -141,6 +139,12 @@ void on_init()
     set_write.descriptor_buffer_descs = &set_buffer_desc;
 
     update_descriptor_set(device, set, 1, &set_write);
+
+    ImageLoadDesc image_load_desc{};
+    image_load_desc.filename = "statue.jpg";
+    image_load_desc.flip     = true;
+
+    ResourceManager::load_image(image, &image_load_desc);
 }
 
 void on_resize(u32 width, u32 height)
@@ -158,12 +162,11 @@ void on_update(f32 delta_time)
     ubo_load_desc.size          = sizeof(camera.get_data());
     ubo_load_desc.data          = &camera.get_data();
     ubo_load_desc.offset        = 0;
-    ubo_load_desc.p_buffer      = &uniform_buffer;
     BufferDesc& buffer_desc     = ubo_load_desc.buffer_desc;
     buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
     buffer_desc.size            = ubo_load_desc.size;
 
-    ResourceManager::load_buffer(&ubo_load_desc);
+    ResourceManager::load_buffer(uniform_buffer, &ubo_load_desc);
 
     if (!command_buffers_recorded[ frame_index ])
     {
@@ -200,12 +203,12 @@ void on_update(f32 delta_time)
     cmd_set_scissor(cmd, 0, 0, swapchain->width, swapchain->height);
     cmd_bind_pipeline(cmd, pipeline);
     cmd_bind_descriptor_set(cmd, set, pipeline);
-    for (auto& node : geometry->nodes)
+    for (auto& node : geometry->nodes())
     {
         Matrix4 model = Matrix4(1.0f);
         cmd_push_constants(cmd, pipeline, 0, sizeof(Matrix4), &model);
-        cmd_bind_vertex_buffer(cmd, node.vertex_buffer);
-        cmd_bind_index_buffer_u32(cmd, node.index_buffer);
+        cmd_bind_vertex_buffer(cmd, node.vertex_buffer->get());
+        cmd_bind_index_buffer_u32(cmd, node.index_buffer->get());
         cmd_draw_indexed(cmd, node.index_count, 1, 0, 0, 0);
     }
     cmd_end_render_pass(cmd);
@@ -247,8 +250,9 @@ void on_update(f32 delta_time)
 void on_shutdown()
 {
     device_wait_idle(device);
-    ResourceManager::free_geometry(geometry);
-    destroy_buffer(device, uniform_buffer);
+    ResourceManager::release_geometry(geometry);
+    ResourceManager::release_buffer(uniform_buffer);
+    ResourceManager::release_image(image);
     destroy_pipeline(device, pipeline);
     destroy_descriptor_set_layout(device, descriptor_set_layout);
     destroy_swapchain(device, swapchain);

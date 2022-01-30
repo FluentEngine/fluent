@@ -4,12 +4,10 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-#include "resource_manager/resources.hpp"
+#include "resource_manager/resource_manager.hpp"
 
 namespace fluent
 {
-struct GeometryLoadDesc;
-
 class ModelLoader
 {
 private:
@@ -28,18 +26,18 @@ private:
     u32         m_stride = 0;
     std::string m_directory;
 
-    [[nodiscard]] GeometryData load(const std::string& filename);
+    [[nodiscard]] GeometryDesc load(const std::string& filename);
 
-    void process_node(GeometryData& model, aiNode* node, const aiScene* scene);
+    void process_node(GeometryDesc& model, aiNode* node, const aiScene* scene);
 
-    GeometryData::GeometryDataNode process_mesh(aiMesh* mesh, const aiScene* scene);
+    GeometryDesc::GeometryDataNode process_mesh(aiMesh* mesh, const aiScene* scene);
 
-    std::vector<Image*> load_material_textures(aiMaterial* mat, aiTextureType type, std::string type_name);
+    std::vector<Ref<Image>> load_material_textures(aiMaterial* mat, aiTextureType type, std::string type_name);
 
     void count_stride(const GeometryLoadDesc* desc);
     void fill_vertex_layout(VertexLayout* layout);
 
 public:
-    [[nodiscard]] GeometryData load(const GeometryLoadDesc* desc);
+    [[nodiscard]] GeometryDesc load(const GeometryLoadDesc* desc);
 };
 } // namespace fluent

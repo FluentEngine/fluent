@@ -21,8 +21,8 @@ void Camera::init_camera(Vector3 position, Vector3 direction, Vector3 up)
     recalculate_projection_matrix();
     recalculate_view_matrix();
 
-    m_speed             = 200.0f;
-    m_mouse_sensitivity = 0.4f;
+    m_speed             = 50.0f;
+    m_mouse_sensitivity = 0.1f;
 }
 
 void Camera::recalculate_projection_matrix()

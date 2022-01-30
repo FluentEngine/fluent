@@ -49,10 +49,12 @@ set(renderer
 	${src_dir}/renderer/renderer_backend.cpp)
 
 set(resource_manager
+	${src_dir}/resource_manager/resources.cpp
 	${src_dir}/resource_manager/resource_manager.cpp)
 	
 set(util
-	${src_dir}/utils/utils.cpp
+	${src_dir}/utils/file_loader.cpp	
+	${src_dir}/utils/image_loader.cpp
 	${src_dir}/utils/model_loader.cpp)
 
 set(math

@@ -97,14 +97,14 @@ void app_run()
 
     while (app_state.is_running)
     {
+        update_input_system(&app_state.input_system);
+
         while (!SDL_TICKS_PASSED(SDL_GetTicks(), last_frame + 16))
             ;
 
         u32 current_frame    = get_time();
         app_state.delta_time = (current_frame - last_frame) / 1000.0f;
         last_frame           = current_frame;
-
-        update_input_system(&app_state.input_system);
 
         while (SDL_PollEvent(&e) != 0)
         {
@@ -130,13 +130,13 @@ void app_run()
                 update_input_keyboard_state(
                     &app_state.input_system, static_cast<KeyCode>(e.key.keysym.scancode), false);
                 break;
-            case SDL_MOUSEMOTION:
-                update_input_mouse_state(&app_state.input_system, e.motion.x, e.motion.y);
-                break;
             default:
                 break;
             }
         }
+        i32 x, y;
+        SDL_GetGlobalMouseState(&x, &y);
+        update_input_mouse_state(&app_state.input_system, x, y);
         app_state.on_update(app_state.delta_time);
     }
 

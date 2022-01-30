@@ -6,13 +6,65 @@
 
 namespace fluent
 {
-struct Texture
+class ResourceManager;
+
+class Buffer
 {
-    ResourceState state;
-    Image*        image;
+    friend class ResourceManager;
+
+private:
+    const Device* m_device = nullptr;
+    BaseBuffer*   m_buffer = nullptr;
+    u32           m_id     = 0;
+
+    Buffer(const Device* device, const BufferDesc* desc, u32 id);
+
+public:
+    ~Buffer();
+
+    operator BaseBuffer*() const
+    {
+        return m_buffer;
+    }
+
+    BaseBuffer* get() const
+    {
+        return m_buffer;
+    }
+
+    static Ref<Buffer> create(const Device* device, const BufferDesc* desc);
+    static Ref<Buffer> create(const Device* device, const BufferDesc* desc, u32 id);
 };
 
-struct GeometryData
+class Image
+{
+    friend class ResourceManager;
+
+private:
+    const Device* m_device = nullptr;
+    BaseImage*    m_image  = nullptr;
+    u32           m_id     = 0;
+
+    Image(const Device* device, const ImageDesc* desc, u32 id);
+
+public:
+    ~Image();
+
+    operator BaseImage*() const
+    {
+        return m_image;
+    }
+
+    BaseImage* get() const
+    {
+        return m_image;
+    }
+
+    static Ref<Image> create(const Device* device, const ImageDesc* desc);
+    static Ref<Image> create(const Device* device, const ImageDesc* desc, u32 id);
+};
+
+struct GeometryDesc
 {
     struct GeometryDataNode
     {
@@ -24,18 +76,41 @@ struct GeometryData
     VertexLayout                  vertex_layout;
 };
 
-struct Geometry
+class Geometry
 {
-    u32 id = 0;
+    friend class ResourceManager;
 
+public:
     struct GeometryNode
     {
-        Buffer* vertex_buffer;
-        Buffer* index_buffer;
-        u32     index_count;
+        Ref<Buffer> vertex_buffer;
+        Ref<Buffer> index_buffer;
+        u32         index_count;
     };
 
-    VertexLayout              vertex_layout;
-    std::vector<GeometryNode> nodes;
+private:
+    const Device* m_device = nullptr;
+    u32           m_id     = 0;
+
+    VertexLayout              m_vertex_layout;
+    std::vector<GeometryNode> m_nodes;
+
+    Geometry(const Device* device, const GeometryDesc* desc, u32 id);
+
+public:
+    ~Geometry();
+
+    const VertexLayout& vertex_layout() const
+    {
+        return m_vertex_layout;
+    }
+
+    const std::vector<GeometryNode>& nodes() const
+    {
+        return m_nodes;
+    }
+
+    static Ref<Geometry> create(const Device* device, const GeometryDesc* desc);
+    static Ref<Geometry> create(const Device* device, const GeometryDesc* desc, u32 id);
 };
 } // namespace fluent

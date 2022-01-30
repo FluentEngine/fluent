@@ -4,7 +4,7 @@
 #include "core/base.hpp"
 #include "renderer/renderer_backend.hpp"
 #include "math/math.hpp"
-#include "resource_manager/resource_manager.hpp"
+#include "resource_manager/resources.hpp"
 
 namespace fluent
 {
@@ -15,6 +15,6 @@ struct TransformComponent
 
 struct MeshComponent
 {
-    Geometry* geometry;
+    Ref<Geometry> geometry;
 };
 } // namespace fluent

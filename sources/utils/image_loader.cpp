@@ -2,27 +2,18 @@
 #include "tinyimageformat_apis.h"
 #include "tinyddsloader.h"
 #include "stb_image.h"
-#include "utils/utils.hpp"
+#include "utils/image_loader.hpp"
 
 namespace fluent
 {
-std::vector<u32> read_file_binary(const std::string& filename)
-{
-    std::ifstream file(filename, std::ios_base::binary);
-    FT_ASSERT(file.is_open() && "Failed to open file");
-
-    std::vector<char> res = { std::istreambuf_iterator(file), std::istreambuf_iterator<char>() };
-    return std::vector<u32>(reinterpret_cast<u32*>(res.data()), reinterpret_cast<u32*>(res.data() + res.size()));
-}
-
-ImageDesc read_dds_image(const char* filename, b32 flip, void** data)
+ImageDesc read_dds_image(const std::string& filename, b32 flip, u32* size, void** data)
 {
     using namespace tinyddsloader;
 
     ImageDesc image_desc{};
 
     DDSFile dds;
-    auto    ret = dds.Load(filename);
+    auto    ret = dds.Load(filename.c_str());
     FT_ASSERT(ret == Result::Success);
 
     if (flip)
@@ -41,26 +32,26 @@ ImageDesc read_dds_image(const char* filename, b32 flip, void** data)
     image_desc.format     = ( Format ) TinyImageFormat_FromDXGI_FORMAT(( TinyImageFormat_DXGI_FORMAT ) dds.GetFormat());
     image_desc.mip_levels = dds.GetMipCount();
     image_desc.layer_count = dds.GetArraySize();
-    // image_desc.data_size   = image_data->m_memSlicePitch;
+    *size                  = image_data->m_memSlicePitch;
 
-    *data = new u8[ image_data->m_memSlicePitch ];
-    std::memcpy((*data), image_data->m_mem, image_data->m_memSlicePitch);
-
+    u8* loaded_data = new u8[ image_data->m_memSlicePitch ];
+    std::memcpy(*data, image_data->m_mem, image_data->m_memSlicePitch);
+    *data = loaded_data;
     return image_desc;
 }
 
-void release_dds_image(void* data)
+void release_dds_image_data(void* data)
 {
     delete[](u8*) data;
 }
 
-ImageDesc read_image(const char* filename, b32 flip, void** data)
+ImageDesc read_image(const std::string& filename, b32 flip, u32* size, void** data)
 {
     ImageDesc image_desc{};
 
     stbi_set_flip_vertically_on_load(flip);
     int tex_width, tex_height, tex_channels;
-    *data = stbi_load(filename, &tex_width, &tex_height, &tex_channels, STBI_rgb_alpha);
+    *data = stbi_load(filename.c_str(), &tex_width, &tex_height, &tex_channels, STBI_rgb_alpha);
 
     stbi_set_flip_vertically_on_load(!flip);
 
@@ -70,11 +61,11 @@ ImageDesc read_image(const char* filename, b32 flip, void** data)
     image_desc.format      = Format::eR8G8B8A8Unorm;
     image_desc.mip_levels  = 1;
     image_desc.layer_count = 1;
-
+    *size                  = tex_width * tex_height * 4;
     return image_desc;
 }
 
-void release_image(void* data)
+void release_image_data(void* data)
 {
     stbi_image_free(data);
 }

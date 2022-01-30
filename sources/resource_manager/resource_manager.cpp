@@ -1,4 +1,6 @@
+#include "core/application.hpp"
 #include "utils/model_loader.hpp"
+#include "utils/image_loader.hpp"
 #include "resource_manager/resource_manager.hpp"
 
 namespace fluent
@@ -8,9 +10,10 @@ CommandPool*   ResourceManager::m_command_pool = nullptr;
 CommandBuffer* ResourceManager::m_cmd          = nullptr;
 Queue*         ResourceManager::m_queue        = nullptr;
 
-std::unordered_map<u32, Geometry*> ResourceManager::m_geometries;
+std::unordered_map<u32, Ref<Image>>    ResourceManager::m_images;
+std::unordered_map<u32, Ref<Geometry>> ResourceManager::m_geometries;
 
-void ResourceManager::create_staging_buffer(u32 size, Buffer** buffer)
+void ResourceManager::create_staging_buffer(u32 size, BaseBuffer** buffer)
 {
     BufferDesc buffer_desc{};
     buffer_desc.descriptor_type = DescriptorType::eHostVisibleBuffer;
@@ -35,47 +38,41 @@ void ResourceManager::init(const Device* device)
 
 void ResourceManager::shutdown()
 {
-    for (auto& [ id, geometry ] : m_geometries)
-    {
-        free_geometry(geometry);
-    }
+    m_images.clear();
+    m_geometries.clear();
     destroy_command_buffers(m_device, m_command_pool, 1, &m_cmd);
     destroy_command_pool(m_device, m_command_pool);
     destroy_queue(m_queue);
 }
 
-void ResourceManager::load_buffer(const BufferLoadDesc* desc)
+void ResourceManager::load_buffer(Ref<Buffer>& buffer, const BufferLoadDesc* desc)
 {
-    FT_ASSERT(desc->p_buffer);
+    FT_ASSERT(desc);
 
-    Buffer* buffer = nullptr;
-
-    if (*desc->p_buffer == nullptr)
+    if (buffer == nullptr)
     {
-        create_buffer(m_device, &desc->buffer_desc, desc->p_buffer);
+        buffer = Buffer::create(m_device, &desc->buffer_desc);
     }
-
-    buffer = *desc->p_buffer;
 
     if (desc->data)
     {
         if (b32(desc->buffer_desc.descriptor_type & DescriptorType::eHostVisibleBuffer))
         {
             // TODO: Add asserts, check sizes
-            map_memory(m_device, buffer);
-            std::memcpy(( u8* ) buffer->mapped_memory + desc->offset, desc->data, desc->size);
-            unmap_memory(m_device, buffer);
+            map_memory(m_device, buffer->get());
+            std::memcpy(( u8* ) buffer->get()->mapped_memory + desc->offset, desc->data, desc->size);
+            unmap_memory(m_device, buffer->get());
         }
         else
         {
-            Buffer* staging_buffer = nullptr;
+            BaseBuffer* staging_buffer = nullptr;
             create_staging_buffer(desc->size, &staging_buffer);
             map_memory(m_device, staging_buffer);
             std::memcpy(staging_buffer->mapped_memory, desc->data, desc->size);
             unmap_memory(m_device, staging_buffer);
 
             begin_command_buffer(m_cmd);
-            cmd_copy_buffer(m_cmd, staging_buffer, 0, buffer, desc->offset, desc->size);
+            cmd_copy_buffer(m_cmd, staging_buffer, 0, buffer->get(), desc->offset, desc->size);
             end_command_buffer(m_cmd);
 
             immediate_submit(m_queue, m_cmd);
@@ -84,66 +81,133 @@ void ResourceManager::load_buffer(const BufferLoadDesc* desc)
     }
 }
 
-void ResourceManager::load_geometry(const GeometryLoadDesc* desc)
+void ResourceManager::release_buffer(Ref<Buffer>& buffer)
+{
+    buffer = nullptr;
+}
+
+void ResourceManager::load_image(Ref<Image>& image, const ImageLoadDesc* desc)
 {
     FT_ASSERT(desc);
+
+    BaseBuffer* staging_buffer = nullptr;
+
+    if (!desc->filename.empty())
+    {
+        u32  id = std::hash<std::string>{}(desc->filename);
+        auto it = m_images.find(id);
+
+        if (it != m_images.cend())
+        {
+            Ref<Image> r = m_images[ id ];
+            image        = r;
+        }
+        else
+        {
+            std::string ext = desc->filename.substr(desc->filename.find_last_of("."));
+            ImageDesc   image_desc{};
+            u32         size = 0;
+            void*       data = nullptr;
+
+            if (ext == ".dds")
+            {
+                image_desc = read_dds_image(get_app_textures_directory() + desc->filename, desc->flip, &size, &data);
+            }
+            else
+            {
+                image_desc = read_image(get_app_textures_directory() + desc->filename, desc->flip, &size, &data);
+            }
+
+            image_desc.descriptor_type = DescriptorType::eSampledImage;
+
+            image          = Image::create(m_device, &image_desc, id);
+            m_images[ id ] = image;
+
+            create_staging_buffer(size, &staging_buffer);
+            map_memory(m_device, staging_buffer);
+            std::memcpy(staging_buffer->mapped_memory, data, size);
+            unmap_memory(m_device, staging_buffer);
+
+            if (ext == ".dds")
+            {
+                release_dds_image_data(data);
+            }
+            else
+            {
+                release_image_data(data);
+            }
+        }
+    }
+    else if (desc->data)
+    {
+        create_staging_buffer(desc->size, &staging_buffer);
+        map_memory(m_device, staging_buffer);
+        std::memcpy(staging_buffer->mapped_memory, desc->data, desc->size);
+        unmap_memory(m_device, staging_buffer);
+    }
+
+    if (staging_buffer)
+    {
+        ImageBarrier image_barrier{};
+        image_barrier.image     = image->get();
+        image_barrier.src_queue = m_queue;
+        image_barrier.dst_queue = m_queue;
+        image_barrier.old_state = ResourceState::eUndefined;
+        image_barrier.new_state = ResourceState::eTransferDst;
+
+        begin_command_buffer(m_cmd);
+        cmd_barrier(m_cmd, 0, nullptr, 1, &image_barrier);
+        cmd_copy_buffer_to_image(m_cmd, staging_buffer, 0, image->get());
+        image_barrier.old_state = ResourceState::eTransferDst;
+        image_barrier.new_state = ResourceState::eShaderReadOnly;
+        cmd_barrier(m_cmd, 0, nullptr, 1, &image_barrier);
+        end_command_buffer(m_cmd);
+
+        immediate_submit(m_queue, m_cmd);
+        destroy_buffer(m_device, staging_buffer);
+    }
+}
+
+void ResourceManager::release_image(Ref<Image>& image)
+{
+    image = nullptr;
+}
+
+void ResourceManager::load_geometry(Ref<Geometry>& geometry, const GeometryLoadDesc* desc)
+{
+    FT_ASSERT(desc);
+
     if (!desc->filename.empty())
     {
         // load geometry from file
-        *desc->p_geometry  = new Geometry{};
-        Geometry* geometry = *desc->p_geometry;
-
-        ModelLoader  model_loader;
-        GeometryData data = model_loader.load(desc);
-
-        geometry->vertex_layout = data.vertex_layout;
-
-        for (u32 i = 0; i < data.nodes.size(); ++i)
-        {
-            auto& geometry_node = geometry->nodes.emplace_back();
-
-            BufferLoadDesc buffer_load_desc{};
-            buffer_load_desc.p_buffer   = &geometry_node.vertex_buffer;
-            buffer_load_desc.offset     = 0;
-            buffer_load_desc.size       = data.nodes[ i ].positions.size() * sizeof(data.nodes[ i ].positions[ 0 ]);
-            buffer_load_desc.data       = data.nodes[ i ].positions.data();
-            BufferDesc& buffer_desc     = buffer_load_desc.buffer_desc;
-            buffer_desc.descriptor_type = DescriptorType::eVertexBuffer;
-            buffer_desc.size            = buffer_load_desc.size;
-
-            load_buffer(&buffer_load_desc);
-
-            buffer_load_desc.p_buffer   = &geometry_node.index_buffer;
-            buffer_load_desc.size       = data.nodes[ i ].indices.size() * sizeof(data.nodes[ i ].indices[ 0 ]);
-            buffer_load_desc.data       = data.nodes[ i ].indices.data();
-            buffer_desc.descriptor_type = DescriptorType::eIndexBuffer;
-            buffer_desc.size            = buffer_load_desc.size;
-
-            load_buffer(&buffer_load_desc);
-
-            geometry_node.index_count = data.nodes[ i ].indices.size();
-        }
-
         u32 id = std::hash<std::string>{}(desc->filename);
 
-        m_geometries[ id ] = geometry;
-        geometry->id       = id;
+        auto it = m_geometries.find(id);
+
+        if (it != m_geometries.cend())
+        {
+            // TODO: not so nice solution
+            Ref<Geometry> r = it->second;
+            geometry        = r;
+        }
+        else
+        {
+            ModelLoader  model_loader;
+            GeometryDesc geometry_desc = model_loader.load(desc);
+
+            geometry = Geometry::create(m_device, &geometry_desc, id);
+
+            m_geometries[ id ] = geometry;
+        }
     }
-    else if (desc->data)
+    else if (desc->desc)
     {
         // TODO: Support loading from user data
     }
 }
 
-void ResourceManager::free_geometry(Geometry* geometry)
+void ResourceManager::release_geometry(Ref<Geometry>& geometry)
 {
-    m_geometries.erase(geometry->id);
-    for (auto& node : geometry->nodes)
-    {
-        destroy_buffer(m_device, node.vertex_buffer);
-        destroy_buffer(m_device, node.index_buffer);
-    }
-
-    delete geometry;
+    geometry = nullptr;
 }
 } // namespace fluent

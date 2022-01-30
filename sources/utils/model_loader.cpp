@@ -1,5 +1,6 @@
 #include "core/application.hpp"
 #include "resource_manager/resource_manager.hpp"
+#include "resource_manager/resources.hpp"
 #include "utils/model_loader.hpp"
 
 namespace fluent
@@ -32,7 +33,7 @@ void ModelLoader::count_stride(const GeometryLoadDesc* desc)
     }
 }
 
-GeometryData ModelLoader::load(const GeometryLoadDesc* desc)
+GeometryDesc ModelLoader::load(const GeometryLoadDesc* desc)
 {
     m_flip_uvs  = desc->flip_uvs;
     m_directory = std::string(desc->filename.substr(0, desc->filename.find_last_of('/')));
@@ -40,7 +41,7 @@ GeometryData ModelLoader::load(const GeometryLoadDesc* desc)
     return load(desc->filename);
 }
 
-GeometryData ModelLoader::load(const std::string& filename)
+GeometryDesc ModelLoader::load(const std::string& filename)
 {
     Assimp::Importer importer;
     const aiScene*   scene = importer.ReadFile(
@@ -49,13 +50,13 @@ GeometryData ModelLoader::load(const std::string& filename)
 
     FT_ASSERT(scene || !(scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) || scene->mRootNode);
 
-    GeometryData data;
+    GeometryDesc data;
     process_node(data, scene->mRootNode, scene);
     fill_vertex_layout(&data.vertex_layout);
     return data;
 }
 
-void ModelLoader::process_node(GeometryData& model, aiNode* node, const aiScene* scene)
+void ModelLoader::process_node(GeometryDesc& model, aiNode* node, const aiScene* scene)
 {
     for (uint32_t i = 0; i < node->mNumMeshes; i++)
     {
@@ -69,12 +70,12 @@ void ModelLoader::process_node(GeometryData& model, aiNode* node, const aiScene*
     }
 }
 
-GeometryData::GeometryDataNode ModelLoader::process_mesh(aiMesh* mesh, const aiScene* scene)
+GeometryDesc::GeometryDataNode ModelLoader::process_mesh(aiMesh* mesh, const aiScene* scene)
 {
     // data to fill
-    std::vector<f32>    vertices(mesh->mNumVertices * m_stride);
-    std::vector<u32>    indices;
-    std::vector<Image*> textures;
+    std::vector<f32>        vertices(mesh->mNumVertices * m_stride);
+    std::vector<u32>        indices;
+    std::vector<Ref<Image>> textures;
 
     // walk through each of the mesh's vertices
     for (u32 i = 0; i < mesh->mNumVertices; i++)
@@ -137,40 +138,41 @@ GeometryData::GeometryDataNode ModelLoader::process_mesh(aiMesh* mesh, const aiS
 
     aiMaterial* material = scene->mMaterials[ mesh->mMaterialIndex ];
 
-    std::vector<Image*> diffuseMaps = load_material_textures(material, aiTextureType_DIFFUSE, "texture_diffuse");
+    std::vector<Ref<Image>> diffuseMaps = load_material_textures(material, aiTextureType_DIFFUSE, "texture_diffuse");
     textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
 
-    std::vector<Image*> normalMaps = load_material_textures(material, aiTextureType_NORMALS, "texture_normal");
+    std::vector<Ref<Image>> normalMaps = load_material_textures(material, aiTextureType_NORMALS, "texture_normal");
     textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
 
-    std::vector<Image*> specularMaps = load_material_textures(material, aiTextureType_SPECULAR, "texture_specular");
+    std::vector<Ref<Image>> specularMaps = load_material_textures(material, aiTextureType_SPECULAR, "texture_specular");
     textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
 
-    std::vector<Image*> heightMaps = load_material_textures(material, aiTextureType_HEIGHT, "texture_height");
+    std::vector<Ref<Image>> heightMaps = load_material_textures(material, aiTextureType_HEIGHT, "texture_height");
     textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
 
-    std::vector<Image*> ambientMaps = load_material_textures(material, aiTextureType_AMBIENT, "texture_ambient");
+    std::vector<Ref<Image>> ambientMaps = load_material_textures(material, aiTextureType_AMBIENT, "texture_ambient");
     textures.insert(textures.end(), ambientMaps.begin(), ambientMaps.end());
 
     // TODO:
-    std::vector<Image*> aoMaps = load_material_textures(material, aiTextureType_LIGHTMAP, "texture_ao");
+    std::vector<Ref<Image>> aoMaps = load_material_textures(material, aiTextureType_LIGHTMAP, "texture_ao");
     textures.insert(textures.end(), aoMaps.begin(), aoMaps.end());
 
-    std::vector<Image*> emissiveMaps = load_material_textures(material, aiTextureType_EMISSIVE, "texture_emissive");
+    std::vector<Ref<Image>> emissiveMaps = load_material_textures(material, aiTextureType_EMISSIVE, "texture_emissive");
     textures.insert(textures.end(), emissiveMaps.begin(), emissiveMaps.end());
 
-    std::vector<Image*> metalness_maps = load_material_textures(material, aiTextureType_METALNESS, "texture_metalness");
+    std::vector<Ref<Image>> metalness_maps =
+        load_material_textures(material, aiTextureType_METALNESS, "texture_metalness");
     textures.insert(textures.end(), metalness_maps.begin(), metalness_maps.end());
     // meshMaterial.metalness = prevTexSize != textures.size() ? textures.size() - 1 : -1;
 
-    std::vector<Image*> metal_roughness_maps =
+    std::vector<Ref<Image>> metal_roughness_maps =
         load_material_textures(material, aiTextureType_UNKNOWN, "texture_metal_roughness");
     textures.insert(textures.end(), metal_roughness_maps.begin(), metal_roughness_maps.end());
 
-    return GeometryData::GeometryDataNode{ vertices, indices };
+    return GeometryDesc::GeometryDataNode{ vertices, indices };
 }
 
-std::vector<Image*> ModelLoader::load_material_textures(aiMaterial* mat, aiTextureType type, std::string type_name)
+std::vector<Ref<Image>> ModelLoader::load_material_textures(aiMaterial* mat, aiTextureType type, std::string type_name)
 {
     return {};
 }

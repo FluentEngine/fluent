@@ -22,7 +22,7 @@ CommandBuffer* command_buffers[ FRAME_COUNT ];
 DescriptorSetLayout* descriptor_set_layout;
 Pipeline*            pipeline;
 
-Buffer* vertex_buffer;
+BaseBuffer* vertex_buffer;
 
 static const f32 vertices[] = { -0.5f, -0.5f, 0.5f, -0.5f, 0.0f, 0.5f };
 
