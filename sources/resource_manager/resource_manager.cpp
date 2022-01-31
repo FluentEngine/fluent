@@ -140,6 +140,13 @@ void ResourceManager::load_image(Ref<Image>& image, const ImageLoadDesc* desc)
     }
     else if (desc->data)
     {
+        if (image == nullptr)
+        {
+            image = Image::create(m_device, &desc->image_desc);
+
+            m_images[ image->id() ] = image;
+        }
+
         create_staging_buffer(desc->size, &staging_buffer);
         map_memory(m_device, staging_buffer);
         std::memcpy(staging_buffer->mapped_memory, desc->data, desc->size);

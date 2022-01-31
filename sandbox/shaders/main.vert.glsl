@@ -6,6 +6,8 @@ layout(location = 2) in vec2 i_texcoord;
 layout(location = 3) in vec3 i_tangent; 
 layout(location = 4) in vec3 i_bitangent; 
 
+layout(location = 0) out vec2 tex_coord;
+
 layout (set = 0, binding = 0) uniform u_camera_buffer
 {
 	mat4 projection;
@@ -19,5 +21,6 @@ layout (push_constant) uniform constants
 
 void main() 
 {
+	tex_coord = i_texcoord;
     gl_Position = ubo.projection * ubo.view * pc.model * vec4(i_position, 1.0);
 }

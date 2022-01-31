@@ -1642,50 +1642,66 @@ void create_descriptor_set_layout(
     descriptor_set_layout->shaders      = shaders;
 
     // count bindings in all shaders
-    u32                      binding_count                                 = 0;
-    VkDescriptorBindingFlags binding_flags[ MAX_DESCRIPTOR_BINDING_COUNT ] = {};
+    u32                      binding_counts[ MAX_SET_COUNT ]                                = { 0 };
+    VkDescriptorBindingFlags binding_flags[ MAX_SET_COUNT ][ MAX_DESCRIPTOR_BINDING_COUNT ] = {};
     // collect all bindings
-    VkDescriptorSetLayoutBinding bindings[ MAX_DESCRIPTOR_BINDING_COUNT ];
+    VkDescriptorSetLayoutBinding bindings[ MAX_SET_COUNT ][ MAX_DESCRIPTOR_BINDING_COUNT ];
+
+    u32 set_count = 0;
 
     for (u32 i = 0; i < descriptor_set_layout->shader_count; ++i)
     {
         for (u32 j = 0; j < descriptor_set_layout->shaders[ i ]->reflect_data.binding_count; ++j)
         {
-            auto& reflected_binding                   = descriptor_set_layout->shaders[ i ]->reflect_data.bindings[ j ];
-            bindings[ binding_count ].binding         = reflected_binding.binding;
-            bindings[ binding_count ].descriptorCount = reflected_binding.descriptor_count;
-            bindings[ binding_count ].descriptorType  = to_vk_descriptor_type(reflected_binding.descriptor_type);
-            bindings[ binding_count ].pImmutableSamplers = nullptr; // ??? TODO
-            bindings[ binding_count ].stageFlags = to_vk_shader_stage(descriptor_set_layout->shaders[ i ]->stage);
+            auto& binding       = descriptor_set_layout->shaders[ i ]->reflect_data.bindings[ j ];
+            u32   set           = binding.set;
+            u32&  binding_count = binding_counts[ set ];
 
-            if (reflected_binding.descriptor_count > 1)
+            bindings[ set ][ binding_count ].binding            = binding.binding;
+            bindings[ set ][ binding_count ].descriptorCount    = binding.descriptor_count;
+            bindings[ set ][ binding_count ].descriptorType     = to_vk_descriptor_type(binding.descriptor_type);
+            bindings[ set ][ binding_count ].pImmutableSamplers = nullptr; // ??? TODO
+            bindings[ set ][ binding_count ].stageFlags =
+                to_vk_shader_stage(descriptor_set_layout->shaders[ i ]->stage);
+
+            if (binding.descriptor_count > 1)
             {
-                binding_flags[ binding_count ] = VkDescriptorBindingFlags{};
-                binding_flags[ binding_count ] |= VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
+                binding_flags[ set ][ binding_count ] = VkDescriptorBindingFlags{};
+                binding_flags[ set ][ binding_count ] |= VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
             }
 
             binding_count++;
+
+            if (set + 1 > set_count)
+            {
+                set_count = set + 1;
+            }
         }
     }
 
-    if (binding_count > 0)
+    for (u32 set = 0; set < set_count; ++set)
     {
-        VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags_create_info{};
-        binding_flags_create_info.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
-        binding_flags_create_info.pNext         = nullptr;
-        binding_flags_create_info.bindingCount  = binding_count;
-        binding_flags_create_info.pBindingFlags = binding_flags;
+        if (binding_counts[ set ] > 0)
+        {
+            VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags_create_info{};
+            binding_flags_create_info.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+            binding_flags_create_info.pNext         = nullptr;
+            binding_flags_create_info.bindingCount  = binding_counts[ set ];
+            binding_flags_create_info.pBindingFlags = binding_flags[ set ];
 
-        VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info{};
-        descriptor_set_layout_create_info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        descriptor_set_layout_create_info.pNext        = &binding_flags_create_info;
-        descriptor_set_layout_create_info.flags        = 0;
-        descriptor_set_layout_create_info.bindingCount = binding_count;
-        descriptor_set_layout_create_info.pBindings    = bindings;
+            VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info{};
+            descriptor_set_layout_create_info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            descriptor_set_layout_create_info.pNext        = &binding_flags_create_info;
+            descriptor_set_layout_create_info.flags        = 0;
+            descriptor_set_layout_create_info.bindingCount = binding_counts[ set ];
+            descriptor_set_layout_create_info.pBindings    = bindings[ set ];
 
-        VK_ASSERT(vkCreateDescriptorSetLayout(
-            device->logical_device, &descriptor_set_layout_create_info, device->vulkan_allocator,
-            &descriptor_set_layout->descriptor_set_layout));
+            VK_ASSERT(vkCreateDescriptorSetLayout(
+                device->logical_device, &descriptor_set_layout_create_info, device->vulkan_allocator,
+                &descriptor_set_layout->descriptor_set_layouts[ set ]));
+
+            descriptor_set_layout->descriptor_set_layout_count++;
+        }
     }
 }
 
@@ -1693,10 +1709,16 @@ void destroy_descriptor_set_layout(const Device* device, DescriptorSetLayout* la
 {
     FT_ASSERT(layout);
     FT_ASSERT(layout->shaders);
-    if (layout->descriptor_set_layout)
+
+    for (u32 i = 0; i < layout->descriptor_set_layout_count; ++i)
     {
-        vkDestroyDescriptorSetLayout(device->logical_device, layout->descriptor_set_layout, device->vulkan_allocator);
+        if (layout->descriptor_set_layouts[ i ])
+        {
+            vkDestroyDescriptorSetLayout(
+                device->logical_device, layout->descriptor_set_layouts[ i ], device->vulkan_allocator);
+        }
     }
+
     delete layout;
 }
 
@@ -1726,8 +1748,8 @@ void create_compute_pipeline(const Device* device, const PipelineDesc* desc, Pip
 
     VkPipelineLayoutCreateInfo pipeline_layout_create_info{};
     pipeline_layout_create_info.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_create_info.setLayoutCount         = 1;
-    pipeline_layout_create_info.pSetLayouts            = &desc->descriptor_set_layout->descriptor_set_layout;
+    pipeline_layout_create_info.setLayoutCount         = desc->descriptor_set_layout->descriptor_set_layout_count;
+    pipeline_layout_create_info.pSetLayouts            = desc->descriptor_set_layout->descriptor_set_layouts;
     pipeline_layout_create_info.pushConstantRangeCount = 1;
     pipeline_layout_create_info.pPushConstantRanges    = &push_constant_range;
 
@@ -1862,14 +1884,10 @@ void create_graphics_pipeline(const Device* device, const PipelineDesc* desc, Pi
     push_constant_range.stageFlags =
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    u32                    set_layout_count = desc->descriptor_set_layout->descriptor_set_layout ? 1 : 0;
-    VkDescriptorSetLayout* set_layout =
-        set_layout_count ? &desc->descriptor_set_layout->descriptor_set_layout : nullptr;
-
     VkPipelineLayoutCreateInfo pipeline_layout_create_info{};
     pipeline_layout_create_info.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_create_info.setLayoutCount         = set_layout_count;
-    pipeline_layout_create_info.pSetLayouts            = set_layout;
+    pipeline_layout_create_info.setLayoutCount         = desc->descriptor_set_layout->descriptor_set_layout_count;
+    pipeline_layout_create_info.pSetLayouts            = desc->descriptor_set_layout->descriptor_set_layouts;
     pipeline_layout_create_info.pushConstantRangeCount = 1;
     pipeline_layout_create_info.pPushConstantRanges    = &push_constant_range;
 
@@ -2226,10 +2244,11 @@ void destroy_buffer(const Device* device, BaseBuffer* buffer)
     delete buffer;
 }
 
-void cmd_bind_descriptor_set(const CommandBuffer* cmd, const DescriptorSet* set, const Pipeline* pipeline)
+void cmd_bind_descriptor_set(
+    const CommandBuffer* cmd, u32 first_set, const DescriptorSet* set, const Pipeline* pipeline)
 {
     vkCmdBindDescriptorSets(
-        cmd->command_buffer, to_vk_pipeline_bind_point(pipeline->type), pipeline->pipeline_layout, 0, 1,
+        cmd->command_buffer, to_vk_pipeline_bind_point(pipeline->type), pipeline->pipeline_layout, first_set, 1,
         &set->descriptor_set, 0, nullptr);
 }
 
@@ -2355,7 +2374,6 @@ void create_descriptor_set(const Device* device, const DescriptorSetDesc* desc, 
 {
     FT_ASSERT(p_descriptor_set);
     FT_ASSERT(desc->descriptor_set_layout);
-    FT_ASSERT(desc->descriptor_set_layout->descriptor_set_layout != VK_NULL_HANDLE);
 
     *p_descriptor_set             = new (std::nothrow) DescriptorSet{};
     DescriptorSet* descriptor_set = *p_descriptor_set;
@@ -2365,7 +2383,7 @@ void create_descriptor_set(const Device* device, const DescriptorSetDesc* desc, 
     descriptor_set_allocate_info.pNext              = nullptr;
     descriptor_set_allocate_info.descriptorPool     = device->descriptor_pool;
     descriptor_set_allocate_info.descriptorSetCount = 1;
-    descriptor_set_allocate_info.pSetLayouts        = &desc->descriptor_set_layout->descriptor_set_layout;
+    descriptor_set_allocate_info.pSetLayouts = &desc->descriptor_set_layout->descriptor_set_layouts[ desc->index ];
 
     VK_ASSERT(vkAllocateDescriptorSets(
         device->logical_device, &descriptor_set_allocate_info, &descriptor_set->descriptor_set));

@@ -119,7 +119,7 @@ ReflectionData reflect(u32 byte_code_size, const u32* byte_code)
         result.bindings[ i ].descriptor_count = descriptor_binding->count;
         result.bindings[ i ].descriptor_type =
             to_desctriptor_type(( VkDescriptorType ) descriptor_binding->descriptor_type);
-
+        result.bindings[ i ].set = descriptor_binding->set;
         i++;
     }
 

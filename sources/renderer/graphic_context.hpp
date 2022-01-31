@@ -61,9 +61,19 @@ public:
         return get_swapchain_render_pass(m_swapchain, m_image_index);
     }
 
+    u32 frame_index() const
+    {
+        return m_frame_index;
+    }
+
     static void init();
     static void shutdown();
 
     static GraphicContext* get();
+
+    static constexpr u32 frame_count()
+    {
+        return FRAME_COUNT;
+    }
 };
 } // namespace fluent

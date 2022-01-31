@@ -24,6 +24,7 @@ static constexpr u32 MAX_STAGE_COUNT              = 5;
 static constexpr u32 MAX_VERTEX_BINDING_COUNT     = 15;
 static constexpr u32 MAX_VERTEX_ATTRIBUTE_COUNT   = 15;
 static constexpr u32 MAX_DESCRIPTOR_BINDING_COUNT = 15;
+static constexpr u32 MAX_SET_COUNT                = 10;
 
 struct QueueDesc
 {
@@ -248,7 +249,8 @@ struct DescriptorSetLayout
 {
     u32                   shader_count;
     Shader**              shaders;
-    VkDescriptorSetLayout descriptor_set_layout;
+    u32                   descriptor_set_layout_count = 0;
+    VkDescriptorSetLayout descriptor_set_layouts[ MAX_SET_COUNT ];
 };
 
 struct VertexBindingDesc
@@ -337,6 +339,7 @@ struct Device
 
 struct DescriptorSetDesc
 {
+    u32                  index = 0;
     DescriptorSetLayout* descriptor_set_layout;
 };
 
@@ -468,7 +471,8 @@ void cmd_copy_buffer(
     const CommandBuffer* cmd, const BaseBuffer* src, u32 src_offset, BaseBuffer* dst, u32 dst_offset, u32 size);
 
 void cmd_copy_buffer_to_image(const CommandBuffer* cmd, const BaseBuffer* src, u32 src_offset, BaseImage* dst);
-void cmd_bind_descriptor_set(const CommandBuffer* cmd, const DescriptorSet* set, const Pipeline* pipeline);
+void cmd_bind_descriptor_set(
+    const CommandBuffer* cmd, u32 first_set, const DescriptorSet* set, const Pipeline* pipeline);
 
 void cmd_dispatch(const CommandBuffer* cmd, u32 group_count_x, u32 group_count_y, u32 group_count_z);
 

@@ -4,8 +4,10 @@
 
 namespace fluent
 {
-GraphicContext*          Renderer3D::m_context = nullptr;
-Renderer3D::RendererData Renderer3D::m_data    = {};
+GraphicContext*               Renderer3D::m_context    = nullptr;
+Renderer3D::RendererData      Renderer3D::m_data       = {};
+Renderer3D::RendererResources Renderer3D::m_resources  = {};
+Renderer3D::FrameData         Renderer3D::m_frame_data = {};
 
 void Renderer3D::setup_vertex_layout(VertexLayout& vertex_layout)
 {
@@ -36,6 +38,48 @@ void Renderer3D::setup_vertex_layout(VertexLayout& vertex_layout)
     vertex_layout.attribute_descs[ 4 ].offset   = 11 * sizeof(f32);
 }
 
+void Renderer3D::create_default_resources()
+{
+    u32 image_width  = 2;
+    u32 image_height = 2;
+
+    struct Color
+    {
+        u8 data[ 4 ];
+    };
+
+    Color magenta = { 255, 0, 255, 255 };
+
+    std::vector<Color> magenta_image_data(image_width * image_height, magenta);
+
+    ImageLoadDesc image_load_desc{};
+    image_load_desc.size       = magenta_image_data.size() * sizeof(magenta_image_data[ 0 ]);
+    image_load_desc.data       = magenta_image_data.data();
+    ImageDesc& image_desc      = image_load_desc.image_desc;
+    image_desc.width           = image_width;
+    image_desc.height          = image_height;
+    image_desc.depth           = 1;
+    image_desc.format          = Format::eR8G8B8A8Unorm;
+    image_desc.layer_count     = 1;
+    image_desc.mip_levels      = 1;
+    image_desc.sample_count    = SampleCount::e1;
+    image_desc.descriptor_type = DescriptorType::eSampledImage;
+
+    ResourceManager::load_image(m_resources.default_albedo, &image_load_desc);
+
+    SamplerDesc sampler_desc{};
+    sampler_desc.mipmap_mode = SamplerMipmapMode::eLinear;
+    sampler_desc.min_lod     = 0;
+    sampler_desc.max_lod     = 16;
+    create_sampler(m_context->device(), &sampler_desc, &m_resources.default_sampler);
+}
+
+void Renderer3D::destroy_default_resources()
+{
+    destroy_sampler(m_context->device(), m_resources.default_sampler);
+    ResourceManager::release_image(m_resources.default_albedo);
+}
+
 void Renderer3D::init(u32 width, u32 height)
 {
     m_context              = GraphicContext::get();
@@ -56,10 +100,10 @@ void Renderer3D::init(u32 width, u32 height)
     shader_descs[ 1 ].bytecode      = frag_code.data();
 
     Shader* shaders[ 2 ] = {};
-    create_shader(GraphicContext::get()->device(), &shader_descs[ 0 ], &shaders[ 0 ]);
-    create_shader(GraphicContext::get()->device(), &shader_descs[ 1 ], &shaders[ 1 ]);
+    create_shader(m_context->device(), &shader_descs[ 0 ], &shaders[ 0 ]);
+    create_shader(m_context->device(), &shader_descs[ 1 ], &shaders[ 1 ]);
 
-    create_descriptor_set_layout(GraphicContext::get()->device(), 2, shaders, &m_data.descriptor_set_layout);
+    create_descriptor_set_layout(m_context->device(), 2, shaders, &m_data.descriptor_set_layout);
 
     PipelineDesc pipeline_desc{};
     setup_vertex_layout(pipeline_desc.vertex_layout);
@@ -71,11 +115,11 @@ void Renderer3D::init(u32 width, u32 height)
     pipeline_desc.descriptor_set_layout        = m_data.descriptor_set_layout;
     pipeline_desc.render_pass                  = m_data.render_pass;
 
-    create_graphics_pipeline(GraphicContext::get()->device(), &pipeline_desc, &m_data.pipeline);
+    create_graphics_pipeline(m_context->device(), &pipeline_desc, &m_data.pipeline);
 
     for (u32 i = 0; i < 2; ++i)
     {
-        destroy_shader(GraphicContext::get()->device(), shaders[ i ]);
+        destroy_shader(m_context->device(), shaders[ i ]);
     }
 
     BufferLoadDesc ubo_load_desc{};
@@ -86,28 +130,54 @@ void Renderer3D::init(u32 width, u32 height)
 
     ResourceManager::load_buffer(m_data.uniform_buffer, &ubo_load_desc);
 
+    create_default_resources();
+
     DescriptorSetDesc set_desc{};
+    set_desc.index                 = 0;
     set_desc.descriptor_set_layout = m_data.descriptor_set_layout;
-    create_descriptor_set(GraphicContext::get()->device(), &set_desc, &m_data.set);
+    create_descriptor_set(m_context->device(), &set_desc, &m_data.per_frame_set);
+    set_desc.index = 1;
+    create_descriptor_set(m_context->device(), &set_desc, &m_data.per_material_set);
 
-    DescriptorBufferDesc set_buffer_desc{};
-    set_buffer_desc.offset = 0;
-    set_buffer_desc.range  = sizeof(CameraData);
-    set_buffer_desc.buffer = m_data.uniform_buffer->get();
+    DescriptorBufferDesc descriptor_buffer_desc = {};
+    descriptor_buffer_desc.offset               = 0;
+    descriptor_buffer_desc.range                = sizeof(CameraData);
+    descriptor_buffer_desc.buffer               = m_data.uniform_buffer->get();
 
-    DescriptorWriteDesc set_write{};
-    set_write.binding                 = 0;
-    set_write.descriptor_type         = DescriptorType::eUniformBuffer;
-    set_write.descriptor_count        = 1;
-    set_write.descriptor_buffer_descs = &set_buffer_desc;
+    DescriptorImageDesc descriptor_sampler_desc = {};
+    descriptor_sampler_desc.sampler             = m_resources.default_sampler;
 
-    update_descriptor_set(GraphicContext::get()->device(), m_data.set, 1, &set_write);
+    DescriptorWriteDesc per_frame_set_writes[ 2 ]     = {};
+    per_frame_set_writes[ 0 ].binding                 = 0;
+    per_frame_set_writes[ 0 ].descriptor_type         = DescriptorType::eUniformBuffer;
+    per_frame_set_writes[ 0 ].descriptor_count        = 1;
+    per_frame_set_writes[ 0 ].descriptor_buffer_descs = &descriptor_buffer_desc;
+    per_frame_set_writes[ 1 ].binding                 = 1;
+    per_frame_set_writes[ 1 ].descriptor_count        = 1;
+    per_frame_set_writes[ 1 ].descriptor_type         = DescriptorType::eSampler;
+    per_frame_set_writes[ 1 ].descriptor_image_descs  = &descriptor_sampler_desc;
+
+    update_descriptor_set(m_context->device(), m_data.per_frame_set, 2, per_frame_set_writes);
+
+    DescriptorImageDesc descriptor_image_desc = {};
+    descriptor_image_desc.image               = m_resources.default_albedo->get();
+    descriptor_image_desc.resource_state      = ResourceState::eShaderReadOnly;
+
+    DescriptorWriteDesc per_material_set_write    = {};
+    per_material_set_write.binding                = 0;
+    per_material_set_write.descriptor_count       = 1;
+    per_material_set_write.descriptor_type        = DescriptorType::eSampledImage;
+    per_material_set_write.descriptor_image_descs = &descriptor_image_desc;
+
+    update_descriptor_set(m_context->device(), m_data.per_material_set, 1, &per_material_set_write);
 }
 
 void Renderer3D::shutdown()
 {
     device_wait_idle(m_context->device());
-    destroy_descriptor_set(m_context->device(), m_data.set);
+    destroy_descriptor_set(m_context->device(), m_data.per_material_set);
+    destroy_descriptor_set(m_context->device(), m_data.per_frame_set);
+    destroy_default_resources();
     ResourceManager::release_buffer(m_data.uniform_buffer);
     destroy_descriptor_set_layout(m_context->device(), m_data.descriptor_set_layout);
     destroy_pipeline(m_context->device(), m_data.pipeline);
@@ -144,12 +214,13 @@ void Renderer3D::create_output_images(u32 width, u32 height)
     image_barriers[ 0 ].src_queue    = m_context->queue();
     image_barriers[ 0 ].dst_queue    = m_context->queue();
     image_barriers[ 0 ].old_state    = ResourceState::eUndefined;
-    image_barriers[ 0 ].new_state    = ResourceState::eColorAttachment;
-    image_barriers[ 1 ].image        = m_data.output_depth_image;
-    image_barriers[ 1 ].src_queue    = m_context->queue();
-    image_barriers[ 1 ].dst_queue    = m_context->queue();
-    image_barriers[ 1 ].old_state    = ResourceState::eUndefined;
-    image_barriers[ 1 ].new_state    = ResourceState::eDepthStencilWrite;
+    // Just because frame always ends with shader read only
+    image_barriers[ 0 ].new_state = ResourceState::eShaderReadOnly;
+    image_barriers[ 1 ].image     = m_data.output_depth_image;
+    image_barriers[ 1 ].src_queue = m_context->queue();
+    image_barriers[ 1 ].dst_queue = m_context->queue();
+    image_barriers[ 1 ].old_state = ResourceState::eUndefined;
+    image_barriers[ 1 ].new_state = ResourceState::eDepthStencilWrite;
 
     auto* cmd = m_context->acquire_cmd();
     begin_command_buffer(cmd);
@@ -181,15 +252,21 @@ void Renderer3D::create_render_pass(u32 width, u32 height)
     fluent::create_render_pass(m_context->device(), &rp_desc, &m_data.render_pass);
 }
 
-void Renderer3D::begin_frame(Camera& camera)
+void Renderer3D::begin_frame(const Camera& camera)
 {
+    for (DescriptorSet* set : m_frame_data.free_set_lists[ m_context->frame_index() ])
+    {
+        destroy_descriptor_set(m_context->device(), set);
+    }
+    m_frame_data.free_set_lists[ m_context->frame_index() ].clear();
+
     map_memory(m_context->device(), m_data.uniform_buffer->get());
     std::memcpy(m_data.uniform_buffer->get()->mapped_memory, &camera.get_data(), sizeof(CameraData));
     unmap_memory(m_context->device(), m_data.uniform_buffer->get());
 
     ImageBarrier to_color_attachment{};
     to_color_attachment.image     = m_data.output_image;
-    to_color_attachment.old_state = ResourceState::eUndefined;
+    to_color_attachment.old_state = ResourceState::eShaderReadOnly;
     to_color_attachment.new_state = ResourceState::eColorAttachment;
     to_color_attachment.src_queue = m_context->queue();
     to_color_attachment.dst_queue = m_context->queue();
@@ -198,9 +275,9 @@ void Renderer3D::begin_frame(Camera& camera)
     cmd_barrier(cmd, 0, nullptr, 1, &to_color_attachment);
 
     RenderPassBeginDesc rp_begin_desc{};
-    rp_begin_desc.clear_values[ 0 ].color[ 0 ] = 0.5;
-    rp_begin_desc.clear_values[ 0 ].color[ 1 ] = 0.6;
-    rp_begin_desc.clear_values[ 0 ].color[ 2 ] = 0.4;
+    rp_begin_desc.clear_values[ 0 ].color[ 0 ] = 0.52;
+    rp_begin_desc.clear_values[ 0 ].color[ 1 ] = 0.8;
+    rp_begin_desc.clear_values[ 0 ].color[ 2 ] = 0.92;
     rp_begin_desc.clear_values[ 0 ].color[ 3 ] = 1.0;
     rp_begin_desc.clear_values[ 1 ].depth      = 1.0f;
     rp_begin_desc.clear_values[ 1 ].stencil    = 0;
@@ -211,12 +288,55 @@ void Renderer3D::begin_frame(Camera& camera)
     cmd_set_viewport(cmd, 0, 0, m_data.viewport_width, m_data.viewport_height, 0.0f, 1.0f);
     cmd_set_scissor(cmd, 0, 0, m_data.viewport_width, m_data.viewport_height);
     cmd_bind_pipeline(cmd, m_data.pipeline);
-    cmd_bind_descriptor_set(cmd, m_data.set, m_data.pipeline);
+    cmd_bind_descriptor_set(cmd, 0, m_data.per_frame_set, m_data.pipeline);
 }
 
-void Renderer3D::draw_geometry(const Matrix4& transform, const Ref<Geometry>& geometry)
+void Renderer3D::draw_geometry(const Matrix4& transform, const Ref<Geometry> geometry)
 {
     auto* cmd = m_context->acquire_cmd();
+
+    cmd_bind_descriptor_set(cmd, 1, m_data.per_material_set, m_data.pipeline);
+    for (auto& node : geometry->nodes())
+    {
+        cmd_push_constants(cmd, m_data.pipeline, 0, sizeof(Matrix4), &transform);
+        cmd_bind_vertex_buffer(cmd, node.vertex_buffer->get());
+        cmd_bind_index_buffer_u32(cmd, node.index_buffer->get());
+        cmd_draw_indexed(cmd, node.index_count, 1, 0, 0, 0);
+    }
+}
+
+void Renderer3D::draw_geometry(const Matrix4& transform, const Ref<Geometry> geometry, const Ref<Image> image)
+{
+    auto* cmd = m_context->acquire_cmd();
+
+    // TODO: its very bad solution
+    DescriptorSet*    sets[ GraphicContext::frame_count() ] = { nullptr };
+    DescriptorSetDesc set_desc{};
+    set_desc.index                 = 1;
+    set_desc.descriptor_set_layout = m_data.descriptor_set_layout;
+    // TODO: add function to create many sets
+    create_descriptor_set(m_context->device(), &set_desc, &sets[ 0 ]);
+    create_descriptor_set(m_context->device(), &set_desc, &sets[ 1 ]);
+
+    DescriptorImageDesc descriptor_image_desc = {};
+    descriptor_image_desc.image               = image->get();
+    descriptor_image_desc.resource_state      = ResourceState::eShaderReadOnly;
+
+    DescriptorWriteDesc set_write    = {};
+    set_write.binding                = 0;
+    set_write.descriptor_count       = 1;
+    set_write.descriptor_type        = DescriptorType::eSampledImage;
+    set_write.descriptor_image_descs = &descriptor_image_desc;
+
+    for (u32 i = 0; i < GraphicContext::frame_count(); ++i)
+    {
+        update_descriptor_set(m_context->device(), sets[ i ], 1, &set_write);
+
+        m_frame_data.free_set_lists[ i ].push_back(sets[ i ]);
+    }
+
+    cmd_bind_descriptor_set(cmd, 1, sets[ m_context->frame_index() ], m_data.pipeline);
+
     for (auto& node : geometry->nodes())
     {
         cmd_push_constants(cmd, m_data.pipeline, 0, sizeof(Matrix4), &transform);

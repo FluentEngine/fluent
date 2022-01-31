@@ -60,6 +60,11 @@ public:
         return m_image;
     }
 
+    u32 id() const
+    {
+        return m_id;
+    }
+
     static Ref<Image> create(const Device* device, const ImageDesc* desc);
     static Ref<Image> create(const Device* device, const ImageDesc* desc, u32 id);
 };
