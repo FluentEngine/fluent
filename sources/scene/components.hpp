@@ -10,11 +10,17 @@ namespace fluent
 {
 struct TransformComponent
 {
-    Matrix4 transform;
+    Matrix4 transform                             = Matrix4(1.0f);
+    TransformComponent()                          = default;
+    TransformComponent(const TransformComponent&) = default;
+    TransformComponent(const Matrix4& transform) : transform(transform)
+    {
+    }
 };
 
 struct MeshComponent
 {
     Ref<Geometry> geometry;
+    MeshComponent() = default;
 };
 } // namespace fluent

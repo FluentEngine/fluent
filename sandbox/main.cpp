@@ -4,32 +4,100 @@
 
 using namespace fluent;
 
-static constexpr u32 FRAME_COUNT = 2;
-u32                  frame_index = 0;
-
-GraphicContext* context;
-Device*         device;
-Queue*          queue;
-CommandPool*    command_pool;
-Semaphore*      image_available_semaphores[ FRAME_COUNT ];
-Semaphore*      rendering_finished_semaphores[ FRAME_COUNT ];
-Fence*          in_flight_fences[ FRAME_COUNT ];
-bool            command_buffers_recorded[ FRAME_COUNT ];
-
-Swapchain*     swapchain;
-CommandBuffer* command_buffers[ FRAME_COUNT ];
-
-DescriptorSetLayout* descriptor_set_layout;
-Pipeline*            pipeline;
-DescriptorSet*       set = nullptr;
-
-Ref<Geometry> geometry       = nullptr;
-Ref<Buffer>   uniform_buffer = nullptr;
-Ref<Image>    image          = nullptr;
-
 Camera           camera;
 CameraController camera_controller;
 InputSystem*     input_system;
+UiContext*       ui_context;
+
+Ref<Geometry> geometry = nullptr;
+
+struct
+{
+    u32 scene_viewport_width   = 1400;
+    u32 scene_viewport_height  = 900;
+    b32 scene_viewport_changed = false;
+} ui_data;
+
+// ui
+void begin_dockspace()
+{
+    static bool               dockspace_open            = true;
+    static bool               opt_fullscreen_persistent = true;
+    bool                      opt_fullscreen            = opt_fullscreen_persistent;
+    static ImGuiDockNodeFlags dockspace_flags           = ImGuiDockNodeFlags_None;
+
+    // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
+    // because it would be confusing to have two docking targets within each others.
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+    if (opt_fullscreen)
+    {
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(viewport->Pos);
+        ImGui::SetNextWindowSize(viewport->Size);
+        ImGui::SetNextWindowViewport(viewport->ID);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+                        ImGuiWindowFlags_NoMove;
+        window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+    }
+
+    // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background and handle the
+    // pass-thru hole, so we ask Begin() to not render a background.
+    if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
+        window_flags |= ImGuiWindowFlags_NoBackground;
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::Begin("DockSpace Demo", &dockspace_open, window_flags);
+    ImGui::PopStyleVar();
+
+    if (opt_fullscreen)
+        ImGui::PopStyleVar(2);
+
+    // DockSpace
+    ImGuiIO&    io          = ImGui::GetIO();
+    ImGuiStyle& style       = ImGui::GetStyle();
+    f32         minWinSizeX = style.WindowMinSize.x;
+    style.WindowMinSize.x   = 100.0f;
+    if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
+    {
+        ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+    }
+
+    style.WindowMinSize.x = minWinSizeX;
+}
+
+void end_dockspace()
+{
+    ImGui::End();
+}
+
+void draw_ui(CommandBuffer* cmd)
+{
+    ui_begin_frame();
+    begin_dockspace();
+    {
+        ImGui::Begin("Performance");
+        ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
+        ImGui::End();
+
+        ImGui::Begin("Scene");
+        ImVec2 viewport_size = ImGui::GetContentRegionAvail();
+        if (viewport_size.x != ui_data.scene_viewport_width || viewport_size.y != ui_data.scene_viewport_height)
+        {
+            ui_data.scene_viewport_width   = viewport_size.x;
+            ui_data.scene_viewport_height  = viewport_size.y;
+            ui_data.scene_viewport_changed = true;
+        }
+        ImGui::Image(
+            Renderer3D::get_output_image()->image_view,
+            ImVec2(ui_data.scene_viewport_width, ui_data.scene_viewport_height));
+        ImGui::End();
+    }
+    end_dockspace();
+    ui_end_frame(cmd);
+}
 
 void on_init()
 {
@@ -37,120 +105,38 @@ void on_init()
     app_set_models_directory("../../sandbox/models/");
     app_set_textures_directory("../../sandbox/textures/");
 
-    GraphicContextDesc context_desc{};
-    context_desc.vulkan_allocator = nullptr;
-    create_graphic_context(&context_desc, &context);
+    GraphicContext::init();
+    ResourceManager::init(GraphicContext::get()->device());
+    Renderer3D::init(GraphicContext::get()->swapchain()->width, GraphicContext::get()->swapchain()->height);
 
-    DeviceDesc device_desc{};
-    device_desc.frame_in_use_count = 2;
-    create_device(context, &device_desc, &device);
+    UiDesc ui_desc{};
+    ui_desc.window             = get_app_window();
+    ui_desc.renderer           = GraphicContext::get()->backend();
+    ui_desc.device             = GraphicContext::get()->device();
+    ui_desc.queue              = GraphicContext::get()->queue();
+    ui_desc.min_image_count    = GraphicContext::get()->swapchain()->min_image_count;
+    ui_desc.image_count        = GraphicContext::get()->swapchain()->image_count;
+    ui_desc.in_fly_frame_count = 2; // TODO:
+    ui_desc.render_pass        = GraphicContext::get()->swapchain()->render_passes[ 0 ];
+    ui_desc.docking            = true;
 
-    ResourceManager::init(device);
-
-    QueueDesc queue_desc{};
-    queue_desc.queue_type = QueueType::eGraphics;
-    create_queue(device, &queue_desc, &queue);
-
-    CommandPoolDesc command_pool_desc{};
-    command_pool_desc.queue = queue;
-    create_command_pool(device, &command_pool_desc, &command_pool);
-
-    create_command_buffers(device, command_pool, FRAME_COUNT, command_buffers);
-
-    for (u32 i = 0; i < FRAME_COUNT; ++i)
-    {
-        create_semaphore(device, &image_available_semaphores[ i ]);
-        create_semaphore(device, &rendering_finished_semaphores[ i ]);
-        create_fence(device, &in_flight_fences[ i ]);
-        command_buffers_recorded[ i ] = false;
-    }
-
-    SwapchainDesc swapchain_desc{};
-    swapchain_desc.width           = window_get_width(get_app_window());
-    swapchain_desc.height          = window_get_height(get_app_window());
-    swapchain_desc.queue           = queue;
-    swapchain_desc.min_image_count = FRAME_COUNT;
-
-    create_swapchain(device, &swapchain_desc, &swapchain);
-
-    auto vert_code = read_file_binary(get_app_shaders_directory() + "/main.vert.glsl.spv");
-    auto frag_code = read_file_binary(get_app_shaders_directory() + "/main.frag.glsl.spv");
-
-    ShaderDesc shader_descs[ 2 ];
-    shader_descs[ 0 ].stage         = ShaderStage::eVertex;
-    shader_descs[ 0 ].bytecode_size = vert_code.size() * sizeof(vert_code[ 0 ]);
-    shader_descs[ 0 ].bytecode      = vert_code.data();
-    shader_descs[ 1 ].stage         = ShaderStage::eFragment;
-    shader_descs[ 1 ].bytecode_size = frag_code.size() * sizeof(frag_code[ 0 ]);
-    shader_descs[ 1 ].bytecode      = frag_code.data();
-
-    Shader* shaders[ 2 ] = {};
-    create_shader(device, &shader_descs[ 0 ], &shaders[ 0 ]);
-    create_shader(device, &shader_descs[ 1 ], &shaders[ 1 ]);
-
-    create_descriptor_set_layout(device, 2, shaders, &descriptor_set_layout);
+    create_ui_context(&ui_desc, &ui_context);
 
     GeometryLoadDesc geom_load_desc{};
-    geom_load_desc.filename = "cube.gltf";
+    geom_load_desc.filename        = "cube.gltf";
+    geom_load_desc.load_normals    = true;
+    geom_load_desc.load_tex_coords = true;
+    geom_load_desc.load_tangents   = true;
+    geom_load_desc.load_bitangents = true;
     ResourceManager::load_geometry(geometry, &geom_load_desc);
 
-    PipelineDesc pipeline_desc{};
-    pipeline_desc.vertex_layout                = geometry->vertex_layout();
-    pipeline_desc.rasterizer_desc.cull_mode    = CullMode::eNone;
-    pipeline_desc.rasterizer_desc.front_face   = FrontFace::eCounterClockwise;
-    pipeline_desc.depth_state_desc.depth_test  = false;
-    pipeline_desc.depth_state_desc.depth_write = false;
-    pipeline_desc.descriptor_set_layout        = descriptor_set_layout;
-    pipeline_desc.render_pass                  = swapchain->render_passes[ 0 ];
-
-    create_graphics_pipeline(device, &pipeline_desc, &pipeline);
-
-    for (u32 i = 0; i < 2; ++i)
-    {
-        destroy_shader(device, shaders[ i ]);
-    }
-
-    camera.init_camera(Vector3(0.0f, 1.0, 100.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));
+    camera.init_camera(Vector3(0.0f, 1.0, 3.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));
     camera_controller.init(get_app_input_system(), camera);
-
-    BufferLoadDesc ubo_load_desc{};
-    ubo_load_desc.size          = sizeof(camera.get_data());
-    ubo_load_desc.data          = &camera.get_data();
-    ubo_load_desc.offset        = 0;
-    BufferDesc& buffer_desc     = ubo_load_desc.buffer_desc;
-    buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
-    buffer_desc.size            = ubo_load_desc.size;
-
-    ResourceManager::load_buffer(uniform_buffer, &ubo_load_desc);
-
-    DescriptorSetDesc set_desc{};
-    set_desc.descriptor_set_layout = descriptor_set_layout;
-    create_descriptor_set(device, &set_desc, &set);
-
-    DescriptorBufferDesc set_buffer_desc{};
-    set_buffer_desc.offset = 0;
-    set_buffer_desc.range  = sizeof(camera.get_data());
-    set_buffer_desc.buffer = uniform_buffer->get();
-
-    DescriptorWriteDesc set_write{};
-    set_write.binding                 = 0;
-    set_write.descriptor_type         = DescriptorType::eUniformBuffer;
-    set_write.descriptor_count        = 1;
-    set_write.descriptor_buffer_descs = &set_buffer_desc;
-
-    update_descriptor_set(device, set, 1, &set_write);
-
-    ImageLoadDesc image_load_desc{};
-    image_load_desc.filename = "statue.jpg";
-    image_load_desc.flip     = true;
-
-    ResourceManager::load_image(image, &image_load_desc);
 }
 
 void on_resize(u32 width, u32 height)
 {
-    queue_wait_idle(queue);
-    resize_swapchain(device, swapchain, width, height);
+    GraphicContext::get()->on_resize(width, height);
     camera.on_resize(width, height);
 }
 
@@ -158,116 +144,65 @@ void on_update(f32 delta_time)
 {
     camera_controller.update(delta_time);
 
-    BufferLoadDesc ubo_load_desc{};
-    ubo_load_desc.size          = sizeof(camera.get_data());
-    ubo_load_desc.data          = &camera.get_data();
-    ubo_load_desc.offset        = 0;
-    BufferDesc& buffer_desc     = ubo_load_desc.buffer_desc;
-    buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
-    buffer_desc.size            = ubo_load_desc.size;
-
-    ResourceManager::load_buffer(uniform_buffer, &ubo_load_desc);
-
-    if (!command_buffers_recorded[ frame_index ])
+    if (ui_data.scene_viewport_changed)
     {
-        wait_for_fences(device, 1, in_flight_fences[ frame_index ]);
-        reset_fences(device, 1, in_flight_fences[ frame_index ]);
-        command_buffers_recorded[ frame_index ] = true;
+        ui_data.scene_viewport_changed = false;
+        queue_wait_idle(GraphicContext::get()->queue());
+        Renderer3D::resize_viewport(ui_data.scene_viewport_width, ui_data.scene_viewport_height);
     }
 
-    u32 image_index = 0;
-    acquire_next_image(device, swapchain, image_available_semaphores[ frame_index ], nullptr, &image_index);
+    GraphicContext::get()->begin_frame();
 
-    auto& cmd = command_buffers[ frame_index ];
+    auto* cmd = GraphicContext::get()->acquire_cmd();
 
     begin_command_buffer(cmd);
 
-    ImageBarrier to_clear_barrier{};
-    to_clear_barrier.src_queue = queue;
-    to_clear_barrier.dst_queue = queue;
-    to_clear_barrier.image     = swapchain->images[ image_index ];
-    to_clear_barrier.old_state = ResourceState::eUndefined;
-    to_clear_barrier.new_state = ResourceState::eColorAttachment;
+    Renderer3D::begin_frame(camera);
+    Renderer3D::draw_geometry(Matrix4(1.0f), geometry);
+    Renderer3D::end_frame();
 
-    cmd_barrier(cmd, 0, nullptr, 1, &to_clear_barrier);
+    ImageBarrier to_color_attachment{};
+    to_color_attachment.src_queue = GraphicContext::get()->queue();
+    to_color_attachment.dst_queue = GraphicContext::get()->queue();
+    to_color_attachment.image     = GraphicContext::get()->acquire_image();
+    to_color_attachment.old_state = ResourceState::eUndefined;
+    to_color_attachment.new_state = ResourceState::eColorAttachment;
+
+    cmd_barrier(cmd, 0, nullptr, 1, &to_color_attachment);
 
     RenderPassBeginDesc render_pass_begin_desc{};
-    render_pass_begin_desc.render_pass                  = get_swapchain_render_pass(swapchain, image_index);
+    render_pass_begin_desc.render_pass                  = GraphicContext::get()->acquire_render_pass();
     render_pass_begin_desc.clear_values[ 0 ].color[ 0 ] = 1.0f;
     render_pass_begin_desc.clear_values[ 0 ].color[ 1 ] = 0.8f;
     render_pass_begin_desc.clear_values[ 0 ].color[ 2 ] = 0.4f;
     render_pass_begin_desc.clear_values[ 0 ].color[ 3 ] = 1.0f;
 
     cmd_begin_render_pass(cmd, &render_pass_begin_desc);
-    cmd_set_viewport(cmd, 0, 0, swapchain->width, swapchain->height, 0.0f, 1.0f);
-    cmd_set_scissor(cmd, 0, 0, swapchain->width, swapchain->height);
-    cmd_bind_pipeline(cmd, pipeline);
-    cmd_bind_descriptor_set(cmd, set, pipeline);
-    for (auto& node : geometry->nodes())
-    {
-        Matrix4 model = Matrix4(1.0f);
-        cmd_push_constants(cmd, pipeline, 0, sizeof(Matrix4), &model);
-        cmd_bind_vertex_buffer(cmd, node.vertex_buffer->get());
-        cmd_bind_index_buffer_u32(cmd, node.index_buffer->get());
-        cmd_draw_indexed(cmd, node.index_count, 1, 0, 0, 0);
-    }
+    draw_ui(cmd);
     cmd_end_render_pass(cmd);
 
     ImageBarrier to_present_barrier{};
-    to_present_barrier.src_queue = queue;
-    to_present_barrier.dst_queue = queue;
-    to_present_barrier.image     = swapchain->images[ image_index ];
-    to_present_barrier.old_state = ResourceState::eColorAttachment;
+    to_present_barrier.src_queue = GraphicContext::get()->queue();
+    to_present_barrier.dst_queue = GraphicContext::get()->queue();
+    to_present_barrier.image     = GraphicContext::get()->acquire_image();
+    to_present_barrier.old_state = ResourceState::eUndefined;
     to_present_barrier.new_state = ResourceState::ePresent;
 
     cmd_barrier(cmd, 0, nullptr, 1, &to_present_barrier);
 
     end_command_buffer(cmd);
 
-    QueueSubmitDesc queue_submit_desc{};
-    queue_submit_desc.wait_semaphore_count   = 1;
-    queue_submit_desc.wait_semaphores        = image_available_semaphores[ frame_index ];
-    queue_submit_desc.command_buffer_count   = 1;
-    queue_submit_desc.command_buffers        = cmd;
-    queue_submit_desc.signal_semaphore_count = 1;
-    queue_submit_desc.signal_semaphores      = rendering_finished_semaphores[ frame_index ];
-    queue_submit_desc.signal_fence           = in_flight_fences[ frame_index ];
-
-    queue_submit(queue, &queue_submit_desc);
-
-    QueuePresentDesc queue_present_desc{};
-    queue_present_desc.wait_semaphore_count = 1;
-    queue_present_desc.wait_semaphores      = rendering_finished_semaphores[ frame_index ];
-    queue_present_desc.swapchain            = swapchain;
-    queue_present_desc.image_index          = image_index;
-
-    queue_present(queue, &queue_present_desc);
-
-    command_buffers_recorded[ frame_index ] = false;
-    frame_index                             = (frame_index + 1) % FRAME_COUNT;
+    GraphicContext::get()->end_frame();
 }
 
 void on_shutdown()
 {
-    device_wait_idle(device);
+    device_wait_idle(GraphicContext::get()->device());
     ResourceManager::release_geometry(geometry);
-    ResourceManager::release_buffer(uniform_buffer);
-    ResourceManager::release_image(image);
-    destroy_pipeline(device, pipeline);
-    destroy_descriptor_set_layout(device, descriptor_set_layout);
-    destroy_swapchain(device, swapchain);
-    for (u32 i = 0; i < FRAME_COUNT; ++i)
-    {
-        destroy_semaphore(device, image_available_semaphores[ i ]);
-        destroy_semaphore(device, rendering_finished_semaphores[ i ]);
-        destroy_fence(device, in_flight_fences[ i ]);
-    }
-    destroy_command_buffers(device, command_pool, FRAME_COUNT, command_buffers);
-    destroy_command_pool(device, command_pool);
-    destroy_queue(queue);
+    destroy_ui_context(GraphicContext::get()->device(), ui_context);
+    Renderer3D::shutdown();
     ResourceManager::shutdown();
-    destroy_device(device);
-    destroy_graphic_context(context);
+    GraphicContext::shutdown();
 }
 
 int main(int argc, char** argv)

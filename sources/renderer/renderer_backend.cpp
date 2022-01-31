@@ -526,7 +526,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(
     return VK_FALSE;
 }
 
-void create_debug_messenger(GraphicContext* renderer)
+void create_debug_messenger(RendererBackend* renderer)
 {
     VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info{};
     debug_messenger_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -650,12 +650,12 @@ static inline VkImageAspectFlags get_aspect_mask(Format format)
 
     if (format_has_depth_aspect(format))
     {
-        aspect_mask *= ~VK_IMAGE_ASPECT_COLOR_BIT;
+        aspect_mask &= ~VK_IMAGE_ASPECT_COLOR_BIT;
         aspect_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
     }
     else if (format_has_stencil_aspect(format))
     {
-        aspect_mask *= ~VK_IMAGE_ASPECT_COLOR_BIT;
+        aspect_mask &= ~VK_IMAGE_ASPECT_COLOR_BIT;
         aspect_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
     }
 
@@ -681,12 +681,12 @@ VkImageSubresourceLayers get_image_subresource_layers(const BaseImage* image)
                                      subresourceRange.baseArrayLayer, subresourceRange.layerCount };
 }
 
-void create_graphic_context(const GraphicContextDesc* desc, GraphicContext** p_renderer)
+void create_renderer_backend(const RendererBackendDesc* desc, RendererBackend** p_renderer)
 {
     FT_ASSERT(p_renderer);
 
-    *p_renderer              = new (std::nothrow) GraphicContext{};
-    GraphicContext* renderer = *p_renderer;
+    *p_renderer               = new (std::nothrow) RendererBackend{};
+    RendererBackend* renderer = *p_renderer;
 
     renderer->vulkan_allocator = desc->vulkan_allocator;
 
@@ -755,7 +755,7 @@ void create_graphic_context(const GraphicContextDesc* desc, GraphicContext** p_r
     }
 }
 
-void destroy_graphic_context(GraphicContext* renderer)
+void destroy_renderer_backend(RendererBackend* renderer)
 {
     FT_ASSERT(renderer);
 #ifdef FLUENT_DEBUG
@@ -778,7 +778,7 @@ void unmap_memory(const Device* device, BaseBuffer* buffer)
     buffer->mapped_memory = nullptr;
 }
 
-void create_device(const GraphicContext* renderer, const DeviceDesc* desc, Device** p_device)
+void create_device(const RendererBackend* renderer, const DeviceDesc* desc, Device** p_device)
 {
     FT_ASSERT(p_device);
     FT_ASSERT(desc->frame_in_use_count > 0);

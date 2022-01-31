@@ -46,7 +46,9 @@ set(core
 
 set(renderer
 	${src_dir}/renderer/shader_reflection.cpp
-	${src_dir}/renderer/renderer_backend.cpp)
+	${src_dir}/renderer/renderer_backend.cpp
+	${src_dir}/renderer/graphic_context.cpp
+	${src_dir}/renderer/renderer_3d.cpp)
 
 set(resource_manager
 	${src_dir}/resource_manager/resources.cpp
@@ -61,6 +63,7 @@ set(math
 	${src_dir}/math/math.cpp)
 
 set(scene
+	${src_dir}/scene/entity.cpp
 	${src_dir}/scene/scene.cpp
 	${src_dir}/scene/camera.cpp)
 
@@ -114,7 +117,7 @@ if (FLUENT_DEBUG_BUILD)
 else()
 	if (MSVC)
 	elseif (UNIX)
-		target_compile_options(${target} PUBLIC -O3 -fsanitize=address)
+		target_compile_options(${target} PUBLIC -O3)#-fsanitize=address)
 	endif()
 endif()
 

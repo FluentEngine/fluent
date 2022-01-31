@@ -9,6 +9,8 @@
 
 #include "renderer/renderer_enums.hpp"
 #include "renderer/renderer_backend.hpp"
+#include "renderer/graphic_context.hpp"
+#include "renderer/renderer_3d.hpp"
 
 #include "resource_manager/resource_manager.hpp"
 #include "resource_manager/resources.hpp"
@@ -18,6 +20,7 @@
 #include "scene/scene.hpp"
 #include "scene/components.hpp"
 #include "scene/camera.hpp"
+#include "scene/entity.hpp"
 
 #include "utils/file_loader.hpp"
 #include "utils/image_loader.hpp"

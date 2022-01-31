@@ -7,14 +7,14 @@ using namespace fluent;
 static constexpr u32 FRAME_COUNT = 2;
 u32                  frame_index = 0;
 
-GraphicContext* renderer;
-Device*         device;
-Queue*          queue;
-CommandPool*    command_pool;
-Semaphore*      image_available_semaphores[ FRAME_COUNT ];
-Semaphore*      rendering_finished_semaphores[ FRAME_COUNT ];
-Fence*          in_flight_fences[ FRAME_COUNT ];
-bool            command_buffers_recorded[ FRAME_COUNT ];
+RendererBackend* renderer;
+Device*          device;
+Queue*           queue;
+CommandPool*     command_pool;
+Semaphore*       image_available_semaphores[ FRAME_COUNT ];
+Semaphore*       rendering_finished_semaphores[ FRAME_COUNT ];
+Fence*           in_flight_fences[ FRAME_COUNT ];
+bool             command_buffers_recorded[ FRAME_COUNT ];
 
 Swapchain*     swapchain;
 CommandBuffer* command_buffers[ FRAME_COUNT ];
@@ -30,9 +30,9 @@ void on_init()
 {
     app_set_shaders_directory("../../../examples/shaders/01_hello_triangle");
 
-    GraphicContextDesc renderer_desc{};
+    RendererBackendDesc renderer_desc{};
     renderer_desc.vulkan_allocator = nullptr;
-    create_graphic_context(&renderer_desc, &renderer);
+    create_renderer_backend(&renderer_desc, &renderer);
 
     DeviceDesc device_desc{};
     device_desc.frame_in_use_count = 2;
@@ -213,7 +213,7 @@ void on_shutdown()
     destroy_command_pool(device, command_pool);
     destroy_queue(queue);
     destroy_device(device);
-    destroy_graphic_context(renderer);
+    destroy_renderer_backend(renderer);
 }
 
 int main(int argc, char** argv)
