@@ -175,6 +175,15 @@ void Renderer3D::init(u32 width, u32 height)
 void Renderer3D::shutdown()
 {
     device_wait_idle(m_context->device());
+
+    for (u32 i = 0; i < GraphicContext::frame_count(); ++i)
+    {
+        for (DescriptorSet* set : m_frame_data.free_set_lists[ i ])
+        {
+            destroy_descriptor_set(m_context->device(), set);
+        }
+    }
+
     destroy_descriptor_set(m_context->device(), m_data.per_material_set);
     destroy_descriptor_set(m_context->device(), m_data.per_frame_set);
     destroy_default_resources();
