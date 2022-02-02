@@ -56,6 +56,7 @@ public:
     static void load_buffer(Ref<Buffer>& buffer, const BufferLoadDesc* desc);
     static void release_buffer(Ref<Buffer>& buffer);
     static void load_image(Ref<Image>& image, const ImageLoadDesc* desc);
+    static void load_color_image(Ref<Image>& image, const VectorInt4& color);
     static void release_image(Ref<Image>& image);
     static void load_geometry(Ref<Geometry>& geometry, const GeometryLoadDesc* desc);
     static void release_geometry(Ref<Geometry>& geometry);

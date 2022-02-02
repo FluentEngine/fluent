@@ -39,9 +39,16 @@ private:
         std::list<DescriptorSet*> free_set_lists[ GraphicContext::frame_count() ];
     };
 
+    struct PushConstantBlock
+    {
+        Matrix4 model;
+        Vector4 viewer_position;
+    };
+
     static RendererData      m_data;
     static RendererResources m_resources;
     static FrameData         m_frame_data;
+    static PushConstantBlock m_push_constant_block;
 
     static void create_output_images(u32 width, u32 height);
     static void destroy_output_images();

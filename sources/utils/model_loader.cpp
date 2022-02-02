@@ -62,6 +62,9 @@ void ModelLoader::process_node(GeometryDesc& model, aiNode* node, const aiScene*
     {
         aiMesh* mesh = scene->mMeshes[ node->mMeshes[ i ] ];
         model.nodes.push_back(process_mesh(mesh, scene));
+        auto& t = node->mTransformation;
+        model.nodes.back().transform =
+            Matrix4(t.a1, t.b1, t.c1, t.d1, t.a2, t.b2, t.c2, t.d2, t.a3, t.b3, t.c3, t.d3, t.a4, t.b4, t.c4, t.d4);
     }
 
     for (uint32_t i = 0; i < node->mNumChildren; i++)

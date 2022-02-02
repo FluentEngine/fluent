@@ -76,6 +76,7 @@ Geometry::Geometry(const Device* device, const GeometryDesc* desc, u32 id)
         ResourceManager::load_buffer(geometry_node.index_buffer, &buffer_load_desc);
 
         geometry_node.index_count = desc->nodes[ i ].indices.size();
+        geometry_node.transform   = desc->nodes[ i ].transform;
     }
 }
 

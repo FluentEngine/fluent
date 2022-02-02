@@ -11,8 +11,12 @@ UiContext*       ui_context;
 
 Ref<Geometry> cube       = nullptr;
 Ref<Geometry> plane      = nullptr;
+Ref<Geometry> venus      = nullptr;
+Ref<Geometry> sphere     = nullptr;
 Ref<Image>    cyan       = nullptr;
+Ref<Image>    gray       = nullptr;
 Ref<Image>    light_gray = nullptr;
+Ref<Image>    white      = nullptr;
 
 struct
 {
@@ -119,7 +123,7 @@ void on_init()
     ui_desc.queue              = GraphicContext::get()->queue();
     ui_desc.min_image_count    = GraphicContext::get()->swapchain()->min_image_count;
     ui_desc.image_count        = GraphicContext::get()->swapchain()->image_count;
-    ui_desc.in_fly_frame_count = 2; // TODO:
+    ui_desc.in_fly_frame_count = 2;
     ui_desc.render_pass        = GraphicContext::get()->swapchain()->render_passes[ 0 ];
     ui_desc.docking            = true;
 
@@ -134,43 +138,23 @@ void on_init()
     ResourceManager::load_geometry(cube, &geom_load_desc);
     geom_load_desc.filename = "plane.gltf";
     ResourceManager::load_geometry(plane, &geom_load_desc);
+    geom_load_desc.filename = "venus.gltf";
+    ResourceManager::load_geometry(venus, &geom_load_desc);
+    geom_load_desc.filename = "sphere.gltf";
+    ResourceManager::load_geometry(sphere, &geom_load_desc);
 
     camera.init_camera(Vector3(0.0f, 1.0, 3.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));
     camera_controller.init(get_app_input_system(), camera);
 
-    u32 image_width  = 2;
-    u32 image_height = 2;
+    VectorInt4 cyan_color       = { 0, 255, 255, 255 };
+    VectorInt4 gray_color       = { 43, 45, 47, 255 };
+    VectorInt4 light_gray_color = { 243, 243, 243, 255 };
+    VectorInt4 white_color      = { 255, 255, 255, 255 };
 
-    struct Color
-    {
-        u8 data[ 4 ];
-    };
-
-    Color cyan_color       = { 0, 255, 255, 255 };
-    Color light_gray_color = { 120, 120, 120, 255 };
-
-    std::vector<Color> cyan_image_data(image_width * image_height, cyan_color);
-    std::vector<Color> light_gray_image_data(image_width * image_height, light_gray_color);
-
-    ImageLoadDesc image_load_desc{};
-    image_load_desc.size       = cyan_image_data.size() * sizeof(cyan_image_data[ 0 ]);
-    image_load_desc.data       = cyan_image_data.data();
-    ImageDesc& image_desc      = image_load_desc.image_desc;
-    image_desc.width           = image_width;
-    image_desc.height          = image_height;
-    image_desc.depth           = 1;
-    image_desc.format          = Format::eR8G8B8A8Unorm;
-    image_desc.layer_count     = 1;
-    image_desc.mip_levels      = 1;
-    image_desc.sample_count    = SampleCount::e1;
-    image_desc.descriptor_type = DescriptorType::eSampledImage;
-
-    ResourceManager::load_image(cyan, &image_load_desc);
-
-    image_load_desc.size = light_gray_image_data.size() * sizeof(light_gray_image_data[ 0 ]);
-    image_load_desc.data = light_gray_image_data.data();
-
-    ResourceManager::load_image(light_gray, &image_load_desc);
+    ResourceManager::load_color_image(cyan, cyan_color);
+    ResourceManager::load_color_image(gray, gray_color);
+    ResourceManager::load_color_image(light_gray, light_gray_color);
+    ResourceManager::load_color_image(white, white_color);
 }
 
 void on_resize(u32 width, u32 height)
@@ -198,9 +182,13 @@ void on_update(f32 delta_time)
 
     Renderer3D::begin_frame(camera);
     Renderer3D::draw_geometry(Matrix4(1.0f), cube, cyan);
+    Matrix4 venus_transform = scale(translate(Matrix4(1.0), Vector3(2.0, 2.0, -2.0)), Vector3(3.0));
+    Renderer3D::draw_geometry(venus_transform, venus, light_gray);
     Renderer3D::draw_geometry(translate(Matrix4(1.0f), Vector3(5.0, 0.0, 0.0)), cube);
-    Renderer3D::draw_geometry(
-        scale(translate(Matrix4(1.0f), Vector3(0.0, -1.0, 0.0)), Vector3(60.0f)), plane, light_gray);
+    Matrix4 plane_transform = scale(translate(Matrix4(1.0f), Vector3(0.0, -1.0, 0.0)), Vector3(60.0f));
+    Renderer3D::draw_geometry(plane_transform, plane, gray);
+    Matrix4 sphere_transform = translate(Matrix4(1.0f), Vector3(1.0, 10.0, -1.0));
+    Renderer3D::draw_geometry(sphere_transform, sphere, white);
     Renderer3D::end_frame();
 
     ImageBarrier to_color_attachment{};
@@ -242,8 +230,12 @@ void on_shutdown()
     device_wait_idle(GraphicContext::get()->device());
     ResourceManager::release_geometry(cube);
     ResourceManager::release_geometry(plane);
-    ResourceManager::release_image(cyan);
+    ResourceManager::release_geometry(venus);
+    ResourceManager::release_geometry(sphere);
     ResourceManager::release_image(light_gray);
+    ResourceManager::release_image(cyan);
+    ResourceManager::release_image(gray);
+    ResourceManager::release_image(white);
     destroy_ui_context(GraphicContext::get()->device(), ui_context);
     Renderer3D::shutdown();
     ResourceManager::shutdown();

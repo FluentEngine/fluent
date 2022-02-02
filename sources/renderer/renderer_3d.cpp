@@ -4,10 +4,11 @@
 
 namespace fluent
 {
-GraphicContext*               Renderer3D::m_context    = nullptr;
-Renderer3D::RendererData      Renderer3D::m_data       = {};
-Renderer3D::RendererResources Renderer3D::m_resources  = {};
-Renderer3D::FrameData         Renderer3D::m_frame_data = {};
+GraphicContext*               Renderer3D::m_context             = nullptr;
+Renderer3D::RendererData      Renderer3D::m_data                = {};
+Renderer3D::RendererResources Renderer3D::m_resources           = {};
+Renderer3D::FrameData         Renderer3D::m_frame_data          = {};
+Renderer3D::PushConstantBlock Renderer3D::m_push_constant_block = {};
 
 void Renderer3D::setup_vertex_layout(VertexLayout& vertex_layout)
 {
@@ -273,6 +274,8 @@ void Renderer3D::begin_frame(const Camera& camera)
     std::memcpy(m_data.uniform_buffer->get()->mapped_memory, &camera.get_data(), sizeof(CameraData));
     unmap_memory(m_context->device(), m_data.uniform_buffer->get());
 
+    m_push_constant_block.viewer_position = Vector4(camera.get_position(), 0.0);
+
     ImageBarrier to_color_attachment{};
     to_color_attachment.image     = m_data.output_image;
     to_color_attachment.old_state = ResourceState::eShaderReadOnly;
@@ -307,7 +310,8 @@ void Renderer3D::draw_geometry(const Matrix4& transform, const Ref<Geometry> geo
     cmd_bind_descriptor_set(cmd, 1, m_data.per_material_set, m_data.pipeline);
     for (auto& node : geometry->nodes())
     {
-        cmd_push_constants(cmd, m_data.pipeline, 0, sizeof(Matrix4), &transform);
+        m_push_constant_block.model = transform * node.transform;
+        cmd_push_constants(cmd, m_data.pipeline, 0, sizeof(PushConstantBlock), &m_push_constant_block);
         cmd_bind_vertex_buffer(cmd, node.vertex_buffer->get());
         cmd_bind_index_buffer_u32(cmd, node.index_buffer->get());
         cmd_draw_indexed(cmd, node.index_count, 1, 0, 0, 0);
@@ -319,13 +323,12 @@ void Renderer3D::draw_geometry(const Matrix4& transform, const Ref<Geometry> geo
     auto* cmd = m_context->acquire_cmd();
 
     // TODO: its very bad solution
-    DescriptorSet*    sets[ GraphicContext::frame_count() ] = { nullptr };
+    DescriptorSet*    set = nullptr;
     DescriptorSetDesc set_desc{};
     set_desc.index                 = 1;
     set_desc.descriptor_set_layout = m_data.descriptor_set_layout;
-    // TODO: add function to create many sets
-    create_descriptor_set(m_context->device(), &set_desc, &sets[ 0 ]);
-    create_descriptor_set(m_context->device(), &set_desc, &sets[ 1 ]);
+
+    create_descriptor_set(m_context->device(), &set_desc, &set);
 
     DescriptorImageDesc descriptor_image_desc = {};
     descriptor_image_desc.image               = image->get();
@@ -337,18 +340,15 @@ void Renderer3D::draw_geometry(const Matrix4& transform, const Ref<Geometry> geo
     set_write.descriptor_type        = DescriptorType::eSampledImage;
     set_write.descriptor_image_descs = &descriptor_image_desc;
 
-    for (u32 i = 0; i < GraphicContext::frame_count(); ++i)
-    {
-        update_descriptor_set(m_context->device(), sets[ i ], 1, &set_write);
+    update_descriptor_set(m_context->device(), set, 1, &set_write);
 
-        m_frame_data.free_set_lists[ i ].push_back(sets[ i ]);
-    }
-
-    cmd_bind_descriptor_set(cmd, 1, sets[ m_context->frame_index() ], m_data.pipeline);
+    m_frame_data.free_set_lists[ m_context->frame_index() ].push_back(set);
+    cmd_bind_descriptor_set(cmd, 1, set, m_data.pipeline);
 
     for (auto& node : geometry->nodes())
     {
-        cmd_push_constants(cmd, m_data.pipeline, 0, sizeof(Matrix4), &transform);
+        m_push_constant_block.model = transform * node.transform;
+        cmd_push_constants(cmd, m_data.pipeline, 0, sizeof(PushConstantBlock), &m_push_constant_block);
         cmd_bind_vertex_buffer(cmd, node.vertex_buffer->get());
         cmd_bind_index_buffer_u32(cmd, node.index_buffer->get());
         cmd_draw_indexed(cmd, node.index_count, 1, 0, 0, 0);

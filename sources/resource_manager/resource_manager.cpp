@@ -175,6 +175,33 @@ void ResourceManager::load_image(Ref<Image>& image, const ImageLoadDesc* desc)
     }
 }
 
+void ResourceManager::load_color_image(Ref<Image>& image, const VectorInt4& color)
+{
+    static constexpr u32 color_image_size = 2;
+
+    struct Color
+    {
+        u8 data[ 4 ];
+    } fill_color{ ( u8 ) color.r, ( u8 ) color.g, ( u8 ) color.b, ( u8 ) color.a };
+
+    std::vector<Color> image_data(color_image_size * color_image_size, fill_color);
+
+    ImageLoadDesc image_load_desc{};
+    image_load_desc.size       = image_data.size() * sizeof(image_data[ 0 ]);
+    image_load_desc.data       = image_data.data();
+    ImageDesc& image_desc      = image_load_desc.image_desc;
+    image_desc.width           = color_image_size;
+    image_desc.height          = color_image_size;
+    image_desc.depth           = 1;
+    image_desc.format          = Format::eR8G8B8A8Unorm;
+    image_desc.layer_count     = 1;
+    image_desc.mip_levels      = 1;
+    image_desc.sample_count    = SampleCount::e1;
+    image_desc.descriptor_type = DescriptorType::eSampledImage;
+
+    ResourceManager::load_image(image, &image_load_desc);
+}
+
 void ResourceManager::release_image(Ref<Image>& image)
 {
     image = nullptr;

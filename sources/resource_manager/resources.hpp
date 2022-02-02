@@ -75,6 +75,7 @@ struct GeometryDesc
     {
         std::vector<f32> positions;
         std::vector<u32> indices;
+        Matrix4          transform;
     };
 
     std::vector<GeometryDataNode> nodes;
@@ -91,6 +92,7 @@ public:
         Ref<Buffer> vertex_buffer;
         Ref<Buffer> index_buffer;
         u32         index_count;
+        Matrix4     transform;
     };
 
 private:
