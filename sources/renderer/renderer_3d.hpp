@@ -9,6 +9,12 @@
 
 namespace fluent
 {
+enum class LightModel
+{
+    eNone,
+    ePhong
+};
+
 class Renderer3D
 {
 private:
@@ -20,7 +26,8 @@ private:
         BaseImage*           output_depth_image    = nullptr;
         RenderPass*          render_pass           = nullptr;
         DescriptorSetLayout* descriptor_set_layout = nullptr;
-        Pipeline*            pipeline              = nullptr;
+        Pipeline*            phong_pipeline        = nullptr;
+        Pipeline*            color_pipeline        = nullptr;
         DescriptorSet*       per_frame_set         = nullptr;
         DescriptorSet*       per_material_set      = nullptr;
         Ref<Buffer>          uniform_buffer        = nullptr;
@@ -61,6 +68,7 @@ public:
     static void init(u32 width, u32 height);
     static void shutdown();
     static void begin_frame(const Camera& camera);
+    static void set_light_model(LightModel pipeline);
     static void draw_geometry(const Matrix4& transform, const Ref<Geometry> geometry);
     static void draw_geometry(const Matrix4& transform, const Ref<Geometry> geometry, const Ref<Image> image);
     static void end_frame();

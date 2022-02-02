@@ -1776,16 +1776,16 @@ void create_graphics_pipeline(const Device* device, const PipelineDesc* desc, Pi
 
     pipeline->type = PipelineType::eGraphics;
 
-    u32                             shader_stage_count = desc->descriptor_set_layout->shader_count;
+    u32                             shader_stage_count = desc->shader_count;
     VkPipelineShaderStageCreateInfo shader_stage_create_infos[ MAX_STAGE_COUNT ];
     for (u32 i = 0; i < shader_stage_count; ++i)
     {
-        shader_stage_create_infos[ i ].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        shader_stage_create_infos[ i ].pNext  = nullptr;
-        shader_stage_create_infos[ i ].flags  = 0;
-        shader_stage_create_infos[ i ].stage  = to_vk_shader_stage(desc->descriptor_set_layout->shaders[ i ]->stage);
-        shader_stage_create_infos[ i ].module = desc->descriptor_set_layout->shaders[ i ]->shader;
-        shader_stage_create_infos[ i ].pName  = "main";
+        shader_stage_create_infos[ i ].sType               = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        shader_stage_create_infos[ i ].pNext               = nullptr;
+        shader_stage_create_infos[ i ].flags               = 0;
+        shader_stage_create_infos[ i ].stage               = to_vk_shader_stage(desc->shaders[ i ]->stage);
+        shader_stage_create_infos[ i ].module              = desc->shaders[ i ]->shader;
+        shader_stage_create_infos[ i ].pName               = "main";
         shader_stage_create_infos[ i ].pSpecializationInfo = nullptr;
     }
 

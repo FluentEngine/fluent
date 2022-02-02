@@ -89,20 +89,28 @@ void Renderer3D::init(u32 width, u32 height)
     create_output_images(width, height);
     create_render_pass(width, height);
 
-    auto vert_code = read_file_binary(get_app_shaders_directory() + "/main.vert.glsl.spv");
-    auto frag_code = read_file_binary(get_app_shaders_directory() + "/main.frag.glsl.spv");
+    auto vert_code       = read_file_binary(get_app_shaders_directory() + "/main.vert.glsl.spv");
+    auto phong_frag_code = read_file_binary(get_app_shaders_directory() + "/phong.frag.glsl.spv");
+    auto color_frag_code = read_file_binary(get_app_shaders_directory() + "/color.frag.glsl.spv");
 
-    ShaderDesc shader_descs[ 2 ];
-    shader_descs[ 0 ].stage         = ShaderStage::eVertex;
-    shader_descs[ 0 ].bytecode_size = vert_code.size() * sizeof(vert_code[ 0 ]);
-    shader_descs[ 0 ].bytecode      = vert_code.data();
-    shader_descs[ 1 ].stage         = ShaderStage::eFragment;
-    shader_descs[ 1 ].bytecode_size = frag_code.size() * sizeof(frag_code[ 0 ]);
-    shader_descs[ 1 ].bytecode      = frag_code.data();
+    static constexpr u32 shader_count = 3;
 
-    Shader* shaders[ 2 ] = {};
-    create_shader(m_context->device(), &shader_descs[ 0 ], &shaders[ 0 ]);
-    create_shader(m_context->device(), &shader_descs[ 1 ], &shaders[ 1 ]);
+    ShaderDesc shader_descs[ shader_count ] = {};
+    shader_descs[ 0 ].stage                 = ShaderStage::eVertex;
+    shader_descs[ 0 ].bytecode_size         = vert_code.size() * sizeof(vert_code[ 0 ]);
+    shader_descs[ 0 ].bytecode              = vert_code.data();
+    shader_descs[ 1 ].stage                 = ShaderStage::eFragment;
+    shader_descs[ 1 ].bytecode_size         = phong_frag_code.size() * sizeof(phong_frag_code[ 0 ]);
+    shader_descs[ 1 ].bytecode              = phong_frag_code.data();
+    shader_descs[ 2 ].stage                 = ShaderStage::eFragment;
+    shader_descs[ 2 ].bytecode_size         = color_frag_code.size() * sizeof(color_frag_code[ 0 ]);
+    shader_descs[ 2 ].bytecode              = color_frag_code.data();
+
+    Shader* shaders[ shader_count ] = {};
+    for (u32 i = 0; i < shader_count; ++i)
+    {
+        create_shader(m_context->device(), &shader_descs[ i ], &shaders[ i ]);
+    }
 
     create_descriptor_set_layout(m_context->device(), 2, shaders, &m_data.descriptor_set_layout);
 
@@ -113,12 +121,17 @@ void Renderer3D::init(u32 width, u32 height)
     pipeline_desc.depth_state_desc.depth_test  = true;
     pipeline_desc.depth_state_desc.depth_write = true;
     pipeline_desc.depth_state_desc.compare_op  = CompareOp::eLess;
+    pipeline_desc.shader_count                 = 2;
+    pipeline_desc.shaders[ 0 ]                 = shaders[ 0 ];
+    pipeline_desc.shaders[ 1 ]                 = shaders[ 1 ];
     pipeline_desc.descriptor_set_layout        = m_data.descriptor_set_layout;
     pipeline_desc.render_pass                  = m_data.render_pass;
 
-    create_graphics_pipeline(m_context->device(), &pipeline_desc, &m_data.pipeline);
+    create_graphics_pipeline(m_context->device(), &pipeline_desc, &m_data.phong_pipeline);
+    pipeline_desc.shaders[ 1 ] = shaders[ 2 ];
+    create_graphics_pipeline(m_context->device(), &pipeline_desc, &m_data.color_pipeline);
 
-    for (u32 i = 0; i < 2; ++i)
+    for (u32 i = 0; i < shader_count; ++i)
     {
         destroy_shader(m_context->device(), shaders[ i ]);
     }
@@ -190,7 +203,8 @@ void Renderer3D::shutdown()
     destroy_default_resources();
     ResourceManager::release_buffer(m_data.uniform_buffer);
     destroy_descriptor_set_layout(m_context->device(), m_data.descriptor_set_layout);
-    destroy_pipeline(m_context->device(), m_data.pipeline);
+    destroy_pipeline(m_context->device(), m_data.phong_pipeline);
+    destroy_pipeline(m_context->device(), m_data.color_pipeline);
     destroy_render_pass(m_context->device(), m_data.render_pass);
     destroy_output_images();
 }
@@ -299,19 +313,35 @@ void Renderer3D::begin_frame(const Camera& camera)
 
     cmd_set_viewport(cmd, 0, 0, m_data.viewport_width, m_data.viewport_height, 0.0f, 1.0f);
     cmd_set_scissor(cmd, 0, 0, m_data.viewport_width, m_data.viewport_height);
-    cmd_bind_pipeline(cmd, m_data.pipeline);
-    cmd_bind_descriptor_set(cmd, 0, m_data.per_frame_set, m_data.pipeline);
+    cmd_bind_pipeline(cmd, m_data.phong_pipeline);
+    cmd_bind_descriptor_set(cmd, 0, m_data.per_frame_set, m_data.phong_pipeline);
+}
+
+void Renderer3D::set_light_model(LightModel light_model)
+{
+    auto* cmd = m_context->acquire_cmd();
+    switch (light_model)
+    {
+    case LightModel::eNone:
+        cmd_bind_pipeline(cmd, m_data.color_pipeline);
+        break;
+    case LightModel::ePhong:
+        cmd_bind_pipeline(cmd, m_data.color_pipeline);
+        break;
+    default:
+        break;
+    }
 }
 
 void Renderer3D::draw_geometry(const Matrix4& transform, const Ref<Geometry> geometry)
 {
     auto* cmd = m_context->acquire_cmd();
 
-    cmd_bind_descriptor_set(cmd, 1, m_data.per_material_set, m_data.pipeline);
+    cmd_bind_descriptor_set(cmd, 1, m_data.per_material_set, m_data.phong_pipeline);
     for (auto& node : geometry->nodes())
     {
         m_push_constant_block.model = transform * node.transform;
-        cmd_push_constants(cmd, m_data.pipeline, 0, sizeof(PushConstantBlock), &m_push_constant_block);
+        cmd_push_constants(cmd, m_data.phong_pipeline, 0, sizeof(PushConstantBlock), &m_push_constant_block);
         cmd_bind_vertex_buffer(cmd, node.vertex_buffer->get());
         cmd_bind_index_buffer_u32(cmd, node.index_buffer->get());
         cmd_draw_indexed(cmd, node.index_count, 1, 0, 0, 0);
@@ -343,12 +373,12 @@ void Renderer3D::draw_geometry(const Matrix4& transform, const Ref<Geometry> geo
     update_descriptor_set(m_context->device(), set, 1, &set_write);
 
     m_frame_data.free_set_lists[ m_context->frame_index() ].push_back(set);
-    cmd_bind_descriptor_set(cmd, 1, set, m_data.pipeline);
+    cmd_bind_descriptor_set(cmd, 1, set, m_data.phong_pipeline);
 
     for (auto& node : geometry->nodes())
     {
         m_push_constant_block.model = transform * node.transform;
-        cmd_push_constants(cmd, m_data.pipeline, 0, sizeof(PushConstantBlock), &m_push_constant_block);
+        cmd_push_constants(cmd, m_data.phong_pipeline, 0, sizeof(PushConstantBlock), &m_push_constant_block);
         cmd_bind_vertex_buffer(cmd, node.vertex_buffer->get());
         cmd_bind_index_buffer_u32(cmd, node.index_buffer->get());
         cmd_draw_indexed(cmd, node.index_count, 1, 0, 0, 0);

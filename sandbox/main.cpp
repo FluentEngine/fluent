@@ -187,6 +187,7 @@ void on_update(f32 delta_time)
     Renderer3D::draw_geometry(translate(Matrix4(1.0f), Vector3(5.0, 0.0, 0.0)), cube);
     Matrix4 plane_transform = scale(translate(Matrix4(1.0f), Vector3(0.0, -1.0, 0.0)), Vector3(60.0f));
     Renderer3D::draw_geometry(plane_transform, plane, gray);
+    Renderer3D::set_light_model(LightModel::eNone);
     Matrix4 sphere_transform = translate(Matrix4(1.0f), Vector3(1.0, 10.0, -1.0));
     Renderer3D::draw_geometry(sphere_transform, sphere, white);
     Renderer3D::end_frame();

@@ -295,6 +295,8 @@ struct PipelineDesc
     VertexLayout         vertex_layout;
     RasterizerStateDesc  rasterizer_desc;
     DepthStateDesc       depth_state_desc;
+    u32                  shader_count = 0;
+    Shader*              shaders[ MAX_STAGE_COUNT ];
     DescriptorSetLayout* descriptor_set_layout;
     RenderPass*          render_pass;
 };

@@ -8,12 +8,14 @@ project(${target} CXX)
 
 set(SHADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/shaders/main.vert.glsl
-  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/main.frag.glsl
+  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/phong.frag.glsl
+  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/color.frag.glsl
 )
 
 set(COMPILED_SHADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/shaders/main.vert.glsl.spv
-  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/main.frag.glsl.spv
+  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/phong.frag.glsl.spv
+  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/color.frag.glsl.spv
 )
 
 compile_shaders(${SHADERS})
