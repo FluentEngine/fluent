@@ -162,7 +162,7 @@ void on_update(f32 delta_time)
     cmd_set_viewport(cmd, 0, 0, swapchain->width, swapchain->height, 0.0f, 1.0f);
     cmd_set_scissor(cmd, 0, 0, swapchain->width, swapchain->height);
     cmd_bind_pipeline(cmd, pipeline);
-    cmd_bind_vertex_buffer(cmd, vertex_buffer);
+    cmd_bind_vertex_buffer(cmd, vertex_buffer, 0);
     cmd_draw(cmd, 3, 1, 0, 0);
     cmd_end_render_pass(cmd);
 

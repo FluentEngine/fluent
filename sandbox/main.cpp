@@ -14,6 +14,16 @@ Buffer* vertex_buffer;
 
 static const f32 vertices[] = { -0.5f, -0.5f, 0.0f, 0.5f, -0.5f, 0.0f, 0.0f, 0.5f, 0.0f };
 
+struct Mesh
+{
+    std::vector<f32> vertices;
+    std::vector<u32> indices;
+};
+
+void load_mesh(Mesh& mesh, const std::string& filepath)
+{
+}
+
 void on_init()
 {
     FileSystem::set_shaders_directory("../../sandbox/shaders/");
@@ -96,7 +106,7 @@ void on_update(f32 delta_time)
     cmd_bind_pipeline(cmd, pipeline);
     cmd_set_viewport(cmd, 0, 0, context->width(), context->height(), 0, 1.0f);
     cmd_set_scissor(cmd, 0, 0, context->width(), context->height());
-    cmd_bind_vertex_buffer(cmd, vertex_buffer);
+    cmd_bind_vertex_buffer(cmd, vertex_buffer, 0);
     cmd_draw(cmd, 3, 1, 0, 0);
     context->end_render_pass();
     context->end_frame();

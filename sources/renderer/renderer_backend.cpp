@@ -2067,15 +2067,13 @@ void cmd_draw_indexed(
     vkCmdDrawIndexed(cmd->command_buffer, index_count, instance_count, first_index, vertex_offset, first_instance);
 }
 
-void cmd_bind_vertex_buffer(const CommandBuffer* cmd, const Buffer* buffer)
+void cmd_bind_vertex_buffer(const CommandBuffer* cmd, const Buffer* buffer, const u64 offset)
 {
-    static constexpr VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(cmd->command_buffer, 0, 1, &buffer->buffer, &offset);
 }
 
-void cmd_bind_index_buffer_u32(const CommandBuffer* cmd, const Buffer* buffer)
+void cmd_bind_index_buffer_u32(const CommandBuffer* cmd, const Buffer* buffer, u64 offset)
 {
-    static constexpr VkDeviceSize offset = 0;
     vkCmdBindIndexBuffer(cmd->command_buffer, buffer->buffer, offset, VK_INDEX_TYPE_UINT32);
 }
 

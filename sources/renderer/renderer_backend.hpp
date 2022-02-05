@@ -107,7 +107,7 @@ struct Image
 
 struct BufferDesc
 {
-    u32            size = 0;
+    u64            size = 0;
     DescriptorType descriptor_type;
     MemoryUsage    memory_usage = MemoryUsage::eGpuOnly;
 };
@@ -116,7 +116,7 @@ struct Buffer
 {
     VkBuffer       buffer;
     VmaAllocation  allocation;
-    u32            size;
+    u64            size;
     ResourceState  resource_state;
     DescriptorType descriptor_type;
     MemoryUsage    memory_usage;
@@ -352,14 +352,14 @@ struct DescriptorSet
     VkDescriptorSet descriptor_set;
 };
 
-struct DescriptorBufferDesc
+struct BufferDescriptor
 {
     Buffer* buffer;
-    u32     offset = 0;
-    u32     range  = 0;
+    u64     offset = 0;
+    u64     range  = 0;
 };
 
-struct DescriptorImageDesc
+struct ImageDescriptor
 {
     Sampler*      sampler;
     Image*        image;
@@ -368,11 +368,11 @@ struct DescriptorImageDesc
 
 struct DescriptorWriteDesc
 {
-    u32                   descriptor_count;
-    u32                   binding;
-    DescriptorType        descriptor_type;
-    DescriptorImageDesc*  descriptor_image_descs;
-    DescriptorBufferDesc* descriptor_buffer_descs;
+    u32               descriptor_count;
+    u32               binding;
+    DescriptorType    descriptor_type;
+    ImageDescriptor*  descriptor_image_descs;
+    BufferDescriptor* descriptor_buffer_descs;
 };
 
 struct UiDesc
@@ -468,8 +468,8 @@ void cmd_draw_indexed(
     const CommandBuffer* cmd, u32 index_count, u32 instance_count, u32 first_index, u32 vertex_offset,
     u32 first_instance);
 
-void cmd_bind_vertex_buffer(const CommandBuffer* cmd, const Buffer* buffer);
-void cmd_bind_index_buffer_u32(const CommandBuffer* cmd, const Buffer* buffer);
+void cmd_bind_vertex_buffer(const CommandBuffer* cmd, const Buffer* buffer, const u64 offset);
+void cmd_bind_index_buffer_u32(const CommandBuffer* cmd, const Buffer* buffer, const u64 offset);
 
 void cmd_copy_buffer(
     const CommandBuffer* cmd, const Buffer* src, u32 src_offset, Buffer* dst, u32 dst_offset, u32 size);
