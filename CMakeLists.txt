@@ -53,7 +53,8 @@ set(renderer
 
 set(util
 	${src_dir}/utils/file_loader.cpp	
-	${src_dir}/utils/image_loader.cpp)
+	${src_dir}/utils/image_loader.cpp
+	${src_dir}/utils/file_system.cpp)
 
 set(math
 	${src_dir}/math/math.cpp)

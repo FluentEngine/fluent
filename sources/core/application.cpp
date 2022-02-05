@@ -5,6 +5,7 @@
 #include "core/window.hpp"
 #include "core/application.hpp"
 #include "core/input.hpp"
+#include "utils/file_system.hpp"
 
 namespace fluent
 {
@@ -13,10 +14,6 @@ using ImGuiCallback = bool (*)(const SDL_Event* e);
 
 struct ApplicationState
 {
-    std::string      exec_path;
-    std::string      shaders_directory;
-    std::string      textures_directory;
-    std::string      models_directory;
     b32              is_inited;
     b32              is_running;
     const char*      title;
@@ -32,29 +29,6 @@ struct ApplicationState
 
 static ApplicationState app_state{};
 
-std::string get_exec_path(u32 argc, char* argv_zero)
-{
-    std::string exec_path =
-        std::filesystem::weakly_canonical(std::filesystem::path(argv_zero)).parent_path().string() + "/";
-
-    return exec_path;
-}
-
-void app_set_shaders_directory(const std::string& path)
-{
-    app_state.shaders_directory = app_state.exec_path + std::filesystem::path(path).string() + "/";
-}
-
-void app_set_textures_directory(const std::string& path)
-{
-    app_state.textures_directory = app_state.exec_path + std::filesystem::path(path).string() + "/";
-}
-
-void app_set_models_directory(const std::string& path)
-{
-    app_state.models_directory = app_state.exec_path + std::filesystem::path(path).string() + "/";
-}
-
 void app_init(const ApplicationConfig* config)
 {
     FT_ASSERT(config->argv);
@@ -68,7 +42,6 @@ void app_init(const ApplicationConfig* config)
 
     app_state.window = fluent::create_window(config->title, config->x, config->y, config->width, config->height);
 
-    app_state.exec_path      = get_exec_path(config->argc, config->argv[ 0 ]);
     app_state.title          = config->title;
     app_state.on_init        = config->on_init;
     app_state.on_update      = config->on_update;
@@ -78,6 +51,8 @@ void app_init(const ApplicationConfig* config)
     spdlog::set_level(to_spdlog_level(config->log_level));
 
     init_input_system(&app_state.input_system);
+
+    FileSystem::init(config->argv);
 
     app_state.is_inited = true;
 }
@@ -163,21 +138,6 @@ const Window* get_app_window()
 const InputSystem* get_app_input_system()
 {
     return &app_state.input_system;
-}
-
-const std::string& get_app_shaders_directory()
-{
-    return app_state.shaders_directory;
-}
-
-const std::string& get_app_textures_directory()
-{
-    return app_state.textures_directory;
-}
-
-const std::string& get_app_models_directory()
-{
-    return app_state.models_directory;
 }
 
 void app_set_ui_context(const UiContext& context)

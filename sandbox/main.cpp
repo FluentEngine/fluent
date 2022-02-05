@@ -16,9 +16,9 @@ static const f32 vertices[] = { -0.5f, -0.5f, 0.5f, -0.5f, 0.0f, 0.5f };
 
 void on_init()
 {
-    app_set_shaders_directory("../../sandbox/shaders/");
-    app_set_models_directory("../../sandbox/models/");
-    app_set_textures_directory("../../sandbox/textures/");
+    FileSystem::set_shaders_directory("../../sandbox/shaders/");
+    FileSystem::set_models_directory("../../sandbox/models/");
+    FileSystem::set_textures_directory("../../sandbox/textures/");
 
     GraphicContextDesc desc{};
     desc.width         = SCREEN_WIDTH;
@@ -28,8 +28,8 @@ void on_init()
 
     ResourceLoader::init(GraphicContext::get()->device());
 
-    auto vert_code = read_file_binary(get_app_shaders_directory() + "/triangle.vert.glsl.spv");
-    auto frag_code = read_file_binary(get_app_shaders_directory() + "/triangle.frag.glsl.spv");
+    auto vert_code = read_file_binary(FileSystem::get_shaders_directory() + "/triangle.vert.glsl.spv");
+    auto frag_code = read_file_binary(FileSystem::get_shaders_directory() + "/triangle.frag.glsl.spv");
 
     ShaderDesc shader_descs[ 2 ];
     shader_descs[ 0 ].stage         = ShaderStage::eVertex;

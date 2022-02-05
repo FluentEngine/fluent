@@ -28,7 +28,7 @@ static const f32 vertices[] = { -0.5f, -0.5f, 0.5f, -0.5f, 0.0f, 0.5f };
 
 void on_init()
 {
-    app_set_shaders_directory("../../../examples/shaders/01_hello_triangle");
+    FileSystem::set_shaders_directory("../../../examples/shaders/01_hello_triangle");
 
     RendererBackendDesc renderer_desc{};
     renderer_desc.vulkan_allocator = nullptr;
@@ -64,8 +64,8 @@ void on_init()
 
     create_swapchain(device, &swapchain_desc, &swapchain);
 
-    auto vert_code = read_file_binary(get_app_shaders_directory() + "/main.vert.glsl.spv");
-    auto frag_code = read_file_binary(get_app_shaders_directory() + "/main.frag.glsl.spv");
+    auto vert_code = read_file_binary(FileSystem::get_shaders_directory() + "/main.vert.glsl.spv");
+    auto frag_code = read_file_binary(FileSystem::get_shaders_directory() + "/main.frag.glsl.spv");
 
     ShaderDesc shader_descs[ 2 ];
     shader_descs[ 0 ].stage         = ShaderStage::eVertex;

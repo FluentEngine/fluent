@@ -35,17 +35,10 @@ void app_run();
 void app_shutdown();
 
 void app_set_ui_context(const UiContext& context);
-void app_set_shaders_directory(const std::string& path);
-void app_set_textures_directory(const std::string& path);
-void app_set_models_directory(const std::string& path);
 
 const char*        get_app_name();
 const Window*      get_app_window();
 const InputSystem* get_app_input_system();
-
-const std::string& get_app_shaders_directory();
-const std::string& get_app_textures_directory();
-const std::string& get_app_models_directory();
 
 u32 get_time();
 f32 get_delta_time();

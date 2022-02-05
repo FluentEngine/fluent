@@ -40,12 +40,7 @@ ImageDesc read_dds_image(const std::string& filename, b32 flip, u32* size, void*
     return image_desc;
 }
 
-void release_dds_image_data(void* data)
-{
-    delete[](u8*) data;
-}
-
-ImageDesc read_image(const std::string& filename, b32 flip, u32* size, void** data)
+ImageDesc read_image_stb(const std::string& filename, b32 flip, u32* size, void** data)
 {
     ImageDesc image_desc{};
 
@@ -62,12 +57,31 @@ ImageDesc read_image(const std::string& filename, b32 flip, u32* size, void** da
     image_desc.mip_levels  = 1;
     image_desc.layer_count = 1;
     *size                  = tex_width * tex_height * 4;
+
+    return image_desc;
+}
+
+ImageDesc read_image_data(const std::string& filename, b32 flip, u32* size, void** data)
+{
+    std::string file_ext = filename.substr(filename.find_last_of('.'));
+
+    ImageDesc image_desc{};
+
+    if (file_ext == ".dds")
+    {
+        image_desc = read_dds_image(filename, flip, size, data);
+    }
+    else
+    {
+        image_desc = read_image_stb(filename, flip, size, data);
+    }
+
     return image_desc;
 }
 
 void release_image_data(void* data)
 {
-    stbi_image_free(data);
+    delete[](u8*) data;
 }
 
 } // namespace fluent
