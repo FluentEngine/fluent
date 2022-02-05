@@ -22,7 +22,7 @@ CommandBuffer* command_buffers[ FRAME_COUNT ];
 DescriptorSetLayout* descriptor_set_layout;
 Pipeline*            pipeline;
 
-BaseBuffer* vertex_buffer;
+Buffer* vertex_buffer;
 
 static const f32 vertices[] = { -0.5f, -0.5f, 0.5f, -0.5f, 0.0f, 0.5f };
 
@@ -92,6 +92,9 @@ void on_init()
     vertex_layout.attribute_descs[ 0 ].format   = Format::eR32G32Sfloat;
     vertex_layout.attribute_descs[ 0 ].location = 0;
     vertex_layout.attribute_descs[ 0 ].offset   = 0;
+    pipeline_desc.shader_count                  = 2;
+    pipeline_desc.shaders[ 0 ]                  = shaders[ 0 ];
+    pipeline_desc.shaders[ 1 ]                  = shaders[ 1 ];
     pipeline_desc.rasterizer_desc.cull_mode     = CullMode::eNone;
     pipeline_desc.rasterizer_desc.front_face    = FrontFace::eCounterClockwise;
     pipeline_desc.depth_state_desc.depth_test   = false;
@@ -108,7 +111,8 @@ void on_init()
 
     BufferDesc buffer_desc{};
     buffer_desc.size            = sizeof(vertices);
-    buffer_desc.descriptor_type = DescriptorType::eVertexBuffer | DescriptorType::eHostVisibleBuffer;
+    buffer_desc.descriptor_type = DescriptorType::eVertexBuffer;
+    buffer_desc.memory_usage    = MemoryUsage::eCpuToGpu;
 
     create_buffer(device, &buffer_desc, &vertex_buffer);
     map_memory(device, vertex_buffer);

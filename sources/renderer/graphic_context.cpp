@@ -7,8 +7,11 @@ namespace fluent
 {
 static GraphicContext* graphic_context = nullptr;
 
-GraphicContext::GraphicContext()
+GraphicContext::GraphicContext(const GraphicContextDesc& desc)
 {
+    m_width  = desc.width;
+    m_height = desc.height;
+
     RendererBackendDesc context_desc{};
     context_desc.vulkan_allocator = nullptr;
     create_renderer_backend(&context_desc, &m_backend);
@@ -36,10 +39,11 @@ GraphicContext::GraphicContext()
     }
 
     SwapchainDesc swapchain_desc{};
-    swapchain_desc.width           = window_get_width(get_app_window());
-    swapchain_desc.height          = window_get_height(get_app_window());
+    swapchain_desc.width           = desc.width;
+    swapchain_desc.height          = desc.height;
     swapchain_desc.queue           = m_queue;
     swapchain_desc.min_image_count = FRAME_COUNT;
+    swapchain_desc.builtin_depth   = desc.builtin_depth;
 
     create_swapchain(m_device, &swapchain_desc, &m_swapchain);
 }
@@ -67,9 +71,9 @@ void GraphicContext::on_resize(u32 width, u32 height)
     resize_swapchain(m_device, m_swapchain, width, height);
 }
 
-void GraphicContext::init()
+void GraphicContext::init(const GraphicContextDesc& desc)
 {
-    graphic_context = new GraphicContext();
+    graphic_context = new GraphicContext(desc);
 }
 
 void GraphicContext::shutdown()
@@ -87,10 +91,13 @@ void GraphicContext::begin_frame()
     }
 
     acquire_next_image(m_device, m_swapchain, m_image_available_semaphores[ m_frame_index ], nullptr, &m_image_index);
+    begin_command_buffer(acquire_cmd());
 }
 
 void GraphicContext::end_frame()
 {
+    end_command_buffer(acquire_cmd());
+
     QueueSubmitDesc queue_submit_desc{};
     queue_submit_desc.wait_semaphore_count   = 1;
     queue_submit_desc.wait_semaphores        = m_image_available_semaphores[ m_frame_index ];
@@ -114,12 +121,53 @@ void GraphicContext::end_frame()
     m_frame_index                               = (m_frame_index + 1) % FRAME_COUNT;
 }
 
-CommandBuffer* GraphicContext::acquire_cmd()
+void GraphicContext::begin_render_pass(f32 r, f32 g, f32 b, f32 a) const
+{
+    auto* cmd = acquire_cmd();
+
+    ImageBarrier to_color_attachment{};
+    to_color_attachment.src_queue = queue();
+    to_color_attachment.dst_queue = queue();
+    to_color_attachment.image     = acquire_image();
+    to_color_attachment.old_state = ResourceState::eUndefined;
+    to_color_attachment.new_state = ResourceState::eColorAttachment;
+
+    cmd_barrier(cmd, 0, nullptr, 1, &to_color_attachment);
+
+    RenderPassBeginDesc render_pass_begin_desc{};
+    render_pass_begin_desc.render_pass                  = get_swapchain_render_pass(m_swapchain, m_image_index);
+    render_pass_begin_desc.clear_values[ 0 ].color[ 0 ] = r;
+    render_pass_begin_desc.clear_values[ 0 ].color[ 1 ] = g;
+    render_pass_begin_desc.clear_values[ 0 ].color[ 2 ] = b;
+    render_pass_begin_desc.clear_values[ 0 ].color[ 3 ] = a;
+    render_pass_begin_desc.clear_values[ 1 ].depth      = 1.0f;
+    render_pass_begin_desc.clear_values[ 1 ].stencil    = 0;
+
+    cmd_begin_render_pass(cmd, &render_pass_begin_desc);
+}
+
+void GraphicContext::end_render_pass() const
+{
+    auto* cmd = acquire_cmd();
+
+    cmd_end_render_pass(cmd);
+
+    ImageBarrier to_present_barrier{};
+    to_present_barrier.src_queue = m_queue;
+    to_present_barrier.dst_queue = m_queue;
+    to_present_barrier.image     = acquire_image();
+    to_present_barrier.old_state = ResourceState::eUndefined;
+    to_present_barrier.new_state = ResourceState::ePresent;
+
+    cmd_barrier(cmd, 0, nullptr, 1, &to_present_barrier);
+}
+
+CommandBuffer* GraphicContext::acquire_cmd() const
 {
     return m_command_buffers[ m_frame_index ];
 }
 
-BaseImage* GraphicContext::acquire_image()
+Image* GraphicContext::acquire_image() const
 {
     return m_swapchain->images[ m_image_index ];
 }

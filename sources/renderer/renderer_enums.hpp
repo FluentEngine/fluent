@@ -240,6 +240,15 @@ enum class AttachmentLoadOp
     eDontCare = 2
 };
 
+enum class MemoryUsage
+{
+    eGpuOnly  = 0,
+    eCpuOnly  = 1,
+    eCpuToGpu = 2,
+    eGpuToCpu = 3,
+    eCpuCopy  = 4,
+};
+
 enum class ResourceState : u32
 {
     eUndefined            = BIT(0),
@@ -261,19 +270,16 @@ enum class DescriptorType : u32
     eIndexBuffer            = BIT(2),
     eUniformBuffer          = BIT(3),
     eSampler                = BIT(4),
-    eCombinedImageSampler   = BIT(5),
-    eSampledImage           = BIT(6),
-    eStorageImage           = BIT(7),
-    eUniformTexelBuffer     = BIT(8),
-    eStorageTexelBuffer     = BIT(9),
-    eStorageBuffer          = BIT(10),
-    eUniformBufferDynamic   = BIT(11),
-    eStorageBufferDynamic   = BIT(12),
-    eInputAttachment        = BIT(13),
-    eDepthStencilAttachment = BIT(14),
-    eColorAttachment        = BIT(15),
-    eHostVisibleBuffer      = BIT(16),
-    eDeviceLocalBuffer      = BIT(17)
+    eSampledImage           = BIT(5),
+    eStorageImage           = BIT(6),
+    eUniformTexelBuffer     = BIT(7),
+    eStorageTexelBuffer     = BIT(8),
+    eStorageBuffer          = BIT(9),
+    eUniformBufferDynamic   = BIT(10),
+    eStorageBufferDynamic   = BIT(11),
+    eInputAttachment        = BIT(12),
+    eDepthStencilAttachment = BIT(13),
+    eColorAttachment        = BIT(14)
 };
 MAKE_ENUM_FLAG(u32, DescriptorType);
 

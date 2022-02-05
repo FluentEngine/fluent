@@ -4,107 +4,15 @@
 
 using namespace fluent;
 
-Camera           camera;
-CameraController camera_controller;
-InputSystem*     input_system;
-UiContext*       ui_context;
+static constexpr u32 SCREEN_WIDTH  = 1400;
+static constexpr u32 SCREEN_HEIGHT = 900;
 
-Ref<Geometry> cube       = nullptr;
-Ref<Geometry> plane      = nullptr;
-Ref<Geometry> venus      = nullptr;
-Ref<Geometry> sphere     = nullptr;
-Ref<Image>    cyan       = nullptr;
-Ref<Image>    gray       = nullptr;
-Ref<Image>    light_gray = nullptr;
-Ref<Image>    white      = nullptr;
+DescriptorSetLayout* dsl;
+Pipeline*            pipeline;
 
-struct
-{
-    u32 scene_viewport_width   = 1400;
-    u32 scene_viewport_height  = 900;
-    b32 scene_viewport_changed = false;
-} ui_data;
+Buffer* vertex_buffer;
 
-// ui
-void begin_dockspace()
-{
-    static bool               dockspace_open            = true;
-    static bool               opt_fullscreen_persistent = true;
-    bool                      opt_fullscreen            = opt_fullscreen_persistent;
-    static ImGuiDockNodeFlags dockspace_flags           = ImGuiDockNodeFlags_None;
-
-    // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
-    // because it would be confusing to have two docking targets within each others.
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
-    if (opt_fullscreen)
-    {
-        ImGuiViewport* viewport = ImGui::GetMainViewport();
-        ImGui::SetNextWindowPos(viewport->Pos);
-        ImGui::SetNextWindowSize(viewport->Size);
-        ImGui::SetNextWindowViewport(viewport->ID);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-        window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
-                        ImGuiWindowFlags_NoMove;
-        window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-    }
-
-    // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background and handle the
-    // pass-thru hole, so we ask Begin() to not render a background.
-    if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
-        window_flags |= ImGuiWindowFlags_NoBackground;
-
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    ImGui::Begin("DockSpace Demo", &dockspace_open, window_flags);
-    ImGui::PopStyleVar();
-
-    if (opt_fullscreen)
-        ImGui::PopStyleVar(2);
-
-    // DockSpace
-    ImGuiIO&    io          = ImGui::GetIO();
-    ImGuiStyle& style       = ImGui::GetStyle();
-    f32         minWinSizeX = style.WindowMinSize.x;
-    style.WindowMinSize.x   = 100.0f;
-    if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
-    {
-        ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-    }
-
-    style.WindowMinSize.x = minWinSizeX;
-}
-
-void end_dockspace()
-{
-    ImGui::End();
-}
-
-void draw_ui(CommandBuffer* cmd)
-{
-    ui_begin_frame();
-    begin_dockspace();
-    {
-        ImGui::Begin("Performance");
-        ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
-        ImGui::End();
-
-        ImGui::Begin("Scene");
-        ImVec2 viewport_size = ImGui::GetContentRegionAvail();
-        if (viewport_size.x != ui_data.scene_viewport_width || viewport_size.y != ui_data.scene_viewport_height)
-        {
-            ui_data.scene_viewport_width   = viewport_size.x;
-            ui_data.scene_viewport_height  = viewport_size.y;
-            ui_data.scene_viewport_changed = true;
-        }
-        ImGui::Image(
-            Renderer3D::get_output_image()->image_view,
-            ImVec2(ui_data.scene_viewport_width, ui_data.scene_viewport_height));
-        ImGui::End();
-    }
-    end_dockspace();
-    ui_end_frame(cmd);
-}
+static const f32 vertices[] = { -0.5f, -0.5f, 0.5f, -0.5f, 0.0f, 0.5f };
 
 void on_init()
 {
@@ -112,49 +20,66 @@ void on_init()
     app_set_models_directory("../../sandbox/models/");
     app_set_textures_directory("../../sandbox/textures/");
 
-    GraphicContext::init();
-    ResourceManager::init(GraphicContext::get()->device());
-    Renderer3D::init(GraphicContext::get()->swapchain()->width, GraphicContext::get()->swapchain()->height);
+    GraphicContextDesc desc{};
+    desc.width         = SCREEN_WIDTH;
+    desc.height        = SCREEN_HEIGHT;
+    desc.builtin_depth = true;
+    GraphicContext::init(desc);
 
-    UiDesc ui_desc{};
-    ui_desc.window             = get_app_window();
-    ui_desc.renderer           = GraphicContext::get()->backend();
-    ui_desc.device             = GraphicContext::get()->device();
-    ui_desc.queue              = GraphicContext::get()->queue();
-    ui_desc.min_image_count    = GraphicContext::get()->swapchain()->min_image_count;
-    ui_desc.image_count        = GraphicContext::get()->swapchain()->image_count;
-    ui_desc.in_fly_frame_count = 2;
-    ui_desc.render_pass        = GraphicContext::get()->swapchain()->render_passes[ 0 ];
-    ui_desc.docking            = true;
+    ResourceLoader::init(GraphicContext::get()->device());
 
-    create_ui_context(&ui_desc, &ui_context);
+    auto vert_code = read_file_binary(get_app_shaders_directory() + "/triangle.vert.glsl.spv");
+    auto frag_code = read_file_binary(get_app_shaders_directory() + "/triangle.frag.glsl.spv");
 
-    GeometryLoadDesc geom_load_desc{};
-    geom_load_desc.filename        = "cube.gltf";
-    geom_load_desc.load_normals    = true;
-    geom_load_desc.load_tex_coords = true;
-    geom_load_desc.load_tangents   = true;
-    geom_load_desc.load_bitangents = true;
-    ResourceManager::load_geometry(cube, &geom_load_desc);
-    geom_load_desc.filename = "plane.gltf";
-    ResourceManager::load_geometry(plane, &geom_load_desc);
-    geom_load_desc.filename = "venus.gltf";
-    ResourceManager::load_geometry(venus, &geom_load_desc);
-    geom_load_desc.filename = "sphere.gltf";
-    ResourceManager::load_geometry(sphere, &geom_load_desc);
+    ShaderDesc shader_descs[ 2 ];
+    shader_descs[ 0 ].stage         = ShaderStage::eVertex;
+    shader_descs[ 0 ].bytecode_size = vert_code.size() * sizeof(vert_code[ 0 ]);
+    shader_descs[ 0 ].bytecode      = vert_code.data();
+    shader_descs[ 1 ].stage         = ShaderStage::eFragment;
+    shader_descs[ 1 ].bytecode_size = frag_code.size() * sizeof(frag_code[ 0 ]);
+    shader_descs[ 1 ].bytecode      = frag_code.data();
 
-    camera.init_camera(Vector3(0.0f, 1.0, 3.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));
-    camera_controller.init(get_app_input_system(), camera);
+    Shader* shaders[ 2 ] = {};
+    create_shader(GraphicContext::get()->device(), &shader_descs[ 0 ], &shaders[ 0 ]);
+    create_shader(GraphicContext::get()->device(), &shader_descs[ 1 ], &shaders[ 1 ]);
 
-    VectorInt4 cyan_color       = { 0, 255, 255, 255 };
-    VectorInt4 gray_color       = { 43, 45, 47, 255 };
-    VectorInt4 light_gray_color = { 243, 243, 243, 255 };
-    VectorInt4 white_color      = { 255, 255, 255, 255 };
+    create_descriptor_set_layout(GraphicContext::get()->device(), 2, shaders, &dsl);
 
-    ResourceManager::load_color_image(cyan, cyan_color);
-    ResourceManager::load_color_image(gray, gray_color);
-    ResourceManager::load_color_image(light_gray, light_gray_color);
-    ResourceManager::load_color_image(white, white_color);
+    PipelineDesc  pipeline_desc{};
+    VertexLayout& vertex_layout                 = pipeline_desc.vertex_layout;
+    vertex_layout.binding_desc_count            = 1;
+    vertex_layout.binding_descs[ 0 ].binding    = 0;
+    vertex_layout.binding_descs[ 0 ].input_rate = VertexInputRate::eVertex;
+    vertex_layout.binding_descs[ 0 ].stride     = 2 * sizeof(float);
+    vertex_layout.attribute_desc_count          = 1;
+    vertex_layout.attribute_descs[ 0 ].binding  = 0;
+    vertex_layout.attribute_descs[ 0 ].format   = Format::eR32G32Sfloat;
+    vertex_layout.attribute_descs[ 0 ].location = 0;
+    vertex_layout.attribute_descs[ 0 ].offset   = 0;
+    pipeline_desc.shader_count                  = 2;
+    pipeline_desc.shaders[ 0 ]                  = shaders[ 0 ];
+    pipeline_desc.shaders[ 1 ]                  = shaders[ 1 ];
+    pipeline_desc.rasterizer_desc.cull_mode     = CullMode::eNone;
+    pipeline_desc.rasterizer_desc.front_face    = FrontFace::eCounterClockwise;
+    pipeline_desc.depth_state_desc.depth_test   = false;
+    pipeline_desc.depth_state_desc.depth_write  = false;
+    pipeline_desc.descriptor_set_layout         = dsl;
+    pipeline_desc.render_pass                   = GraphicContext::get()->swapchain()->render_passes[ 0 ];
+
+    create_graphics_pipeline(GraphicContext::get()->device(), &pipeline_desc, &pipeline);
+
+    for (u32 i = 0; i < 2; ++i)
+    {
+        destroy_shader(GraphicContext::get()->device(), shaders[ i ]);
+    }
+
+    BufferDesc buffer_desc{};
+    buffer_desc.size            = sizeof(vertices);
+    buffer_desc.descriptor_type = DescriptorType::eVertexBuffer;
+    buffer_desc.memory_usage    = MemoryUsage::eGpuOnly;
+    create_buffer(GraphicContext::get()->device(), &buffer_desc, &vertex_buffer);
+
+    ResourceLoader::upload_buffer(vertex_buffer, 0, sizeof(vertices), vertices);
 }
 
 void on_resize(u32 width, u32 height)
@@ -164,82 +89,27 @@ void on_resize(u32 width, u32 height)
 
 void on_update(f32 delta_time)
 {
-    camera_controller.update(delta_time);
-
-    if (ui_data.scene_viewport_changed)
-    {
-        ui_data.scene_viewport_changed = false;
-        queue_wait_idle(GraphicContext::get()->queue());
-        Renderer3D::resize_viewport(ui_data.scene_viewport_width, ui_data.scene_viewport_height);
-        camera.on_resize(ui_data.scene_viewport_width, ui_data.scene_viewport_height);
-    }
-
-    GraphicContext::get()->begin_frame();
-
-    auto* cmd = GraphicContext::get()->acquire_cmd();
-
-    begin_command_buffer(cmd);
-
-    Renderer3D::begin_frame(camera);
-    Renderer3D::draw_geometry(Matrix4(1.0f), cube, cyan);
-    Matrix4 venus_transform = scale(translate(Matrix4(1.0), Vector3(2.0, 2.0, -2.0)), Vector3(3.0));
-    Renderer3D::draw_geometry(venus_transform, venus, light_gray);
-    Renderer3D::draw_geometry(translate(Matrix4(1.0f), Vector3(5.0, 0.0, 0.0)), cube);
-    Matrix4 plane_transform = scale(translate(Matrix4(1.0f), Vector3(0.0, -1.0, 0.0)), Vector3(60.0f));
-    Renderer3D::draw_geometry(plane_transform, plane, gray);
-    Renderer3D::set_light_model(LightModel::eNone);
-    Matrix4 sphere_transform = translate(Matrix4(1.0f), Vector3(1.0, 10.0, -1.0));
-    Renderer3D::draw_geometry(sphere_transform, sphere, white);
-    Renderer3D::end_frame();
-
-    ImageBarrier to_color_attachment{};
-    to_color_attachment.src_queue = GraphicContext::get()->queue();
-    to_color_attachment.dst_queue = GraphicContext::get()->queue();
-    to_color_attachment.image     = GraphicContext::get()->acquire_image();
-    to_color_attachment.old_state = ResourceState::eUndefined;
-    to_color_attachment.new_state = ResourceState::eColorAttachment;
-
-    cmd_barrier(cmd, 0, nullptr, 1, &to_color_attachment);
-
-    RenderPassBeginDesc render_pass_begin_desc{};
-    render_pass_begin_desc.render_pass                  = GraphicContext::get()->acquire_render_pass();
-    render_pass_begin_desc.clear_values[ 0 ].color[ 0 ] = 1.0f;
-    render_pass_begin_desc.clear_values[ 0 ].color[ 1 ] = 0.8f;
-    render_pass_begin_desc.clear_values[ 0 ].color[ 2 ] = 0.4f;
-    render_pass_begin_desc.clear_values[ 0 ].color[ 3 ] = 1.0f;
-
-    cmd_begin_render_pass(cmd, &render_pass_begin_desc);
-    draw_ui(cmd);
-    cmd_end_render_pass(cmd);
-
-    ImageBarrier to_present_barrier{};
-    to_present_barrier.src_queue = GraphicContext::get()->queue();
-    to_present_barrier.dst_queue = GraphicContext::get()->queue();
-    to_present_barrier.image     = GraphicContext::get()->acquire_image();
-    to_present_barrier.old_state = ResourceState::eUndefined;
-    to_present_barrier.new_state = ResourceState::ePresent;
-
-    cmd_barrier(cmd, 0, nullptr, 1, &to_present_barrier);
-
-    end_command_buffer(cmd);
-
-    GraphicContext::get()->end_frame();
+    auto* context = GraphicContext::get();
+    auto* cmd     = context->acquire_cmd();
+    context->begin_frame();
+    context->begin_render_pass(0.4, 0.1, 0.2, 1.0);
+    cmd_bind_pipeline(cmd, pipeline);
+    cmd_set_viewport(cmd, 0, 0, context->width(), context->height(), 0, 1.0f);
+    cmd_set_scissor(cmd, 0, 0, context->width(), context->height());
+    cmd_bind_vertex_buffer(cmd, vertex_buffer);
+    cmd_draw(cmd, 3, 1, 0, 0);
+    context->end_render_pass();
+    context->end_frame();
 }
 
 void on_shutdown()
 {
-    device_wait_idle(GraphicContext::get()->device());
-    ResourceManager::release_geometry(cube);
-    ResourceManager::release_geometry(plane);
-    ResourceManager::release_geometry(venus);
-    ResourceManager::release_geometry(sphere);
-    ResourceManager::release_image(light_gray);
-    ResourceManager::release_image(cyan);
-    ResourceManager::release_image(gray);
-    ResourceManager::release_image(white);
-    destroy_ui_context(GraphicContext::get()->device(), ui_context);
-    Renderer3D::shutdown();
-    ResourceManager::shutdown();
+    auto* device = GraphicContext::get()->device();
+    device_wait_idle(device);
+    destroy_buffer(device, vertex_buffer);
+    destroy_pipeline(device, pipeline);
+    destroy_descriptor_set_layout(device, dsl);
+    ResourceLoader::shutdown();
     GraphicContext::shutdown();
 }
 
@@ -251,8 +121,8 @@ int main(int argc, char** argv)
     config.title       = "Sandbox";
     config.x           = 0;
     config.y           = 0;
-    config.width       = 1400;
-    config.height      = 900;
+    config.width       = SCREEN_WIDTH;
+    config.height      = SCREEN_HEIGHT;
     config.log_level   = LogLevel::eTrace;
     config.on_init     = on_init;
     config.on_update   = on_update;

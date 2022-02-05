@@ -42,30 +42,21 @@ set(core
     ${src_dir}/core/window.cpp
 	${src_dir}/core/input.cpp
 	${src_dir}/core/application.cpp
+	${src_dir}/core/camera.cpp
 	)
 
 set(renderer
 	${src_dir}/renderer/shader_reflection.cpp
 	${src_dir}/renderer/renderer_backend.cpp
-	${src_dir}/renderer/graphic_context.cpp
-	${src_dir}/renderer/renderer_3d.cpp)
+	${src_dir}/renderer/resource_loader.cpp
+	${src_dir}/renderer/graphic_context.cpp)
 
-set(resource_manager
-	${src_dir}/resource_manager/resources.cpp
-	${src_dir}/resource_manager/resource_manager.cpp)
-	
 set(util
 	${src_dir}/utils/file_loader.cpp	
-	${src_dir}/utils/image_loader.cpp
-	${src_dir}/utils/model_loader.cpp)
+	${src_dir}/utils/image_loader.cpp)
 
 set(math
 	${src_dir}/math/math.cpp)
-
-set(scene
-	${src_dir}/scene/entity.cpp
-	${src_dir}/scene/scene.cpp
-	${src_dir}/scene/camera.cpp)
 
 set(sources 
 	${core} 
@@ -117,7 +108,7 @@ if (FLUENT_DEBUG_BUILD)
 else()
 	if (MSVC)
 	elseif (UNIX)
-		target_compile_options(${target} PUBLIC -O3)#-fsanitize=address)
+		target_compile_options(${target} PUBLIC -O3)
 	endif()
 endif()
 

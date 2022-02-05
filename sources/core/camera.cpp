@@ -1,5 +1,5 @@
 #include "core/input.hpp"
-#include "scene/camera.hpp"
+#include "core/camera.hpp"
 
 namespace fluent
 {

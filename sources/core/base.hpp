@@ -9,11 +9,7 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
-#ifndef __APPLE__
-#include <malloc.h>
-#else
-#include <stdlib.h>
-#endif
+
 using i8  = int8_t;
 using u8  = uint8_t;
 using i16 = int16_t;
@@ -24,7 +20,7 @@ using i64 = int64_t;
 using u64 = uint64_t;
 using f32 = float;
 using f64 = double;
-using b32 = u32;
+using b32 = bool;
 
 #define MAKE_ENUM_FLAG(TYPE, ENUM_TYPE)                                                                                \
     static inline ENUM_TYPE operator|(ENUM_TYPE a, ENUM_TYPE b)                                                        \

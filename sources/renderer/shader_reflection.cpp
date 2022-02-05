@@ -67,7 +67,8 @@ DescriptorType to_desctriptor_type(VkDescriptorType descriptor_type)
     case VK_DESCRIPTOR_TYPE_SAMPLER:
         return DescriptorType::eSampler;
     case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-        return DescriptorType::eCombinedImageSampler;
+        FT_ASSERT(false && "Use separate types instead, texture + sampler");
+        return DescriptorType(-1);
     case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
         return DescriptorType::eSampledImage;
     case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:

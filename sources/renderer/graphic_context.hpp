@@ -4,6 +4,13 @@
 
 namespace fluent
 {
+struct GraphicContextDesc
+{
+    u32 width         = 0;
+    u32 height        = 0;
+    b32 builtin_depth = false;
+};
+
 class GraphicContext
 {
 private:
@@ -24,7 +31,12 @@ private:
     u32 m_frame_index = 0;
     u32 m_image_index = 0;
 
-    GraphicContext();
+    u32 m_width  = 0;
+    u32 m_height = 0;
+
+    Image* acquire_image() const;
+
+    GraphicContext(const GraphicContextDesc& desc);
 
 public:
     ~GraphicContext();
@@ -33,8 +45,7 @@ public:
     void begin_frame();
     void end_frame();
 
-    CommandBuffer* acquire_cmd();
-    BaseImage*     acquire_image();
+    CommandBuffer* acquire_cmd() const;
 
     RendererBackend* backend() const
     {
@@ -56,17 +67,25 @@ public:
         return m_swapchain;
     }
 
-    const RenderPass* acquire_render_pass() const
+    u32 width() const
     {
-        return get_swapchain_render_pass(m_swapchain, m_image_index);
+        return m_width;
     }
+
+    u32 height() const
+    {
+        return m_height;
+    }
+
+    void begin_render_pass(f32 r, f32 g, f32 b, f32 a) const;
+    void end_render_pass() const;
 
     u32 frame_index() const
     {
         return m_frame_index;
     }
 
-    static void init();
+    static void init(const GraphicContextDesc& desc);
     static void shutdown();
 
     static GraphicContext* get();

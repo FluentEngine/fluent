@@ -10,12 +10,16 @@ set(SHADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/shaders/main.vert.glsl
   ${CMAKE_CURRENT_SOURCE_DIR}/shaders/phong.frag.glsl
   ${CMAKE_CURRENT_SOURCE_DIR}/shaders/color.frag.glsl
+  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/triangle.vert.glsl
+  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/triangle.frag.glsl
 )
 
 set(COMPILED_SHADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/shaders/main.vert.glsl.spv
   ${CMAKE_CURRENT_SOURCE_DIR}/shaders/phong.frag.glsl.spv
   ${CMAKE_CURRENT_SOURCE_DIR}/shaders/color.frag.glsl.spv
+  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/triangle.vert.glsl.spv
+  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/triangle.frag.glsl.spv
 )
 
 compile_shaders(${SHADERS})

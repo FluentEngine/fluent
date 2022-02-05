@@ -13,9 +13,9 @@ namespace fluent
 // Forward declares
 struct Window;
 struct RenderPass;
-struct BaseBuffer;
+struct Buffer;
 struct StagingBuffer;
-struct BaseImage;
+struct Image;
 
 static constexpr u32 FLUENT_VULKAN_API_VERSION    = VK_API_VERSION_1_2;
 static constexpr u32 MAX_ATTACHMENTS_COUNT        = 10;
@@ -91,7 +91,7 @@ struct ImageDesc
     DescriptorType descriptor_type;
 };
 
-struct BaseImage
+struct Image
 {
     VkImage        image;
     VkImageView    image_view;
@@ -107,17 +107,19 @@ struct BaseImage
 
 struct BufferDesc
 {
-    u32            size;
+    u32            size = 0;
     DescriptorType descriptor_type;
+    MemoryUsage    memory_usage = MemoryUsage::eGpuOnly;
 };
 
-struct BaseBuffer
+struct Buffer
 {
     VkBuffer       buffer;
     VmaAllocation  allocation;
     u32            size;
     ResourceState  resource_state;
     DescriptorType descriptor_type;
+    MemoryUsage    memory_usage;
     void*          mapped_memory = nullptr;
 };
 
@@ -133,8 +135,8 @@ struct Swapchain
     VkSurfaceKHR                  surface;
     VkSwapchainKHR                swapchain;
     Format                        format;
-    BaseImage**                   images;
-    BaseImage*                    depth_image;
+    Image**                       images;
+    Image*                        depth_image;
     RenderPass**                  render_passes;
     Queue*                        queue;
 };
@@ -180,10 +182,10 @@ struct RenderPassDesc
     u32              width;
     u32              height;
     u32              color_attachment_count;
-    BaseImage*       color_attachments[ MAX_ATTACHMENTS_COUNT ];
+    Image*           color_attachments[ MAX_ATTACHMENTS_COUNT ];
     AttachmentLoadOp color_attachment_load_ops[ MAX_ATTACHMENTS_COUNT ];
     ResourceState    color_image_states[ MAX_ATTACHMENTS_COUNT ];
-    BaseImage*       depth_stencil;
+    Image*           depth_stencil;
     AttachmentLoadOp depth_stencil_load_op;
     ResourceState    depth_stencil_state;
 };
@@ -215,7 +217,7 @@ struct BufferBarrier
 {
     ResourceState old_state;
     ResourceState new_state;
-    BaseBuffer*   buffer;
+    Buffer*       buffer;
     Queue*        src_queue;
     Queue*        dst_queue;
     u32           size;
@@ -224,11 +226,11 @@ struct BufferBarrier
 
 struct ImageBarrier
 {
-    ResourceState    old_state;
-    ResourceState    new_state;
-    const BaseImage* image;
-    const Queue*     src_queue;
-    const Queue*     dst_queue;
+    ResourceState old_state;
+    ResourceState new_state;
+    const Image*  image;
+    const Queue*  src_queue;
+    const Queue*  dst_queue;
 };
 
 struct ShaderDesc
@@ -352,15 +354,15 @@ struct DescriptorSet
 
 struct DescriptorBufferDesc
 {
-    BaseBuffer* buffer;
-    u32         offset = 0;
-    u32         range  = 0;
+    Buffer* buffer;
+    u32     offset = 0;
+    u32     range  = 0;
 };
 
 struct DescriptorImageDesc
 {
     Sampler*      sampler;
-    BaseImage*    image;
+    Image*        image;
     ResourceState resource_state;
 };
 
@@ -466,13 +468,13 @@ void cmd_draw_indexed(
     const CommandBuffer* cmd, u32 index_count, u32 instance_count, u32 first_index, u32 vertex_offset,
     u32 first_instance);
 
-void cmd_bind_vertex_buffer(const CommandBuffer* cmd, const BaseBuffer* buffer);
-void cmd_bind_index_buffer_u32(const CommandBuffer* cmd, const BaseBuffer* buffer);
+void cmd_bind_vertex_buffer(const CommandBuffer* cmd, const Buffer* buffer);
+void cmd_bind_index_buffer_u32(const CommandBuffer* cmd, const Buffer* buffer);
 
 void cmd_copy_buffer(
-    const CommandBuffer* cmd, const BaseBuffer* src, u32 src_offset, BaseBuffer* dst, u32 dst_offset, u32 size);
+    const CommandBuffer* cmd, const Buffer* src, u32 src_offset, Buffer* dst, u32 dst_offset, u32 size);
 
-void cmd_copy_buffer_to_image(const CommandBuffer* cmd, const BaseBuffer* src, u32 src_offset, BaseImage* dst);
+void cmd_copy_buffer_to_image(const CommandBuffer* cmd, const Buffer* src, u32 src_offset, Image* dst);
 void cmd_bind_descriptor_set(
     const CommandBuffer* cmd, u32 first_set, const DescriptorSet* set, const Pipeline* pipeline);
 
@@ -481,22 +483,22 @@ void cmd_dispatch(const CommandBuffer* cmd, u32 group_count_x, u32 group_count_y
 void cmd_push_constants(const CommandBuffer* cmd, const Pipeline* pipeline, u32 offset, u32 size, const void* data);
 
 void cmd_blit_image(
-    const CommandBuffer* cmd, const BaseImage* src, ResourceState src_state, BaseImage* dst, ResourceState dst_state,
+    const CommandBuffer* cmd, const Image* src, ResourceState src_state, Image* dst, ResourceState dst_state,
     Filter filter);
 
-void cmd_clear_color_image(const CommandBuffer* cmd, BaseImage* image, Vector4 color);
+void cmd_clear_color_image(const CommandBuffer* cmd, Image* image, Vector4 color);
 
-void create_buffer(const Device* device, const BufferDesc* desc, BaseBuffer** buffer);
-void destroy_buffer(const Device* device, BaseBuffer* buffer);
+void create_buffer(const Device* device, const BufferDesc* desc, Buffer** buffer);
+void destroy_buffer(const Device* device, Buffer* buffer);
 
-void map_memory(const Device* device, BaseBuffer* buffer);
-void unmap_memory(const Device* device, BaseBuffer* buffer);
+void map_memory(const Device* device, Buffer* buffer);
+void unmap_memory(const Device* device, Buffer* buffer);
 
 void create_sampler(const Device* device, const SamplerDesc* desc, Sampler** sampler);
 void destroy_sampler(const Device* device, Sampler* sampler);
 
-void create_image(const Device* device, const ImageDesc* desc, BaseImage** image);
-void destroy_image(const Device* device, BaseImage* image);
+void create_image(const Device* device, const ImageDesc* desc, Image** image);
+void destroy_image(const Device* device, Image* image);
 
 void create_descriptor_set(const Device* device, const DescriptorSetDesc* desc, DescriptorSet** descriptor_set);
 void destroy_descriptor_set(const Device* device, DescriptorSet* set);
