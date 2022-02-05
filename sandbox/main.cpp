@@ -12,7 +12,7 @@ Pipeline*            pipeline;
 
 Buffer* vertex_buffer;
 
-static const f32 vertices[] = { -0.5f, -0.5f, 0.5f, -0.5f, 0.0f, 0.5f };
+static const f32 vertices[] = { -0.5f, -0.5f, 0.0f, 0.5f, -0.5f, 0.0f, 0.0f, 0.5f, 0.0f };
 
 void on_init()
 {
@@ -50,10 +50,10 @@ void on_init()
     vertex_layout.binding_desc_count            = 1;
     vertex_layout.binding_descs[ 0 ].binding    = 0;
     vertex_layout.binding_descs[ 0 ].input_rate = VertexInputRate::eVertex;
-    vertex_layout.binding_descs[ 0 ].stride     = 2 * sizeof(float);
+    vertex_layout.binding_descs[ 0 ].stride     = 3 * sizeof(float);
     vertex_layout.attribute_desc_count          = 1;
     vertex_layout.attribute_descs[ 0 ].binding  = 0;
-    vertex_layout.attribute_descs[ 0 ].format   = Format::eR32G32Sfloat;
+    vertex_layout.attribute_descs[ 0 ].format   = Format::eR32G32B32Sfloat;
     vertex_layout.attribute_descs[ 0 ].location = 0;
     vertex_layout.attribute_descs[ 0 ].offset   = 0;
     pipeline_desc.shader_count                  = 2;
