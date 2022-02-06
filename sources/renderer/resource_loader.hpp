@@ -15,9 +15,11 @@ private:
     static Buffer* create_staging_buffer(u64 size, const void* data);
 
 public:
-    static void init(const Device* m_device);
-    static void shutdown();
-    static void upload_buffer(Buffer* buffer, u64 offset, u64 size, const void* data);
-    static void upload_image(Image* image, u64 size, const void* data);
+    static void  init(const Device* m_device);
+    static void  shutdown();
+    static void  upload_buffer(Buffer* buffer, u64 offset, u64 size, const void* data);
+    static void* begin_upload_buffer(Buffer* buffer);
+    static void  end_upload_buffer(Buffer* buffer);
+    static void  upload_image(Image* image, u64 size, const void* data);
 };
 } // namespace fluent

@@ -10,6 +10,10 @@ static constexpr u32 SCREEN_HEIGHT = 900;
 
 static constexpr b32 DRAW_INDIRECT = false;
 
+static constexpr u32 MAX_COMMANDS         = 100;
+static constexpr u32 MAX_OBJECTS          = 10000;
+static constexpr u32 GEOMETRY_BUFFER_SIZE = 500 * 1024 * 1024;
+
 struct GlobalUbo
 {
     Matrix4 projection;
@@ -31,11 +35,11 @@ struct Geometry
     u32 index_count  = 0;
 };
 
-DescriptorSetLayout* dsl;
-Pipeline*            pipeline;
-DescriptorSet*       set;
-
-static constexpr u32 MAX_COMMANDS = 100;
+struct GpuObjectData
+{
+    Matrix4 model;
+    Vector4 color;
+};
 
 struct GeometryBuffer
 {
@@ -46,9 +50,22 @@ struct GeometryBuffer
     u32     total_index_count     = 0;
     Buffer* index_buffer          = nullptr;
     Buffer* indirect_buffer       = nullptr;
-} geometry_buffer;
+};
 
-Buffer*               global_ubo_buffer = nullptr;
+struct FrameData
+{
+    Buffer*        global_buffer          = nullptr;
+    Buffer*        objects_buffer         = nullptr;
+    DescriptorSet* global_descriptor_set  = nullptr;
+    DescriptorSet* objects_descriptor_set = nullptr;
+};
+
+DescriptorSetLayout* dsl;
+Pipeline*            pipeline;
+
+GeometryBuffer geometry_buffer;
+FrameData      frames[ GraphicContext::frame_count() ];
+
 std::vector<Geometry> geometries;
 std::vector<Vector4>  colors;
 
@@ -222,45 +239,8 @@ void load_geometry(Geometry& geometry, const Mesh& mesh)
     geometry_buffer.current_index_offset += index_upload_size;
 }
 
-void create_descriptor_set()
+void create_pipeline()
 {
-    DescriptorSetDesc desc{};
-    desc.descriptor_set_layout = dsl;
-    desc.set                   = 0;
-
-    create_descriptor_set(GraphicContext::get()->device(), &desc, &set);
-
-    BufferDescriptor buffer_descriptor{};
-    buffer_descriptor.buffer = global_ubo_buffer;
-    buffer_descriptor.offset = 0;
-    buffer_descriptor.range  = sizeof(GlobalUbo);
-
-    DescriptorWrite write{};
-    write.binding            = 0;
-    write.descriptor_type    = DescriptorType::eUniformBuffer;
-    write.descriptor_count   = 1;
-    write.buffer_descriptors = &buffer_descriptor;
-
-    update_descriptor_set(GraphicContext::get()->device(), set, 1, &write);
-}
-
-void on_init()
-{
-    FileSystem::set_shaders_directory("../../sandbox/shaders/");
-    FileSystem::set_models_directory("../../sandbox/models/");
-    FileSystem::set_textures_directory("../../sandbox/textures/");
-
-    GraphicContextDesc desc{};
-    desc.width         = SCREEN_WIDTH;
-    desc.height        = SCREEN_HEIGHT;
-    desc.builtin_depth = true;
-    GraphicContext::init(desc);
-
-    ResourceLoader::init(GraphicContext::get()->device());
-
-    camera.init_camera(Vector3(0.0f, 1.0, 3.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));
-    camera_controller.init(get_app_input_system(), camera);
-
     auto vert_code = read_file_binary(FileSystem::get_shaders_directory() + "/triangle.vert.glsl.spv");
     auto frag_code = read_file_binary(FileSystem::get_shaders_directory() + "/triangle.frag.glsl.spv");
 
@@ -306,22 +286,91 @@ void on_init()
     {
         destroy_shader(GraphicContext::get()->device(), shaders[ i ]);
     }
+}
 
-    BufferDesc global_ubo_buffer_desc{};
-    global_ubo_buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
-    global_ubo_buffer_desc.memory_usage    = MemoryUsage::eCpuToGpu;
-    global_ubo_buffer_desc.size            = sizeof(GlobalUbo);
-    create_buffer(GraphicContext::get()->device(), &global_ubo_buffer_desc, &global_ubo_buffer);
+void destroy_pipeline()
+{
+    Device* device = GraphicContext::get()->device();
+    destroy_pipeline(device, pipeline);
+    destroy_descriptor_set_layout(device, dsl);
+}
 
-    global_ubo.projection = camera.get_projection_matrix();
-    global_ubo.view       = camera.get_view_matrix();
+void create_frames()
+{
+    for (u32 i = 0; i < GraphicContext::frame_count(); ++i)
+    {
+        // Create buffers
 
-    ResourceLoader::upload_buffer(global_ubo_buffer, 0, sizeof(GlobalUbo), &global_ubo);
+        BufferDesc global_ubo_buffer_desc{};
+        global_ubo_buffer_desc.descriptor_type = DescriptorType::eUniformBuffer;
+        global_ubo_buffer_desc.memory_usage    = MemoryUsage::eCpuToGpu;
+        global_ubo_buffer_desc.size            = sizeof(GlobalUbo);
+        create_buffer(GraphicContext::get()->device(), &global_ubo_buffer_desc, &frames[ i ].global_buffer);
 
-    ::create_descriptor_set();
+        global_ubo.projection = camera.get_projection_matrix();
+        global_ubo.view       = camera.get_view_matrix();
 
+        ResourceLoader::upload_buffer(frames[ i ].global_buffer, 0, sizeof(GlobalUbo), &global_ubo);
+
+        BufferDesc gpu_objects_data_buffer_desc{};
+        gpu_objects_data_buffer_desc.descriptor_type = DescriptorType::eStorageBuffer;
+        gpu_objects_data_buffer_desc.size            = MAX_OBJECTS * sizeof(GpuObjectData);
+        gpu_objects_data_buffer_desc.memory_usage    = MemoryUsage::eCpuToGpu;
+
+        create_buffer(GraphicContext::get()->device(), &gpu_objects_data_buffer_desc, &frames[ i ].objects_buffer);
+
+        // Create descriptors
+
+        DescriptorSetDesc desc{};
+        desc.descriptor_set_layout = dsl;
+        desc.set                   = 0;
+
+        create_descriptor_set(GraphicContext::get()->device(), &desc, &frames[ i ].global_descriptor_set);
+        desc.set = 1;
+        create_descriptor_set(GraphicContext::get()->device(), &desc, &frames[ i ].objects_descriptor_set);
+
+        BufferDescriptor buffer_descriptor{};
+        buffer_descriptor.buffer = frames[ i ].global_buffer;
+        buffer_descriptor.offset = 0;
+        buffer_descriptor.range  = sizeof(GlobalUbo);
+
+        DescriptorWrite write{};
+        write.binding            = 0;
+        write.descriptor_type    = DescriptorType::eUniformBuffer;
+        write.descriptor_count   = 1;
+        write.buffer_descriptors = &buffer_descriptor;
+
+        update_descriptor_set(GraphicContext::get()->device(), frames[ i ].global_descriptor_set, 1, &write);
+
+        buffer_descriptor.buffer = frames[ i ].objects_buffer;
+        buffer_descriptor.offset = 0;
+        buffer_descriptor.range  = sizeof(GpuObjectData) * MAX_OBJECTS;
+
+        write.binding            = 0;
+        write.descriptor_type    = DescriptorType::eStorageBuffer;
+        write.descriptor_count   = 1;
+        write.buffer_descriptors = &buffer_descriptor;
+
+        update_descriptor_set(GraphicContext::get()->device(), frames[ i ].objects_descriptor_set, 1, &write);
+    }
+}
+
+void destroy_frames()
+{
+    Device* device = GraphicContext::get()->device();
+    for (u32 i = 0; i < GraphicContext::frame_count(); ++i)
+    {
+        destroy_descriptor_set(device, frames[ i ].global_descriptor_set);
+        destroy_descriptor_set(device, frames[ i ].objects_descriptor_set);
+        destroy_buffer(device, frames[ i ].global_buffer);
+        destroy_buffer(device, frames[ i ].objects_buffer);
+    }
+}
+
+void create_geometry_buffer()
+{
     BufferDesc buffer_desc{};
-    buffer_desc.size            = 500 * 1024 * 1024;
+    buffer_desc.size            = GEOMETRY_BUFFER_SIZE;
     buffer_desc.descriptor_type = DescriptorType::eVertexBuffer;
     buffer_desc.memory_usage    = MemoryUsage::eGpuOnly;
     create_buffer(GraphicContext::get()->device(), &buffer_desc, &geometry_buffer.vertex_buffer);
@@ -330,11 +379,51 @@ void on_init()
 
     if constexpr (DRAW_INDIRECT)
     {
-        buffer_desc.size            = MAX_COMMANDS * sizeof(VkDrawIndexedIndirectCommand);
+        buffer_desc.size            = MAX_COMMANDS * sizeof(DrawIndexedIndirectCommand);
         buffer_desc.descriptor_type = DescriptorType::eIndirectBuffer | DescriptorType::eStorageBuffer;
         buffer_desc.memory_usage    = MemoryUsage::eCpuToGpu;
         create_buffer(GraphicContext::get()->device(), &buffer_desc, &geometry_buffer.indirect_buffer);
     }
+}
+
+void destroy_geometry_buffer()
+{
+    Device* device = GraphicContext::get()->device();
+    destroy_buffer(device, geometry_buffer.vertex_buffer);
+    destroy_buffer(device, geometry_buffer.index_buffer);
+    if constexpr (DRAW_INDIRECT)
+    {
+        destroy_buffer(device, geometry_buffer.indirect_buffer);
+    }
+}
+
+void on_init()
+{
+    FileSystem::set_shaders_directory("../../sandbox/shaders/");
+    FileSystem::set_models_directory("../../sandbox/models/");
+    FileSystem::set_textures_directory("../../sandbox/textures/");
+
+    GraphicContextDesc desc{};
+    desc.width         = SCREEN_WIDTH;
+    desc.height        = SCREEN_HEIGHT;
+    desc.builtin_depth = true;
+    GraphicContext::init(desc);
+
+    ResourceLoader::init(GraphicContext::get()->device());
+
+    camera.init_camera(Vector3(0.0f, 1.0, 3.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));
+    camera_controller.init(get_app_input_system(), camera);
+
+    create_pipeline();
+    create_frames();
+    create_geometry_buffer();
+
+    Mesh mesh{};
+    load_mesh(mesh, FileSystem::get_models_directory() + "plane.gltf");
+    load_geometry(geometries.emplace_back(), mesh);
+    mesh = {};
+    load_mesh(mesh, FileSystem::get_models_directory() + "venus.gltf");
+    load_geometry(geometries.emplace_back(), mesh);
 
     auto generate_color = []() {
         Vector4 color;
@@ -345,15 +434,6 @@ void on_init()
 
         return color;
     };
-
-    std::vector<Vector3> vertices{ Vector3(-0.5, -0.5, 0.0), Vector3(0.5, -0.5, 0.0), Vector3(0.0, 0.5, 0.0) };
-
-    Mesh mesh{};
-    load_mesh(mesh, FileSystem::get_models_directory() + "plane.gltf");
-    load_geometry(geometries.emplace_back(), mesh);
-    mesh = {};
-    load_mesh(mesh, FileSystem::get_models_directory() + "venus.gltf");
-    load_geometry(geometries.emplace_back(), mesh);
 
     colors.emplace_back(generate_color());
     colors.emplace_back(generate_color());
@@ -368,16 +448,19 @@ void on_resize(u32 width, u32 height)
 
 void on_update(f32 delta_time)
 {
-    camera_controller.update(delta_time);
-    global_ubo.view = camera.get_view_matrix();
-    ResourceLoader::upload_buffer(global_ubo_buffer, 0, sizeof(GlobalUbo), &global_ubo);
-
     auto* context = GraphicContext::get();
     auto* cmd     = context->acquire_cmd();
+    auto& frame   = frames[ context->frame_index() ];
+
+    camera_controller.update(delta_time);
+    global_ubo.view = camera.get_view_matrix();
+    ResourceLoader::upload_buffer(frame.global_buffer, 0, sizeof(GlobalUbo), &global_ubo);
+
     context->begin_frame();
     context->begin_render_pass(0.4, 0.1, 0.2, 1.0);
     cmd_bind_pipeline(cmd, pipeline);
-    cmd_bind_descriptor_set(cmd, 0, set, pipeline);
+    cmd_bind_descriptor_set(cmd, 0, frame.global_descriptor_set, pipeline);
+    cmd_bind_descriptor_set(cmd, 1, frame.objects_descriptor_set, pipeline);
     cmd_set_viewport(cmd, 0, 0, context->width(), context->height(), 0.1f, 1.0f);
     cmd_set_scissor(cmd, 0, 0, context->width(), context->height());
     cmd_bind_vertex_buffer(cmd, geometry_buffer.vertex_buffer, 0);
@@ -385,38 +468,44 @@ void on_update(f32 delta_time)
 
     if constexpr (DRAW_INDIRECT)
     {
-        map_memory(context->device(), geometry_buffer.indirect_buffer);
-        VkDrawIndexedIndirectCommand* draw_commands =
-            ( VkDrawIndexedIndirectCommand* ) geometry_buffer.indirect_buffer->mapped_memory;
-
-        cmd_push_constants(cmd, pipeline, 0, sizeof(Vector4), &colors[ 0 ]);
+        auto* draw_commands =
+            ( DrawIndexedIndirectCommand* ) ResourceLoader::begin_upload_buffer(geometry_buffer.indirect_buffer);
+        auto* objects_data = ( GpuObjectData* ) ResourceLoader::begin_upload_buffer(frame.objects_buffer);
 
         for (u32 i = 0; i < geometries.size(); i++)
         {
+
             Geometry& geometry               = geometries[ i ];
             draw_commands[ i ].indexCount    = geometries[ i ].index_count;
             draw_commands[ i ].instanceCount = 1;
             draw_commands[ i ].firstIndex    = geometries[ i ].first_index;
             draw_commands[ i ].vertexOffset  = geometries[ i ].first_vertex;
-            draw_commands[ i ].firstInstance = 0;
+            draw_commands[ i ].firstInstance = i;
         }
 
-        u32 draw_stride = sizeof(VkDrawIndexedIndirectCommand);
-        vkCmdDrawIndexedIndirect(
-            cmd->command_buffer, geometry_buffer.indirect_buffer->buffer, 0, geometries.size(), draw_stride);
+        ResourceLoader::end_upload_buffer(geometry_buffer.indirect_buffer);
+        ResourceLoader::end_upload_buffer(frame.objects_buffer);
 
-        unmap_memory(context->device(), geometry_buffer.indirect_buffer);
+        u32 draw_stride = sizeof(DrawIndexedIndirectCommand);
+        cmd_draw_indexed_indirect(cmd, geometry_buffer.indirect_buffer, 0, geometries.size(), draw_stride);
     }
     else
     {
+        auto* objects_data = ( GpuObjectData* ) ResourceLoader::begin_upload_buffer(frame.objects_buffer);
+
         for (u32 i = 0; i < geometries.size(); ++i)
         {
+            objects_data[ i ].model = Matrix4(1.0);
+            objects_data[ i ].color = colors[ i ];
+
             i32 first_vertex = geometries[ i ].first_vertex;
             u32 first_index  = geometries[ i ].first_index;
             u32 index_count  = geometries[ i ].index_count;
             cmd_push_constants(cmd, pipeline, 0, sizeof(Vector4), &colors[ i ]);
-            cmd_draw_indexed(cmd, index_count, 1, first_index, first_vertex, 0);
+            cmd_draw_indexed(cmd, index_count, 1, first_index, first_vertex, i);
         }
+
+        ResourceLoader::end_upload_buffer(frame.objects_buffer);
     }
 
     context->end_render_pass();
@@ -427,16 +516,9 @@ void on_shutdown()
 {
     auto* device = GraphicContext::get()->device();
     device_wait_idle(device);
-    destroy_buffer(device, global_ubo_buffer);
-    destroy_buffer(device, geometry_buffer.vertex_buffer);
-    destroy_buffer(device, geometry_buffer.index_buffer);
-    if constexpr (DRAW_INDIRECT)
-    {
-        destroy_buffer(device, geometry_buffer.indirect_buffer);
-    }
-    destroy_pipeline(device, pipeline);
-    destroy_descriptor_set(device, set);
-    destroy_descriptor_set_layout(device, dsl);
+    destroy_geometry_buffer();
+    destroy_frames();
+    destroy_pipeline();
     ResourceLoader::shutdown();
     GraphicContext::shutdown();
 }

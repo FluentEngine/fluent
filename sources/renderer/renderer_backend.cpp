@@ -466,6 +466,11 @@ static inline VkBufferUsageFlags determine_vk_buffer_usage(DescriptorType descri
         buffer_usage |= (VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     }
 
+    if (b32(descriptor_type & DescriptorType::eStorageBuffer))
+    {
+        buffer_usage |= (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+    }
+
     return buffer_usage;
 }
 
@@ -762,14 +767,17 @@ void destroy_renderer_backend(RendererBackend* renderer)
     delete renderer;
 }
 
-void map_memory(const Device* device, Buffer* buffer)
+void* map_memory(const Device* device, Buffer* buffer)
 {
+    FT_ASSERT(buffer != nullptr);
     FT_ASSERT(buffer->mapped_memory == nullptr);
     vmaMapMemory(device->memory_allocator, buffer->allocation, &buffer->mapped_memory);
+    return buffer->mapped_memory;
 }
 
 void unmap_memory(const Device* device, Buffer* buffer)
 {
+    FT_ASSERT(buffer);
     FT_ASSERT(buffer->mapped_memory);
     vmaUnmapMemory(device->memory_allocator, buffer->allocation);
     buffer->mapped_memory = nullptr;
@@ -830,9 +838,14 @@ void create_device(const RendererBackend* renderer, const DeviceDesc* desc, Devi
     multiview_features.multiview = true;
     multiview_features.pNext     = &descriptor_indexing_features;
 
+    VkPhysicalDeviceShaderDrawParametersFeatures shader_draw_parameters_features{};
+    shader_draw_parameters_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETER_FEATURES;
+    shader_draw_parameters_features.shaderDrawParameters = true;
+    shader_draw_parameters_features.pNext                = &multiview_features;
+
     VkDeviceCreateInfo device_create_info{};
     device_create_info.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    device_create_info.pNext                   = &multiview_features;
+    device_create_info.pNext                   = &shader_draw_parameters_features;
     device_create_info.flags                   = 0;
     device_create_info.queueCreateInfoCount    = queue_create_info_count;
     device_create_info.pQueueCreateInfos       = queue_create_infos;
@@ -2195,6 +2208,19 @@ void cmd_clear_color_image(const CommandBuffer* cmd, Image* image, Vector4 color
         cmd->command_buffer, image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
 }
 
+void cmd_draw_indexed_indirect(const CommandBuffer* cmd, const Buffer* buffer, u64 offset, u32 draw_count, u32 stride)
+{
+    vkCmdDrawIndexedIndirect(cmd->command_buffer, buffer->buffer, offset, draw_count, stride);
+}
+
+void cmd_bind_descriptor_set(
+    const CommandBuffer* cmd, u32 first_set, const DescriptorSet* set, const Pipeline* pipeline)
+{
+    vkCmdBindDescriptorSets(
+        cmd->command_buffer, to_vk_pipeline_bind_point(pipeline->type), pipeline->pipeline_layout, first_set, 1,
+        &set->descriptor_set, 0, nullptr);
+}
+
 void create_buffer(const Device* device, const BufferDesc* desc, Buffer** p_buffer)
 {
     FT_ASSERT(p_buffer);
@@ -2231,14 +2257,6 @@ void destroy_buffer(const Device* device, Buffer* buffer)
     FT_ASSERT(buffer->buffer);
     vmaDestroyBuffer(device->memory_allocator, buffer->buffer, buffer->allocation);
     delete buffer;
-}
-
-void cmd_bind_descriptor_set(
-    const CommandBuffer* cmd, u32 first_set, const DescriptorSet* set, const Pipeline* pipeline)
-{
-    vkCmdBindDescriptorSets(
-        cmd->command_buffer, to_vk_pipeline_bind_point(pipeline->type), pipeline->pipeline_layout, first_set, 1,
-        &set->descriptor_set, 0, nullptr);
 }
 
 void create_sampler(const Device* device, const SamplerDesc* desc, Sampler** p_sampler)

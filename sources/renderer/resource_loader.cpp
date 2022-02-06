@@ -51,6 +51,8 @@ Buffer* ResourceLoader::create_staging_buffer(u64 size, const void* data)
 
 void ResourceLoader::upload_buffer(Buffer* buffer, u64 offset, u64 size, const void* data)
 {
+    FT_ASSERT(buffer);
+    FT_ASSERT(data);
     FT_ASSERT(size + offset <= buffer->size);
 
     if (need_staging(buffer))
@@ -68,6 +70,34 @@ void ResourceLoader::upload_buffer(Buffer* buffer, u64 offset, u64 size, const v
     {
         map_memory(m_device, buffer);
         std::memcpy(( u8* ) buffer->mapped_memory + offset, data, size);
+        unmap_memory(m_device, buffer);
+    }
+}
+
+void* ResourceLoader::begin_upload_buffer(Buffer* buffer)
+{
+    FT_ASSERT(buffer);
+    if (need_staging(buffer))
+    {
+        // TODO:
+        return nullptr;
+    }
+    else
+    {
+        map_memory(m_device, buffer);
+        return buffer->mapped_memory;
+    }
+}
+
+void ResourceLoader::end_upload_buffer(Buffer* buffer)
+{
+    FT_ASSERT(buffer);
+    if (need_staging(buffer))
+    {
+        // TODO:
+    }
+    else
+    {
         unmap_memory(m_device, buffer);
     }
 }

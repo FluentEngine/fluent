@@ -375,6 +375,9 @@ struct DescriptorWrite
     BufferDescriptor* buffer_descriptors;
 };
 
+// TODO:
+using DrawIndexedIndirectCommand = VkDrawIndexedIndirectCommand;
+
 struct UiDesc
 {
     const Window*          window;
@@ -491,8 +494,10 @@ void cmd_clear_color_image(const CommandBuffer* cmd, Image* image, Vector4 color
 void create_buffer(const Device* device, const BufferDesc* desc, Buffer** buffer);
 void destroy_buffer(const Device* device, Buffer* buffer);
 
-void map_memory(const Device* device, Buffer* buffer);
-void unmap_memory(const Device* device, Buffer* buffer);
+void* map_memory(const Device* device, Buffer* buffer);
+void  unmap_memory(const Device* device, Buffer* buffer);
+
+void cmd_draw_indexed_indirect(const CommandBuffer* cmd, const Buffer* buffer, u64 offset, u32 draw_count, u32 stride);
 
 void create_sampler(const Device* device, const SamplerDesc* desc, Sampler** sampler);
 void destroy_sampler(const Device* device, Sampler* sampler);
