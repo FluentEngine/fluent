@@ -21,18 +21,18 @@ void Camera::init_camera(Vector3 position, Vector3 direction, Vector3 up)
     recalculate_projection_matrix();
     recalculate_view_matrix();
 
-    m_speed             = 50.0f;
+    m_speed             = 5.0f;
     m_mouse_sensitivity = 0.1f;
 }
 
 void Camera::recalculate_projection_matrix()
 {
-    m_data.projection = create_perspective_matrix(m_fov, m_aspect, m_near, m_far);
+    m_projection = create_perspective_matrix(m_fov, m_aspect, m_near, m_far);
 }
 
 void Camera::recalculate_view_matrix()
 {
-    m_data.view = create_look_at_matrix(m_position, m_direction, m_up);
+    m_view = create_look_at_matrix(m_position, m_direction, m_up);
 }
 
 void Camera::on_move(CameraDirection direction, f32 delta_time)

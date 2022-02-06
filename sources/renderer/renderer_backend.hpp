@@ -343,7 +343,7 @@ struct Device
 
 struct DescriptorSetDesc
 {
-    u32                  index = 0;
+    u32                  set = 0;
     DescriptorSetLayout* descriptor_set_layout;
 };
 
@@ -366,13 +366,13 @@ struct ImageDescriptor
     ResourceState resource_state;
 };
 
-struct DescriptorWriteDesc
+struct DescriptorWrite
 {
     u32               descriptor_count;
     u32               binding;
     DescriptorType    descriptor_type;
-    ImageDescriptor*  descriptor_image_descs;
-    BufferDescriptor* descriptor_buffer_descs;
+    ImageDescriptor*  image_descriptors;
+    BufferDescriptor* buffer_descriptors;
 };
 
 struct UiDesc
@@ -465,22 +465,22 @@ void cmd_set_viewport(const CommandBuffer* cmd, f32 x, f32 y, f32 width, f32 hei
 void cmd_bind_pipeline(const CommandBuffer* cmd, const Pipeline* pipeline);
 void cmd_draw(const CommandBuffer* cmd, u32 vertex_count, u32 instance_count, u32 first_vertex, u32 first_instance);
 void cmd_draw_indexed(
-    const CommandBuffer* cmd, u32 index_count, u32 instance_count, u32 first_index, u32 vertex_offset,
+    const CommandBuffer* cmd, u32 index_count, u32 instance_count, u32 first_index, i32 vertex_offset,
     u32 first_instance);
 
 void cmd_bind_vertex_buffer(const CommandBuffer* cmd, const Buffer* buffer, const u64 offset);
 void cmd_bind_index_buffer_u32(const CommandBuffer* cmd, const Buffer* buffer, const u64 offset);
 
 void cmd_copy_buffer(
-    const CommandBuffer* cmd, const Buffer* src, u32 src_offset, Buffer* dst, u32 dst_offset, u32 size);
+    const CommandBuffer* cmd, const Buffer* src, u64 src_offset, Buffer* dst, u64 dst_offset, u64 size);
 
-void cmd_copy_buffer_to_image(const CommandBuffer* cmd, const Buffer* src, u32 src_offset, Image* dst);
+void cmd_copy_buffer_to_image(const CommandBuffer* cmd, const Buffer* src, u64 src_offset, Image* dst);
 void cmd_bind_descriptor_set(
     const CommandBuffer* cmd, u32 first_set, const DescriptorSet* set, const Pipeline* pipeline);
 
 void cmd_dispatch(const CommandBuffer* cmd, u32 group_count_x, u32 group_count_y, u32 group_count_z);
 
-void cmd_push_constants(const CommandBuffer* cmd, const Pipeline* pipeline, u32 offset, u32 size, const void* data);
+void cmd_push_constants(const CommandBuffer* cmd, const Pipeline* pipeline, u64 offset, u64 size, const void* data);
 
 void cmd_blit_image(
     const CommandBuffer* cmd, const Image* src, ResourceState src_state, Image* dst, ResourceState dst_state,
@@ -502,7 +502,7 @@ void destroy_image(const Device* device, Image* image);
 
 void create_descriptor_set(const Device* device, const DescriptorSetDesc* desc, DescriptorSet** descriptor_set);
 void destroy_descriptor_set(const Device* device, DescriptorSet* set);
-void update_descriptor_set(const Device* device, DescriptorSet* set, u32 count, const DescriptorWriteDesc* descs);
+void update_descriptor_set(const Device* device, DescriptorSet* set, u32 count, const DescriptorWrite* writes);
 
 void create_ui_context(const UiDesc* desc, UiContext** ui_context);
 void destroy_ui_context(const Device* device, const UiContext* context);

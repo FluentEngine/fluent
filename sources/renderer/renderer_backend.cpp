@@ -2061,7 +2061,7 @@ void cmd_draw(const CommandBuffer* cmd, u32 vertex_count, u32 instance_count, u3
 }
 
 void cmd_draw_indexed(
-    const CommandBuffer* cmd, u32 index_count, u32 instance_count, u32 first_index, u32 vertex_offset,
+    const CommandBuffer* cmd, u32 index_count, u32 instance_count, u32 first_index, i32 vertex_offset,
     u32 first_instance)
 {
     vkCmdDrawIndexed(cmd->command_buffer, index_count, instance_count, first_index, vertex_offset, first_instance);
@@ -2077,7 +2077,7 @@ void cmd_bind_index_buffer_u32(const CommandBuffer* cmd, const Buffer* buffer, u
     vkCmdBindIndexBuffer(cmd->command_buffer, buffer->buffer, offset, VK_INDEX_TYPE_UINT32);
 }
 
-void cmd_copy_buffer(const CommandBuffer* cmd, const Buffer* src, u32 src_offset, Buffer* dst, u32 dst_offset, u32 size)
+void cmd_copy_buffer(const CommandBuffer* cmd, const Buffer* src, u64 src_offset, Buffer* dst, u64 dst_offset, u64 size)
 {
     VkBufferCopy buffer_copy{};
     buffer_copy.srcOffset = src_offset;
@@ -2087,7 +2087,7 @@ void cmd_copy_buffer(const CommandBuffer* cmd, const Buffer* src, u32 src_offset
     vkCmdCopyBuffer(cmd->command_buffer, src->buffer, dst->buffer, 1, &buffer_copy);
 }
 
-void cmd_copy_buffer_to_image(const CommandBuffer* cmd, const Buffer* src, u32 src_offset, Image* dst)
+void cmd_copy_buffer_to_image(const CommandBuffer* cmd, const Buffer* src, u64 src_offset, Image* dst)
 {
     auto dst_layers = get_image_subresource_layers(dst);
 
@@ -2109,7 +2109,7 @@ void cmd_dispatch(const CommandBuffer* cmd, u32 group_count_x, u32 group_count_y
     vkCmdDispatch(cmd->command_buffer, group_count_x, group_count_y, group_count_z);
 }
 
-void cmd_push_constants(const CommandBuffer* cmd, const Pipeline* pipeline, u32 offset, u32 size, const void* data)
+void cmd_push_constants(const CommandBuffer* cmd, const Pipeline* pipeline, u64 offset, u64 size, const void* data)
 {
     vkCmdPushConstants(
         cmd->command_buffer, pipeline->pipeline_layout,
@@ -2367,7 +2367,7 @@ void create_descriptor_set(const Device* device, const DescriptorSetDesc* desc, 
     descriptor_set_allocate_info.pNext              = nullptr;
     descriptor_set_allocate_info.descriptorPool     = device->descriptor_pool;
     descriptor_set_allocate_info.descriptorSetCount = 1;
-    descriptor_set_allocate_info.pSetLayouts = &desc->descriptor_set_layout->descriptor_set_layouts[ desc->index ];
+    descriptor_set_allocate_info.pSetLayouts        = &desc->descriptor_set_layout->descriptor_set_layouts[ desc->set ];
 
     VK_ASSERT(vkAllocateDescriptorSets(
         device->logical_device, &descriptor_set_allocate_info, &descriptor_set->descriptor_set));
@@ -2381,7 +2381,7 @@ void destroy_descriptor_set(const Device* device, DescriptorSet* set)
     delete set;
 }
 
-void update_descriptor_set(const Device* device, DescriptorSet* set, u32 count, const DescriptorWriteDesc* descs)
+void update_descriptor_set(const Device* device, DescriptorSet* set, u32 count, const DescriptorWrite* writes)
 {
     FT_ASSERT(set);
     // TODO: rewrite
@@ -2395,7 +2395,7 @@ void update_descriptor_set(const Device* device, DescriptorSet* set, u32 count, 
 
     for (u32 i = 0; i < count; ++i)
     {
-        const auto& descriptor_write = descs[ i ];
+        const auto& descriptor_write = writes[ i ];
 
         auto& write_descriptor_set           = descriptor_writes[ write++ ];
         write_descriptor_set                 = {};
@@ -2405,7 +2405,7 @@ void update_descriptor_set(const Device* device, DescriptorSet* set, u32 count, 
         write_descriptor_set.dstSet          = set->descriptor_set;
         write_descriptor_set.descriptorType  = to_vk_descriptor_type(descriptor_write.descriptor_type);
 
-        if (descriptor_write.descriptor_buffer_descs)
+        if (descriptor_write.buffer_descriptors)
         {
             auto& bds = buffer_updates.emplace_back();
             bds.resize(descriptor_write.descriptor_count);
@@ -2413,9 +2413,9 @@ void update_descriptor_set(const Device* device, DescriptorSet* set, u32 count, 
             for (u32 j = 0; j < descriptor_write.descriptor_count; ++j)
             {
                 bds[ j ]        = {};
-                bds[ j ].buffer = descriptor_write.descriptor_buffer_descs[ j ].buffer->buffer;
-                bds[ j ].offset = descriptor_write.descriptor_buffer_descs[ j ].offset;
-                bds[ j ].range  = descriptor_write.descriptor_buffer_descs[ j ].range;
+                bds[ j ].buffer = descriptor_write.buffer_descriptors[ j ].buffer->buffer;
+                bds[ j ].offset = descriptor_write.buffer_descriptors[ j ].offset;
+                bds[ j ].range  = descriptor_write.buffer_descriptors[ j ].range;
             }
 
             write_descriptor_set.pBufferInfo = bds.data();
@@ -2427,14 +2427,14 @@ void update_descriptor_set(const Device* device, DescriptorSet* set, u32 count, 
 
             for (u32 j = 0; j < descriptor_write.descriptor_count; ++j)
             {
-                auto& image_write = descriptor_write.descriptor_image_descs[ j ];
+                auto& image_write = descriptor_write.image_descriptors[ j ];
                 ids[ j ]          = {};
 
                 if (image_write.image)
                 {
                     ids[ j ].imageLayout = determine_image_layout(image_write.resource_state);
                     ids[ j ].imageView   = image_write.image->image_view;
-                    ids[ j ].sampler     = image_write.sampler ? image_write.sampler->sampler : nullptr;
+                    ids[ j ].sampler     = nullptr;
                 }
                 else
                 {

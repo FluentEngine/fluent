@@ -1,9 +1,13 @@
 #version 450
 
-layout(location = 0) in vec3 iColor;
-layout(location = 0) out vec4 outColor;
+layout(location = 0) out vec4 out_color;
+
+layout (push_constant) uniform constants
+{
+	vec4 color;
+} pc;
 
 void main()
 {
-    outColor = vec4(iColor, 1.0);
+    out_color = vec4(pc.color);
 }

@@ -34,7 +34,7 @@ void ResourceLoader::shutdown()
     destroy_queue(m_queue);
 }
 
-Buffer* ResourceLoader::create_staging_buffer(u32 size, const void* data)
+Buffer* ResourceLoader::create_staging_buffer(u64 size, const void* data)
 {
     BufferDesc desc{};
     desc.memory_usage = MemoryUsage::eCpuOnly;
@@ -49,7 +49,7 @@ Buffer* ResourceLoader::create_staging_buffer(u32 size, const void* data)
     return staging_buffer;
 }
 
-void ResourceLoader::upload_buffer(Buffer* buffer, u32 offset, u32 size, const void* data)
+void ResourceLoader::upload_buffer(Buffer* buffer, u64 offset, u64 size, const void* data)
 {
     FT_ASSERT(size + offset <= buffer->size);
 
@@ -72,7 +72,7 @@ void ResourceLoader::upload_buffer(Buffer* buffer, u32 offset, u32 size, const v
     }
 }
 
-void ResourceLoader::upload_image(Image* image, u32 size, const void* data)
+void ResourceLoader::upload_image(Image* image, u64 size, const void* data)
 {
     Buffer* staging_buffer = create_staging_buffer(size, data);
 

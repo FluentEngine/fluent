@@ -69,6 +69,8 @@ void GraphicContext::on_resize(u32 width, u32 height)
 {
     queue_wait_idle(m_queue);
     resize_swapchain(m_device, m_swapchain, width, height);
+    m_width  = width;
+    m_height = height;
 }
 
 void GraphicContext::init(const GraphicContextDesc& desc)

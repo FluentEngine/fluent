@@ -13,12 +13,6 @@ enum class CameraDirection
     eRight
 };
 
-struct CameraData
-{
-    Matrix4 projection;
-    Matrix4 view;
-};
-
 class Camera
 {
 private:
@@ -29,12 +23,13 @@ private:
     f32 m_yaw;
     f32 m_pitch;
 
-    Vector3    m_position;
-    Vector3    m_direction;
-    Vector3    m_up;
-    Vector3    m_world_up;
-    Vector3    m_right;
-    CameraData m_data;
+    Vector3 m_position;
+    Vector3 m_direction;
+    Vector3 m_up;
+    Vector3 m_world_up;
+    Vector3 m_right;
+    Matrix4 m_projection;
+    Matrix4 m_view;
 
     f32 m_speed;
     f32 m_mouse_sensitivity;
@@ -50,9 +45,14 @@ public:
 
     void on_resize(u32 width, u32 height);
 
-    const CameraData& get_data() const
+    const Matrix4& get_projection_matrix() const
     {
-        return m_data;
+        return m_projection;
+    }
+
+    const Matrix4& get_view_matrix() const
+    {
+        return m_view;
     }
 
     const Vector3& get_position() const
@@ -71,4 +71,4 @@ public:
     void init(const InputSystem* input_system, Camera& camera);
     void update(f32 delta_time);
 };
-}
+} // namespace fluent
