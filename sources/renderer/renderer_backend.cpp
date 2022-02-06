@@ -458,8 +458,12 @@ static inline VkBufferUsageFlags determine_vk_buffer_usage(DescriptorType descri
 
     if (b32(descriptor_type & DescriptorType::eUniformBuffer))
     {
-        buffer_usage |=
-            (VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+        buffer_usage |= (VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+    }
+
+    if (b32(descriptor_type & DescriptorType::eIndirectBuffer))
+    {
+        buffer_usage |= (VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     }
 
     return buffer_usage;
@@ -814,7 +818,8 @@ void create_device(const RendererBackend* renderer, const DeviceDesc* desc, Devi
 
     // TODO: check support
     VkPhysicalDeviceFeatures used_features{};
-    used_features.fillModeNonSolid = true;
+    used_features.fillModeNonSolid  = true;
+    used_features.multiDrawIndirect = true;
 
     VkPhysicalDeviceDescriptorIndexingFeatures descriptor_indexing_features{};
     descriptor_indexing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;

@@ -275,11 +275,12 @@ enum class DescriptorType : u32
     eUniformTexelBuffer     = BIT(7),
     eStorageTexelBuffer     = BIT(8),
     eStorageBuffer          = BIT(9),
-    eUniformBufferDynamic   = BIT(10),
-    eStorageBufferDynamic   = BIT(11),
-    eInputAttachment        = BIT(12),
-    eDepthStencilAttachment = BIT(13),
-    eColorAttachment        = BIT(14)
+    eIndirectBuffer         = BIT(10),
+    eUniformBufferDynamic   = BIT(11),
+    eStorageBufferDynamic   = BIT(12),
+    eInputAttachment        = BIT(13),
+    eDepthStencilAttachment = BIT(14),
+    eColorAttachment        = BIT(15)
 };
 MAKE_ENUM_FLAG(u32, DescriptorType);
 

@@ -8,6 +8,8 @@ using namespace fluent;
 static constexpr u32 SCREEN_WIDTH  = 1400;
 static constexpr u32 SCREEN_HEIGHT = 900;
 
+static constexpr b32 DRAW_INDIRECT = false;
+
 struct GlobalUbo
 {
     Matrix4 projection;
@@ -33,12 +35,18 @@ DescriptorSetLayout* dsl;
 Pipeline*            pipeline;
 DescriptorSet*       set;
 
-u64     current_vertex_offset = 0;
-u32     total_vertex_count    = 0;
-Buffer* vertex_buffer         = nullptr;
-u64     current_index_offset  = 0;
-u32     total_index_count     = 0;
-Buffer* index_buffer          = nullptr;
+static constexpr u32 MAX_COMMANDS = 100;
+
+struct GeometryBuffer
+{
+    u64     current_vertex_offset = 0;
+    u32     total_vertex_count    = 0;
+    Buffer* vertex_buffer         = nullptr;
+    u64     current_index_offset  = 0;
+    u32     total_index_count     = 0;
+    Buffer* index_buffer          = nullptr;
+    Buffer* indirect_buffer       = nullptr;
+} geometry_buffer;
 
 Buffer*               global_ubo_buffer = nullptr;
 std::vector<Geometry> geometries;
@@ -197,19 +205,21 @@ void load_geometry(Geometry& geometry, const Mesh& mesh)
     auto& indices  = mesh.indices;
 
     u64 vertex_upload_size = vertices.size() * sizeof(vertices[ 0 ]);
-    ResourceLoader::upload_buffer(vertex_buffer, current_vertex_offset, vertex_upload_size, vertices.data());
+    ResourceLoader::upload_buffer(
+        geometry_buffer.vertex_buffer, geometry_buffer.current_vertex_offset, vertex_upload_size, vertices.data());
     u64 index_upload_size = indices.size() * sizeof(indices[ 0 ]);
-    ResourceLoader::upload_buffer(index_buffer, current_index_offset, index_upload_size, indices.data());
+    ResourceLoader::upload_buffer(
+        geometry_buffer.index_buffer, geometry_buffer.current_index_offset, index_upload_size, indices.data());
 
-    geometry.first_index  = total_index_count;
-    geometry.first_vertex = total_vertex_count;
+    geometry.first_index  = geometry_buffer.total_index_count;
+    geometry.first_vertex = geometry_buffer.total_vertex_count;
     geometry.index_count  = indices.size();
 
-    total_index_count += indices.size();
-    total_vertex_count += mesh.positions.size();
+    geometry_buffer.total_index_count += indices.size();
+    geometry_buffer.total_vertex_count += mesh.positions.size();
 
-    current_vertex_offset += vertex_upload_size;
-    current_index_offset += index_upload_size;
+    geometry_buffer.current_vertex_offset += vertex_upload_size;
+    geometry_buffer.current_index_offset += index_upload_size;
 }
 
 void create_descriptor_set()
@@ -243,7 +253,7 @@ void on_init()
     GraphicContextDesc desc{};
     desc.width         = SCREEN_WIDTH;
     desc.height        = SCREEN_HEIGHT;
-    desc.builtin_depth = false;
+    desc.builtin_depth = true;
     GraphicContext::init(desc);
 
     ResourceLoader::init(GraphicContext::get()->device());
@@ -282,10 +292,11 @@ void on_init()
     pipeline_desc.shader_count                  = 2;
     pipeline_desc.shaders[ 0 ]                  = shaders[ 0 ];
     pipeline_desc.shaders[ 1 ]                  = shaders[ 1 ];
-    pipeline_desc.rasterizer_desc.cull_mode     = CullMode::eNone;
+    pipeline_desc.rasterizer_desc.cull_mode     = CullMode::eBack;
     pipeline_desc.rasterizer_desc.front_face    = FrontFace::eCounterClockwise;
-    pipeline_desc.depth_state_desc.depth_test   = false;
-    pipeline_desc.depth_state_desc.depth_write  = false;
+    pipeline_desc.depth_state_desc.depth_test   = true;
+    pipeline_desc.depth_state_desc.depth_write  = true;
+    pipeline_desc.depth_state_desc.compare_op   = CompareOp::eLess;
     pipeline_desc.descriptor_set_layout         = dsl;
     pipeline_desc.render_pass                   = GraphicContext::get()->swapchain()->render_passes[ 0 ];
 
@@ -313,9 +324,17 @@ void on_init()
     buffer_desc.size            = 500 * 1024 * 1024;
     buffer_desc.descriptor_type = DescriptorType::eVertexBuffer;
     buffer_desc.memory_usage    = MemoryUsage::eGpuOnly;
-    create_buffer(GraphicContext::get()->device(), &buffer_desc, &vertex_buffer);
+    create_buffer(GraphicContext::get()->device(), &buffer_desc, &geometry_buffer.vertex_buffer);
     buffer_desc.descriptor_type = DescriptorType::eIndexBuffer;
-    create_buffer(GraphicContext::get()->device(), &buffer_desc, &index_buffer);
+    create_buffer(GraphicContext::get()->device(), &buffer_desc, &geometry_buffer.index_buffer);
+
+    if constexpr (DRAW_INDIRECT)
+    {
+        buffer_desc.size            = MAX_COMMANDS * sizeof(VkDrawIndexedIndirectCommand);
+        buffer_desc.descriptor_type = DescriptorType::eIndirectBuffer | DescriptorType::eStorageBuffer;
+        buffer_desc.memory_usage    = MemoryUsage::eCpuToGpu;
+        create_buffer(GraphicContext::get()->device(), &buffer_desc, &geometry_buffer.indirect_buffer);
+    }
 
     auto generate_color = []() {
         Vector4 color;
@@ -333,7 +352,7 @@ void on_init()
     load_mesh(mesh, FileSystem::get_models_directory() + "plane.gltf");
     load_geometry(geometries.emplace_back(), mesh);
     mesh = {};
-    load_mesh(mesh, FileSystem::get_models_directory() + "deer.gltf");
+    load_mesh(mesh, FileSystem::get_models_directory() + "venus.gltf");
     load_geometry(geometries.emplace_back(), mesh);
 
     colors.emplace_back(generate_color());
@@ -361,17 +380,43 @@ void on_update(f32 delta_time)
     cmd_bind_descriptor_set(cmd, 0, set, pipeline);
     cmd_set_viewport(cmd, 0, 0, context->width(), context->height(), 0.1f, 1.0f);
     cmd_set_scissor(cmd, 0, 0, context->width(), context->height());
+    cmd_bind_vertex_buffer(cmd, geometry_buffer.vertex_buffer, 0);
+    cmd_bind_index_buffer_u32(cmd, geometry_buffer.index_buffer, 0);
 
-    cmd_bind_vertex_buffer(cmd, vertex_buffer, 0);
-    cmd_bind_index_buffer_u32(cmd, index_buffer, 0);
-
-    for (u32 i = 0; i < geometries.size(); ++i)
+    if constexpr (DRAW_INDIRECT)
     {
-        i32 first_vertex = geometries[ i ].first_vertex;
-        u32 first_index  = geometries[ i ].first_index;
-        u32 index_count  = geometries[ i ].index_count;
-        cmd_push_constants(cmd, pipeline, 0, sizeof(Vector4), &colors[ i ]);
-        cmd_draw_indexed(cmd, index_count, 1, first_index, first_vertex, 0);
+        map_memory(context->device(), geometry_buffer.indirect_buffer);
+        VkDrawIndexedIndirectCommand* draw_commands =
+            ( VkDrawIndexedIndirectCommand* ) geometry_buffer.indirect_buffer->mapped_memory;
+
+        cmd_push_constants(cmd, pipeline, 0, sizeof(Vector4), &colors[ 0 ]);
+
+        for (u32 i = 0; i < geometries.size(); i++)
+        {
+            Geometry& geometry               = geometries[ i ];
+            draw_commands[ i ].indexCount    = geometries[ i ].index_count;
+            draw_commands[ i ].instanceCount = 1;
+            draw_commands[ i ].firstIndex    = geometries[ i ].first_index;
+            draw_commands[ i ].vertexOffset  = geometries[ i ].first_vertex;
+            draw_commands[ i ].firstInstance = 0;
+        }
+
+        u32 draw_stride = sizeof(VkDrawIndexedIndirectCommand);
+        vkCmdDrawIndexedIndirect(
+            cmd->command_buffer, geometry_buffer.indirect_buffer->buffer, 0, geometries.size(), draw_stride);
+
+        unmap_memory(context->device(), geometry_buffer.indirect_buffer);
+    }
+    else
+    {
+        for (u32 i = 0; i < geometries.size(); ++i)
+        {
+            i32 first_vertex = geometries[ i ].first_vertex;
+            u32 first_index  = geometries[ i ].first_index;
+            u32 index_count  = geometries[ i ].index_count;
+            cmd_push_constants(cmd, pipeline, 0, sizeof(Vector4), &colors[ i ]);
+            cmd_draw_indexed(cmd, index_count, 1, first_index, first_vertex, 0);
+        }
     }
 
     context->end_render_pass();
@@ -383,8 +428,12 @@ void on_shutdown()
     auto* device = GraphicContext::get()->device();
     device_wait_idle(device);
     destroy_buffer(device, global_ubo_buffer);
-    destroy_buffer(device, vertex_buffer);
-    destroy_buffer(device, index_buffer);
+    destroy_buffer(device, geometry_buffer.vertex_buffer);
+    destroy_buffer(device, geometry_buffer.index_buffer);
+    if constexpr (DRAW_INDIRECT)
+    {
+        destroy_buffer(device, geometry_buffer.indirect_buffer);
+    }
     destroy_pipeline(device, pipeline);
     destroy_descriptor_set(device, set);
     destroy_descriptor_set_layout(device, dsl);
