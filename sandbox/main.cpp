@@ -241,8 +241,8 @@ void load_geometry(Geometry& geometry, const Mesh& mesh)
 
 void create_pipeline()
 {
-    auto vert_code = read_file_binary(FileSystem::get_shaders_directory() + "/triangle.vert.glsl.spv");
-    auto frag_code = read_file_binary(FileSystem::get_shaders_directory() + "/triangle.frag.glsl.spv");
+    auto vert_code = read_file_binary(FileSystem::get_shaders_directory() + "/main.vert.glsl.spv");
+    auto frag_code = read_file_binary(FileSystem::get_shaders_directory() + "/main.frag.glsl.spv");
 
     ShaderDesc shader_descs[ 2 ];
     shader_descs[ 0 ].stage         = ShaderStage::eVertex;

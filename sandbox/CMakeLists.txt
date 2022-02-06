@@ -6,21 +6,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/${target})
 
 project(${target} CXX)
 
-set(SHADERS
-  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/main.vert.glsl
-  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/phong.frag.glsl
-  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/color.frag.glsl
-  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/triangle.vert.glsl
-  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/triangle.frag.glsl
-)
+file(GLOB SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.glsl)
 
-set(COMPILED_SHADERS
-  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/main.vert.glsl.spv
-  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/phong.frag.glsl.spv
-  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/color.frag.glsl.spv
-  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/triangle.vert.glsl.spv
-  ${CMAKE_CURRENT_SOURCE_DIR}/shaders/triangle.frag.glsl.spv
-)
+foreach(source IN LISTS SHADERS)
+  list(APPEND COMPILED_SHADERS ${source}.spv)
+endforeach()
 
 compile_shaders(${SHADERS})
 
