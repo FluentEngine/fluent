@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include "fluent/fluent.hpp"
-#include "cgltf.h"
+#include "model.hpp"
 
 using namespace fluent;
 
@@ -20,12 +20,18 @@ struct GlobalUbo
     Matrix4 view;
 } global_ubo;
 
-struct Mesh
+struct Material
 {
-    std::vector<Vector3> positions;
-    std::vector<Vector3> normals;
-    std::vector<Vector2> texcoords;
-    std::vector<u32>     indices;
+    u32 base_color = 0;
+    u32 normal     = 0;
+};
+
+struct LoadedTexture
+{
+    u32       id   = 0;
+    ImageDesc desc = {};
+    u64       size = 0;
+    void*     data = nullptr;
 };
 
 struct Geometry
@@ -54,11 +60,17 @@ struct GeometryBuffer
 
 struct FrameData
 {
-    Buffer*        global_buffer          = nullptr;
-    Buffer*        objects_buffer         = nullptr;
-    DescriptorSet* global_descriptor_set  = nullptr;
-    DescriptorSet* objects_descriptor_set = nullptr;
+    Buffer*        global_buffer  = nullptr;
+    Buffer*        objects_buffer = nullptr;
+    DescriptorSet* const_set      = nullptr;
+    DescriptorSet* material_set   = nullptr;
 };
+
+struct DefaultResources
+{
+    Sampler* sampler = nullptr;
+    Image*   magenta = nullptr;
+} default_resources;
 
 DescriptorSetLayout* dsl;
 Pipeline*            pipeline;
@@ -68,176 +80,10 @@ FrameData      frames[ GraphicContext::frame_count() ];
 
 std::vector<Geometry> geometries;
 std::vector<Vector4>  colors;
+std::vector<Matrix4>  transforms;
 
 Camera           camera;
 CameraController camera_controller;
-
-void gltf_read_float(
-    const float* accessor_data, cgltf_size accessor_num_components, cgltf_size index, cgltf_float* out,
-    cgltf_size out_element_size)
-{
-    const float* input = &accessor_data[ accessor_num_components * index ];
-
-    for (cgltf_size ii = 0; ii < out_element_size; ++ii)
-    {
-        out[ ii ] = (ii < accessor_num_components) ? input[ ii ] : 0.0f;
-    }
-}
-
-void process_mesh_node(Mesh& result, cgltf_node* node)
-{
-    cgltf_mesh* mesh = node->mesh;
-
-    if (mesh)
-    {
-        Matrix4 node_to_world = Matrix4(1.0);
-        cgltf_node_transform_world(node, &node_to_world[ 0 ][ 0 ]);
-
-        for (cgltf_size primitive_index = 0; primitive_index < mesh->primitives_count; ++primitive_index)
-        {
-            cgltf_primitive& primitive    = mesh->primitives[ primitive_index ];
-            cgltf_size       vertex_count = primitive.attributes[ 0 ].data->count;
-
-            for (cgltf_size attribute_index = 0; attribute_index < primitive.attributes_count; ++attribute_index)
-            {
-                cgltf_attribute& attribute      = primitive.attributes[ attribute_index ];
-                cgltf_accessor*  accessor       = attribute.data;
-                cgltf_size       accessor_count = accessor->count;
-
-                FT_ASSERT(vertex_count == accessor_count && "Invalid attribute count");
-
-                cgltf_size         float_count = cgltf_accessor_unpack_floats(accessor, nullptr, 0);
-                std::vector<float> accessor_data(float_count);
-                cgltf_accessor_unpack_floats(accessor, accessor_data.data(), float_count);
-
-                cgltf_size components_count = cgltf_num_components(accessor->type);
-
-                if (attribute.type == cgltf_attribute_type_position && attribute_index == 0)
-                {
-                    result.positions.reserve(result.positions.size() + accessor_count);
-
-                    Vector3 position;
-
-                    for (cgltf_size v = 0; v < accessor_count; ++v)
-                    {
-                        gltf_read_float(accessor_data.data(), components_count, v, &position.x, 3);
-                        position = node_to_world * Vector4(position, 1.0);
-                        result.positions.emplace_back(position);
-                    }
-                }
-                else if (attribute.type == cgltf_attribute_type_normal && attribute_index == 0)
-                {
-                    result.normals.reserve(result.normals.size() + accessor_count);
-
-                    Vector3 normal;
-
-                    for (cgltf_size v = 0; v < accessor_count; ++v)
-                    {
-                        gltf_read_float(accessor_data.data(), components_count, v, &normal.x, 3);
-                        normal = node_to_world * Vector4(normal, 1.0);
-                        result.normals.emplace_back(normal);
-                    }
-                }
-                else if (attribute.type == cgltf_attribute_type_texcoord && attribute_index == 0)
-                {
-                    result.texcoords.reserve(result.texcoords.size() + accessor_count);
-
-                    Vector2 texcoord;
-
-                    for (cgltf_size v = 0; v < accessor_count; ++v)
-                    {
-                        gltf_read_float(accessor_data.data(), components_count, v, &texcoord.x, 2);
-                        result.texcoords.emplace_back(texcoord);
-                    }
-                }
-            }
-
-            if (primitive.indices != NULL)
-            {
-                cgltf_accessor* accessor = primitive.indices;
-
-                for (cgltf_size v = 0; v < accessor->count; v += 3)
-                {
-                    for (int i = 0; i < 3; ++i)
-                    {
-                        u32 index = u32(cgltf_accessor_read_index(accessor, v + i));
-                        result.indices.push_back(index);
-                    }
-                }
-            }
-            else
-            {
-                // TODO: Count indices
-                FT_ASSERT(false && "Not implemented");
-            }
-        }
-    }
-
-    for (cgltf_size child_index = 0; child_index < node->children_count; ++child_index)
-        process_mesh_node(result, node->children[ child_index ]);
-}
-
-void load_mesh(Mesh& mesh, const std::string& filepath)
-{
-    cgltf_options options = {};
-    cgltf_data*   data    = NULL;
-    cgltf_result  result  = cgltf_parse_file(&options, filepath.c_str(), &data);
-
-    FT_ASSERT(result == cgltf_result_success && "Model loading failed");
-    result = cgltf_load_buffers(&options, data, filepath.c_str());
-    FT_ASSERT(result == cgltf_result_success && "Model buffers loading failed");
-
-    for (cgltf_size scene_index = 0; scene_index < data->scenes_count; ++scene_index)
-    {
-        cgltf_scene* scene = &data->scenes[ scene_index ];
-
-        for (cgltf_size node_index = 0; node_index < scene->nodes_count; ++node_index)
-        {
-            cgltf_node* node = scene->nodes[ node_index ];
-            process_mesh_node(mesh, node);
-        }
-    }
-
-    cgltf_free(data);
-}
-
-std::vector<f32> process_geometry(const Mesh& mesh)
-{
-    std::vector<f32> result;
-    result.reserve(mesh.positions.size() * 3);
-
-    for (u32 i = 0; i < mesh.positions.size(); i++)
-    {
-        result.emplace_back(mesh.positions[ i ].x);
-        result.emplace_back(mesh.positions[ i ].y);
-        result.emplace_back(mesh.positions[ i ].z);
-    }
-
-    return result;
-}
-
-void load_geometry(Geometry& geometry, const Mesh& mesh)
-{
-    auto  vertices = process_geometry(mesh);
-    auto& indices  = mesh.indices;
-
-    u64 vertex_upload_size = vertices.size() * sizeof(vertices[ 0 ]);
-    ResourceLoader::upload_buffer(
-        geometry_buffer.vertex_buffer, geometry_buffer.current_vertex_offset, vertex_upload_size, vertices.data());
-    u64 index_upload_size = indices.size() * sizeof(indices[ 0 ]);
-    ResourceLoader::upload_buffer(
-        geometry_buffer.index_buffer, geometry_buffer.current_index_offset, index_upload_size, indices.data());
-
-    geometry.first_index  = geometry_buffer.total_index_count;
-    geometry.first_vertex = geometry_buffer.total_vertex_count;
-    geometry.index_count  = indices.size();
-
-    geometry_buffer.total_index_count += indices.size();
-    geometry_buffer.total_vertex_count += mesh.positions.size();
-
-    geometry_buffer.current_vertex_offset += vertex_upload_size;
-    geometry_buffer.current_index_offset += index_upload_size;
-}
 
 void create_pipeline()
 {
@@ -325,33 +171,29 @@ void create_frames()
         desc.descriptor_set_layout = dsl;
         desc.set                   = 0;
 
-        create_descriptor_set(GraphicContext::get()->device(), &desc, &frames[ i ].global_descriptor_set);
+        create_descriptor_set(GraphicContext::get()->device(), &desc, &frames[ i ].const_set);
         desc.set = 1;
-        create_descriptor_set(GraphicContext::get()->device(), &desc, &frames[ i ].objects_descriptor_set);
+        create_descriptor_set(GraphicContext::get()->device(), &desc, &frames[ i ].material_set);
 
-        BufferDescriptor buffer_descriptor{};
-        buffer_descriptor.buffer = frames[ i ].global_buffer;
-        buffer_descriptor.offset = 0;
-        buffer_descriptor.range  = sizeof(GlobalUbo);
+        BufferDescriptor buffer_descriptors[ 2 ] = {};
+        buffer_descriptors[ 0 ].buffer           = frames[ i ].global_buffer;
+        buffer_descriptors[ 0 ].offset           = 0;
+        buffer_descriptors[ 0 ].range            = sizeof(GlobalUbo);
+        buffer_descriptors[ 1 ].buffer           = frames[ i ].objects_buffer;
+        buffer_descriptors[ 1 ].offset           = 0;
+        buffer_descriptors[ 1 ].range            = sizeof(GpuObjectData) * MAX_OBJECTS;
 
-        DescriptorWrite write{};
-        write.binding            = 0;
-        write.descriptor_type    = DescriptorType::eUniformBuffer;
-        write.descriptor_count   = 1;
-        write.buffer_descriptors = &buffer_descriptor;
+        DescriptorWrite writes[ 2 ]    = {};
+        writes[ 0 ].binding            = 0;
+        writes[ 0 ].descriptor_type    = DescriptorType::eUniformBuffer;
+        writes[ 0 ].descriptor_count   = 1;
+        writes[ 0 ].buffer_descriptors = &buffer_descriptors[ 0 ];
+        writes[ 1 ].binding            = 1;
+        writes[ 1 ].descriptor_type    = DescriptorType::eStorageBuffer;
+        writes[ 1 ].descriptor_count   = 1;
+        writes[ 1 ].buffer_descriptors = &buffer_descriptors[ 1 ];
 
-        update_descriptor_set(GraphicContext::get()->device(), frames[ i ].global_descriptor_set, 1, &write);
-
-        buffer_descriptor.buffer = frames[ i ].objects_buffer;
-        buffer_descriptor.offset = 0;
-        buffer_descriptor.range  = sizeof(GpuObjectData) * MAX_OBJECTS;
-
-        write.binding            = 0;
-        write.descriptor_type    = DescriptorType::eStorageBuffer;
-        write.descriptor_count   = 1;
-        write.buffer_descriptors = &buffer_descriptor;
-
-        update_descriptor_set(GraphicContext::get()->device(), frames[ i ].objects_descriptor_set, 1, &write);
+        update_descriptor_set(GraphicContext::get()->device(), frames[ i ].const_set, 2, writes);
     }
 }
 
@@ -360,8 +202,8 @@ void destroy_frames()
     Device* device = GraphicContext::get()->device();
     for (u32 i = 0; i < GraphicContext::frame_count(); ++i)
     {
-        destroy_descriptor_set(device, frames[ i ].global_descriptor_set);
-        destroy_descriptor_set(device, frames[ i ].objects_descriptor_set);
+        destroy_descriptor_set(device, frames[ i ].material_set);
+        destroy_descriptor_set(device, frames[ i ].const_set);
         destroy_buffer(device, frames[ i ].global_buffer);
         destroy_buffer(device, frames[ i ].objects_buffer);
     }
@@ -397,6 +239,69 @@ void destroy_geometry_buffer()
     }
 }
 
+void create_default_resources()
+{
+    Device* device = GraphicContext::get()->device();
+
+    SamplerDesc sampler_desc{};
+    create_sampler(device, &sampler_desc, &default_resources.sampler);
+    ImageDesc image_desc{};
+    image_desc.width           = 2;
+    image_desc.height          = 2;
+    image_desc.depth           = 1;
+    image_desc.descriptor_type = DescriptorType::eSampledImage;
+    image_desc.sample_count    = SampleCount::e1;
+    image_desc.format          = Format::eR8G8B8A8Unorm;
+    image_desc.mip_levels      = 1;
+    image_desc.layer_count     = 1;
+
+    create_image(device, &image_desc, &default_resources.magenta);
+
+    struct Color
+    {
+        u8 r, g, b, a;
+    };
+
+    std::vector<Color> image_data(image_desc.width * image_desc.height, { 255, 0, 255, 255 });
+    ResourceLoader::upload_image(
+        default_resources.magenta, image_data.size() * sizeof(image_data[ 0 ]), image_data.data());
+}
+
+void destroy_default_resources()
+{
+    Device* device = GraphicContext::get()->device();
+
+    destroy_image(device, default_resources.magenta);
+    destroy_sampler(device, default_resources.sampler);
+}
+
+void upload_model(const Model& model)
+{
+    for (auto& mesh : model.meshes)
+    {
+        u64 vertex_upload_size = mesh.vertex_count * sizeof(model.vertices[ 0 ]);
+        ResourceLoader::upload_buffer(
+            geometry_buffer.vertex_buffer, geometry_buffer.current_vertex_offset, vertex_upload_size,
+            model.vertices.data());
+
+        u64 index_upload_size = mesh.index_count * sizeof(model.indices[ 0 ]);
+        ResourceLoader::upload_buffer(
+            geometry_buffer.index_buffer, geometry_buffer.current_index_offset, index_upload_size,
+            model.indices.data());
+
+        auto& geometry        = geometries.emplace_back();
+        geometry.first_index  = geometry_buffer.total_index_count;
+        geometry.first_vertex = geometry_buffer.total_vertex_count;
+        geometry.index_count  = mesh.index_count;
+
+        geometry_buffer.total_index_count += mesh.index_count;
+        geometry_buffer.total_vertex_count += mesh.vertex_count / mesh.vertex_stride;
+
+        geometry_buffer.current_vertex_offset += vertex_upload_size;
+        geometry_buffer.current_index_offset += index_upload_size;
+    }
+}
+
 void on_init()
 {
     FileSystem::set_shaders_directory("../../sandbox/shaders/");
@@ -418,25 +323,13 @@ void on_init()
     create_frames();
     create_geometry_buffer();
 
-    Mesh mesh{};
-    load_mesh(mesh, FileSystem::get_models_directory() + "plane.gltf");
-    load_geometry(geometries.emplace_back(), mesh);
-    mesh = {};
-    load_mesh(mesh, FileSystem::get_models_directory() + "venus.gltf");
-    load_geometry(geometries.emplace_back(), mesh);
-
-    auto generate_color = []() {
-        Vector4 color;
-        color.r = ( f32 ) (rand() % 255) / 255.0f;
-        color.g = ( f32 ) (rand() % 255) / 255.0f;
-        color.b = ( f32 ) (rand() % 255) / 255.0f;
-        color.a = 1.0f;
-
-        return color;
-    };
-
-    colors.emplace_back(generate_color());
-    colors.emplace_back(generate_color());
+    Model model = create_triangle();
+    upload_model(model);
+    upload_model(model);
+    colors.emplace_back(Vector4(0.0, 1.0, 1.0, 1.0));
+    colors.emplace_back(Vector4(1.0, 1.0, 0.0, 1.0));
+    transforms.emplace_back(Matrix4(1.0));
+    transforms.emplace_back(translate(Matrix4(1.0), Vector3(1.0, 0.0, 0.0)));
 }
 
 void on_resize(u32 width, u32 height)
@@ -459,8 +352,8 @@ void on_update(f32 delta_time)
     context->begin_frame();
     context->begin_render_pass(0.4, 0.1, 0.2, 1.0);
     cmd_bind_pipeline(cmd, pipeline);
-    cmd_bind_descriptor_set(cmd, 0, frame.global_descriptor_set, pipeline);
-    cmd_bind_descriptor_set(cmd, 1, frame.objects_descriptor_set, pipeline);
+    cmd_bind_descriptor_set(cmd, 0, frame.const_set, pipeline);
+    cmd_bind_descriptor_set(cmd, 1, frame.material_set, pipeline);
     cmd_set_viewport(cmd, 0, 0, context->width(), context->height(), 0.1f, 1.0f);
     cmd_set_scissor(cmd, 0, 0, context->width(), context->height());
     cmd_bind_vertex_buffer(cmd, geometry_buffer.vertex_buffer, 0);
@@ -474,6 +367,8 @@ void on_update(f32 delta_time)
 
         for (u32 i = 0; i < geometries.size(); i++)
         {
+            objects_data[ i ].model = transforms[ i ];
+            objects_data[ i ].color = colors[ i ];
 
             Geometry& geometry               = geometries[ i ];
             draw_commands[ i ].indexCount    = geometries[ i ].index_count;
@@ -495,7 +390,7 @@ void on_update(f32 delta_time)
 
         for (u32 i = 0; i < geometries.size(); ++i)
         {
-            objects_data[ i ].model = Matrix4(1.0);
+            objects_data[ i ].model = transforms[ i ];
             objects_data[ i ].color = colors[ i ];
 
             i32 first_vertex = geometries[ i ].first_vertex;

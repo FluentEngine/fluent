@@ -6,7 +6,7 @@
 
 namespace fluent
 {
-ImageDesc read_dds_image(const std::string& filename, b32 flip, u32* size, void** data)
+ImageDesc read_dds_image(const std::string& filename, b32 flip, u64* size, void** data)
 {
     using namespace tinyddsloader;
 
@@ -40,7 +40,7 @@ ImageDesc read_dds_image(const std::string& filename, b32 flip, u32* size, void*
     return image_desc;
 }
 
-ImageDesc read_image_stb(const std::string& filename, b32 flip, u32* size, void** data)
+ImageDesc read_image_stb(const std::string& filename, b32 flip, u64* size, void** data)
 {
     ImageDesc image_desc{};
 
@@ -61,7 +61,7 @@ ImageDesc read_image_stb(const std::string& filename, b32 flip, u32* size, void*
     return image_desc;
 }
 
-ImageDesc read_image_data(const std::string& filename, b32 flip, u32* size, void** data)
+ImageDesc read_image_data(const std::string& filename, b32 flip, u64* size, void** data)
 {
     std::string file_ext = filename.substr(filename.find_last_of('.'));
 

@@ -15,6 +15,8 @@ cmake_policy(SET CMP0063 NEW) # ENABLE CMP0063: Honor visibility properties for 
 cmake_policy(SET CMP0077 NEW) # ENABLE CMP0077: option() honors normal variables
 
 set(BUILD_SHARED_LIBS OFF)
+set(ASSIMP_BUILD_TESTS OFF)
+set(ASSIMP_INSTALL OFF)
 add_subdirectory(third_party/spdlog)
 add_subdirectory(third_party/volk)
 add_subdirectory(third_party/vk_mem_alloc)
@@ -24,7 +26,7 @@ add_subdirectory(third_party/spirv_reflect)
 add_subdirectory(third_party/tinyddsloader)
 add_subdirectory(third_party/stb_image)
 add_subdirectory(third_party/glm)
-add_subdirectory(third_party/cgltf)
+add_subdirectory(third_party/assimp)
 add_subdirectory(third_party/imgui)
 add_subdirectory(third_party/entt)
 
@@ -77,7 +79,7 @@ set(libs
 	tinyddsloader 
 	stb_image 
 	glm 
-	cgltf
+	assimp
 	imgui
 	entt)
 
