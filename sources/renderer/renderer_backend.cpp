@@ -2459,9 +2459,13 @@ void update_descriptor_set(const Device* device, DescriptorSet* set, u32 count, 
                     ids[ j ].imageView   = image_write.image->image_view;
                     ids[ j ].sampler     = nullptr;
                 }
-                else
+                else if (image_write.sampler)
                 {
                     ids[ j ].sampler = image_write.sampler->sampler;
+                }
+                else
+                {
+                    FT_ASSERT(false && "Null descriptor");
                 }
             }
 

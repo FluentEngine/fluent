@@ -8,8 +8,6 @@ using namespace fluent;
 static constexpr u32 SCREEN_WIDTH  = 1400;
 static constexpr u32 SCREEN_HEIGHT = 900;
 
-static constexpr b32 DRAW_INDIRECT = false;
-
 static constexpr u32 MAX_COMMANDS         = 100;
 static constexpr u32 MAX_OBJECTS          = 10000;
 static constexpr u32 GEOMETRY_BUFFER_SIZE = 500 * 1024 * 1024;
@@ -19,20 +17,6 @@ struct GlobalUbo
     Matrix4 projection;
     Matrix4 view;
 } global_ubo;
-
-struct Material
-{
-    u32 base_color = 0;
-    u32 normal     = 0;
-};
-
-struct LoadedTexture
-{
-    u32       id   = 0;
-    ImageDesc desc = {};
-    u64       size = 0;
-    void*     data = nullptr;
-};
 
 struct Geometry
 {
@@ -44,7 +28,6 @@ struct Geometry
 struct GpuObjectData
 {
     Matrix4 model;
-    Vector4 color;
 };
 
 struct GeometryBuffer
@@ -63,7 +46,6 @@ struct FrameData
     Buffer*        global_buffer  = nullptr;
     Buffer*        objects_buffer = nullptr;
     DescriptorSet* const_set      = nullptr;
-    DescriptorSet* material_set   = nullptr;
 };
 
 struct DefaultResources
@@ -72,20 +54,26 @@ struct DefaultResources
     Image*   magenta = nullptr;
 } default_resources;
 
+struct DrawData
+{
+    Geometry       geometry;
+    Matrix4        transform;
+    DescriptorSet* material_set;
+};
+
 DescriptorSetLayout* dsl;
 Pipeline*            pipeline;
 
 GeometryBuffer geometry_buffer;
 FrameData      frames[ GraphicContext::frame_count() ];
 
-std::vector<Geometry> geometries;
-std::vector<Vector4>  colors;
-std::vector<Matrix4>  transforms;
+std::vector<Image*>   loaded_textures;
+std::vector<DrawData> draws;
 
 Camera           camera;
 CameraController camera_controller;
 
-void create_pipeline()
+void create_pipeline(VertexLayout& layout)
 {
     auto vert_code = read_file_binary(FileSystem::get_shaders_directory() + "/main.vert.glsl.spv");
     auto frag_code = read_file_binary(FileSystem::get_shaders_directory() + "/main.frag.glsl.spv");
@@ -104,27 +92,18 @@ void create_pipeline()
 
     create_descriptor_set_layout(GraphicContext::get()->device(), 2, shaders, &dsl);
 
-    PipelineDesc  pipeline_desc{};
-    VertexLayout& vertex_layout                 = pipeline_desc.vertex_layout;
-    vertex_layout.binding_desc_count            = 1;
-    vertex_layout.binding_descs[ 0 ].binding    = 0;
-    vertex_layout.binding_descs[ 0 ].input_rate = VertexInputRate::eVertex;
-    vertex_layout.binding_descs[ 0 ].stride     = 3 * sizeof(float);
-    vertex_layout.attribute_desc_count          = 1;
-    vertex_layout.attribute_descs[ 0 ].binding  = 0;
-    vertex_layout.attribute_descs[ 0 ].format   = Format::eR32G32B32Sfloat;
-    vertex_layout.attribute_descs[ 0 ].location = 0;
-    vertex_layout.attribute_descs[ 0 ].offset   = 0;
-    pipeline_desc.shader_count                  = 2;
-    pipeline_desc.shaders[ 0 ]                  = shaders[ 0 ];
-    pipeline_desc.shaders[ 1 ]                  = shaders[ 1 ];
-    pipeline_desc.rasterizer_desc.cull_mode     = CullMode::eBack;
-    pipeline_desc.rasterizer_desc.front_face    = FrontFace::eCounterClockwise;
-    pipeline_desc.depth_state_desc.depth_test   = true;
-    pipeline_desc.depth_state_desc.depth_write  = true;
-    pipeline_desc.depth_state_desc.compare_op   = CompareOp::eLess;
-    pipeline_desc.descriptor_set_layout         = dsl;
-    pipeline_desc.render_pass                   = GraphicContext::get()->swapchain()->render_passes[ 0 ];
+    PipelineDesc pipeline_desc{};
+    pipeline_desc.vertex_layout                = layout;
+    pipeline_desc.shader_count                 = 2;
+    pipeline_desc.shaders[ 0 ]                 = shaders[ 0 ];
+    pipeline_desc.shaders[ 1 ]                 = shaders[ 1 ];
+    pipeline_desc.rasterizer_desc.cull_mode    = CullMode::eBack;
+    pipeline_desc.rasterizer_desc.front_face   = FrontFace::eCounterClockwise;
+    pipeline_desc.depth_state_desc.depth_test  = true;
+    pipeline_desc.depth_state_desc.depth_write = true;
+    pipeline_desc.depth_state_desc.compare_op  = CompareOp::eLess;
+    pipeline_desc.descriptor_set_layout        = dsl;
+    pipeline_desc.render_pass                  = GraphicContext::get()->swapchain()->render_passes[ 0 ];
 
     create_graphics_pipeline(GraphicContext::get()->device(), &pipeline_desc, &pipeline);
 
@@ -172,8 +151,6 @@ void create_frames()
         desc.set                   = 0;
 
         create_descriptor_set(GraphicContext::get()->device(), &desc, &frames[ i ].const_set);
-        desc.set = 1;
-        create_descriptor_set(GraphicContext::get()->device(), &desc, &frames[ i ].material_set);
 
         BufferDescriptor buffer_descriptors[ 2 ] = {};
         buffer_descriptors[ 0 ].buffer           = frames[ i ].global_buffer;
@@ -202,7 +179,6 @@ void destroy_frames()
     Device* device = GraphicContext::get()->device();
     for (u32 i = 0; i < GraphicContext::frame_count(); ++i)
     {
-        destroy_descriptor_set(device, frames[ i ].material_set);
         destroy_descriptor_set(device, frames[ i ].const_set);
         destroy_buffer(device, frames[ i ].global_buffer);
         destroy_buffer(device, frames[ i ].objects_buffer);
@@ -218,14 +194,6 @@ void create_geometry_buffer()
     create_buffer(GraphicContext::get()->device(), &buffer_desc, &geometry_buffer.vertex_buffer);
     buffer_desc.descriptor_type = DescriptorType::eIndexBuffer;
     create_buffer(GraphicContext::get()->device(), &buffer_desc, &geometry_buffer.index_buffer);
-
-    if constexpr (DRAW_INDIRECT)
-    {
-        buffer_desc.size            = MAX_COMMANDS * sizeof(DrawIndexedIndirectCommand);
-        buffer_desc.descriptor_type = DescriptorType::eIndirectBuffer | DescriptorType::eStorageBuffer;
-        buffer_desc.memory_usage    = MemoryUsage::eCpuToGpu;
-        create_buffer(GraphicContext::get()->device(), &buffer_desc, &geometry_buffer.indirect_buffer);
-    }
 }
 
 void destroy_geometry_buffer()
@@ -233,18 +201,12 @@ void destroy_geometry_buffer()
     Device* device = GraphicContext::get()->device();
     destroy_buffer(device, geometry_buffer.vertex_buffer);
     destroy_buffer(device, geometry_buffer.index_buffer);
-    if constexpr (DRAW_INDIRECT)
-    {
-        destroy_buffer(device, geometry_buffer.indirect_buffer);
-    }
 }
 
-void create_default_resources()
+void create_color_texture(Image** image, const Vector4& color)
 {
     Device* device = GraphicContext::get()->device();
 
-    SamplerDesc sampler_desc{};
-    create_sampler(device, &sampler_desc, &default_resources.sampler);
     ImageDesc image_desc{};
     image_desc.width           = 2;
     image_desc.height          = 2;
@@ -255,16 +217,29 @@ void create_default_resources()
     image_desc.mip_levels      = 1;
     image_desc.layer_count     = 1;
 
-    create_image(device, &image_desc, &default_resources.magenta);
+    create_image(device, &image_desc, image);
 
     struct Color
     {
         u8 r, g, b, a;
     };
 
-    std::vector<Color> image_data(image_desc.width * image_desc.height, { 255, 0, 255, 255 });
-    ResourceLoader::upload_image(
-        default_resources.magenta, image_data.size() * sizeof(image_data[ 0 ]), image_data.data());
+    std::vector<Color> image_data(
+        image_desc.width * image_desc.height,
+        { ( u8 ) (color.r * 255.0f), ( u8 ) (color.g * 255.0f), ( u8 ) (color.b * 255.0f), ( u8 ) (color.a * 255.0f) });
+    ResourceLoader::upload_image(*image, image_data.size() * sizeof(image_data[ 0 ]), image_data.data());
+}
+
+void create_default_resources()
+{
+    Device* device = GraphicContext::get()->device();
+
+    SamplerDesc sampler_desc{};
+    sampler_desc.mipmap_mode = SamplerMipmapMode::eLinear;
+    sampler_desc.min_lod     = 0;
+    sampler_desc.max_lod     = 16;
+    create_sampler(device, &sampler_desc, &default_resources.sampler);
+    create_color_texture(&default_resources.magenta, Vector4(1.0, 0, 1.0, 1.0));
 }
 
 void destroy_default_resources()
@@ -275,11 +250,15 @@ void destroy_default_resources()
     destroy_sampler(device, default_resources.sampler);
 }
 
-void upload_model(const Model& model)
+void upload_model(const Model& model, const Matrix4& transform)
 {
+    Device* device = GraphicContext::get()->device();
+
     for (auto& mesh : model.meshes)
     {
-        u64 vertex_upload_size = mesh.vertex_count * sizeof(model.vertices[ 0 ]);
+        auto& draw = draws.emplace_back();
+
+        u64 vertex_upload_size = mesh.vertex_count * model.vertex_stride * sizeof(model.vertices[ 0 ]);
         ResourceLoader::upload_buffer(
             geometry_buffer.vertex_buffer, geometry_buffer.current_vertex_offset, vertex_upload_size,
             model.vertices.data());
@@ -289,16 +268,140 @@ void upload_model(const Model& model)
             geometry_buffer.index_buffer, geometry_buffer.current_index_offset, index_upload_size,
             model.indices.data());
 
-        auto& geometry        = geometries.emplace_back();
+        auto& geometry        = draw.geometry;
         geometry.first_index  = geometry_buffer.total_index_count;
         geometry.first_vertex = geometry_buffer.total_vertex_count;
         geometry.index_count  = mesh.index_count;
 
         geometry_buffer.total_index_count += mesh.index_count;
-        geometry_buffer.total_vertex_count += mesh.vertex_count / mesh.vertex_stride;
+        geometry_buffer.total_vertex_count += mesh.vertex_count;
 
         geometry_buffer.current_vertex_offset += vertex_upload_size;
         geometry_buffer.current_index_offset += index_upload_size;
+
+        draw.transform = transform;
+
+        // Upload mesh textures
+        u32                   first_texture = loaded_textures.size();
+        std::array<Image*, 5> mesh_textures = { nullptr };
+
+        if (mesh.material.base_color_texture != 0)
+        {
+            auto& texture = model.textures[ mesh.material.base_color_texture ];
+            create_image(device, &texture.desc, &loaded_textures.emplace_back());
+            ResourceLoader::upload_image(loaded_textures.back(), texture.size, texture.data);
+            mesh_textures[ 0 ] = loaded_textures.back();
+        }
+        else
+        {
+            mesh_textures[ 0 ] = default_resources.magenta;
+        }
+
+        if (mesh.material.normal_texture != 0)
+        {
+            auto& texture = model.textures[ mesh.material.normal_texture ];
+            ResourceLoader::upload_image(loaded_textures.emplace_back(), texture.size, texture.data);
+            mesh_textures[ 1 ] = loaded_textures.back();
+        }
+        else
+        {
+            mesh_textures[ 1 ] = default_resources.magenta;
+        }
+
+        if (mesh.material.metallic_roughness_texture != 0)
+        {
+            auto& texture = model.textures[ mesh.material.metallic_roughness_texture ];
+            ResourceLoader::upload_image(loaded_textures.emplace_back(), texture.size, texture.data);
+            mesh_textures[ 2 ] = loaded_textures.back();
+        }
+        else
+        {
+            mesh_textures[ 2 ] = default_resources.magenta;
+        }
+
+        if (mesh.material.ambient_occlusion_texture != 0)
+        {
+            auto& texture = model.textures[ mesh.material.ambient_occlusion_texture ];
+            ResourceLoader::upload_image(loaded_textures.emplace_back(), texture.size, texture.data);
+            mesh_textures[ 3 ] = loaded_textures.back();
+        }
+        else
+        {
+            mesh_textures[ 3 ] = default_resources.magenta;
+        }
+
+        if (mesh.material.emissive_texture != 0)
+        {
+            auto& texture = model.textures[ mesh.material.emissive_texture ];
+            ResourceLoader::upload_image(loaded_textures.emplace_back(), texture.size, texture.data);
+            mesh_textures[ 4 ] = loaded_textures.back();
+        }
+        else
+        {
+            mesh_textures[ 4 ] = default_resources.magenta;
+        }
+
+        // create material set
+        DescriptorSetDesc desc{};
+        desc.descriptor_set_layout = dsl;
+        desc.set                   = 1;
+        create_descriptor_set(GraphicContext::get()->device(), &desc, &draw.material_set);
+
+        ImageDescriptor image_descriptors[ 6 ] = {};
+        image_descriptors[ 0 ].sampler         = default_resources.sampler;
+        image_descriptors[ 1 ].resource_state  = ResourceState::eShaderReadOnly;
+        image_descriptors[ 1 ].image           = mesh_textures[ 0 ];
+        image_descriptors[ 2 ].resource_state  = ResourceState::eShaderReadOnly;
+        image_descriptors[ 2 ].image           = mesh_textures[ 1 ];
+        image_descriptors[ 3 ].resource_state  = ResourceState::eShaderReadOnly;
+        image_descriptors[ 3 ].image           = mesh_textures[ 2 ];
+        image_descriptors[ 4 ].resource_state  = ResourceState::eShaderReadOnly;
+        image_descriptors[ 4 ].image           = mesh_textures[ 3 ];
+        image_descriptors[ 5 ].resource_state  = ResourceState::eShaderReadOnly;
+        image_descriptors[ 5 ].image           = mesh_textures[ 4 ];
+
+        DescriptorWrite writes[ 6 ]   = {};
+        writes[ 0 ].binding           = 0;
+        writes[ 0 ].descriptor_count  = 1;
+        writes[ 0 ].descriptor_type   = DescriptorType::eSampler;
+        writes[ 0 ].image_descriptors = &image_descriptors[ 0 ];
+        writes[ 1 ].binding           = 1;
+        writes[ 1 ].descriptor_count  = 1;
+        writes[ 1 ].descriptor_type   = DescriptorType::eSampledImage;
+        writes[ 1 ].image_descriptors = &image_descriptors[ 1 ];
+        writes[ 2 ].binding           = 2;
+        writes[ 2 ].descriptor_count  = 1;
+        writes[ 2 ].descriptor_type   = DescriptorType::eSampledImage;
+        writes[ 2 ].image_descriptors = &image_descriptors[ 2 ];
+        writes[ 3 ].binding           = 3;
+        writes[ 3 ].descriptor_count  = 1;
+        writes[ 3 ].descriptor_type   = DescriptorType::eSampledImage;
+        writes[ 3 ].image_descriptors = &image_descriptors[ 3 ];
+        writes[ 4 ].binding           = 4;
+        writes[ 4 ].descriptor_count  = 1;
+        writes[ 4 ].descriptor_type   = DescriptorType::eSampledImage;
+        writes[ 4 ].image_descriptors = &image_descriptors[ 4 ];
+        writes[ 5 ].binding           = 5;
+        writes[ 5 ].descriptor_count  = 1;
+        writes[ 5 ].descriptor_type   = DescriptorType::eSampledImage;
+        writes[ 5 ].image_descriptors = &image_descriptors[ 5 ];
+
+        update_descriptor_set(GraphicContext::get()->device(), draw.material_set, 6, writes);
+    }
+}
+
+void unload_models()
+{
+    Device* device = GraphicContext::get()->device();
+
+    for (u32 i = 0; i < loaded_textures.size(); ++i)
+    {
+        destroy_image(device, loaded_textures[ i ]);
+    }
+
+    for (u32 i = 0; i < draws.size(); ++i)
+    {
+        destroy_descriptor_set(device, draws[ i ].material_set);
     }
 }
 
@@ -319,17 +422,24 @@ void on_init()
     camera.init_camera(Vector3(0.0f, 1.0, 3.0f), Vector3(0.0, 0.0, -1.0), Vector3(0.0, 1.0, 0.0));
     camera_controller.init(get_app_input_system(), camera);
 
-    create_pipeline();
+    VertexComponents components =
+        (VertexComponents::ePosition | VertexComponents::eNormal | VertexComponents::eTexcoord |
+         VertexComponents::eTangent);
+
+    // temporary solution, all models will be load with same layout
+    VertexLayout layout;
+    fill_vertex_layout(layout, components);
+    create_pipeline(layout);
     create_frames();
     create_geometry_buffer();
+    create_default_resources();
 
-    Model model = create_triangle();
-    upload_model(model);
-    upload_model(model);
-    colors.emplace_back(Vector4(0.0, 1.0, 1.0, 1.0));
-    colors.emplace_back(Vector4(1.0, 1.0, 0.0, 1.0));
-    transforms.emplace_back(Matrix4(1.0));
-    transforms.emplace_back(translate(Matrix4(1.0), Vector3(1.0, 0.0, 0.0)));
+    Model model;
+    load_model(model, components, FileSystem::get_models_directory() + "damaged-helmet/DamagedHelmet.gltf");
+    upload_model(model, translate(Matrix4(1.0), Vector3(0.0, 1.0, 0.0)));
+    model = {};
+    load_model(model, components, FileSystem::get_models_directory() + "plane.gltf");
+    upload_model(model, Matrix4(1.0));
 }
 
 void on_resize(u32 width, u32 height)
@@ -350,58 +460,32 @@ void on_update(f32 delta_time)
     ResourceLoader::upload_buffer(frame.global_buffer, 0, sizeof(GlobalUbo), &global_ubo);
 
     context->begin_frame();
-    context->begin_render_pass(0.4, 0.1, 0.2, 1.0);
+    context->begin_render_pass(0.52, 0.8, 0.9, 1.0);
     cmd_bind_pipeline(cmd, pipeline);
     cmd_bind_descriptor_set(cmd, 0, frame.const_set, pipeline);
-    cmd_bind_descriptor_set(cmd, 1, frame.material_set, pipeline);
     cmd_set_viewport(cmd, 0, 0, context->width(), context->height(), 0.1f, 1.0f);
     cmd_set_scissor(cmd, 0, 0, context->width(), context->height());
     cmd_bind_vertex_buffer(cmd, geometry_buffer.vertex_buffer, 0);
     cmd_bind_index_buffer_u32(cmd, geometry_buffer.index_buffer, 0);
 
-    if constexpr (DRAW_INDIRECT)
+    auto* objects_data = ( GpuObjectData* ) ResourceLoader::begin_upload_buffer(frame.objects_buffer);
+
+    for (u32 i = 0; i < draws.size(); ++i)
     {
-        auto* draw_commands =
-            ( DrawIndexedIndirectCommand* ) ResourceLoader::begin_upload_buffer(geometry_buffer.indirect_buffer);
-        auto* objects_data = ( GpuObjectData* ) ResourceLoader::begin_upload_buffer(frame.objects_buffer);
+        DrawData& draw = draws[ i ];
 
-        for (u32 i = 0; i < geometries.size(); i++)
-        {
-            objects_data[ i ].model = transforms[ i ];
-            objects_data[ i ].color = colors[ i ];
+        cmd_bind_descriptor_set(cmd, 1, draw.material_set, pipeline);
 
-            Geometry& geometry               = geometries[ i ];
-            draw_commands[ i ].indexCount    = geometries[ i ].index_count;
-            draw_commands[ i ].instanceCount = 1;
-            draw_commands[ i ].firstIndex    = geometries[ i ].first_index;
-            draw_commands[ i ].vertexOffset  = geometries[ i ].first_vertex;
-            draw_commands[ i ].firstInstance = i;
-        }
+        objects_data[ i ].model = draw.transform;
 
-        ResourceLoader::end_upload_buffer(geometry_buffer.indirect_buffer);
-        ResourceLoader::end_upload_buffer(frame.objects_buffer);
+        i32 first_vertex = draw.geometry.first_vertex;
+        u32 first_index  = draw.geometry.first_index;
+        u32 index_count  = draw.geometry.index_count;
 
-        u32 draw_stride = sizeof(DrawIndexedIndirectCommand);
-        cmd_draw_indexed_indirect(cmd, geometry_buffer.indirect_buffer, 0, geometries.size(), draw_stride);
+        cmd_draw_indexed(cmd, index_count, 1, first_index, first_vertex, i);
     }
-    else
-    {
-        auto* objects_data = ( GpuObjectData* ) ResourceLoader::begin_upload_buffer(frame.objects_buffer);
 
-        for (u32 i = 0; i < geometries.size(); ++i)
-        {
-            objects_data[ i ].model = transforms[ i ];
-            objects_data[ i ].color = colors[ i ];
-
-            i32 first_vertex = geometries[ i ].first_vertex;
-            u32 first_index  = geometries[ i ].first_index;
-            u32 index_count  = geometries[ i ].index_count;
-            cmd_push_constants(cmd, pipeline, 0, sizeof(Vector4), &colors[ i ]);
-            cmd_draw_indexed(cmd, index_count, 1, first_index, first_vertex, i);
-        }
-
-        ResourceLoader::end_upload_buffer(frame.objects_buffer);
-    }
+    ResourceLoader::end_upload_buffer(frame.objects_buffer);
 
     context->end_render_pass();
     context->end_frame();
@@ -411,6 +495,8 @@ void on_shutdown()
 {
     auto* device = GraphicContext::get()->device();
     device_wait_idle(device);
+    unload_models();
+    destroy_default_resources();
     destroy_geometry_buffer();
     destroy_frames();
     destroy_pipeline();

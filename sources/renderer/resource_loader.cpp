@@ -107,7 +107,17 @@ void ResourceLoader::upload_image(Image* image, u64 size, const void* data)
     Buffer* staging_buffer = create_staging_buffer(size, data);
 
     begin_command_buffer(m_cmd);
+    ImageBarrier barrier{};
+    barrier.image     = image;
+    barrier.src_queue = m_queue;
+    barrier.dst_queue = m_queue;
+    barrier.old_state = ResourceState::eUndefined;
+    barrier.new_state = ResourceState::eTransferDst;
+    cmd_barrier(m_cmd, 0, nullptr, 1, &barrier);
     cmd_copy_buffer_to_image(m_cmd, staging_buffer, 0, image);
+    barrier.old_state = ResourceState::eTransferDst;
+    barrier.new_state = ResourceState::eShaderReadOnly;
+    cmd_barrier(m_cmd, 0, nullptr, 1, &barrier);
     end_command_buffer(m_cmd);
     immediate_submit(m_queue, m_cmd);
 
