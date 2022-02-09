@@ -1,10 +1,21 @@
 #pragma once
 
 #include <string>
+#include <array>
 #include "fluent/fluent.hpp"
 
 namespace fluent
 {
+enum class TextureType
+{
+    eBaseColor         = 0,
+    eNormal            = 1,
+    eMetallicRoughness = 2,
+    eAmbientOcclusion  = 3,
+    eEmissive          = 4,
+    eCount             = 5
+};
+
 struct Texture
 {
     std::string filename;
@@ -16,17 +27,13 @@ struct Texture
     {
     }
     Texture(const std::string& directory, const std::string& filename);
-    ~Texture();
+
+    void destroy();
 };
 
 struct Material
 {
-    u32 base_color_texture        = 0;
-    u32 normal_texture            = 0;
-    u32 ambient_occlusion_texture = 0;
-    u32 emissive_texture          = 0;
-    // pbr mr
-    u32 metallic_roughness_texture = 0;
+    std::array<u32, static_cast<u32>(TextureType::eCount)> m_textures = { 0 };
 };
 
 struct Mesh
@@ -36,6 +43,16 @@ struct Mesh
     u32      vertex_count = 0;
     u32      first_index  = 0;
     u32      index_count  = 0;
+
+    b32 has_texture(TextureType type) const
+    {
+        return material.m_textures[ static_cast<u32>(type) ] != 0;
+    }
+
+    u32 get_texture_index(TextureType type) const
+    {
+        return material.m_textures[ static_cast<u32>(type) ];
+    }
 };
 
 enum class VertexComponent : u8
@@ -67,5 +84,6 @@ Model create_triangle();
 
 void fill_vertex_layout(VertexLayout& layout, VertexComponents components);
 void load_model(Model& model, VertexComponents vertex_components, const std::string& filename);
+void destroy_model(Model& model);
 
 } // namespace fluent

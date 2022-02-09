@@ -250,6 +250,23 @@ void destroy_default_resources()
     destroy_sampler(device, default_resources.sampler);
 }
 
+Image* upload_mesh_texture(const Model& model, const Mesh& mesh, TextureType type)
+{
+    const Device* device = GraphicContext::get()->device();
+
+    if (mesh.has_texture(type))
+    {
+        auto& texture = model.textures[ mesh.get_texture_index(type) ];
+        create_image(device, &texture.desc, &loaded_textures.emplace_back());
+        ResourceLoader::upload_image(loaded_textures.back(), texture.size, texture.data);
+        return loaded_textures.back();
+    }
+    else
+    {
+        return default_resources.magenta;
+    }
+}
+
 void upload_model(const Model& model, const Matrix4& transform)
 {
     Device* device = GraphicContext::get()->device();
@@ -282,63 +299,14 @@ void upload_model(const Model& model, const Matrix4& transform)
         draw.transform = transform;
 
         // Upload mesh textures
-        u32                   first_texture = loaded_textures.size();
-        std::array<Image*, 5> mesh_textures = { nullptr };
+        u32 first_texture = loaded_textures.size();
 
-        if (mesh.material.base_color_texture != 0)
-        {
-            auto& texture = model.textures[ mesh.material.base_color_texture ];
-            create_image(device, &texture.desc, &loaded_textures.emplace_back());
-            ResourceLoader::upload_image(loaded_textures.back(), texture.size, texture.data);
-            mesh_textures[ 0 ] = loaded_textures.back();
-        }
-        else
-        {
-            mesh_textures[ 0 ] = default_resources.magenta;
-        }
+        ImageDescriptor image_descriptors[ static_cast<u32>(TextureType::eCount) ] = {};
 
-        if (mesh.material.normal_texture != 0)
+        for (u32 i = 0; i < static_cast<u32>(TextureType::eCount); i++)
         {
-            auto& texture = model.textures[ mesh.material.normal_texture ];
-            ResourceLoader::upload_image(loaded_textures.emplace_back(), texture.size, texture.data);
-            mesh_textures[ 1 ] = loaded_textures.back();
-        }
-        else
-        {
-            mesh_textures[ 1 ] = default_resources.magenta;
-        }
-
-        if (mesh.material.metallic_roughness_texture != 0)
-        {
-            auto& texture = model.textures[ mesh.material.metallic_roughness_texture ];
-            ResourceLoader::upload_image(loaded_textures.emplace_back(), texture.size, texture.data);
-            mesh_textures[ 2 ] = loaded_textures.back();
-        }
-        else
-        {
-            mesh_textures[ 2 ] = default_resources.magenta;
-        }
-
-        if (mesh.material.ambient_occlusion_texture != 0)
-        {
-            auto& texture = model.textures[ mesh.material.ambient_occlusion_texture ];
-            ResourceLoader::upload_image(loaded_textures.emplace_back(), texture.size, texture.data);
-            mesh_textures[ 3 ] = loaded_textures.back();
-        }
-        else
-        {
-            mesh_textures[ 3 ] = default_resources.magenta;
-        }
-
-        if (mesh.material.emissive_texture != 0)
-        {
-            auto& texture = model.textures[ mesh.material.emissive_texture ];
-            ResourceLoader::upload_image(loaded_textures.emplace_back(), texture.size, texture.data);
-            mesh_textures[ 4 ] = loaded_textures.back();
-        }
-        else
-        {
-            mesh_textures[ 4 ] = default_resources.magenta;
+            image_descriptors[ i ].resource_state = ResourceState::eShaderReadOnly;
+            image_descriptors[ i ].image          = upload_mesh_texture(model, mesh, static_cast<TextureType>(i));
         }
 
         // create material set
@@ -347,46 +315,20 @@ void upload_model(const Model& model, const Matrix4& transform)
         desc.set                   = 1;
         create_descriptor_set(GraphicContext::get()->device(), &desc, &draw.material_set);
 
-        ImageDescriptor image_descriptors[ 6 ] = {};
-        image_descriptors[ 0 ].sampler         = default_resources.sampler;
-        image_descriptors[ 1 ].resource_state  = ResourceState::eShaderReadOnly;
-        image_descriptors[ 1 ].image           = mesh_textures[ 0 ];
-        image_descriptors[ 2 ].resource_state  = ResourceState::eShaderReadOnly;
-        image_descriptors[ 2 ].image           = mesh_textures[ 1 ];
-        image_descriptors[ 3 ].resource_state  = ResourceState::eShaderReadOnly;
-        image_descriptors[ 3 ].image           = mesh_textures[ 2 ];
-        image_descriptors[ 4 ].resource_state  = ResourceState::eShaderReadOnly;
-        image_descriptors[ 4 ].image           = mesh_textures[ 3 ];
-        image_descriptors[ 5 ].resource_state  = ResourceState::eShaderReadOnly;
-        image_descriptors[ 5 ].image           = mesh_textures[ 4 ];
+        ImageDescriptor sampler_descriptor = {};
+        sampler_descriptor.sampler         = default_resources.sampler;
 
-        DescriptorWrite writes[ 6 ]   = {};
+        DescriptorWrite writes[ 2 ]   = {};
         writes[ 0 ].binding           = 0;
         writes[ 0 ].descriptor_count  = 1;
         writes[ 0 ].descriptor_type   = DescriptorType::eSampler;
-        writes[ 0 ].image_descriptors = &image_descriptors[ 0 ];
+        writes[ 0 ].image_descriptors = &sampler_descriptor;
         writes[ 1 ].binding           = 1;
-        writes[ 1 ].descriptor_count  = 1;
+        writes[ 1 ].descriptor_count  = static_cast<u32>(TextureType::eCount);
         writes[ 1 ].descriptor_type   = DescriptorType::eSampledImage;
-        writes[ 1 ].image_descriptors = &image_descriptors[ 1 ];
-        writes[ 2 ].binding           = 2;
-        writes[ 2 ].descriptor_count  = 1;
-        writes[ 2 ].descriptor_type   = DescriptorType::eSampledImage;
-        writes[ 2 ].image_descriptors = &image_descriptors[ 2 ];
-        writes[ 3 ].binding           = 3;
-        writes[ 3 ].descriptor_count  = 1;
-        writes[ 3 ].descriptor_type   = DescriptorType::eSampledImage;
-        writes[ 3 ].image_descriptors = &image_descriptors[ 3 ];
-        writes[ 4 ].binding           = 4;
-        writes[ 4 ].descriptor_count  = 1;
-        writes[ 4 ].descriptor_type   = DescriptorType::eSampledImage;
-        writes[ 4 ].image_descriptors = &image_descriptors[ 4 ];
-        writes[ 5 ].binding           = 5;
-        writes[ 5 ].descriptor_count  = 1;
-        writes[ 5 ].descriptor_type   = DescriptorType::eSampledImage;
-        writes[ 5 ].image_descriptors = &image_descriptors[ 5 ];
+        writes[ 1 ].image_descriptors = image_descriptors;
 
-        update_descriptor_set(GraphicContext::get()->device(), draw.material_set, 6, writes);
+        update_descriptor_set(GraphicContext::get()->device(), draw.material_set, 2, writes);
     }
 }
 

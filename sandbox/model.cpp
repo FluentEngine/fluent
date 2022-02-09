@@ -11,7 +11,7 @@ Texture::Texture(const std::string& directory, const std::string& filename) : da
     desc.descriptor_type = DescriptorType::eSampledImage;
 }
 
-Texture::~Texture()
+void Texture::destroy()
 {
     if (data)
     {
@@ -49,7 +49,27 @@ Model create_triangle()
     return model;
 }
 
-void load_material_textures(Mesh& mesh, Model& model, aiMaterial* mat, aiTextureType type)
+TextureType to_texture_type(aiTextureType type)
+{
+    switch (type)
+    {
+    case aiTextureType_BASE_COLOR:
+        return TextureType::eBaseColor;
+    case aiTextureType_NORMALS:
+        return TextureType::eNormal;
+    case aiTextureType_LIGHTMAP:
+    case aiTextureType_AMBIENT_OCCLUSION:
+        return TextureType::eAmbientOcclusion;
+    case aiTextureType_EMISSIVE:
+        return TextureType::eEmissive;
+    case aiTextureType_UNKNOWN:
+        return TextureType::eMetallicRoughness;
+    default:
+        FT_ASSERT(false && "Unsupported type");
+    }
+}
+
+void load_texture_type(Mesh& mesh, Model& model, aiMaterial* mat, aiTextureType type)
 {
     for (u32 i = 0; i < mat->GetTextureCount(type); i++)
     {
@@ -61,18 +81,30 @@ void load_material_textures(Mesh& mesh, Model& model, aiMaterial* mat, aiTexture
         {
             if (std::strcmp(model.textures[ j ].filename.data(), str.C_Str()) == 0)
             {
-                mesh.material.base_color_texture = j;
-                skip                             = true;
+                u32 material_index                         = ( u32 ) to_texture_type(type);
+                mesh.material.m_textures[ material_index ] = j;
+                skip                                       = true;
                 break;
             }
         }
 
         if (!skip)
         {
-            mesh.material.base_color_texture = model.textures.size();
+            u32 material_index                         = ( u32 ) to_texture_type(type);
+            mesh.material.m_textures[ material_index ] = model.textures.size();
             model.textures.emplace_back(model.directory, str.C_Str());
         }
     }
+}
+
+void load_material_textures(Mesh& mesh, Model& model, aiMaterial* mat)
+{
+    load_texture_type(mesh, model, mat, aiTextureType_BASE_COLOR);
+    load_texture_type(mesh, model, mat, aiTextureType_NORMALS);
+    load_texture_type(mesh, model, mat, aiTextureType_LIGHTMAP);
+    load_texture_type(mesh, model, mat, aiTextureType_AMBIENT_OCCLUSION);
+    load_texture_type(mesh, model, mat, aiTextureType_EMISSIVE);
+    load_texture_type(mesh, model, mat, aiTextureType_UNKNOWN);
 }
 
 Mesh process_mesh(
@@ -149,7 +181,7 @@ Mesh process_mesh(
     // process materials
     aiMaterial* material = scene->mMaterials[ mesh->mMaterialIndex ];
 
-    load_material_textures(result, model, material, aiTextureType_DIFFUSE);
+    load_material_textures(result, model, material);
 
     result.vertex_count = (model.vertices.size() / model.vertex_stride) - result.first_vertex;
     result.index_count  = model.indices.size() - result.first_index;
@@ -219,7 +251,6 @@ void fill_vertex_layout(VertexLayout& layout, VertexComponents components)
 
         u32 attrib_count = layout.attribute_desc_count;
         u32 location     = layout.attribute_descs[ attrib_count - 1 ].location + 1;
-        // u32 offset       = layout.attribute_descs[ attrib_count - 1 ].offset + 3 * sizeof(f32);
 
         layout.attribute_desc_count++;
         layout.attribute_descs[ attrib_count ].binding  = 0;
@@ -236,7 +267,6 @@ void fill_vertex_layout(VertexLayout& layout, VertexComponents components)
 
         u32 attrib_count = layout.attribute_desc_count;
         u32 location     = layout.attribute_descs[ attrib_count - 1 ].location + 1;
-        // u32 offset       = layout.attribute_descs[ attrib_count - 1 ].offset + 2 * sizeof(f32);
 
         layout.attribute_desc_count++;
         layout.attribute_descs[ attrib_count ].binding  = 0;
@@ -280,4 +310,13 @@ void load_model(Model& model, VertexComponents vertex_components, const std::str
     fill_vertex_layout(model.vertex_layout, vertex_components);
     process_mesh_node(model, vertex_components, scene->mRootNode, scene);
 }
+
+void destroy_model(Model& model)
+{
+    for (u32 t = 0; t < model.textures.size(); ++t)
+    {
+        model.textures[ t ].destroy();
+    }
+}
+
 } // namespace fluent
