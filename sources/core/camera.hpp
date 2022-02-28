@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/base.hpp"
+#include "core/input.hpp"
 #include "math/math.hpp"
 
 namespace fluent
@@ -38,7 +39,9 @@ private:
     void recalculate_view_matrix();
 
 public:
-    void init_camera(fluent::Vector3 position, fluent::Vector3 direction, fluent::Vector3 up);
+    void init_camera(
+        fluent::Vector3 position, fluent::Vector3 direction,
+        fluent::Vector3 up);
 
     void on_move(CameraDirection direction, f32 delta_time);
     void on_rotate(f32 x_offset, f32 y_offset);
@@ -58,6 +61,11 @@ public:
     const Vector3& get_position() const
     {
         return m_position;
+    }
+
+    const Vector3& get_direction() const
+    {
+        return m_direction;
     }
 };
 

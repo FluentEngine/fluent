@@ -2477,6 +2477,13 @@ void cmd_bind_vertex_buffer(
     vkCmdBindVertexBuffers(cmd->command_buffer, 0, 1, &buffer->buffer, &offset);
 }
 
+void cmd_bind_index_buffer_u16(
+    const CommandBuffer* cmd, const Buffer* buffer, const u64 offset)
+{
+    vkCmdBindIndexBuffer(
+        cmd->command_buffer, buffer->buffer, offset, VK_INDEX_TYPE_UINT16);
+}
+
 void cmd_bind_index_buffer_u32(
     const CommandBuffer* cmd, const Buffer* buffer, u64 offset)
 {

@@ -89,7 +89,8 @@ void Camera::on_resize(u32 width, u32 height)
     recalculate_projection_matrix();
 }
 
-void CameraController::init(const fluent::InputSystem* input_system, Camera& camera)
+void CameraController::init(
+    const fluent::InputSystem* input_system, Camera& camera)
 {
     m_input_system = input_system;
     m_camera       = &camera;
@@ -115,9 +116,7 @@ void CameraController::update(f32 delta_time)
         m_camera->on_move(CameraDirection::eRight, delta_time);
     }
 
-    if (is_key_pressed(m_input_system, Key::LeftAlt))
-    {
-        m_camera->on_rotate(get_mouse_offset_x(m_input_system), get_mouse_offset_y(m_input_system));
-    }
+    m_camera->on_rotate(
+        get_mouse_offset_x(m_input_system), get_mouse_offset_y(m_input_system));
 }
 } // namespace fluent
