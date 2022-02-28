@@ -2,6 +2,7 @@ build/
 .vscode/
 
 *.spv
+*.user
 
 # MacOS generated files #
 ######################

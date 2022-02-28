@@ -1,4 +1,5 @@
 ---
+ColumnLimit: 80
 BasedOnStyle: Microsoft
 AccessModifierOffset: '-4'
 AlignAfterOpenBracket: AlwaysBreak
@@ -25,4 +26,7 @@ SpacesInSquareBrackets: 'true'
 TabWidth: '4'
 SortIncludes: 'false'
 AlwaysBreakTemplateDeclarations: 'Yes'
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowAllArgumentsOnNextLine: true
+BinPackArguments: false
 ...

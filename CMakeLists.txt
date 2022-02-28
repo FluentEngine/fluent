@@ -8,25 +8,24 @@ function(compile_shaders ${SHADERS})
     endforeach()
 endfunction()
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 cmake_policy(SET CMP0054 NEW) # ENABLE CMP0054: Only interpret if() arguments as variables or keywords when unquoted.
 cmake_policy(SET CMP0042 NEW) # ENABLE CMP0042: MACOSX_RPATH is enabled by default.
 cmake_policy(SET CMP0063 NEW) # ENABLE CMP0063: Honor visibility properties for all target types.
 cmake_policy(SET CMP0077 NEW) # ENABLE CMP0077: option() honors normal variables
 
+find_package(assimp REQUIRED)
+
 set(BUILD_SHARED_LIBS OFF)
-set(ASSIMP_BUILD_TESTS OFF)
-set(ASSIMP_INSTALL OFF)
 add_subdirectory(third_party/spdlog)
 add_subdirectory(third_party/volk)
 add_subdirectory(third_party/vk_mem_alloc)
-add_subdirectory(third_party/SDL)
 add_subdirectory(third_party/tiny_image_format)
 add_subdirectory(third_party/spirv_reflect)
 add_subdirectory(third_party/tinyddsloader)
+add_subdirectory(third_party/SDL)
 add_subdirectory(third_party/stb_image)
 add_subdirectory(third_party/glm)
-add_subdirectory(third_party/assimp)
 add_subdirectory(third_party/imgui)
 add_subdirectory(third_party/entt)
 
@@ -38,25 +37,38 @@ project(${target} CXX)
 set(src_dir ${CMAKE_CURRENT_SOURCE_DIR}/sources)
 
 set(core
+	${src_dir}/core/log.hpp
 	${src_dir}/core/log.cpp
-    ${src_dir}/core/window.cpp
+	${src_dir}/core/window.hpp
+	${src_dir}/core/window.cpp
+	${src_dir}/core/input.hpp
 	${src_dir}/core/input.cpp
+	${src_dir}/core/application.hpp
 	${src_dir}/core/application.cpp
+	${src_dir}/core/camera.hpp
 	${src_dir}/core/camera.cpp
 	)
 
 set(renderer
+	${src_dir}/renderer/shader_reflection.hpp
 	${src_dir}/renderer/shader_reflection.cpp
+	${src_dir}/renderer/renderer_backend.hpp
 	${src_dir}/renderer/renderer_backend.cpp
+	${src_dir}/renderer/resource_loader.hpp
 	${src_dir}/renderer/resource_loader.cpp
+	${src_dir}/renderer/graphic_context.hpp
 	${src_dir}/renderer/graphic_context.cpp)
 
 set(util
-	${src_dir}/utils/file_loader.cpp	
+	${src_dir}/utils/file_loader.hpp
+	${src_dir}/utils/file_loader.cpp
+	${src_dir}/utils/image_loader.hpp
 	${src_dir}/utils/image_loader.cpp
+	${src_dir}/utils/file_system.hpp
 	${src_dir}/utils/file_system.cpp)
 
 set(math
+	${src_dir}/math/math.hpp
 	${src_dir}/math/math.cpp)
 
 set(sources 
@@ -95,8 +107,14 @@ target_include_directories(${target}
 
 target_link_libraries(${target} PUBLIC ${libs})
 
-set(FLUENT_BUILD_TESTS ON)
-set(FLUENT_DEBUG_BUILD ON)
+if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+	set(FLUENT_DEBUG_BUILD ON)
+endif()
+if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+	set(FLUENT_DEBUG_BUILD OFF)
+endif()
+
+set(FLUENT_BUILD_TESTS OFF)
 
 if (FLUENT_DEBUG_BUILD)
 	set(compile_definitions FLUENT_DEBUG)
@@ -117,6 +135,5 @@ target_compile_options(${target} PUBLIC ${compile_options})
 
 if (FLUENT_BUILD_TESTS)
     add_subdirectory(examples)
+	add_subdirectory(sandbox)
 endif()
-
-add_subdirectory(sandbox)

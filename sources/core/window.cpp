@@ -5,21 +5,32 @@
 namespace fluent
 {
 
-Window create_window(const char* title, u32 x, u32 y, u32 width, u32 height)
+Window create_window(const WindowDesc& desc)
 {
-    FT_ASSERT(width > 0 && height > 0 && "Width, height should be greater than zero");
+    FT_ASSERT(
+        desc.width > 0 && desc.height > 0 &&
+        "Width, height should be greater than zero");
 
-    SDL_WindowFlags window_flags = ( SDL_WindowFlags ) (SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
-    SDL_Window*     window       = SDL_CreateWindow(title, x, y, width, height, window_flags);
+    SDL_WindowFlags window_flags =
+        ( SDL_WindowFlags ) (SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
+
+    if (desc.grab_mouse)
+    {
+        window_flags =
+            ( SDL_WindowFlags ) (window_flags | SDL_WINDOW_MOUSE_GRABBED);
+    }
+
+    SDL_Window* window = SDL_CreateWindow(
+        desc.title, desc.x, desc.y, desc.width, desc.height, window_flags);
 
     FT_ASSERT(window && "Failed to create window");
 
     Window result{};
     result.handle                           = window;
-    result.data[ WindowParams::ePositionX ] = x;
-    result.data[ WindowParams::ePositionY ] = y;
-    result.data[ WindowParams::eWidth ]     = width;
-    result.data[ WindowParams::eHeight ]    = height;
+    result.data[ WindowParams::ePositionX ] = desc.x;
+    result.data[ WindowParams::ePositionY ] = desc.y;
+    result.data[ WindowParams::eWidth ]     = desc.width;
+    result.data[ WindowParams::eHeight ]    = desc.height;
 
     return result;
 }
@@ -42,7 +53,8 @@ u32 window_get_height(const Window* window)
 
 f32 window_get_aspect(const Window* window)
 {
-    return ( f32 ) window->data[ WindowParams::eWidth ] / ( f32 ) window->data[ WindowParams::eHeight ];
+    return ( f32 ) window->data[ WindowParams::eWidth ] /
+           ( f32 ) window->data[ WindowParams::eHeight ];
 }
 
 } // namespace fluent

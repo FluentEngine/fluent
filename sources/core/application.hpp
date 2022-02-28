@@ -1,11 +1,10 @@
 #pragma once
 
 #include "core/base.hpp"
+#include "core/window.hpp"
 
 namespace fluent
 {
-
-struct Window;
 struct InputSystem;
 struct UiContext;
 
@@ -18,11 +17,7 @@ struct ApplicationConfig
 {
     u32              argc;
     char**           argv;
-    const char*      title = nullptr;
-    u32              x;
-    u32              y;
-    u32              width;
-    u32              height;
+    WindowDesc       window_desc;
     LogLevel         log_level;
     InitCallback     on_init;
     UpdateCallback   on_update;
@@ -36,7 +31,6 @@ void app_shutdown();
 
 void app_set_ui_context(const UiContext& context);
 
-const char*        get_app_name();
 const Window*      get_app_window();
 const InputSystem* get_app_input_system();
 

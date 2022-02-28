@@ -14,13 +14,23 @@ enum WindowParams : u8
     eLast      = 4
 };
 
+struct WindowDesc
+{
+    const char* title      = nullptr;
+    u32         x          = 0;
+    u32         y          = 0;
+    u32         width      = 0;
+    u32         height     = 0;
+    b32         grab_mouse = false;
+};
+
 struct Window
 {
     void* handle;
     u32   data[ static_cast<int>(WindowParams::eLast) ];
 };
 
-Window create_window(const char* title, u32 x, u32 y, u32 width, u32 height);
+Window create_window(const WindowDesc& desc);
 void   destroy_window(Window& window);
 
 u32 window_get_width(const Window* window);

@@ -126,7 +126,8 @@ enum : KeyCode
     RightControl = 228,
     RightAlt     = 230,
     RightSuper   = 101,
-    Menu         = 348
+    Menu         = 348,
+    Last         = 350
 };
 } // namespace Key
 } // namespace fluent

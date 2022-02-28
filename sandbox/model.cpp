@@ -66,6 +66,7 @@ TextureType to_texture_type(aiTextureType type)
         return TextureType::eMetallicRoughness;
     default:
         FT_ASSERT(false && "Unsupported type");
+        return TextureType(-1);
     }
 }
 

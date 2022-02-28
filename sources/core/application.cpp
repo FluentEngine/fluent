@@ -16,7 +16,6 @@ struct ApplicationState
 {
     b32              is_inited;
     b32              is_running;
-    const char*      title;
     Window           window;
     InitCallback     on_init;
     UpdateCallback   on_update;
@@ -40,9 +39,8 @@ void app_init(const ApplicationConfig* config)
     int init_result = SDL_Init(SDL_INIT_VIDEO);
     FT_ASSERT(init_result == 0 && "SDL Init failed");
 
-    app_state.window = fluent::create_window(config->title, config->x, config->y, config->width, config->height);
+    app_state.window = fluent::create_window(config->window_desc);
 
-    app_state.title          = config->title;
     app_state.on_init        = config->on_init;
     app_state.on_update      = config->on_update;
     app_state.on_shutdown    = config->on_shutdown;
@@ -92,18 +90,37 @@ void app_run()
             case SDL_WINDOWEVENT:
                 if (e.window.event == SDL_WINDOWEVENT_RESIZED)
                 {
-                    app_state.window.data[ WindowParams::eWidth ]  = e.window.data1;
-                    app_state.window.data[ WindowParams::eHeight ] = e.window.data2;
+                    app_state.window.data[ WindowParams::eWidth ] =
+                        e.window.data1;
+                    app_state.window.data[ WindowParams::eHeight ] =
+                        e.window.data2;
 
                     app_state.on_resize(e.window.data1, e.window.data2);
                 }
                 break;
             case SDL_KEYDOWN:
-                update_input_keyboard_state(&app_state.input_system, static_cast<KeyCode>(e.key.keysym.scancode), true);
+                update_input_keyboard_state(
+                    &app_state.input_system,
+                    static_cast<KeyCode>(e.key.keysym.scancode),
+                    true);
                 break;
             case SDL_KEYUP:
                 update_input_keyboard_state(
-                    &app_state.input_system, static_cast<KeyCode>(e.key.keysym.scancode), false);
+                    &app_state.input_system,
+                    static_cast<KeyCode>(e.key.keysym.scancode),
+                    false);
+                break;
+            case SDL_MOUSEBUTTONDOWN:
+                update_input_mouse_buttons_state(
+                    &app_state.input_system,
+                    static_cast<ButtonCode>(e.button.button),
+                    true);
+                break;
+            case SDL_MOUSEBUTTONUP:
+                update_input_mouse_buttons_state(
+                    &app_state.input_system,
+                    static_cast<ButtonCode>(e.button.button),
+                    false);
                 break;
             default:
                 break;
@@ -123,11 +140,6 @@ void app_shutdown()
     FT_ASSERT(app_state.is_inited);
     fluent::destroy_window(app_state.window);
     SDL_Quit();
-}
-
-const char* get_app_name()
-{
-    return app_state.title;
 }
 
 const Window* get_app_window()
