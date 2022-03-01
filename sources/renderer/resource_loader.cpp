@@ -67,6 +67,7 @@ void ResourceLoader::upload_buffer(
         {
             begin_command_buffer(m_cmd);
         }
+
         cmd_copy_buffer(
             m_cmd,
             m_staging_buffer.buffer,
@@ -74,6 +75,9 @@ void ResourceLoader::upload_buffer(
             buffer,
             offset,
             size);
+
+        m_staging_buffer.offset += size;
+
         if (need_end_record)
         {
             end_command_buffer(m_cmd);
@@ -142,6 +146,8 @@ void ResourceLoader::upload_image(Image* image, u64 size, const void* data)
     barrier.old_state = ResourceState::eTransferDst;
     barrier.new_state = ResourceState::eShaderReadOnly;
     cmd_barrier(m_cmd, 0, nullptr, 1, &barrier);
+
+    m_staging_buffer.offset += size;
 
     if (need_end_record)
     {
