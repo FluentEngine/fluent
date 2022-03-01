@@ -11,13 +11,11 @@ Window create_window(const WindowDesc& desc)
         desc.width > 0 && desc.height > 0 &&
         "Width, height should be greater than zero");
 
-    SDL_WindowFlags window_flags =
-        ( SDL_WindowFlags ) (SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
+    uint32_t window_flags = (SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
 
     if (desc.grab_mouse)
     {
-        window_flags =
-            ( SDL_WindowFlags ) (window_flags | SDL_WINDOW_MOUSE_GRABBED);
+        window_flags |= SDL_WINDOW_MOUSE_GRABBED;
     }
 
     SDL_Window* window = SDL_CreateWindow(
@@ -55,6 +53,11 @@ f32 window_get_aspect(const Window* window)
 {
     return ( f32 ) window->data[ WindowParams::eWidth ] /
            ( f32 ) window->data[ WindowParams::eHeight ];
+}
+
+void window_show_cursor(b32 show)
+{
+    SDL_ShowCursor(show);
 }
 
 } // namespace fluent
