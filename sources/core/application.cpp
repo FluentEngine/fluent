@@ -127,7 +127,7 @@ void app_run()
             }
         }
         i32 x, y;
-        SDL_GetGlobalMouseState(&x, &y);
+        SDL_GetRelativeMouseState(&x, &y);
         update_input_mouse_state(&app_state.input_system, x, y);
         app_state.on_update(app_state.delta_time);
     }

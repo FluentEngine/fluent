@@ -117,6 +117,7 @@ void CameraController::update(f32 delta_time)
     }
 
     m_camera->on_rotate(
-        get_mouse_offset_x(m_input_system), get_mouse_offset_y(m_input_system));
+        get_mouse_offset_x(m_input_system),
+        -get_mouse_offset_y(m_input_system));
 }
 } // namespace fluent

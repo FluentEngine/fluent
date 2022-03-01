@@ -13,11 +13,6 @@ Window create_window(const WindowDesc& desc)
 
     uint32_t window_flags = (SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
 
-    if (desc.grab_mouse)
-    {
-        window_flags |= SDL_WINDOW_MOUSE_GRABBED;
-    }
-
     SDL_Window* window = SDL_CreateWindow(
         desc.title, desc.x, desc.y, desc.width, desc.height, window_flags);
 
@@ -57,7 +52,6 @@ f32 window_get_aspect(const Window* window)
 
 void window_show_cursor(b32 show)
 {
-    SDL_ShowCursor(show);
+    SDL_SetRelativeMouseMode(show ? SDL_TRUE : SDL_FALSE);
 }
-
 } // namespace fluent

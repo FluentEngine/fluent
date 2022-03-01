@@ -16,13 +16,13 @@ void init_input_system(InputSystem* input_system)
         0,
         static_cast<size_t>(Button::Last) * sizeof(input_system->buttons[ 0 ]));
 
+    std::memset(
+        input_system->mouse_offset,
+        0,
+        2 * sizeof(input_system->mouse_offset[ 0 ]));
+
     i32 x, y;
     SDL_GetMouseState(&x, &y);
-
-    input_system->mouse_position[ 0 ]     = x;
-    input_system->mouse_position[ 1 ]     = y;
-    input_system->old_mouse_position[ 0 ] = x;
-    input_system->old_mouse_position[ 1 ] = y;
 }
 
 void update_input_system(InputSystem* input_system)
@@ -31,8 +31,6 @@ void update_input_system(InputSystem* input_system)
         input_system->buttons,
         0,
         static_cast<size_t>(Button::Last) * sizeof(input_system->buttons[ 0 ]));
-    input_system->old_mouse_position[ 0 ] = input_system->mouse_position[ 0 ];
-    input_system->old_mouse_position[ 1 ] = input_system->mouse_position[ 1 ];
 }
 
 void update_input_keyboard_state(
@@ -43,10 +41,8 @@ void update_input_keyboard_state(
 
 void update_input_mouse_state(InputSystem* input_system, f32 x, f32 y)
 {
-    input_system->old_mouse_position[ 0 ] = input_system->mouse_position[ 0 ];
-    input_system->old_mouse_position[ 1 ] = input_system->mouse_position[ 1 ];
-    input_system->mouse_position[ 0 ]     = x;
-    input_system->mouse_position[ 1 ]     = y;
+    input_system->mouse_offset[ 0 ] = x;
+    input_system->mouse_offset[ 1 ] = y;
 }
 
 void update_input_mouse_buttons_state(
@@ -55,26 +51,14 @@ void update_input_mouse_buttons_state(
     input_system->buttons[ button ] = press;
 }
 
-f32 get_mouse_pos_x(const InputSystem* input_system)
-{
-    return input_system->mouse_position[ 0 ];
-}
-
-f32 get_mouse_pos_y(const InputSystem* input_system)
-{
-    return input_system->mouse_position[ 1 ];
-}
-
 f32 get_mouse_offset_x(const InputSystem* input_system)
 {
-    return input_system->mouse_position[ 0 ] -
-           input_system->old_mouse_position[ 0 ];
+    return input_system->mouse_offset[ 0 ];
 }
 
 f32 get_mouse_offset_y(const InputSystem* input_system)
 {
-    return input_system->old_mouse_position[ 1 ] -
-           input_system->mouse_position[ 1 ];
+    return input_system->mouse_offset[ 1 ];
 }
 
 b32 is_key_pressed(const InputSystem* input_system, KeyCode key)
