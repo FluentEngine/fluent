@@ -14,6 +14,19 @@ enum class CameraDirection
     eRight
 };
 
+struct CameraDesc
+{
+    fluent::Vector3 position;
+    fluent::Vector3 direction;
+    fluent::Vector3 up;
+    f32             aspect      = 1400.0f / 900.0f;
+    f32             fov         = radians(45.0f);
+    f32             near        = 0.1f;
+    f32             far         = 1000.0f;
+    f32             speed       = 5.0f;
+    f32             sensitivity = 0.1f;
+};
+
 class Camera
 {
 private:
@@ -39,9 +52,7 @@ private:
     void recalculate_view_matrix();
 
 public:
-    void init_camera(
-        fluent::Vector3 position, fluent::Vector3 direction,
-        fluent::Vector3 up);
+    void init_camera(const CameraDesc& desc);
 
     void on_move(CameraDirection direction, f32 delta_time);
     void on_rotate(f32 x_offset, f32 y_offset);

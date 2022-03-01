@@ -400,10 +400,12 @@ void on_init()
 
     ResourceLoader::init(GraphicContext::get()->device());
 
-    camera.init_camera(
-        Vector3(0.0f, 1.0, 3.0f),
-        Vector3(0.0, 0.0, -1.0),
-        Vector3(0.0, 1.0, 0.0));
+    CameraDesc camera_desc{};
+    camera_desc.position = Vector3(0.0f, 1.0, 3.0f);
+    camera_desc.direction = Vector3(0.0, 0.0, -1.0);
+    camera_desc.up = Vector3(0.0, 1.0, 0.0);
+
+    camera.init_camera(camera_desc);
     camera_controller.init(get_app_input_system(), camera);
 
     VertexComponents components =

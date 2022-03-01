@@ -3,26 +3,26 @@
 
 namespace fluent
 {
-void Camera::init_camera(Vector3 position, Vector3 direction, Vector3 up)
+void Camera::init_camera(const CameraDesc& desc)
 {
-    m_fov    = radians(45.0f);
-    m_aspect = 1400.0f / 900.0f;
-    m_near   = 0.1f;
-    m_far    = 10000.0f;
+    m_fov    = desc.fov;
+    m_aspect = desc.aspect;
+    m_near   = desc.near;
+    m_far    = desc.far;
     m_yaw    = -90.0f;
     m_pitch  = 0.0f;
 
-    m_position  = position;
-    m_direction = direction;
-    m_world_up  = up;
-    m_right     = glm::cross(direction, m_world_up);
+    m_position  = desc.position;
+    m_direction = desc.direction;
+    m_world_up  = desc.up;
+    m_right     = glm::cross(desc.direction, m_world_up);
     m_up        = normalize(glm::cross(m_right, m_direction));
 
     recalculate_projection_matrix();
     recalculate_view_matrix();
 
-    m_speed             = 5.0f;
-    m_mouse_sensitivity = 0.1f;
+    m_speed             = desc.speed;
+    m_mouse_sensitivity = desc.sensitivity;
 }
 
 void Camera::recalculate_projection_matrix()
