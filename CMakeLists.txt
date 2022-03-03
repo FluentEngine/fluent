@@ -91,7 +91,7 @@ set(libs
 	tinyddsloader 
 	stb_image 
 	glm 
-	assimp
+	assimp::assimp
 	imgui
 	entt)
 
