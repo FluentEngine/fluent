@@ -52,6 +52,6 @@ f32 window_get_aspect(const Window* window)
 
 void window_show_cursor(b32 show)
 {
-    SDL_SetRelativeMouseMode(show ? SDL_TRUE : SDL_FALSE);
+    SDL_SetRelativeMouseMode(show ? SDL_FALSE : SDL_TRUE);
 }
 } // namespace fluent
