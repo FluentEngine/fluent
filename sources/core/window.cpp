@@ -5,20 +5,23 @@
 namespace fluent
 {
 
-Window create_window(const WindowDesc& desc)
+Window create_window( const WindowDesc& desc )
 {
-    FT_ASSERT(
-        desc.width > 0 && desc.height > 0 &&
-        "Width, height should be greater than zero");
+    FT_ASSERT( desc.width > 0 && desc.height > 0 &&
+               "Width, height should be greater than zero" );
 
-    uint32_t window_flags = (SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
+    uint32_t window_flags = ( SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN );
 
-    SDL_Window* window = SDL_CreateWindow(
-        desc.title, desc.x, desc.y, desc.width, desc.height, window_flags);
+    SDL_Window* window = SDL_CreateWindow( desc.title,
+                                           desc.x,
+                                           desc.y,
+                                           desc.width,
+                                           desc.height,
+                                           window_flags );
 
-    FT_ASSERT(window && "Failed to create window");
+    FT_ASSERT( window && "Failed to create window" );
 
-    Window result{};
+    Window result {};
     result.handle                           = window;
     result.data[ WindowParams::ePositionX ] = desc.x;
     result.data[ WindowParams::ePositionY ] = desc.y;
@@ -28,30 +31,30 @@ Window create_window(const WindowDesc& desc)
     return result;
 }
 
-void destroy_window(Window& window)
+void destroy_window( Window& window )
 {
-    FT_ASSERT(window.handle && "Window is nullptr");
-    SDL_DestroyWindow(( SDL_Window* ) window.handle);
+    FT_ASSERT( window.handle && "Window is nullptr" );
+    SDL_DestroyWindow( ( SDL_Window* ) window.handle );
 }
 
-u32 window_get_width(const Window* window)
+u32 window_get_width( const Window* window )
 {
     return window->data[ WindowParams::eWidth ];
 }
 
-u32 window_get_height(const Window* window)
+u32 window_get_height( const Window* window )
 {
     return window->data[ WindowParams::eHeight ];
 }
 
-f32 window_get_aspect(const Window* window)
+f32 window_get_aspect( const Window* window )
 {
     return ( f32 ) window->data[ WindowParams::eWidth ] /
            ( f32 ) window->data[ WindowParams::eHeight ];
 }
 
-void window_show_cursor(b32 show)
+void window_show_cursor( b32 show )
 {
-    SDL_SetRelativeMouseMode(show ? SDL_FALSE : SDL_TRUE);
+    SDL_SetRelativeMouseMode( show ? SDL_FALSE : SDL_TRUE );
 }
 } // namespace fluent

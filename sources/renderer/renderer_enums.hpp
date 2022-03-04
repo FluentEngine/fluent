@@ -6,7 +6,7 @@
 namespace fluent
 {
 
-#define BIT(x) 1 << x
+#define BIT( x ) 1 << x
 
 enum class QueueType : u8
 {
@@ -251,38 +251,38 @@ enum class MemoryUsage
 
 enum class ResourceState : u32
 {
-    eUndefined            = BIT(0),
-    eGeneral              = BIT(1),
-    eColorAttachment      = BIT(2),
-    eDepthStencilWrite    = BIT(3),
-    eDepthStencilReadOnly = BIT(4),
-    eShaderReadOnly       = BIT(5),
-    eTransferSrc          = BIT(6),
-    eTransferDst          = BIT(7),
-    ePresent              = BIT(8)
+    eUndefined            = BIT( 0 ),
+    eGeneral              = BIT( 1 ),
+    eColorAttachment      = BIT( 2 ),
+    eDepthStencilWrite    = BIT( 3 ),
+    eDepthStencilReadOnly = BIT( 4 ),
+    eShaderReadOnly       = BIT( 5 ),
+    eTransferSrc          = BIT( 6 ),
+    eTransferDst          = BIT( 7 ),
+    ePresent              = BIT( 8 )
 };
-MAKE_ENUM_FLAG(u32, ResourceState);
+MAKE_ENUM_FLAG( u32, ResourceState );
 
 enum class DescriptorType : u32
 {
-    eUndefined              = BIT(0),
-    eVertexBuffer           = BIT(1),
-    eIndexBuffer            = BIT(2),
-    eUniformBuffer          = BIT(3),
-    eSampler                = BIT(4),
-    eSampledImage           = BIT(5),
-    eStorageImage           = BIT(6),
-    eUniformTexelBuffer     = BIT(7),
-    eStorageTexelBuffer     = BIT(8),
-    eStorageBuffer          = BIT(9),
-    eIndirectBuffer         = BIT(10),
-    eUniformBufferDynamic   = BIT(11),
-    eStorageBufferDynamic   = BIT(12),
-    eInputAttachment        = BIT(13),
-    eDepthStencilAttachment = BIT(14),
-    eColorAttachment        = BIT(15)
+    eUndefined              = BIT( 0 ),
+    eVertexBuffer           = BIT( 1 ),
+    eIndexBuffer            = BIT( 2 ),
+    eUniformBuffer          = BIT( 3 ),
+    eSampler                = BIT( 4 ),
+    eSampledImage           = BIT( 5 ),
+    eStorageImage           = BIT( 6 ),
+    eUniformTexelBuffer     = BIT( 7 ),
+    eStorageTexelBuffer     = BIT( 8 ),
+    eStorageBuffer          = BIT( 9 ),
+    eIndirectBuffer         = BIT( 10 ),
+    eUniformBufferDynamic   = BIT( 11 ),
+    eStorageBufferDynamic   = BIT( 12 ),
+    eInputAttachment        = BIT( 13 ),
+    eDepthStencilAttachment = BIT( 14 ),
+    eColorAttachment        = BIT( 15 )
 };
-MAKE_ENUM_FLAG(u32, DescriptorType);
+MAKE_ENUM_FLAG( u32, DescriptorType );
 
 enum class PipelineType
 {

@@ -14,13 +14,13 @@ private:
     static std::string m_textures_directory;
     static std::string m_models_directory;
 
-    static std::string get_exec_path(char** argv);
+    static std::string get_exec_path( char** argv );
 
 public:
-    static void init(char** argv);
-    static void set_shaders_directory(const std::string& path);
-    static void set_textures_directory(const std::string& path);
-    static void set_models_directory(const std::string& path);
+    static void init( char** argv );
+    static void set_shaders_directory( const std::string& path );
+    static void set_textures_directory( const std::string& path );
+    static void set_models_directory( const std::string& path );
 
     static const std::string& get_shaders_directory()
     {

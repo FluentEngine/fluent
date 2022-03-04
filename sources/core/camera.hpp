@@ -19,12 +19,12 @@ struct CameraDesc
     fluent::Vector3 position;
     fluent::Vector3 direction;
     fluent::Vector3 up;
-    f32             aspect      = 1400.0f / 900.0f;
-    f32             fov         = radians(45.0f);
-    f32             near        = 0.1f;
-    f32             far         = 1000.0f;
-    f32             speed       = 5.0f;
-    f32             sensitivity = 0.1f;
+    f32 aspect      = 1400.0f / 900.0f;
+    f32 fov         = radians( 45.0f );
+    f32 near        = 0.1f;
+    f32 far         = 1000.0f;
+    f32 speed       = 5.0f;
+    f32 sensitivity = 0.1f;
 };
 
 class Camera
@@ -52,42 +52,30 @@ private:
     void recalculate_view_matrix();
 
 public:
-    void init_camera(const CameraDesc& desc);
+    void init_camera( const CameraDesc& desc );
 
-    void on_move(CameraDirection direction, f32 delta_time);
-    void on_rotate(f32 x_offset, f32 y_offset);
+    void on_move( CameraDirection direction, f32 delta_time );
+    void on_rotate( f32 x_offset, f32 y_offset );
 
-    void on_resize(u32 width, u32 height);
+    void on_resize( u32 width, u32 height );
 
-    const Matrix4& get_projection_matrix() const
-    {
-        return m_projection;
-    }
+    const Matrix4& get_projection_matrix() const { return m_projection; }
 
-    const Matrix4& get_view_matrix() const
-    {
-        return m_view;
-    }
+    const Matrix4& get_view_matrix() const { return m_view; }
 
-    const Vector3& get_position() const
-    {
-        return m_position;
-    }
+    const Vector3& get_position() const { return m_position; }
 
-    const Vector3& get_direction() const
-    {
-        return m_direction;
-    }
+    const Vector3& get_direction() const { return m_direction; }
 };
 
 class CameraController
 {
 private:
     const InputSystem* m_input_system = nullptr;
-    Camera*            m_camera       = nullptr;
+    Camera* m_camera                  = nullptr;
 
 public:
-    void init(const InputSystem* input_system, Camera& camera);
-    void update(f32 delta_time);
+    void init( const InputSystem* input_system, Camera& camera );
+    void update( f32 delta_time );
 };
 } // namespace fluent

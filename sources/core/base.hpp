@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef FLUENT_DEBUG
-#undef NDEBUG
+#    undef NDEBUG
 #endif
 
 #include <string>
@@ -22,22 +22,22 @@ using f32 = float;
 using f64 = double;
 using b32 = bool;
 
-#define MAKE_ENUM_FLAG(TYPE, ENUM_TYPE)                                                                                \
-    static inline ENUM_TYPE operator|(ENUM_TYPE a, ENUM_TYPE b)                                                        \
-    {                                                                                                                  \
-        return ( ENUM_TYPE ) (( TYPE ) (a) | ( TYPE ) (b));                                                            \
-    }                                                                                                                  \
-    static inline ENUM_TYPE operator&(ENUM_TYPE a, ENUM_TYPE b)                                                        \
-    {                                                                                                                  \
-        return ( ENUM_TYPE ) (( TYPE ) (a) & ( TYPE ) (b));                                                            \
-    }                                                                                                                  \
-    static inline ENUM_TYPE operator|=(ENUM_TYPE& a, ENUM_TYPE b)                                                      \
-    {                                                                                                                  \
-        return a = (a | b);                                                                                            \
-    }                                                                                                                  \
-    static inline ENUM_TYPE operator&=(ENUM_TYPE& a, ENUM_TYPE b)                                                      \
-    {                                                                                                                  \
-        return a = (a & b);                                                                                            \
+#define MAKE_ENUM_FLAG( TYPE, ENUM_TYPE )                                      \
+    static inline ENUM_TYPE operator|( ENUM_TYPE a, ENUM_TYPE b )              \
+    {                                                                          \
+        return ( ENUM_TYPE ) ( ( TYPE ) ( a ) | ( TYPE ) ( b ) );              \
+    }                                                                          \
+    static inline ENUM_TYPE operator&( ENUM_TYPE a, ENUM_TYPE b )              \
+    {                                                                          \
+        return ( ENUM_TYPE ) ( ( TYPE ) ( a ) & ( TYPE ) ( b ) );              \
+    }                                                                          \
+    static inline ENUM_TYPE operator|=( ENUM_TYPE& a, ENUM_TYPE b )            \
+    {                                                                          \
+        return a = ( a | b );                                                  \
+    }                                                                          \
+    static inline ENUM_TYPE operator&=( ENUM_TYPE& a, ENUM_TYPE b )            \
+    {                                                                          \
+        return a = ( a & b );                                                  \
     }
 
 template <typename T>
@@ -47,15 +47,15 @@ template <typename T>
 using Ref = std::shared_ptr<T>;
 
 template <typename T, typename... Args>
-Scope<T> CreateScope(Args&&... args)
+Scope<T> CreateScope( Args&&... args )
 {
-    return std::make_unique<T>(args...);
+    return std::make_unique<T>( args... );
 }
 
 template <typename T, typename... Args>
-Ref<T> CreateRef(Args&&... args)
+Ref<T> CreateRef( Args&&... args )
 {
-    return std::make_shared<T>(args...);
+    return std::make_shared<T>( args... );
 }
 
 #include "core/log.hpp"
