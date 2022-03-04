@@ -7,6 +7,8 @@ set(srcs tinyddsloader.cpp)
 
 add_library(${target} STATIC ${srcs})
 
+target_compile_options(${target} PRIVATE -Wswitch)
+
 target_include_directories(${target}
 		PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}

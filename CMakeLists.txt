@@ -1,20 +1,30 @@
-function(compile_shaders ${SHADERS})
-    foreach(SHADER ${SHADERS})
-        add_custom_command(OUTPUT ${SHADER}.spv
-        COMMAND glslangValidator -V ${SHADER} -o ${SHADER}.spv
-        DEPENDS ${SHADER}
-        COMMENT "Rebuilding ${SHADER}.spv" )
-        message(STATUS "Generating build commands for ${SHADER}.spv")
-    endforeach()
-endfunction()
-
 cmake_minimum_required(VERSION 3.20)
 cmake_policy(SET CMP0054 NEW) # ENABLE CMP0054: Only interpret if() arguments as variables or keywords when unquoted.
 cmake_policy(SET CMP0042 NEW) # ENABLE CMP0042: MACOSX_RPATH is enabled by default.
 cmake_policy(SET CMP0063 NEW) # ENABLE CMP0063: Honor visibility properties for all target types.
 cmake_policy(SET CMP0077 NEW) # ENABLE CMP0077: option() honors normal variables
 
+set(target fluent-engine)
+project(${target} CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+
+if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+	set(FLUENT_DEBUG_BUILD ON)
+endif()
+if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+	set(FLUENT_DEBUG_BUILD OFF)
+endif()
+
+set(FLUENT_BUILD_TESTS ON)
+
 find_package(assimp REQUIRED)
+
+if (UNIX AND NOT APPLE)
+	set(assimp_lib assimp)
+else()
+	set(assimp_lib assimp::assimp)
+endif()
 
 set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(third_party/spdlog)
@@ -29,10 +39,19 @@ add_subdirectory(third_party/glm)
 add_subdirectory(third_party/imgui)
 add_subdirectory(third_party/entt)
 
-set(CMAKE_CXX_STANDARD 17)
-
-set(target fluent-engine)
-project(${target} CXX)
+set(libs
+	spdlog
+	volk
+	vma_allocator
+	SDL2::SDL2-static
+	tiny_image_format
+	spirv_reflect
+	tinyddsloader
+	stb_image
+	glm
+	${assimp_lib}
+	imgui
+	entt)
 
 set(src_dir ${CMAKE_CURRENT_SOURCE_DIR}/sources)
 
@@ -81,20 +100,6 @@ set(sources
 
 set(includes ${CMAKE_CURRENT_SOURCE_DIR}/sources)
 
-set(libs 
-	spdlog 
-	volk 
-	vma_allocator 
-	SDL2::SDL2-static 
-	tiny_image_format
-	spirv_reflect 
-	tinyddsloader 
-	stb_image 
-	glm 
-	assimp::assimp
-	imgui
-	entt)
-
 add_library(${target} ${sources})
 
 target_include_directories(${target}
@@ -107,15 +112,6 @@ target_include_directories(${target}
 
 target_link_libraries(${target} PUBLIC ${libs})
 
-if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-	set(FLUENT_DEBUG_BUILD ON)
-endif()
-if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-	set(FLUENT_DEBUG_BUILD OFF)
-endif()
-
-set(FLUENT_BUILD_TESTS OFF)
-
 if (FLUENT_DEBUG_BUILD)
 	set(compile_definitions FLUENT_DEBUG)
 	if (MSVC)
@@ -125,6 +121,7 @@ if (FLUENT_DEBUG_BUILD)
 	endif()
 else()
 	if (MSVC)
+		# TODO: write same for windows
 	elseif (UNIX)
 		target_compile_options(${target} PUBLIC -O3)
 	endif()
@@ -132,6 +129,17 @@ endif()
 
 target_compile_definitions(${target} PUBLIC ${compile_definitions})
 target_compile_options(${target} PUBLIC ${compile_options})
+
+# TODO: move it to separate file
+function(compile_shaders ${SHADERS})
+	foreach(SHADER ${SHADERS})
+		add_custom_command(OUTPUT ${SHADER}.spv
+		COMMAND glslangValidator -V ${SHADER} -o ${SHADER}.spv
+		DEPENDS ${SHADER}
+		COMMENT "Rebuilding ${SHADER}.spv" )
+		message(STATUS "Generating build commands for ${SHADER}.spv")
+	endforeach()
+endfunction()
 
 if (FLUENT_BUILD_TESTS)
     add_subdirectory(examples)
