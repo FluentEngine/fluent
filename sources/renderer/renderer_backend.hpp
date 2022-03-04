@@ -418,8 +418,8 @@ void create_semaphore(const Device* device, Semaphore** semaphore);
 void destroy_semaphore(const Device* device, Semaphore* semaphore);
 void create_fence(const Device* device, Fence** fence);
 void destroy_fence(const Device* device, Fence* fence);
-void wait_for_fences(const Device* device, u32 count, Fence* fences);
-void reset_fences(const Device* device, u32 count, Fence* fences);
+void wait_for_fences(const Device* device, u32 count, Fence** fences);
+void reset_fences(const Device* device, u32 count, Fence** fences);
 
 void create_swapchain(
     const Device* device, const SwapchainDesc* desc, Swapchain** swapchain);

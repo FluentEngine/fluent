@@ -376,8 +376,8 @@ static inline VkPipelineStageFlags determine_pipeline_stage_flags(
     case QueueType::eCompute: {
     }
 	default: {
-	}
     }
+	}
 
     if (access_flags &
             (VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT) ||
@@ -1174,12 +1174,12 @@ void destroy_fence(const Device* device, Fence* fence)
     delete fence;
 }
 
-void wait_for_fences(const Device* device, u32 count, Fence* fences)
+void wait_for_fences(const Device* device, u32 count, Fence** fences)
 {
     std::vector<VkFence> vk_fences(count);
     for (u32 i = 0; i < count; ++i)
     {
-        vk_fences[ i ] = fences[ i ].fence;
+		vk_fences[ i ] = fences[ i ]->fence;
     }
 
     vkWaitForFences(
@@ -1190,12 +1190,12 @@ void wait_for_fences(const Device* device, u32 count, Fence* fences)
         std::numeric_limits<u64>::max());
 }
 
-void reset_fences(const Device* device, u32 count, Fence* fences)
+void reset_fences(const Device* device, u32 count, Fence** fences)
 {
     std::vector<VkFence> vk_fences(count);
     for (u32 i = 0; i < count; ++i)
     {
-        vk_fences[ i ] = fences[ i ].fence;
+		vk_fences[ i ] = fences[ i ]->fence;
     }
 
     vkResetFences(device->logical_device, count, vk_fences.data());

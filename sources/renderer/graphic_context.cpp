@@ -28,7 +28,8 @@ GraphicContext::GraphicContext(const GraphicContextDesc& desc)
     command_pool_desc.queue = m_queue;
     create_command_pool(m_device, &command_pool_desc, &m_command_pool);
 
-    create_command_buffers(m_device, m_command_pool, FRAME_COUNT, m_command_buffers);
+	create_command_buffers(
+	    m_device, m_command_pool, FRAME_COUNT, m_command_buffers);
 
     for (u32 i = 0; i < FRAME_COUNT; ++i)
     {
@@ -58,7 +59,8 @@ GraphicContext::~GraphicContext()
         destroy_semaphore(m_device, m_rendering_finished_semaphores[ i ]);
         destroy_fence(m_device, m_in_flight_fences[ i ]);
     }
-    destroy_command_buffers(m_device, m_command_pool, FRAME_COUNT, m_command_buffers);
+	destroy_command_buffers(
+	    m_device, m_command_pool, FRAME_COUNT, m_command_buffers);
     destroy_command_pool(m_device, m_command_pool);
     destroy_queue(m_queue);
     destroy_device(m_device);
@@ -87,12 +89,17 @@ void GraphicContext::begin_frame()
 {
     if (!m_command_buffers_recorded[ m_frame_index ])
     {
-        wait_for_fences(m_device, 1, m_in_flight_fences[ m_frame_index ]);
-        reset_fences(m_device, 1, m_in_flight_fences[ m_frame_index ]);
+		wait_for_fences(m_device, 1, &m_in_flight_fences[ m_frame_index ]);
+		reset_fences(m_device, 1, &m_in_flight_fences[ m_frame_index ]);
         m_command_buffers_recorded[ m_frame_index ] = true;
     }
 
-    acquire_next_image(m_device, m_swapchain, m_image_available_semaphores[ m_frame_index ], nullptr, &m_image_index);
+	acquire_next_image(
+	    m_device,
+	    m_swapchain,
+	    m_image_available_semaphores[ m_frame_index ],
+	    nullptr,
+	    &m_image_index);
     begin_command_buffer(acquire_cmd());
 }
 
@@ -101,26 +108,29 @@ void GraphicContext::end_frame()
     end_command_buffer(acquire_cmd());
 
     QueueSubmitDesc queue_submit_desc{};
-    queue_submit_desc.wait_semaphore_count   = 1;
-    queue_submit_desc.wait_semaphores        = m_image_available_semaphores[ m_frame_index ];
+	queue_submit_desc.wait_semaphore_count = 1;
+	queue_submit_desc.wait_semaphores =
+	    m_image_available_semaphores[ m_frame_index ];
     queue_submit_desc.command_buffer_count   = 1;
     queue_submit_desc.command_buffers        = acquire_cmd();
     queue_submit_desc.signal_semaphore_count = 1;
-    queue_submit_desc.signal_semaphores      = m_rendering_finished_semaphores[ m_frame_index ];
-    queue_submit_desc.signal_fence           = m_in_flight_fences[ m_frame_index ];
+	queue_submit_desc.signal_semaphores =
+	    m_rendering_finished_semaphores[ m_frame_index ];
+	queue_submit_desc.signal_fence = m_in_flight_fences[ m_frame_index ];
 
     queue_submit(m_queue, &queue_submit_desc);
 
     QueuePresentDesc queue_present_desc{};
     queue_present_desc.wait_semaphore_count = 1;
-    queue_present_desc.wait_semaphores      = m_rendering_finished_semaphores[ m_frame_index ];
-    queue_present_desc.swapchain            = m_swapchain;
-    queue_present_desc.image_index          = m_image_index;
+	queue_present_desc.wait_semaphores =
+	    m_rendering_finished_semaphores[ m_frame_index ];
+	queue_present_desc.swapchain   = m_swapchain;
+	queue_present_desc.image_index = m_image_index;
 
     queue_present(m_queue, &queue_present_desc);
 
     m_command_buffers_recorded[ m_frame_index ] = false;
-    m_frame_index                               = (m_frame_index + 1) % FRAME_COUNT;
+	m_frame_index = (m_frame_index + 1) % FRAME_COUNT;
 }
 
 void GraphicContext::begin_render_pass(f32 r, f32 g, f32 b, f32 a) const
@@ -137,7 +147,8 @@ void GraphicContext::begin_render_pass(f32 r, f32 g, f32 b, f32 a) const
     cmd_barrier(cmd, 0, nullptr, 1, &to_color_attachment);
 
     RenderPassBeginDesc render_pass_begin_desc{};
-    render_pass_begin_desc.render_pass                  = get_swapchain_render_pass(m_swapchain, m_image_index);
+	render_pass_begin_desc.render_pass =
+	    get_swapchain_render_pass(m_swapchain, m_image_index);
     render_pass_begin_desc.clear_values[ 0 ].color[ 0 ] = r;
     render_pass_begin_desc.clear_values[ 0 ].color[ 1 ] = g;
     render_pass_begin_desc.clear_values[ 0 ].color[ 2 ] = b;

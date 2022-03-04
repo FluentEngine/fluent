@@ -133,8 +133,8 @@ void on_update(f32 delta_time)
 {
     if (!command_buffers_recorded[ frame_index ])
     {
-        wait_for_fences(device, 1, in_flight_fences[ frame_index ]);
-        reset_fences(device, 1, in_flight_fences[ frame_index ]);
+		wait_for_fences(device, 1, &in_flight_fences[ frame_index ]);
+		reset_fences(device, 1, &in_flight_fences[ frame_index ]);
         command_buffers_recorded[ frame_index ] = true;
     }
 
