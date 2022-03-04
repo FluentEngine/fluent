@@ -1,12 +1,13 @@
 #include <fstream>
-#include "tinyimageformat_apis.h"
-#include "tinyddsloader.h"
-#include "stb_image.h"
+#include <tinyimageformat_apis.h>
+#include <tinyddsloader.h>
+#include <stb_image.h>
 #include "utils/image_loader.hpp"
 
 namespace fluent
 {
-ImageDesc read_dds_image(const std::string& filename, b32 flip, u64* size, void** data)
+ImageDesc read_dds_image(
+    const std::string& filename, b32 flip, u64* size, void** data)
 {
     using namespace tinyddsloader;
 
@@ -29,8 +30,9 @@ ImageDesc read_dds_image(const std::string& filename, b32 flip, u64* size, void*
     image_desc.depth  = image_data->m_depth;
 
     // TODO: formats
-    image_desc.format     = ( Format ) TinyImageFormat_FromDXGI_FORMAT(( TinyImageFormat_DXGI_FORMAT ) dds.GetFormat());
-    image_desc.mip_levels = dds.GetMipCount();
+	image_desc.format = ( Format ) TinyImageFormat_FromDXGI_FORMAT(
+	    ( TinyImageFormat_DXGI_FORMAT ) dds.GetFormat());
+	image_desc.mip_levels  = dds.GetMipCount();
     image_desc.layer_count = dds.GetArraySize();
     *size                  = image_data->m_memSlicePitch;
 
@@ -40,13 +42,19 @@ ImageDesc read_dds_image(const std::string& filename, b32 flip, u64* size, void*
     return image_desc;
 }
 
-ImageDesc read_image_stb(const std::string& filename, b32 flip, u64* size, void** data)
+ImageDesc read_image_stb(
+    const std::string& filename, b32 flip, u64* size, void** data)
 {
     ImageDesc image_desc{};
 
     stbi_set_flip_vertically_on_load(flip);
     int tex_width, tex_height, tex_channels;
-    *data = stbi_load(filename.c_str(), &tex_width, &tex_height, &tex_channels, STBI_rgb_alpha);
+	*data = stbi_load(
+	    filename.c_str(),
+	    &tex_width,
+	    &tex_height,
+	    &tex_channels,
+	    STBI_rgb_alpha);
 
     stbi_set_flip_vertically_on_load(!flip);
 
@@ -61,7 +69,8 @@ ImageDesc read_image_stb(const std::string& filename, b32 flip, u64* size, void*
     return image_desc;
 }
 
-ImageDesc read_image_data(const std::string& filename, b32 flip, u64* size, void** data)
+ImageDesc read_image_data(
+    const std::string& filename, b32 flip, u64* size, void** data)
 {
     std::string file_ext = filename.substr(filename.find_last_of('.'));
 
@@ -83,5 +92,4 @@ void release_image_data(void* data)
 {
     delete[](u8*) data;
 }
-
 } // namespace fluent

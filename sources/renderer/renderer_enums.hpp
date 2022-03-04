@@ -1,7 +1,7 @@
 #pragma once
 
-#include "volk.h"
-#include "tinyimageformat_base.h"
+#include <volk.h>
+#include <tinyimageformat_base.h>
 
 namespace fluent
 {

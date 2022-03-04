@@ -1,9 +1,9 @@
 #include <algorithm>
 #include <SDL_vulkan.h>
-#include "imgui.h"
-#include "imgui_impl_vulkan.h"
-#include "imgui_impl_sdl.h"
-#include "tinyimageformat_apis.h"
+#include <imgui.h>
+#include <imgui_impl_vulkan.h>
+#include <imgui_impl_sdl.h>
+#include <tinyimageformat_apis.h>
 #include "core/window.hpp"
 #include "core/application.hpp"
 #include "renderer/renderer_backend.hpp"
@@ -375,6 +375,8 @@ static inline VkPipelineStageFlags determine_pipeline_stage_flags(
     }
     case QueueType::eCompute: {
     }
+	default: {
+	}
     }
 
     if (access_flags &

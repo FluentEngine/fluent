@@ -1,6 +1,6 @@
 #pragma once
 
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 
 #ifdef FLUENT_DEBUG
 #define FT_TRACE(...) spdlog::trace(__VA_ARGS__)
@@ -28,4 +28,4 @@ enum class LogLevel
 
 spdlog::level::level_enum to_spdlog_level(LogLevel log_level);
 
-}
+} // namespace fluent
