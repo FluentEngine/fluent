@@ -381,7 +381,7 @@ using DrawIndexedIndirectCommand = VkDrawIndexedIndirectCommand;
 struct UiDesc
 {
     const Window* window;
-    const RendererBackend* renderer;
+	const RendererBackend* backend;
     const Device* device;
     const Queue* queue;
     const RenderPass* render_pass;
@@ -398,11 +398,11 @@ struct UiContext
 };
 
 void create_renderer_backend( const RendererBackendDesc* desc,
-                              RendererBackend** renderer );
+                              RendererBackend** backend );
 
-void destroy_renderer_backend( RendererBackend* renderer );
+void destroy_renderer_backend( RendererBackend* backend );
 
-void create_device( const RendererBackend* renderer,
+void create_device( const RendererBackend* backend,
                     const DeviceDesc* desc,
                     Device** device );
 

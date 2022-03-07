@@ -497,7 +497,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(
     return VK_FALSE;
 }
 
-void create_debug_messenger( RendererBackend* renderer )
+void create_debug_messenger( RendererBackend* backend )
 {
     VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info {};
     debug_messenger_create_info.sType =
@@ -514,10 +514,10 @@ void create_debug_messenger( RendererBackend* renderer )
     debug_messenger_create_info.pfnUserCallback = vulkan_debug_callback;
     debug_messenger_create_info.pUserData       = nullptr;
 
-    vkCreateDebugUtilsMessengerEXT( renderer->instance,
+	vkCreateDebugUtilsMessengerEXT( backend->instance,
                                     &debug_messenger_create_info,
-                                    renderer->vulkan_allocator,
-                                    &renderer->debug_messenger );
+	                                backend->vulkan_allocator,
+	                                &backend->debug_messenger );
 }
 
 static inline void get_instance_extensions( u32& extensions_count,
@@ -671,14 +671,14 @@ VkImageSubresourceLayers get_image_subresource_layers( const Image* image )
 }
 
 void create_renderer_backend( const RendererBackendDesc* desc,
-                              RendererBackend** p_renderer )
+                              RendererBackend** p_backend )
 {
-    FT_ASSERT( p_renderer );
+	FT_ASSERT( p_backend );
 
-    *p_renderer               = new ( std::nothrow ) RendererBackend {};
-    RendererBackend* renderer = *p_renderer;
+	*p_backend               = new ( std::nothrow ) RendererBackend {};
+	RendererBackend* backend = *p_backend;
 
-    renderer->vulkan_allocator = desc->vulkan_allocator;
+	backend->vulkan_allocator = desc->vulkan_allocator;
 
     volkInitialize();
 
@@ -712,25 +712,25 @@ void create_renderer_backend( const RendererBackendDesc* desc,
     instance_create_info.flags                   = 0;
 
     VK_ASSERT( vkCreateInstance( &instance_create_info,
-                                 renderer->vulkan_allocator,
-                                 &renderer->instance ) );
+	                             backend->vulkan_allocator,
+	                             &backend->instance ) );
 
-    volkLoadInstance( renderer->instance );
+	volkLoadInstance( backend->instance );
 
 #ifdef FLUENT_DEBUG
-    create_debug_messenger( renderer );
+	create_debug_messenger( backend );
 #endif
 
     // pick physical device
-    renderer->physical_device = VK_NULL_HANDLE;
-    u32 device_count          = 0;
-    vkEnumeratePhysicalDevices( renderer->instance, &device_count, nullptr );
+	backend->physical_device = VK_NULL_HANDLE;
+	u32 device_count         = 0;
+	vkEnumeratePhysicalDevices( backend->instance, &device_count, nullptr );
     FT_ASSERT( device_count != 0 );
     std::vector<VkPhysicalDevice> physical_devices( device_count );
-    vkEnumeratePhysicalDevices( renderer->instance,
+	vkEnumeratePhysicalDevices( backend->instance,
                                 &device_count,
                                 physical_devices.data() );
-    renderer->physical_device = physical_devices[ 0 ];
+	backend->physical_device = physical_devices[ 0 ];
 
     // select best physical device
     for ( u32 i = 0; i < device_count; ++i )
@@ -744,22 +744,22 @@ void create_renderer_backend( const RendererBackendDesc* desc,
         if ( deviceProperties.deviceType ==
              VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU )
         {
-            renderer->physical_device = physical_devices[ i ];
+			backend->physical_device = physical_devices[ i ];
             break;
         }
     }
 }
 
-void destroy_renderer_backend( RendererBackend* renderer )
+void destroy_renderer_backend( RendererBackend* backend )
 {
-    FT_ASSERT( renderer );
+	FT_ASSERT( backend );
 #ifdef FLUENT_DEBUG
-    vkDestroyDebugUtilsMessengerEXT( renderer->instance,
-                                     renderer->debug_messenger,
-                                     renderer->vulkan_allocator );
+	vkDestroyDebugUtilsMessengerEXT( backend->instance,
+	                                 backend->debug_messenger,
+	                                 backend->vulkan_allocator );
 #endif
-    vkDestroyInstance( renderer->instance, renderer->vulkan_allocator );
-    operator delete( renderer, std::nothrow );
+	vkDestroyInstance( backend->instance, backend->vulkan_allocator );
+	operator delete( backend, std::nothrow );
 }
 
 void* map_memory( const Device* device, Buffer* buffer )
@@ -780,7 +780,7 @@ void unmap_memory( const Device* device, Buffer* buffer )
     buffer->mapped_memory = nullptr;
 }
 
-void create_device( const RendererBackend* renderer,
+void create_device( const RendererBackend* backend,
                     const DeviceDesc* desc,
                     Device** p_device )
 {
@@ -790,9 +790,9 @@ void create_device( const RendererBackend* renderer,
     *p_device      = new ( std::nothrow ) Device {};
     Device* device = *p_device;
 
-    device->vulkan_allocator = renderer->vulkan_allocator;
-    device->instance         = renderer->instance;
-    device->physical_device  = renderer->physical_device;
+	device->vulkan_allocator = backend->vulkan_allocator;
+	device->instance         = backend->instance;
+	device->physical_device  = backend->physical_device;
 
     u32 queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties( device->physical_device,
@@ -2978,7 +2978,7 @@ void create_ui_context( const UiDesc* desc, UiContext** p_context )
     }
 
     ImGui_ImplVulkan_InitInfo init_info {};
-    init_info.Instance        = desc->renderer->instance;
+	init_info.Instance        = desc->backend->instance;
     init_info.PhysicalDevice  = desc->device->physical_device;
     init_info.Device          = desc->device->logical_device;
     init_info.QueueFamily     = desc->queue->family_index;
