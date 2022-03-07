@@ -32,24 +32,14 @@ void update_input_system( InputSystem* input_system )
                      sizeof( input_system->buttons[ 0 ] ) );
 }
 
-void update_input_keyboard_state( InputSystem* input_system,
-                                  KeyCode key,
-                                  u32 press )
+f32 get_mouse_pos_x( const InputSystem* input_system )
 {
-    input_system->keys[ key ] = press;
+	return input_system->mouse_position[ 0 ];
 }
 
-void update_input_mouse_state( InputSystem* input_system, f32 x, f32 y )
+f32 get_mouse_pos_y( const InputSystem* input_system )
 {
-    input_system->mouse_offset[ 0 ] = x;
-    input_system->mouse_offset[ 1 ] = y;
-}
-
-void update_input_mouse_buttons_state( InputSystem* input_system,
-                                       ButtonCode button,
-                                       u32 press )
-{
-    input_system->buttons[ button ] = press;
+	return input_system->mouse_position[ 1 ];
 }
 
 f32 get_mouse_offset_x( const InputSystem* input_system )

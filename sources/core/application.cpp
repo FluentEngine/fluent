@@ -98,35 +98,28 @@ void app_run()
                 }
                 break;
             case SDL_KEYDOWN:
-                update_input_keyboard_state(
-                    &app_state.input_system,
-                    static_cast<KeyCode>( e.key.keysym.scancode ),
-                    true );
-                break;
+				app_state.input_system.keys[ e.key.keysym.scancode ] = true;
+				break;
             case SDL_KEYUP:
-                update_input_keyboard_state(
-                    &app_state.input_system,
-                    static_cast<KeyCode>( e.key.keysym.scancode ),
-                    false );
+				app_state.input_system.keys[ e.key.keysym.scancode ] = false;
                 break;
             case SDL_MOUSEBUTTONDOWN:
-                update_input_mouse_buttons_state(
-                    &app_state.input_system,
-                    static_cast<ButtonCode>( e.button.button ),
-                    true );
+				app_state.input_system.buttons[ e.button.button ] = true;
                 break;
             case SDL_MOUSEBUTTONUP:
-                update_input_mouse_buttons_state(
-                    &app_state.input_system,
-                    static_cast<ButtonCode>( e.button.button ),
-                    false );
+				app_state.input_system.buttons[ e.button.button ] = false;
                 break;
             default: break;
             }
         }
         i32 x, y;
         SDL_GetRelativeMouseState( &x, &y );
-        update_input_mouse_state( &app_state.input_system, x, y );
+		app_state.input_system.mouse_offset[ 0 ] = x;
+		app_state.input_system.mouse_offset[ 1 ] = y;
+		SDL_GetGlobalMouseState( &x, &y );
+		app_state.input_system.mouse_position[ 0 ] = x;
+		app_state.input_system.mouse_position[ 1 ] = y;
+
         app_state.on_update( app_state.delta_time );
     }
 
