@@ -54,6 +54,7 @@ struct SwapchainDesc
     u32    width;
     u32    height;
     Format format;
+	b32    vsync;
     u32    min_image_count;
     b32    builtin_depth;
 };

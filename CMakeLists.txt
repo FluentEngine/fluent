@@ -39,6 +39,9 @@ add_subdirectory(third_party/glm)
 add_subdirectory(third_party/imgui)
 add_subdirectory(third_party/entt)
 
+set(third_party_includes
+	${CMAKE_CURRENT_SOURCE_DIR}/third_party/vk_enum_string_helper)
+
 set(libs
 	spdlog
 	volk
@@ -98,7 +101,9 @@ set(sources
 	${math}
 	${scene})
 
-set(includes ${CMAKE_CURRENT_SOURCE_DIR}/sources)
+set(includes
+	${third_party_includes}
+	${CMAKE_CURRENT_SOURCE_DIR}/sources)
 
 add_library(${target} ${sources})
 

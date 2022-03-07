@@ -4,6 +4,7 @@
 #include <imgui_impl_vulkan.h>
 #include <imgui_impl_sdl.h>
 #include <tinyimageformat_apis.h>
+#include <vk_enum_string_helper.h>
 #include "core/window.hpp"
 #include "core/application.hpp"
 #include "renderer/renderer_backend.hpp"
@@ -1152,14 +1153,20 @@ void configure_swapchain( const Device*        device,
 
     swapchain->present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 
-    for ( u32 i = 0; i < present_mode_count; ++i )
-    {
-        if ( present_modes[ i ] == VK_PRESENT_MODE_MAILBOX_KHR )
+	VkPresentModeKHR preffered_mode =
+	    desc->vsync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR;
+
+	for ( u32 i = 0; i < present_mode_count; ++i )
+	{
+		if ( present_modes[ i ] == preffered_mode )
         {
-            swapchain->present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
-            break;
+			swapchain->present_mode = preffered_mode;
+			break;
         }
-    }
+	}
+
+	FT_INFO( "Swapchain present mode: {}",
+	         string_VkPresentModeKHR( swapchain->present_mode ) );
 
     // determine present image count
     VkSurfaceCapabilitiesKHR surface_capabilities {};
@@ -1193,16 +1200,22 @@ void configure_swapchain( const Device*        device,
                                           &surface_format_count,
                                           surface_formats.data() );
 
-    VkSurfaceFormatKHR surface_format = surface_formats[ 0 ];
+	VkSurfaceFormatKHR surface_format   = surface_formats[ 0 ];
+	VkFormat           preffered_format = to_vk_format( desc->format );
+
     for ( u32 i = 0; i < surface_format_count; ++i )
     {
-        if ( surface_formats[ i ].format == VK_FORMAT_R8G8B8A8_UNORM ||
-             surface_formats[ i ].format == VK_FORMAT_B8G8R8A8_UNORM )
+		if ( surface_formats[ i ].format == preffered_format )
             surface_format = surface_formats[ i ];
     }
 
     swapchain->format      = from_vk_format( surface_format.format );
     swapchain->color_space = surface_format.colorSpace;
+
+	FT_INFO( "Swapchain surface format: {}",
+	         string_VkFormat( surface_format.format ) );
+	FT_INFO( "Swapchain color space: {}",
+	         string_VkColorSpaceKHR( surface_format.colorSpace ) );
 
     /// fins swapchain pretransform
     VkSurfaceTransformFlagBitsKHR pre_transform;
