@@ -15,7 +15,6 @@ function(add_example target)
 
 	add_executable(${target}
 		common/sample.hpp
-		common/sample.cpp
 		${target}/main.cpp
 		${SHADERS}
 		${COMPILED_SHADERS})
