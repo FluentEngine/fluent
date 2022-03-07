@@ -17,15 +17,15 @@ private:
     static constexpr u32 FRAME_COUNT = 2;
 
     RendererBackend* m_backend;
-    Device* m_device;
-    Queue* m_queue;
-    CommandPool* m_command_pool;
-    Semaphore* m_image_available_semaphores[ FRAME_COUNT ];
-    Semaphore* m_rendering_finished_semaphores[ FRAME_COUNT ];
-    Fence* m_in_flight_fences[ FRAME_COUNT ];
-    bool m_command_buffers_recorded[ FRAME_COUNT ];
+    Device*          m_device;
+    Queue*           m_queue;
+    CommandPool*     m_command_pool;
+    Semaphore*       m_image_available_semaphores[ FRAME_COUNT ];
+    Semaphore*       m_rendering_finished_semaphores[ FRAME_COUNT ];
+    Fence*           m_in_flight_fences[ FRAME_COUNT ];
+    bool             m_command_buffers_recorded[ FRAME_COUNT ];
 
-    Swapchain* m_swapchain;
+    Swapchain*     m_swapchain;
     CommandBuffer* m_command_buffers[ FRAME_COUNT ];
 
     u32 m_frame_index = 0;

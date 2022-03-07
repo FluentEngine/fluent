@@ -82,7 +82,7 @@ void Camera::on_resize( u32 width, u32 height )
 }
 
 void CameraController::init( const fluent::InputSystem* input_system,
-                             Camera& camera )
+                             Camera&                    camera )
 {
     m_input_system = input_system;
     m_camera       = &camera;

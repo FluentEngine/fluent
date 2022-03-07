@@ -109,7 +109,7 @@ ReflectionData reflect( u32 byte_code_size, const u32* byte_code )
 {
     ReflectionData result {};
 
-    SpvReflectResult spv_result;
+    SpvReflectResult       spv_result;
     SpvReflectShaderModule reflected_shader;
     spv_result = spvReflectCreateShaderModule( byte_code_size,
                                                ( const void* ) byte_code,

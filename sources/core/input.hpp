@@ -13,7 +13,7 @@ struct InputSystem
 {
     u32 keys[ Key::Last ];
     u32 buttons[ Button::Last ];
-	f32 mouse_position[ 2 ];
+    f32 mouse_position[ 2 ];
     f32 mouse_offset[ 2 ];
 };
 

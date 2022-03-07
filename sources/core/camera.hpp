@@ -19,12 +19,12 @@ struct CameraDesc
     fluent::Vector3 position;
     fluent::Vector3 direction;
     fluent::Vector3 up;
-    f32 aspect      = 1400.0f / 900.0f;
-    f32 fov         = radians( 45.0f );
-    f32 near        = 0.1f;
-    f32 far         = 1000.0f;
-    f32 speed       = 5.0f;
-    f32 sensitivity = 0.1f;
+    f32             aspect      = 1400.0f / 900.0f;
+    f32             fov         = radians( 45.0f );
+    f32             near        = 0.1f;
+    f32             far         = 1000.0f;
+    f32             speed       = 5.0f;
+    f32             sensitivity = 0.1f;
 };
 
 class Camera
@@ -72,7 +72,7 @@ class CameraController
 {
 private:
     const InputSystem* m_input_system = nullptr;
-    Camera* m_camera                  = nullptr;
+    Camera*            m_camera       = nullptr;
 
 public:
     void init( const InputSystem* input_system, Camera& camera );

@@ -7,16 +7,16 @@
 namespace fluent
 {
 ImageDesc read_dds_image( const std::string& filename,
-                          b32 flip,
-                          u64* size,
-                          void** data )
+                          b32                flip,
+                          u64*               size,
+                          void**             data )
 {
     using namespace tinyddsloader;
 
     ImageDesc image_desc {};
 
     DDSFile dds;
-    auto ret = dds.Load( filename.c_str() );
+    auto    ret = dds.Load( filename.c_str() );
     FT_ASSERT( ret == Result::Success );
 
     if ( flip )
@@ -45,9 +45,9 @@ ImageDesc read_dds_image( const std::string& filename,
 }
 
 ImageDesc read_image_stb( const std::string& filename,
-                          b32 flip,
-                          u64* size,
-                          void** data )
+                          b32                flip,
+                          u64*               size,
+                          void**             data )
 {
     ImageDesc image_desc {};
 
@@ -73,9 +73,9 @@ ImageDesc read_image_stb( const std::string& filename,
 }
 
 ImageDesc read_image_data( const std::string& filename,
-                           b32 flip,
-                           u64* size,
-                           void** data )
+                           b32                flip,
+                           u64*               size,
+                           void**             data )
 {
     std::string file_ext = filename.substr( filename.find_last_of( '.' ) );
 

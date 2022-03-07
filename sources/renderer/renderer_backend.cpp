@@ -263,7 +263,7 @@ static inline VkAccessFlags determine_access_flags(
 
 static inline VkPipelineStageFlags determine_pipeline_stage_flags(
     VkAccessFlags access_flags,
-    QueueType queue_type )
+    QueueType     queue_type )
 {
     // TODO: FIX THIS
     VkPipelineStageFlags flags = 0;
@@ -390,7 +390,7 @@ static inline VmaMemoryUsage determine_vma_memory_usage( MemoryUsage usage )
 
 static inline VkBufferUsageFlags determine_vk_buffer_usage(
     DescriptorType descriptor_type,
-    MemoryUsage memory_usage )
+    MemoryUsage    memory_usage )
 {
     // TODO: determine buffer usage flags
     VkBufferUsageFlags buffer_usage = VkBufferUsageFlags( 0 );
@@ -471,10 +471,10 @@ static inline VkImageUsageFlags determine_vk_image_usage(
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT messageType,
+    VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT             messageType,
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-    void* pUserData )
+    void*                                       pUserData )
 {
     if ( messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT )
     {
@@ -514,13 +514,13 @@ void create_debug_messenger( RendererBackend* backend )
     debug_messenger_create_info.pfnUserCallback = vulkan_debug_callback;
     debug_messenger_create_info.pUserData       = nullptr;
 
-	vkCreateDebugUtilsMessengerEXT( backend->instance,
+    vkCreateDebugUtilsMessengerEXT( backend->instance,
                                     &debug_messenger_create_info,
-	                                backend->vulkan_allocator,
-	                                &backend->debug_messenger );
+                                    backend->vulkan_allocator,
+                                    &backend->debug_messenger );
 }
 
-static inline void get_instance_extensions( u32& extensions_count,
+static inline void get_instance_extensions( u32&         extensions_count,
                                             const char** extension_names )
 {
     if ( extension_names == nullptr )
@@ -553,7 +553,7 @@ static inline void get_instance_extensions( u32& extensions_count,
     }
 }
 
-static inline void get_instance_layers( u32& layers_count,
+static inline void get_instance_layers( u32&         layers_count,
                                         const char** layer_names )
 {
     if ( layer_names == nullptr )
@@ -573,7 +573,7 @@ static inline void get_instance_layers( u32& layers_count,
 }
 
 static inline u32 find_queue_family_index( VkPhysicalDevice physical_device,
-                                           QueueType queue_type )
+                                           QueueType        queue_type )
 {
     u32 index = std::numeric_limits<u32>::max();
 
@@ -671,14 +671,14 @@ VkImageSubresourceLayers get_image_subresource_layers( const Image* image )
 }
 
 void create_renderer_backend( const RendererBackendDesc* desc,
-                              RendererBackend** p_backend )
+                              RendererBackend**          p_backend )
 {
-	FT_ASSERT( p_backend );
+    FT_ASSERT( p_backend );
 
-	*p_backend               = new ( std::nothrow ) RendererBackend {};
-	RendererBackend* backend = *p_backend;
+    *p_backend               = new ( std::nothrow ) RendererBackend {};
+    RendererBackend* backend = *p_backend;
 
-	backend->vulkan_allocator = desc->vulkan_allocator;
+    backend->vulkan_allocator = desc->vulkan_allocator;
 
     volkInitialize();
 
@@ -712,31 +712,31 @@ void create_renderer_backend( const RendererBackendDesc* desc,
     instance_create_info.flags                   = 0;
 
     VK_ASSERT( vkCreateInstance( &instance_create_info,
-	                             backend->vulkan_allocator,
-	                             &backend->instance ) );
+                                 backend->vulkan_allocator,
+                                 &backend->instance ) );
 
-	volkLoadInstance( backend->instance );
+    volkLoadInstance( backend->instance );
 
 #ifdef FLUENT_DEBUG
-	create_debug_messenger( backend );
+    create_debug_messenger( backend );
 #endif
 
     // pick physical device
-	backend->physical_device = VK_NULL_HANDLE;
-	u32 device_count         = 0;
-	vkEnumeratePhysicalDevices( backend->instance, &device_count, nullptr );
+    backend->physical_device = VK_NULL_HANDLE;
+    u32 device_count         = 0;
+    vkEnumeratePhysicalDevices( backend->instance, &device_count, nullptr );
     FT_ASSERT( device_count != 0 );
     std::vector<VkPhysicalDevice> physical_devices( device_count );
-	vkEnumeratePhysicalDevices( backend->instance,
+    vkEnumeratePhysicalDevices( backend->instance,
                                 &device_count,
                                 physical_devices.data() );
-	backend->physical_device = physical_devices[ 0 ];
+    backend->physical_device = physical_devices[ 0 ];
 
     // select best physical device
     for ( u32 i = 0; i < device_count; ++i )
     {
         VkPhysicalDeviceProperties deviceProperties;
-        VkPhysicalDeviceFeatures deviceFeatures;
+        VkPhysicalDeviceFeatures   deviceFeatures;
         vkGetPhysicalDeviceProperties( physical_devices[ i ],
                                        &deviceProperties );
         vkGetPhysicalDeviceFeatures( physical_devices[ i ], &deviceFeatures );
@@ -744,7 +744,7 @@ void create_renderer_backend( const RendererBackendDesc* desc,
         if ( deviceProperties.deviceType ==
              VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU )
         {
-			backend->physical_device = physical_devices[ i ];
+            backend->physical_device = physical_devices[ i ];
             break;
         }
     }
@@ -752,14 +752,14 @@ void create_renderer_backend( const RendererBackendDesc* desc,
 
 void destroy_renderer_backend( RendererBackend* backend )
 {
-	FT_ASSERT( backend );
+    FT_ASSERT( backend );
 #ifdef FLUENT_DEBUG
-	vkDestroyDebugUtilsMessengerEXT( backend->instance,
-	                                 backend->debug_messenger,
-	                                 backend->vulkan_allocator );
+    vkDestroyDebugUtilsMessengerEXT( backend->instance,
+                                     backend->debug_messenger,
+                                     backend->vulkan_allocator );
 #endif
-	vkDestroyInstance( backend->instance, backend->vulkan_allocator );
-	operator delete( backend, std::nothrow );
+    vkDestroyInstance( backend->instance, backend->vulkan_allocator );
+    operator delete( backend, std::nothrow );
 }
 
 void* map_memory( const Device* device, Buffer* buffer )
@@ -781,8 +781,8 @@ void unmap_memory( const Device* device, Buffer* buffer )
 }
 
 void create_device( const RendererBackend* backend,
-                    const DeviceDesc* desc,
-                    Device** p_device )
+                    const DeviceDesc*      desc,
+                    Device**               p_device )
 {
     FT_ASSERT( p_device );
     FT_ASSERT( desc->frame_in_use_count > 0 );
@@ -790,9 +790,9 @@ void create_device( const RendererBackend* backend,
     *p_device      = new ( std::nothrow ) Device {};
     Device* device = *p_device;
 
-	device->vulkan_allocator = backend->vulkan_allocator;
-	device->instance         = backend->instance;
-	device->physical_device  = backend->physical_device;
+    device->vulkan_allocator = backend->vulkan_allocator;
+    device->instance         = backend->instance;
+    device->physical_device  = backend->physical_device;
 
     u32 queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties( device->physical_device,
@@ -826,8 +826,8 @@ void create_device( const RendererBackend* backend,
             break;
     }
 
-    static const u32 device_extension_count                 = 2;
-    const char* device_extensions[ device_extension_count ] = {
+    static const u32 device_extension_count                      = 2;
+    const char*      device_extensions[ device_extension_count ] = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME
     };
@@ -951,9 +951,9 @@ void device_wait_idle( const Device* device )
     vkDeviceWaitIdle( device->logical_device );
 }
 
-void create_queue( const Device* device,
+void create_queue( const Device*    device,
                    const QueueDesc* desc,
-                   Queue** p_queue )
+                   Queue**          p_queue )
 {
     FT_ASSERT( p_queue );
     *p_queue     = new ( std::nothrow ) Queue {};
@@ -978,7 +978,7 @@ void queue_wait_idle( const Queue* queue ) { vkQueueWaitIdle( queue->queue ); }
 void queue_submit( const Queue* queue, const QueueSubmitDesc* desc )
 {
     VkPipelineStageFlags wait_dst_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    std::vector<VkSemaphore> wait_semaphores( desc->wait_semaphore_count );
+    std::vector<VkSemaphore>     wait_semaphores( desc->wait_semaphore_count );
     std::vector<VkCommandBuffer> command_buffers( desc->command_buffer_count );
     std::vector<VkSemaphore> signal_semaphores( desc->signal_semaphore_count );
 
@@ -1120,8 +1120,8 @@ void reset_fences( const Device* device, u32 count, Fence** fences )
     vkResetFences( device->logical_device, count, vk_fences.data() );
 }
 
-void configure_swapchain( const Device* device,
-                          Swapchain* swapchain,
+void configure_swapchain( const Device*        device,
+                          Swapchain*           swapchain,
                           const SwapchainDesc* desc )
 {
     swapchain->queue = desc->queue;
@@ -1219,9 +1219,9 @@ void configure_swapchain( const Device* device,
 }
 
 void create_configured_swapchain( const Device* device,
-                                  Swapchain* swapchain,
-                                  b32 resize,
-                                  b32 builtin_depth )
+                                  Swapchain*    swapchain,
+                                  b32           resize,
+                                  b32           builtin_depth )
 {
     // destroy old resources if it is resize
     if ( resize )
@@ -1386,9 +1386,9 @@ void create_configured_swapchain( const Device* device,
     }
 }
 
-void create_swapchain( const Device* device,
+void create_swapchain( const Device*        device,
                        const SwapchainDesc* desc,
-                       Swapchain** p_swapchain )
+                       Swapchain**          p_swapchain )
 {
     FT_ASSERT( p_swapchain );
     *p_swapchain         = new ( std::nothrow ) Swapchain {};
@@ -1402,9 +1402,9 @@ void create_swapchain( const Device* device,
 }
 
 void resize_swapchain( const Device* device,
-                       Swapchain* swapchain,
-                       u32 width,
-                       u32 height )
+                       Swapchain*    swapchain,
+                       u32           width,
+                       u32           height )
 {
     swapchain->width  = width;
     swapchain->height = height;
@@ -1452,15 +1452,15 @@ void destroy_swapchain( const Device* device, Swapchain* swapchain )
 }
 
 const RenderPass* get_swapchain_render_pass( const Swapchain* swapchain,
-                                             u32 image_index )
+                                             u32              image_index )
 {
     FT_ASSERT( image_index < swapchain->image_count );
     return swapchain->render_passes[ image_index ];
 }
 
-void create_command_pool( const Device* device,
+void create_command_pool( const Device*          device,
                           const CommandPoolDesc* desc,
-                          CommandPool** p_command_pool )
+                          CommandPool**          p_command_pool )
 {
     FT_ASSERT( p_command_pool );
     *p_command_pool           = new ( std::nothrow ) CommandPool {};
@@ -1491,10 +1491,10 @@ void destroy_command_pool( const Device* device, CommandPool* command_pool )
     operator delete( command_pool, std::nothrow );
 }
 
-void create_command_buffers( const Device* device,
+void create_command_buffers( const Device*      device,
                              const CommandPool* command_pool,
-                             u32 count,
-                             CommandBuffer** command_buffers )
+                             u32                count,
+                             CommandBuffer**    command_buffers )
 {
     FT_ASSERT( command_buffers );
 
@@ -1522,10 +1522,10 @@ void create_command_buffers( const Device* device,
     }
 }
 
-void free_command_buffers( const Device* device,
+void free_command_buffers( const Device*      device,
                            const CommandPool* command_pool,
-                           u32 count,
-                           CommandBuffer** command_buffers )
+                           u32                count,
+                           CommandBuffer**    command_buffers )
 {
     FT_ASSERT( command_buffers );
 
@@ -1542,10 +1542,10 @@ void free_command_buffers( const Device* device,
                           buffers.data() );
 }
 
-void destroy_command_buffers( const Device* device,
+void destroy_command_buffers( const Device*      device,
                               const CommandPool* command_pool,
-                              u32 count,
-                              CommandBuffer** command_buffers )
+                              u32                count,
+                              CommandBuffer**    command_buffers )
 {
     FT_ASSERT( command_buffers );
 
@@ -1574,11 +1574,11 @@ void end_command_buffer( const CommandBuffer* cmd )
     VK_ASSERT( vkEndCommandBuffer( cmd->command_buffer ) );
 }
 
-void acquire_next_image( const Device* device,
+void acquire_next_image( const Device*    device,
                          const Swapchain* swapchain,
                          const Semaphore* semaphore,
-                         const Fence* fence,
-                         u32* image_index )
+                         const Fence*     fence,
+                         u32*             image_index )
 {
     VkResult result =
         vkAcquireNextImageKHR( device->logical_device,
@@ -1589,8 +1589,8 @@ void acquire_next_image( const Device* device,
                                image_index );
 }
 
-void create_framebuffer( const Device* device,
-                         RenderPass* render_pass,
+void create_framebuffer( const Device*         device,
+                         RenderPass*           render_pass,
                          const RenderPassDesc* desc )
 {
     u32 attachment_count = desc->color_attachment_count;
@@ -1627,9 +1627,9 @@ void create_framebuffer( const Device* device,
     }
 }
 
-void create_render_pass( const Device* device,
+void create_render_pass( const Device*         device,
                          const RenderPassDesc* desc,
-                         RenderPass** p_render_pass )
+                         RenderPass**          p_render_pass )
 {
     FT_ASSERT( p_render_pass );
     *p_render_pass          = new ( std::nothrow ) RenderPass {};
@@ -1642,7 +1642,7 @@ void create_render_pass( const Device* device,
     u32 attachments_count = desc->color_attachment_count;
 
     VkAttachmentDescription
-        attachment_descriptions[ MAX_ATTACHMENTS_COUNT + 1 ];
+                          attachment_descriptions[ MAX_ATTACHMENTS_COUNT + 1 ];
     VkAttachmentReference color_attachment_references[ MAX_ATTACHMENTS_COUNT ];
     VkAttachmentReference depth_attachment_reference {};
 
@@ -1734,8 +1734,8 @@ void create_render_pass( const Device* device,
     create_framebuffer( device, render_pass, desc );
 }
 
-void update_render_pass( const Device* device,
-                         RenderPass* render_pass,
+void update_render_pass( const Device*         device,
+                         RenderPass*           render_pass,
                          const RenderPassDesc* desc )
 {
     FT_ASSERT( render_pass );
@@ -1803,9 +1803,9 @@ void destroy_shader( const Device* device, Shader* shader )
 }
 
 void create_descriptor_set_layout(
-    const Device* device,
-    u32 shader_count,
-    Shader** shaders,
+    const Device*         device,
+    u32                   shader_count,
+    Shader**              shaders,
     DescriptorSetLayout** p_descriptor_set_layout )
 {
     FT_ASSERT( p_descriptor_set_layout );
@@ -1818,7 +1818,7 @@ void create_descriptor_set_layout(
     descriptor_set_layout->shaders      = shaders;
 
     // count bindings in all shaders
-    u32 binding_counts[ MAX_SET_COUNT ] = { 0 };
+    u32                      binding_counts[ MAX_SET_COUNT ] = { 0 };
     VkDescriptorBindingFlags binding_flags[ MAX_SET_COUNT ]
                                           [ MAX_DESCRIPTOR_BINDING_COUNT ] = {};
     // collect all bindings
@@ -1836,7 +1836,7 @@ void create_descriptor_set_layout(
         {
             auto& binding =
                 descriptor_set_layout->shaders[ i ]->reflect_data.bindings[ j ];
-            u32 set            = binding.set;
+            u32  set           = binding.set;
             u32& binding_count = binding_counts[ set ];
 
             bindings[ set ][ binding_count ].binding = binding.binding;
@@ -1900,7 +1900,7 @@ void create_descriptor_set_layout(
     }
 }
 
-void destroy_descriptor_set_layout( const Device* device,
+void destroy_descriptor_set_layout( const Device*        device,
                                     DescriptorSetLayout* layout )
 {
     FT_ASSERT( layout );
@@ -1919,9 +1919,9 @@ void destroy_descriptor_set_layout( const Device* device,
     operator delete( layout, std::nothrow );
 }
 
-void create_compute_pipeline( const Device* device,
+void create_compute_pipeline( const Device*       device,
                               const PipelineDesc* desc,
-                              Pipeline** p_pipeline )
+                              Pipeline**          p_pipeline )
 {
     FT_ASSERT( p_pipeline );
     FT_ASSERT( desc->descriptor_set_layout );
@@ -1978,9 +1978,9 @@ void create_compute_pipeline( const Device* device,
                                          &pipeline->pipeline ) );
 }
 
-void create_graphics_pipeline( const Device* device,
+void create_graphics_pipeline( const Device*       device,
                                const PipelineDesc* desc,
-                               Pipeline** p_pipeline )
+                               Pipeline**          p_pipeline )
 {
     FT_ASSERT( p_pipeline );
     FT_ASSERT( desc->descriptor_set_layout );
@@ -2056,7 +2056,7 @@ void create_graphics_pipeline( const Device* device,
 
     // Dynamic states
     VkViewport viewport {};
-    VkRect2D scissor {};
+    VkRect2D   scissor {};
 
     VkPipelineViewportStateCreateInfo viewport_state_create_info {};
     viewport_state_create_info.sType =
@@ -2190,14 +2190,14 @@ void destroy_pipeline( const Device* device, Pipeline* pipeline )
     operator delete( pipeline, std::nothrow );
 }
 
-void cmd_begin_render_pass( const CommandBuffer* cmd,
+void cmd_begin_render_pass( const CommandBuffer*       cmd,
                             const RenderPassBeginDesc* desc )
 {
     FT_ASSERT( desc->render_pass );
 
     static VkClearValue clear_values[ MAX_ATTACHMENTS_COUNT + 1 ];
-    const RenderPass* render_pass = desc->render_pass;
-    u32 clear_value_count         = render_pass->color_attachment_count;
+    const RenderPass*   render_pass       = desc->render_pass;
+    u32                 clear_value_count = render_pass->color_attachment_count;
 
     for ( u32 i = 0; i < render_pass->color_attachment_count; ++i )
     {
@@ -2246,10 +2246,10 @@ void cmd_end_render_pass( const CommandBuffer* cmd )
 }
 
 void cmd_barrier( const CommandBuffer* cmd,
-                  u32 buffer_barriers_count,
+                  u32                  buffer_barriers_count,
                   const BufferBarrier* buffer_barriers,
-                  u32 image_barriers_count,
-                  const ImageBarrier* image_barriers )
+                  u32                  image_barriers_count,
+                  const ImageBarrier*  image_barriers )
 {
     std::vector<VkBufferMemoryBarrier> buffer_memory_barriers(
         buffer_barriers_count );
@@ -2338,10 +2338,10 @@ void cmd_barrier( const CommandBuffer* cmd,
 };
 
 void cmd_set_scissor( const CommandBuffer* cmd,
-                      i32 x,
-                      i32 y,
-                      u32 width,
-                      u32 height )
+                      i32                  x,
+                      i32                  y,
+                      u32                  width,
+                      u32                  height )
 {
     VkRect2D scissor {};
     scissor.offset.x      = x;
@@ -2352,12 +2352,12 @@ void cmd_set_scissor( const CommandBuffer* cmd,
 }
 
 void cmd_set_viewport( const CommandBuffer* cmd,
-                       f32 x,
-                       f32 y,
-                       f32 width,
-                       f32 height,
-                       f32 min_depth,
-                       f32 max_depth )
+                       f32                  x,
+                       f32                  y,
+                       f32                  width,
+                       f32                  height,
+                       f32                  min_depth,
+                       f32                  max_depth )
 {
     VkViewport viewport {};
     viewport.x        = x;
@@ -2378,10 +2378,10 @@ void cmd_bind_pipeline( const CommandBuffer* cmd, const Pipeline* pipeline )
 }
 
 void cmd_draw( const CommandBuffer* cmd,
-               u32 vertex_count,
-               u32 instance_count,
-               u32 first_vertex,
-               u32 first_instance )
+               u32                  vertex_count,
+               u32                  instance_count,
+               u32                  first_vertex,
+               u32                  first_instance )
 {
     vkCmdDraw( cmd->command_buffer,
                vertex_count,
@@ -2391,11 +2391,11 @@ void cmd_draw( const CommandBuffer* cmd,
 }
 
 void cmd_draw_indexed( const CommandBuffer* cmd,
-                       u32 index_count,
-                       u32 instance_count,
-                       u32 first_index,
-                       i32 vertex_offset,
-                       u32 first_instance )
+                       u32                  index_count,
+                       u32                  instance_count,
+                       u32                  first_index,
+                       i32                  vertex_offset,
+                       u32                  first_instance )
 {
     vkCmdDrawIndexed( cmd->command_buffer,
                       index_count,
@@ -2406,8 +2406,8 @@ void cmd_draw_indexed( const CommandBuffer* cmd,
 }
 
 void cmd_bind_vertex_buffer( const CommandBuffer* cmd,
-                             const Buffer* buffer,
-                             const u64 offset )
+                             const Buffer*        buffer,
+                             const u64            offset )
 {
     vkCmdBindVertexBuffers( cmd->command_buffer,
                             0,
@@ -2417,8 +2417,8 @@ void cmd_bind_vertex_buffer( const CommandBuffer* cmd,
 }
 
 void cmd_bind_index_buffer_u16( const CommandBuffer* cmd,
-                                const Buffer* buffer,
-                                const u64 offset )
+                                const Buffer*        buffer,
+                                const u64            offset )
 {
     vkCmdBindIndexBuffer( cmd->command_buffer,
                           buffer->buffer,
@@ -2427,8 +2427,8 @@ void cmd_bind_index_buffer_u16( const CommandBuffer* cmd,
 }
 
 void cmd_bind_index_buffer_u32( const CommandBuffer* cmd,
-                                const Buffer* buffer,
-                                u64 offset )
+                                const Buffer*        buffer,
+                                u64                  offset )
 {
     vkCmdBindIndexBuffer( cmd->command_buffer,
                           buffer->buffer,
@@ -2437,11 +2437,11 @@ void cmd_bind_index_buffer_u32( const CommandBuffer* cmd,
 }
 
 void cmd_copy_buffer( const CommandBuffer* cmd,
-                      const Buffer* src,
-                      u64 src_offset,
-                      Buffer* dst,
-                      u64 dst_offset,
-                      u64 size )
+                      const Buffer*        src,
+                      u64                  src_offset,
+                      Buffer*              dst,
+                      u64                  dst_offset,
+                      u64                  size )
 {
     VkBufferCopy buffer_copy {};
     buffer_copy.srcOffset = src_offset;
@@ -2456,9 +2456,9 @@ void cmd_copy_buffer( const CommandBuffer* cmd,
 }
 
 void cmd_copy_buffer_to_image( const CommandBuffer* cmd,
-                               const Buffer* src,
-                               u64 src_offset,
-                               Image* dst )
+                               const Buffer*        src,
+                               u64                  src_offset,
+                               Image*               dst )
 {
     auto dst_layers = get_image_subresource_layers( dst );
 
@@ -2481,9 +2481,9 @@ void cmd_copy_buffer_to_image( const CommandBuffer* cmd,
 }
 
 void cmd_dispatch( const CommandBuffer* cmd,
-                   u32 group_count_x,
-                   u32 group_count_y,
-                   u32 group_count_z )
+                   u32                  group_count_x,
+                   u32                  group_count_y,
+                   u32                  group_count_z )
 {
     vkCmdDispatch( cmd->command_buffer,
                    group_count_x,
@@ -2492,10 +2492,10 @@ void cmd_dispatch( const CommandBuffer* cmd,
 }
 
 void cmd_push_constants( const CommandBuffer* cmd,
-                         const Pipeline* pipeline,
-                         u64 offset,
-                         u64 size,
-                         const void* data )
+                         const Pipeline*      pipeline,
+                         u64                  offset,
+                         u64                  size,
+                         const void*          data )
 {
     vkCmdPushConstants( cmd->command_buffer,
                         pipeline->pipeline_layout,
@@ -2508,11 +2508,11 @@ void cmd_push_constants( const CommandBuffer* cmd,
 }
 
 void cmd_blit_image( const CommandBuffer* cmd,
-                     const Image* src,
-                     ResourceState src_state,
-                     Image* dst,
-                     ResourceState dst_state,
-                     Filter filter )
+                     const Image*         src,
+                     ResourceState        src_state,
+                     Image*               dst,
+                     ResourceState        dst_state,
+                     Filter               filter )
 {
     auto src_range = get_image_subresource_range( src );
     auto dst_range = get_image_subresource_range( dst );
@@ -2578,8 +2578,8 @@ void cmd_blit_image( const CommandBuffer* cmd,
 }
 
 void cmd_clear_color_image( const CommandBuffer* cmd,
-                            Image* image,
-                            Vector4 color )
+                            Image*               image,
+                            Vector4              color )
 {
     VkClearColorValue clear_color {};
     clear_color.float32[ 0 ] = color.r;
@@ -2598,10 +2598,10 @@ void cmd_clear_color_image( const CommandBuffer* cmd,
 }
 
 void cmd_draw_indexed_indirect( const CommandBuffer* cmd,
-                                const Buffer* buffer,
-                                u64 offset,
-                                u32 draw_count,
-                                u32 stride )
+                                const Buffer*        buffer,
+                                u64                  offset,
+                                u32                  draw_count,
+                                u32                  stride )
 {
     vkCmdDrawIndexedIndirect( cmd->command_buffer,
                               buffer->buffer,
@@ -2611,9 +2611,9 @@ void cmd_draw_indexed_indirect( const CommandBuffer* cmd,
 }
 
 void cmd_bind_descriptor_set( const CommandBuffer* cmd,
-                              u32 first_set,
+                              u32                  first_set,
                               const DescriptorSet* set,
-                              const Pipeline* pipeline )
+                              const Pipeline*      pipeline )
 {
     vkCmdBindDescriptorSets( cmd->command_buffer,
                              to_vk_pipeline_bind_point( pipeline->type ),
@@ -2625,9 +2625,9 @@ void cmd_bind_descriptor_set( const CommandBuffer* cmd,
                              nullptr );
 }
 
-void create_buffer( const Device* device,
+void create_buffer( const Device*     device,
                     const BufferDesc* desc,
-                    Buffer** p_buffer )
+                    Buffer**          p_buffer )
 {
     FT_ASSERT( p_buffer );
 
@@ -2672,9 +2672,9 @@ void destroy_buffer( const Device* device, Buffer* buffer )
     operator delete( buffer, std::nothrow );
 }
 
-void create_sampler( const Device* device,
+void create_sampler( const Device*      device,
                      const SamplerDesc* desc,
-                     Sampler** p_sampler )
+                     Sampler**          p_sampler )
 {
     FT_ASSERT( p_sampler );
 
@@ -2720,9 +2720,9 @@ void destroy_sampler( const Device* device, Sampler* sampler )
     operator delete( sampler, std::nothrow );
 }
 
-void create_image( const Device* device,
+void create_image( const Device*    device,
                    const ImageDesc* desc,
-                   Image** p_image )
+                   Image**          p_image )
 {
     FT_ASSERT( p_image );
 
@@ -2812,9 +2812,9 @@ void destroy_image( const Device* device, Image* image )
     operator delete( image, std::nothrow );
 }
 
-void create_descriptor_set( const Device* device,
+void create_descriptor_set( const Device*            device,
                             const DescriptorSetDesc* desc,
-                            DescriptorSet** p_descriptor_set )
+                            DescriptorSet**          p_descriptor_set )
 {
     FT_ASSERT( p_descriptor_set );
     FT_ASSERT( desc->descriptor_set_layout );
@@ -2847,16 +2847,16 @@ void destroy_descriptor_set( const Device* device, DescriptorSet* set )
     operator delete( set, std::nothrow );
 }
 
-void update_descriptor_set( const Device* device,
-                            DescriptorSet* set,
-                            u32 count,
+void update_descriptor_set( const Device*          device,
+                            DescriptorSet*         set,
+                            u32                    count,
                             const DescriptorWrite* writes )
 {
     FT_ASSERT( set );
     // TODO: rewrite
     std::vector<std::vector<VkDescriptorBufferInfo>> buffer_updates( count );
-    std::vector<std::vector<VkDescriptorImageInfo>> image_updates( count );
-    std::vector<VkWriteDescriptorSet> descriptor_writes( count );
+    std::vector<std::vector<VkDescriptorImageInfo>>  image_updates( count );
+    std::vector<VkWriteDescriptorSet>                descriptor_writes( count );
 
     uint32_t buffer_update_idx = 0;
     uint32_t image_update_idx  = 0;
@@ -2978,7 +2978,7 @@ void create_ui_context( const UiDesc* desc, UiContext** p_context )
     }
 
     ImGui_ImplVulkan_InitInfo init_info {};
-	init_info.Instance        = desc->backend->instance;
+    init_info.Instance        = desc->backend->instance;
     init_info.PhysicalDevice  = desc->device->physical_device;
     init_info.Device          = desc->device->logical_device;
     init_info.QueueFamily     = desc->queue->family_index;

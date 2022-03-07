@@ -14,16 +14,16 @@ using ImGuiCallback = bool ( * )( const SDL_Event* e );
 
 struct ApplicationState
 {
-    b32 is_inited;
-    b32 is_running;
-    Window window;
-    InitCallback on_init;
-    UpdateCallback on_update;
+    b32              is_inited;
+    b32              is_running;
+    Window           window;
+    InitCallback     on_init;
+    UpdateCallback   on_update;
     ShutdownCallback on_shutdown;
-    ResizeCallback on_resize;
-    f32 delta_time;
-    InputSystem input_system;
-    ImGuiCallback imgui_callback;
+    ResizeCallback   on_resize;
+    f32              delta_time;
+    InputSystem      input_system;
+    ImGuiCallback    imgui_callback;
 };
 
 static ApplicationState app_state {};
@@ -73,9 +73,6 @@ void app_run()
     {
         update_input_system( &app_state.input_system );
 
-        while ( !SDL_TICKS_PASSED( SDL_GetTicks(), last_frame + 16 ) )
-            ;
-
         u32 current_frame    = get_time();
         app_state.delta_time = ( current_frame - last_frame ) / 1000.0f;
         last_frame           = current_frame;
@@ -98,27 +95,27 @@ void app_run()
                 }
                 break;
             case SDL_KEYDOWN:
-				app_state.input_system.keys[ e.key.keysym.scancode ] = true;
-				break;
+                app_state.input_system.keys[ e.key.keysym.scancode ] = true;
+                break;
             case SDL_KEYUP:
-				app_state.input_system.keys[ e.key.keysym.scancode ] = false;
+                app_state.input_system.keys[ e.key.keysym.scancode ] = false;
                 break;
             case SDL_MOUSEBUTTONDOWN:
-				app_state.input_system.buttons[ e.button.button ] = true;
+                app_state.input_system.buttons[ e.button.button ] = true;
                 break;
             case SDL_MOUSEBUTTONUP:
-				app_state.input_system.buttons[ e.button.button ] = false;
+                app_state.input_system.buttons[ e.button.button ] = false;
                 break;
             default: break;
             }
         }
         i32 x, y;
         SDL_GetRelativeMouseState( &x, &y );
-		app_state.input_system.mouse_offset[ 0 ] = x;
-		app_state.input_system.mouse_offset[ 1 ] = y;
-		SDL_GetGlobalMouseState( &x, &y );
-		app_state.input_system.mouse_position[ 0 ] = x;
-		app_state.input_system.mouse_position[ 1 ] = y;
+        app_state.input_system.mouse_offset[ 0 ] = x;
+        app_state.input_system.mouse_offset[ 1 ] = y;
+        SDL_GetGlobalMouseState( &x, &y );
+        app_state.input_system.mouse_position[ 0 ] = x;
+        app_state.input_system.mouse_position[ 1 ] = y;
 
         app_state.on_update( app_state.delta_time );
     }

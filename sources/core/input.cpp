@@ -34,12 +34,12 @@ void update_input_system( InputSystem* input_system )
 
 f32 get_mouse_pos_x( const InputSystem* input_system )
 {
-	return input_system->mouse_position[ 0 ];
+    return input_system->mouse_position[ 0 ];
 }
 
 f32 get_mouse_pos_y( const InputSystem* input_system )
 {
-	return input_system->mouse_position[ 1 ];
+    return input_system->mouse_position[ 1 ];
 }
 
 f32 get_mouse_offset_x( const InputSystem* input_system )

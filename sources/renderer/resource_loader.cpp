@@ -2,12 +2,12 @@
 
 namespace fluent
 {
-const Device* ResourceLoader::m_device      = nullptr;
-Queue* ResourceLoader::m_queue              = nullptr;
-CommandPool* ResourceLoader::m_command_pool = nullptr;
-CommandBuffer* ResourceLoader::m_cmd        = nullptr;
+const Device*                 ResourceLoader::m_device       = nullptr;
+Queue*                        ResourceLoader::m_queue        = nullptr;
+CommandPool*                  ResourceLoader::m_command_pool = nullptr;
+CommandBuffer*                ResourceLoader::m_cmd          = nullptr;
 ResourceLoader::StagingBuffer ResourceLoader::m_staging_buffer;
-b32 ResourceLoader::m_is_recording = false;
+b32                           ResourceLoader::m_is_recording = false;
 
 static b32 need_staging( Buffer* buffer )
 {
@@ -46,9 +46,9 @@ void ResourceLoader::shutdown()
     destroy_queue( m_queue );
 }
 
-void ResourceLoader::upload_buffer( Buffer* buffer,
-                                    u64 offset,
-                                    u64 size,
+void ResourceLoader::upload_buffer( Buffer*     buffer,
+                                    u64         offset,
+                                    u64         size,
                                     const void* data )
 {
     FT_ASSERT( buffer );
