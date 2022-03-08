@@ -44,6 +44,8 @@ GraphicContext::GraphicContext( const GraphicContextDesc& desc )
     SwapchainDesc swapchain_desc {};
     swapchain_desc.width           = desc.width;
     swapchain_desc.height          = desc.height;
+	swapchain_desc.format          = Format::eB8G8R8A8Srgb;
+	swapchain_desc.vsync           = true;
     swapchain_desc.queue           = m_queue;
     swapchain_desc.min_image_count = FRAME_COUNT;
     swapchain_desc.builtin_depth   = desc.builtin_depth;
