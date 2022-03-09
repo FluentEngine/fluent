@@ -22,6 +22,9 @@ bool             command_buffers_recorded[ FRAME_COUNT ];
 Swapchain*     swapchain;
 CommandBuffer* command_buffers[ FRAME_COUNT ];
 
+Image*       depth_image;
+RenderPass** render_passes;
+
 UiContext* ui;
 
 static Shader* load_shader_from_file( const std::string& filename )
@@ -63,6 +66,33 @@ static Image* load_image_from_file( const std::string& filename, b32 flip )
 	ResourceLoader::upload_image( image, size, data );
 
 	return image;
+}
+
+void create_depth_image( u32 width, u32 height )
+{
+	ImageDesc depth_image_desc {};
+	depth_image_desc.width           = width;
+	depth_image_desc.height          = height;
+	depth_image_desc.depth           = 1;
+	depth_image_desc.format          = Format::eD32Sfloat;
+	depth_image_desc.layer_count     = 1;
+	depth_image_desc.mip_levels      = 1;
+	depth_image_desc.sample_count    = SampleCount::e1;
+	depth_image_desc.descriptor_type = DescriptorType::eDepthStencilAttachment;
+
+	create_image( device, &depth_image_desc, &depth_image );
+
+	ImageBarrier barrier {};
+	barrier.image     = depth_image;
+	barrier.old_state = ResourceState::eUndefined;
+	barrier.new_state = ResourceState::eDepthStencilWrite;
+	barrier.src_queue = queue;
+	barrier.dst_queue = queue;
+
+	begin_command_buffer( command_buffers[ 0 ] );
+	cmd_barrier( command_buffers[ 0 ], 0, nullptr, 1, &barrier );
+	end_command_buffer( command_buffers[ 0 ] );
+	immediate_submit( queue, command_buffers[ 0 ] );
 }
 
 void on_init()
@@ -110,6 +140,26 @@ void on_init()
 
 	create_swapchain( device, &swapchain_desc, &swapchain );
 
+	create_depth_image( swapchain->width, swapchain->height );
+
+	RenderPassDesc render_pass_desc;
+	render_pass_desc.width                          = swapchain->width;
+	render_pass_desc.height                         = swapchain->height;
+	render_pass_desc.color_attachment_count         = 1;
+	render_pass_desc.color_attachment_load_ops[ 0 ] = AttachmentLoadOp::eClear;
+	render_pass_desc.color_image_states[ 0 ] = ResourceState::eColorAttachment;
+	render_pass_desc.depth_stencil_state   = ResourceState::eDepthStencilWrite;
+	render_pass_desc.depth_stencil_load_op = AttachmentLoadOp::eClear;
+	render_pass_desc.depth_stencil         = depth_image;
+
+	render_passes = new RenderPass*[ swapchain->image_count ];
+
+	for ( uint32_t i = 0; i < swapchain->image_count; i++ )
+	{
+		render_pass_desc.color_attachments[ 0 ] = swapchain->images[ i ];
+		create_render_pass( device, &render_pass_desc, &render_passes[ i ] );
+	}
+
 	ResourceLoader::init( device );
 
 	UiDesc ui_desc {};
@@ -119,7 +169,7 @@ void on_init()
 	ui_desc.image_count        = swapchain->image_count;
 	ui_desc.in_fly_frame_count = FRAME_COUNT;
 	ui_desc.queue              = queue;
-	ui_desc.render_pass        = swapchain->render_passes[ 0 ];
+	ui_desc.render_pass        = render_passes[ 0 ];
 	ui_desc.window             = get_app_window();
 
 	create_ui_context( &ui_desc, &ui );
@@ -130,7 +180,28 @@ void on_init()
 void on_resize( u32 width, u32 height )
 {
 	queue_wait_idle( queue );
+	destroy_image( device, depth_image );
+
 	resize_swapchain( device, swapchain, width, height );
+
+	create_depth_image( width, height );
+
+	RenderPassDesc render_pass_desc;
+	render_pass_desc.width                          = width;
+	render_pass_desc.height                         = height;
+	render_pass_desc.color_attachment_count         = 1;
+	render_pass_desc.color_attachment_load_ops[ 0 ] = AttachmentLoadOp::eClear;
+	render_pass_desc.color_image_states[ 0 ] = ResourceState::eColorAttachment;
+	render_pass_desc.depth_stencil_state   = ResourceState::eDepthStencilWrite;
+	render_pass_desc.depth_stencil_load_op = AttachmentLoadOp::eClear;
+	render_pass_desc.depth_stencil         = depth_image;
+
+	for ( uint32_t i = 0; i < swapchain->image_count; i++ )
+	{
+		render_pass_desc.color_attachments[ 0 ] = swapchain->images[ i ];
+		update_render_pass( device, render_passes[ i ], &render_pass_desc );
+	}
+
 	resize_sample( width, height );
 }
 
@@ -164,8 +235,7 @@ u32 begin_frame()
 	cmd_barrier( cmd, 0, nullptr, 1, &to_clear_barrier );
 
 	RenderPassBeginDesc render_pass_begin_desc {};
-	render_pass_begin_desc.render_pass =
-	    get_swapchain_render_pass( swapchain, image_index );
+	render_pass_begin_desc.render_pass = render_passes[ image_index ];
 	render_pass_begin_desc.clear_values[ 0 ].color[ 0 ] = 1.0f;
 	render_pass_begin_desc.clear_values[ 0 ].color[ 1 ] = 0.8f;
 	render_pass_begin_desc.clear_values[ 0 ].color[ 2 ] = 0.4f;
@@ -259,6 +329,12 @@ void on_shutdown()
 	shutdown_sample();
 	destroy_ui_context( device, ui );
 	ResourceLoader::shutdown();
+	destroy_image( device, depth_image );
+	for ( uint32_t i = 0; i < swapchain->image_count; i++ )
+	{
+		destroy_render_pass( device, render_passes[ i ] );
+	}
+	delete[] render_passes;
 	destroy_swapchain( device, swapchain );
 	for ( u32 i = 0; i < FRAME_COUNT; ++i )
 	{

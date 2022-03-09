@@ -48,17 +48,6 @@ struct Fence
     VkFence fence = VK_NULL_HANDLE;
 };
 
-struct SwapchainDesc
-{
-    Queue* queue;
-    u32    width;
-    u32    height;
-    Format format;
-	b32    vsync;
-    u32    min_image_count;
-    b32    builtin_depth;
-};
-
 struct SamplerDesc
 {
     Filter             mag_filter     = Filter::eNearest;
@@ -125,6 +114,16 @@ struct Buffer
     void*          mapped_memory = nullptr;
 };
 
+struct SwapchainDesc
+{
+	Queue* queue;
+	u32    width;
+	u32    height;
+	Format format;
+	b32    vsync;
+	u32    min_image_count;
+};
+
 struct Swapchain
 {
     VkPresentModeKHR              present_mode;
@@ -138,9 +137,7 @@ struct Swapchain
     VkSwapchainKHR                swapchain;
     Format                        format;
     Image**                       images;
-    Image*                        depth_image;
-    RenderPass**                  render_passes;
-    Queue*                        queue;
+	Queue*                        queue;
 };
 
 struct CommandPoolDesc
@@ -436,8 +433,6 @@ void resize_swapchain( const Device* device,
                        u32           height );
 
 void destroy_swapchain( const Device* device, Swapchain* swapchain );
-const RenderPass* get_swapchain_render_pass( const Swapchain* swapchain,
-                                             u32              image_index );
 
 void create_command_pool( const Device*          device,
                           const CommandPoolDesc* desc,

@@ -1125,8 +1125,6 @@ void configure_swapchain( const Device*        device,
                           Swapchain*           swapchain,
                           const SwapchainDesc* desc )
 {
-    swapchain->queue = desc->queue;
-
     SDL_Vulkan_CreateSurface( ( SDL_Window* ) get_app_window()->handle,
                               device->instance,
                               &swapchain->surface );
@@ -1233,17 +1231,11 @@ void configure_swapchain( const Device*        device,
 
 void create_configured_swapchain( const Device* device,
                                   Swapchain*    swapchain,
-                                  b32           resize,
-                                  b32           builtin_depth )
+                                  b32           resize )
 {
-    // destroy old resources if it is resize
-    if ( resize )
+	// destroy old resources if it is resize
+	if ( resize )
     {
-        if ( builtin_depth )
-        {
-            destroy_image( device, swapchain->depth_image );
-        }
-
         FT_ASSERT( swapchain->image_count );
         for ( u32 i = 0; i < swapchain->image_count; ++i )
         {
@@ -1335,68 +1327,6 @@ void create_configured_swapchain( const Device* device,
                                       device->vulkan_allocator,
                                       &swapchain->images[ i ]->image_view ) );
     }
-
-    if ( builtin_depth )
-    {
-        ImageDesc image_desc {};
-        image_desc.width           = swapchain->width;
-        image_desc.height          = swapchain->height;
-        image_desc.depth           = 1;
-        image_desc.layer_count     = 1;
-        image_desc.mip_levels      = 1;
-        image_desc.format          = Format::eD32Sfloat;
-        image_desc.descriptor_type = DescriptorType::eDepthStencilAttachment;
-
-        create_image( device, &image_desc, &swapchain->depth_image );
-
-        ImageBarrier image_barrier {};
-        image_barrier.image     = swapchain->depth_image;
-        image_barrier.src_queue = device->queue;
-        image_barrier.dst_queue = device->queue;
-        image_barrier.old_state = ResourceState::eUndefined;
-        image_barrier.new_state = ResourceState::eDepthStencilWrite;
-
-        begin_command_buffer( device->cmd );
-        cmd_barrier( device->cmd, 0, nullptr, 1, &image_barrier );
-        end_command_buffer( device->cmd );
-        immediate_submit( device->queue, device->cmd );
-    }
-
-    // create default render passes
-    RenderPassDesc render_pass_desc {};
-    render_pass_desc.color_attachment_count         = 1;
-    render_pass_desc.color_attachment_load_ops[ 0 ] = AttachmentLoadOp::eClear;
-    render_pass_desc.color_image_states[ 0 ] = ResourceState::eColorAttachment;
-    render_pass_desc.depth_stencil =
-        builtin_depth ? swapchain->depth_image : nullptr;
-    render_pass_desc.depth_stencil_load_op = AttachmentLoadOp::eClear;
-    render_pass_desc.depth_stencil_state   = ResourceState::eDepthStencilWrite;
-    render_pass_desc.width                 = swapchain->width;
-    render_pass_desc.height                = swapchain->height;
-
-    if ( !resize )
-    {
-        swapchain->render_passes =
-            new ( std::nothrow ) RenderPass*[ swapchain->image_count ];
-
-        for ( u32 i = 0; i < swapchain->image_count; ++i )
-        {
-            render_pass_desc.color_attachments[ 0 ] = swapchain->images[ i ];
-            create_render_pass( device,
-                                &render_pass_desc,
-                                &swapchain->render_passes[ i ] );
-        }
-    }
-    else
-    {
-        for ( u32 i = 0; i < swapchain->image_count; ++i )
-        {
-            render_pass_desc.color_attachments[ 0 ] = swapchain->images[ i ];
-            update_render_pass( device,
-                                swapchain->render_passes[ i ],
-                                &render_pass_desc );
-        }
-    }
 }
 
 void create_swapchain( const Device*        device,
@@ -1408,10 +1338,7 @@ void create_swapchain( const Device*        device,
     Swapchain* swapchain = *p_swapchain;
 
     configure_swapchain( device, swapchain, desc );
-    create_configured_swapchain( device,
-                                 swapchain,
-                                 false,
-                                 desc->builtin_depth );
+	create_configured_swapchain( device, swapchain, false );
 }
 
 void resize_swapchain( const Device* device,
@@ -1421,28 +1348,14 @@ void resize_swapchain( const Device* device,
 {
     swapchain->width  = width;
     swapchain->height = height;
-    create_configured_swapchain( device,
-                                 swapchain,
-                                 true,
-                                 swapchain->depth_image != nullptr );
+	create_configured_swapchain( device, swapchain, true );
 }
 
 void destroy_swapchain( const Device* device, Swapchain* swapchain )
 {
-    FT_ASSERT( swapchain );
-    FT_ASSERT( swapchain->render_passes );
-    for ( u32 i = 0; i < swapchain->image_count; ++i )
-    {
-        destroy_render_pass( device, swapchain->render_passes[ i ] );
-    }
-    operator delete[]( swapchain->render_passes, std::nothrow );
+	FT_ASSERT( swapchain );
 
-    if ( swapchain->depth_image )
-    {
-        destroy_image( device, swapchain->depth_image );
-    }
-
-    FT_ASSERT( swapchain->image_count );
+	FT_ASSERT( swapchain->image_count );
     for ( u32 i = 0; i < swapchain->image_count; ++i )
     {
         FT_ASSERT( swapchain->images[ i ]->image_view );
@@ -1452,23 +1365,18 @@ void destroy_swapchain( const Device* device, Swapchain* swapchain )
         operator delete( swapchain->images[ i ], std::nothrow );
     }
     operator delete[]( swapchain->images, std::nothrow );
-    FT_ASSERT( swapchain->swapchain );
-    vkDestroySwapchainKHR( device->logical_device,
+
+	FT_ASSERT( swapchain->swapchain );
+	vkDestroySwapchainKHR( device->logical_device,
                            swapchain->swapchain,
-                           device->vulkan_allocator );
-    FT_ASSERT( swapchain->surface );
-    vkDestroySurfaceKHR( device->instance,
+	                       device->vulkan_allocator );
+
+	FT_ASSERT( swapchain->surface );
+	vkDestroySurfaceKHR( device->instance,
                          swapchain->surface,
                          device->vulkan_allocator );
 
     operator delete( swapchain, std::nothrow );
-}
-
-const RenderPass* get_swapchain_render_pass( const Swapchain* swapchain,
-                                             u32              image_index )
-{
-    FT_ASSERT( image_index < swapchain->image_count );
-    return swapchain->render_passes[ image_index ];
 }
 
 void create_command_pool( const Device*          device,

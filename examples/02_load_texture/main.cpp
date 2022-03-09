@@ -52,7 +52,7 @@ void init_sample()
     pipeline_desc.depth_state_desc.depth_test   = false;
     pipeline_desc.depth_state_desc.depth_write  = false;
     pipeline_desc.descriptor_set_layout         = descriptor_set_layout;
-    pipeline_desc.render_pass                   = swapchain->render_passes[ 0 ];
+	pipeline_desc.render_pass                   = render_passes[ 0 ];
 
     create_graphics_pipeline( device, &pipeline_desc, &pipeline );
 

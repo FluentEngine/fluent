@@ -14,5 +14,9 @@ endforeach()
 
 compile_shaders(${SHADERS})
 
-add_executable(${target} main.cpp model.cpp ${SHADERS} ${COMPILED_SHADERS})
+add_executable(${target}
+	main.cpp
+	${SHADERS}
+	${COMPILED_SHADERS})
+
 target_link_libraries(${target} fluent-engine)
