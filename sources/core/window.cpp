@@ -7,6 +7,9 @@ namespace fluent
 
 Window create_window( const WindowDesc& desc )
 {
+	int init_result = SDL_Init( SDL_INIT_VIDEO );
+	FT_ASSERT( init_result == 0 && "SDL Init failed" );
+
     FT_ASSERT( desc.width > 0 && desc.height > 0 &&
                "Width, height should be greater than zero" );
 
@@ -35,6 +38,7 @@ void destroy_window( Window& window )
 {
     FT_ASSERT( window.handle && "Window is nullptr" );
     SDL_DestroyWindow( ( SDL_Window* ) window.handle );
+	SDL_Quit();
 }
 
 u32 window_get_width( const Window* window )

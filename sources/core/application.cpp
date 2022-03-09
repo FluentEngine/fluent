@@ -36,9 +36,6 @@ void app_init( const ApplicationConfig* config )
     FT_ASSERT( config->on_shutdown );
     FT_ASSERT( config->on_resize );
 
-    int init_result = SDL_Init( SDL_INIT_VIDEO );
-    FT_ASSERT( init_result == 0 && "SDL Init failed" );
-
     app_state.window = fluent::create_window( config->window_desc );
 
     app_state.on_init        = config->on_init;
@@ -127,7 +124,6 @@ void app_shutdown()
 {
     FT_ASSERT( app_state.is_inited );
     fluent::destroy_window( app_state.window );
-    SDL_Quit();
 }
 
 const Window* get_app_window() { return &app_state.window; }
