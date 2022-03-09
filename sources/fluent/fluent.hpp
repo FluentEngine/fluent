@@ -11,7 +11,6 @@
 #include "renderer/renderer_enums.hpp"
 #include "renderer/renderer_backend.hpp"
 #include "renderer/resource_loader.hpp"
-#include "renderer/graphic_context.hpp"
 
 #include "math/math.hpp"
 

@@ -77,9 +77,7 @@ set(renderer
 	${src_dir}/renderer/renderer_backend.hpp
 	${src_dir}/renderer/renderer_backend.cpp
 	${src_dir}/renderer/resource_loader.hpp
-	${src_dir}/renderer/resource_loader.cpp
-	${src_dir}/renderer/graphic_context.hpp
-	${src_dir}/renderer/graphic_context.cpp)
+	${src_dir}/renderer/resource_loader.cpp)
 
 set(util
 	${src_dir}/utils/file_loader.hpp
