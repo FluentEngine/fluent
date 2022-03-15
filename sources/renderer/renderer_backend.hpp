@@ -116,12 +116,12 @@ struct Buffer
 
 struct SwapchainDesc
 {
-	Queue* queue;
-	u32    width;
-	u32    height;
-	Format format;
-	b32    vsync;
-	u32    min_image_count;
+    Queue* queue;
+    u32    width;
+    u32    height;
+    Format format;
+    b32    vsync;
+    u32    min_image_count;
 };
 
 struct Swapchain
@@ -137,7 +137,7 @@ struct Swapchain
     VkSwapchainKHR                swapchain;
     Format                        format;
     Image**                       images;
-	Queue*                        queue;
+    Queue*                        queue;
 };
 
 struct CommandPoolDesc
@@ -299,7 +299,7 @@ struct PipelineDesc
     u32                  shader_count = 0;
     Shader*              shaders[ MAX_STAGE_COUNT ];
     DescriptorSetLayout* descriptor_set_layout;
-    RenderPass*          render_pass;
+    const RenderPass*    render_pass;
 };
 
 struct Pipeline
