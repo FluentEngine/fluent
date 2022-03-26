@@ -1,6 +1,3 @@
-#ifdef VULKAN_BACKEND
-#include <volk.h>
-#endif
 #include <spirv_reflect.h>
 #include "renderer/shader_reflection.hpp"
 
@@ -79,30 +76,31 @@ void recursive_uniform_visit( std::vector<ShaderType>& uniform_variables,
     }
 }
 
-#ifdef VULKAN_BACKEND
-DescriptorType to_desctriptor_type( VkDescriptorType descriptor_type )
+DescriptorType to_desctriptor_type( SpvReflectDescriptorType descriptor_type )
 {
     switch ( descriptor_type )
     {
-    case VK_DESCRIPTOR_TYPE_SAMPLER: return DescriptorType::eSampler;
-    case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+    case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: return DescriptorType::eSampler;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
         FT_ASSERT( false && "Use separate types instead, texture + sampler" );
         return DescriptorType( -1 );
-    case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE: return DescriptorType::eSampledImage;
-    case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: return DescriptorType::eStorageImage;
-    case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+    case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+        return DescriptorType::eSampledImage;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+        return DescriptorType::eStorageImage;
+    case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
         return DescriptorType::eUniformTexelBuffer;
-    case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
         return DescriptorType::eStorageTexelBuffer;
-    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+    case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
         return DescriptorType::eUniformBuffer;
-    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER:
         return DescriptorType::eStorageBuffer;
-    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+    case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
         return DescriptorType::eUniformBufferDynamic;
-    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
         return DescriptorType::eStorageBufferDynamic;
-    case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+    case SPV_REFLECT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
         return DescriptorType::eInputAttachment;
     default: FT_ASSERT( false ); return DescriptorType( -1 );
     }
@@ -141,8 +139,8 @@ ReflectionData reflect( u32 byte_code_size, const u32* byte_code )
     {
         result.bindings[ i ].binding          = descriptor_binding->binding;
         result.bindings[ i ].descriptor_count = descriptor_binding->count;
-        result.bindings[ i ].descriptor_type  = to_desctriptor_type(
-            ( VkDescriptorType ) descriptor_binding->descriptor_type );
+        result.bindings[ i ].descriptor_type =
+            to_desctriptor_type( descriptor_binding->descriptor_type );
         result.bindings[ i ].set = descriptor_binding->set;
         i++;
     }
@@ -151,6 +149,5 @@ ReflectionData reflect( u32 byte_code_size, const u32* byte_code )
 
     return result;
 }
-#endif
 
 } // namespace fluent
