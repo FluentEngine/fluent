@@ -102,7 +102,6 @@ void on_init()
     FileSystem::set_textures_directory( "../../../examples/textures/" );
 
     RendererBackendDesc backend_desc {};
-    backend_desc.vulkan_allocator = nullptr;
     create_renderer_backend( &backend_desc, &backend );
 
     DeviceDesc device_desc {};
@@ -357,7 +356,7 @@ int main( int argc, char** argv )
     ApplicationConfig config;
     config.argc        = argc;
     config.argv        = argv;
-    config.window_desc = { SAMPLE_NAME, 0, 0, 1400, 900, false };
+    config.window_desc = { SAMPLE_NAME, 100, 100, 1400, 900, false };
     config.log_level   = LogLevel::eTrace;
     config.on_init     = on_init;
     config.on_update   = on_update;

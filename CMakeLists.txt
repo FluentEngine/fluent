@@ -15,6 +15,8 @@ elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
     set(FLUENT_DEBUG_BUILD OFF)
 endif()
 
+set(RENDERER_BACKEND "Vulkan")
+
 set(FLUENT_BUILD_TESTS ON)
 
 set(BUILD_SHARED_LIBS OFF)
@@ -65,7 +67,7 @@ set(renderer
     ${src_dir}/renderer/shader_reflection.hpp
     ${src_dir}/renderer/shader_reflection.cpp
     ${src_dir}/renderer/renderer_backend.hpp
-    ${src_dir}/renderer/renderer_backend.cpp
+    ${src_dir}/renderer/vulkan_backend.cpp
     ${src_dir}/renderer/resource_loader.hpp
     ${src_dir}/renderer/resource_loader.cpp)
 
@@ -105,8 +107,14 @@ target_include_directories(${target}
 
 target_link_libraries(${target} PUBLIC ${libs})
 
+if ("${RENDERER_BACKEND}" STREQUAL "Vulkan")
+    set(compile_definitions VULKAN_BACKEND)
+elseif("${RENDERER_BACKEND}" STREQUAL "D3D12")
+    set(compile_definitions D3D12_BACKEND)
+endif()
+
 if (FLUENT_DEBUG_BUILD)
-    set(compile_definitions FLUENT_DEBUG)
+    set(compile_definitions FLUENT_DEBUG ${compile_definitions})
     if (UNIX)
         set(compile_options -g)
     endif()

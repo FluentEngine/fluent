@@ -35,17 +35,32 @@ struct Queue
 {
     u32       family_index;
     QueueType type;
-    VkQueue   queue;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkQueue queue;
+    } p;
+#endif
 };
 
 struct Semaphore
 {
-    VkSemaphore semaphore;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkSemaphore semaphore;
+    } p;
+#endif
 };
 
 struct Fence
 {
-    VkFence fence = VK_NULL_HANDLE;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkFence fence = VK_NULL_HANDLE;
+    } p;
+#endif
 };
 
 struct SamplerDesc
@@ -67,7 +82,12 @@ struct SamplerDesc
 
 struct Sampler
 {
-    VkSampler sampler;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkSampler sampler;
+    } p;
+#endif
 };
 
 struct ImageDesc
@@ -84,9 +104,6 @@ struct ImageDesc
 
 struct Image
 {
-    VkImage        image;
-    VkImageView    image_view;
-    VmaAllocation  allocation;
     u32            width;
     u32            height;
     Format         format;
@@ -94,6 +111,14 @@ struct Image
     u32            mip_level_count = 1;
     u32            layer_count     = 1;
     DescriptorType descriptor_type;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkImage       image;
+        VkImageView   image_view;
+        VmaAllocation allocation;
+    } p;
+#endif
 };
 
 struct BufferDesc
@@ -105,13 +130,18 @@ struct BufferDesc
 
 struct Buffer
 {
-    VkBuffer       buffer;
-    VmaAllocation  allocation;
     u64            size;
     ResourceState  resource_state;
     DescriptorType descriptor_type;
     MemoryUsage    memory_usage;
     void*          mapped_memory = nullptr;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkBuffer      buffer;
+        VmaAllocation allocation;
+    } p;
+#endif
 };
 
 struct SwapchainDesc
@@ -126,18 +156,23 @@ struct SwapchainDesc
 
 struct Swapchain
 {
-    VkPresentModeKHR              present_mode;
-    VkColorSpaceKHR               color_space;
-    VkSurfaceTransformFlagBitsKHR pre_transform;
-    u32                           min_image_count;
-    u32                           image_count;
-    u32                           width;
-    u32                           height;
-    VkSurfaceKHR                  surface;
-    VkSwapchainKHR                swapchain;
-    Format                        format;
-    Image**                       images;
-    Queue*                        queue;
+    u32     min_image_count;
+    u32     image_count;
+    u32     width;
+    u32     height;
+    Format  format;
+    Image** images;
+    Queue*  queue;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkPresentModeKHR              present_mode;
+        VkColorSpaceKHR               color_space;
+        VkSurfaceTransformFlagBitsKHR pre_transform;
+        VkSurfaceKHR                  surface;
+        VkSwapchainKHR                swapchain;
+    } p;
+#endif
 };
 
 struct CommandPoolDesc
@@ -153,8 +188,13 @@ struct CommandPool
 
 struct CommandBuffer
 {
-    Queue*          queue;
-    VkCommandBuffer command_buffer;
+    Queue* queue;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkCommandBuffer command_buffer;
+    } p;
+#endif
 };
 
 struct QueueSubmitDesc
@@ -194,13 +234,18 @@ struct RenderPassDesc
 
 struct RenderPass
 {
-    VkRenderPass  render_pass;
-    VkFramebuffer framebuffer;
-    u32           width;
-    u32           height;
-    SampleCount   sample_count;
-    u32           color_attachment_count;
-    b32           has_depth_stencil;
+    u32         width;
+    u32         height;
+    SampleCount sample_count;
+    u32         color_attachment_count;
+    b32         has_depth_stencil;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkRenderPass  render_pass;
+        VkFramebuffer framebuffer;
+    } p;
+#endif
 };
 
 struct ClearValue
@@ -246,8 +291,13 @@ struct ShaderDesc
 struct Shader
 {
     ShaderStage    stage;
-    VkShaderModule shader;
     ReflectionData reflect_data;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkShaderModule shader;
+    } p;
+#endif
 };
 
 struct DescriptorSetLayout
@@ -309,22 +359,35 @@ struct PipelineDesc
 
 struct Pipeline
 {
-    PipelineType     type;
-    VkPipelineLayout pipeline_layout;
-    VkPipeline       pipeline;
+    PipelineType type;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkPipelineLayout pipeline_layout;
+        VkPipeline       pipeline;
+    } p;
+#endif
 };
 
 struct RendererBackendDesc
 {
-    VkAllocationCallbacks* vulkan_allocator;
+    struct
+    {
+        VkAllocationCallbacks* vulkan_allocator;
+    } p;
 };
 
 struct RendererBackend
 {
-    VkAllocationCallbacks*   vulkan_allocator;
-    VkInstance               instance;
-    VkDebugUtilsMessengerEXT debug_messenger;
-    VkPhysicalDevice         physical_device;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkAllocationCallbacks*   vulkan_allocator;
+        VkInstance               instance;
+        VkDebugUtilsMessengerEXT debug_messenger;
+        VkPhysicalDevice         physical_device;
+    } p;
+#endif
 };
 
 struct DeviceDesc
@@ -334,15 +397,20 @@ struct DeviceDesc
 
 struct Device
 {
-    VkAllocationCallbacks* vulkan_allocator;
-    VkInstance             instance;
-    VkPhysicalDevice       physical_device;
-    VkDevice               logical_device;
-    VmaAllocator           memory_allocator;
-    VkDescriptorPool       descriptor_pool;
-    Queue*                 queue;
-    CommandPool*           command_pool;
-    CommandBuffer*         cmd;
+    Queue*         queue;
+    CommandPool*   command_pool;
+    CommandBuffer* cmd;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkAllocationCallbacks* vulkan_allocator;
+        VkInstance             instance;
+        VkPhysicalDevice       physical_device;
+        VkDevice               logical_device;
+        VmaAllocator           memory_allocator;
+        VkDescriptorPool       descriptor_pool;
+    } p;
+#endif
 };
 
 struct DescriptorSetDesc
@@ -353,7 +421,12 @@ struct DescriptorSetDesc
 
 struct DescriptorSet
 {
-    VkDescriptorSet descriptor_set;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkDescriptorSet descriptor_set;
+    } p;
+#endif
 };
 
 struct BufferDescriptor
@@ -398,7 +471,12 @@ struct UiDesc
 
 struct UiContext
 {
-    VkDescriptorPool desriptor_pool;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkDescriptorPool desriptor_pool;
+    } p;
+#endif
 };
 
 void create_renderer_backend( const RendererBackendDesc* desc,

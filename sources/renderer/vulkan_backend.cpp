@@ -1,31 +1,32 @@
-#include <algorithm>
-#include <SDL_vulkan.h>
-#include <imgui.h>
-#include <imgui_impl_vulkan.h>
-#include <imgui_impl_sdl.h>
-#include <tinyimageformat_apis.h>
-#include <vk_enum_string_helper.h>
-#include "core/window.hpp"
-#include "core/application.hpp"
-#include "renderer/renderer_backend.hpp"
+#ifdef VULKAN_BACKEND
 
-#ifdef FLUENT_DEBUG
-#    define VK_ASSERT( x )                                                     \
-        do {                                                                   \
-            VkResult err = x;                                                  \
-            if ( err )                                                         \
-            {                                                                  \
-                FT_ERROR( "Detected Vulkan error: {}", err );                  \
-                abort();                                                       \
-            }                                                                  \
-        } while ( 0 )
-#else
-#    define VK_ASSERT( x ) x
-#endif
+#    include <algorithm>
+#    include <SDL_vulkan.h>
+#    include <imgui.h>
+#    include <imgui_impl_vulkan.h>
+#    include <imgui_impl_sdl.h>
+#    include <tinyimageformat_apis.h>
+#    include <vk_enum_string_helper.h>
+#    include "core/window.hpp"
+#    include "core/application.hpp"
+#    include "renderer/renderer_backend.hpp"
+
+#    ifdef FLUENT_DEBUG
+#        define VK_ASSERT( x )                                                 \
+            do {                                                               \
+                VkResult err = x;                                              \
+                if ( err )                                                     \
+                {                                                              \
+                    FT_ERROR( "Detected Vulkan error: {}", err );              \
+                    abort();                                                   \
+                }                                                              \
+            } while ( 0 )
+#    else
+#        define VK_ASSERT( x ) x
+#    endif
 
 namespace fluent
 {
-
 VkFormat to_vk_format( Format format )
 {
     return static_cast<VkFormat>(
@@ -537,10 +538,10 @@ void create_debug_messenger( RendererBackend* backend )
     debug_messenger_create_info.pfnUserCallback = vulkan_debug_callback;
     debug_messenger_create_info.pUserData       = nullptr;
 
-    vkCreateDebugUtilsMessengerEXT( backend->instance,
+    vkCreateDebugUtilsMessengerEXT( backend->p.instance,
                                     &debug_messenger_create_info,
-                                    backend->vulkan_allocator,
-                                    &backend->debug_messenger );
+                                    backend->p.vulkan_allocator,
+                                    &backend->p.debug_messenger );
 }
 
 static inline void get_instance_extensions( u32&         extensions_count,
@@ -552,13 +553,13 @@ static inline void get_instance_extensions( u32&         extensions_count,
             ( SDL_Window* ) get_app_window()->handle,
             &extensions_count,
             nullptr );
-#ifdef FLUENT_DEBUG
+#    ifdef FLUENT_DEBUG
         extensions_count++;
-#endif
+#    endif
     }
     else
     {
-#ifdef FLUENT_DEBUG
+#    ifdef FLUENT_DEBUG
         u32 sdl_extensions_count = extensions_count - 1;
         b32 result               = SDL_Vulkan_GetInstanceExtensions(
             ( SDL_Window* ) get_app_window()->handle,
@@ -567,12 +568,12 @@ static inline void get_instance_extensions( u32&         extensions_count,
         FT_ASSERT( result );
         extension_names[ extensions_count - 1 ] =
             VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
-#else
+#    else
         b32 result = SDL_Vulkan_GetInstanceExtensions(
             ( SDL_Window* ) get_app_window()->handle,
             &extensions_count,
             extension_names );
-#endif
+#    endif
     }
 }
 
@@ -581,17 +582,17 @@ static inline void get_instance_layers( u32&         layers_count,
 {
     if ( layer_names == nullptr )
     {
-#ifdef FLUENT_DEBUG
+#    ifdef FLUENT_DEBUG
         layers_count = 1;
-#else
+#    else
         layers_count = 0;
-#endif
+#    endif
     }
     else
     {
-#ifdef FLUENT_DEBUG
+#    ifdef FLUENT_DEBUG
         layer_names[ layers_count - 1 ] = "VK_LAYER_KHRONOS_validation";
-#endif
+#    endif
     }
 }
 
@@ -701,7 +702,7 @@ void create_renderer_backend( const RendererBackendDesc* desc,
     *p_backend               = new ( std::nothrow ) RendererBackend {};
     RendererBackend* backend = *p_backend;
 
-    backend->vulkan_allocator = desc->vulkan_allocator;
+    backend->p.vulkan_allocator = desc->p.vulkan_allocator;
 
     volkInitialize();
 
@@ -735,25 +736,25 @@ void create_renderer_backend( const RendererBackendDesc* desc,
     instance_create_info.flags                   = 0;
 
     VK_ASSERT( vkCreateInstance( &instance_create_info,
-                                 backend->vulkan_allocator,
-                                 &backend->instance ) );
+                                 backend->p.vulkan_allocator,
+                                 &backend->p.instance ) );
 
-    volkLoadInstance( backend->instance );
+    volkLoadInstance( backend->p.instance );
 
-#ifdef FLUENT_DEBUG
+#    ifdef FLUENT_DEBUG
     create_debug_messenger( backend );
-#endif
+#    endif
 
     // pick physical device
-    backend->physical_device = VK_NULL_HANDLE;
-    u32 device_count         = 0;
-    vkEnumeratePhysicalDevices( backend->instance, &device_count, nullptr );
+    backend->p.physical_device = VK_NULL_HANDLE;
+    u32 device_count           = 0;
+    vkEnumeratePhysicalDevices( backend->p.instance, &device_count, nullptr );
     FT_ASSERT( device_count != 0 );
     std::vector<VkPhysicalDevice> physical_devices( device_count );
-    vkEnumeratePhysicalDevices( backend->instance,
+    vkEnumeratePhysicalDevices( backend->p.instance,
                                 &device_count,
                                 physical_devices.data() );
-    backend->physical_device = physical_devices[ 0 ];
+    backend->p.physical_device = physical_devices[ 0 ];
 
     // select best physical device
     for ( u32 i = 0; i < device_count; ++i )
@@ -767,7 +768,7 @@ void create_renderer_backend( const RendererBackendDesc* desc,
         if ( deviceProperties.deviceType ==
              VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU )
         {
-            backend->physical_device = physical_devices[ i ];
+            backend->p.physical_device = physical_devices[ i ];
             break;
         }
     }
@@ -776,12 +777,12 @@ void create_renderer_backend( const RendererBackendDesc* desc,
 void destroy_renderer_backend( RendererBackend* backend )
 {
     FT_ASSERT( backend );
-#ifdef FLUENT_DEBUG
-    vkDestroyDebugUtilsMessengerEXT( backend->instance,
-                                     backend->debug_messenger,
-                                     backend->vulkan_allocator );
-#endif
-    vkDestroyInstance( backend->instance, backend->vulkan_allocator );
+#    ifdef FLUENT_DEBUG
+    vkDestroyDebugUtilsMessengerEXT( backend->p.instance,
+                                     backend->p.debug_messenger,
+                                     backend->p.vulkan_allocator );
+#    endif
+    vkDestroyInstance( backend->p.instance, backend->p.vulkan_allocator );
     operator delete( backend, std::nothrow );
 }
 
@@ -789,8 +790,8 @@ void* map_memory( const Device* device, Buffer* buffer )
 {
     FT_ASSERT( buffer != nullptr );
     FT_ASSERT( buffer->mapped_memory == nullptr );
-    vmaMapMemory( device->memory_allocator,
-                  buffer->allocation,
+    vmaMapMemory( device->p.memory_allocator,
+                  buffer->p.allocation,
                   &buffer->mapped_memory );
     return buffer->mapped_memory;
 }
@@ -799,7 +800,7 @@ void unmap_memory( const Device* device, Buffer* buffer )
 {
     FT_ASSERT( buffer );
     FT_ASSERT( buffer->mapped_memory );
-    vmaUnmapMemory( device->memory_allocator, buffer->allocation );
+    vmaUnmapMemory( device->p.memory_allocator, buffer->p.allocation );
     buffer->mapped_memory = nullptr;
 }
 
@@ -813,16 +814,16 @@ void create_device( const RendererBackend* backend,
     *p_device      = new ( std::nothrow ) Device {};
     Device* device = *p_device;
 
-    device->vulkan_allocator = backend->vulkan_allocator;
-    device->instance         = backend->instance;
-    device->physical_device  = backend->physical_device;
+    device->p.vulkan_allocator = backend->p.vulkan_allocator;
+    device->p.instance         = backend->p.instance;
+    device->p.physical_device  = backend->p.physical_device;
 
     u32 queue_family_count = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties( device->physical_device,
+    vkGetPhysicalDeviceQueueFamilyProperties( device->p.physical_device,
                                               &queue_family_count,
                                               nullptr );
     std::vector<VkQueueFamilyProperties> queue_families( queue_family_count );
-    vkGetPhysicalDeviceQueueFamilyProperties( device->physical_device,
+    vkGetPhysicalDeviceQueueFamilyProperties( device->p.physical_device,
                                               &queue_family_count,
                                               queue_families.data() );
 
@@ -849,18 +850,18 @@ void create_device( const RendererBackend* backend,
             break;
     }
 
-#ifndef __APPLE__
+#    ifndef __APPLE__
     static const u32 device_extension_count = 2;
-#else
+#    else
     static const u32 device_extension_count = 3;
-#endif
+#    endif
 
     const char* device_extensions[ device_extension_count ] = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-#ifdef __APPLE__
+#    ifdef __APPLE__
         "VK_KHR_portability_subset"
-#endif
+#    endif
     };
 
     // TODO: check support
@@ -900,24 +901,24 @@ void create_device( const RendererBackend* backend,
     device_create_info.ppEnabledExtensionNames = device_extensions;
     device_create_info.pEnabledFeatures        = &used_features;
 
-    VK_ASSERT( vkCreateDevice( device->physical_device,
+    VK_ASSERT( vkCreateDevice( device->p.physical_device,
                                &device_create_info,
-                               device->vulkan_allocator,
-                               &device->logical_device ) );
+                               device->p.vulkan_allocator,
+                               &device->p.logical_device ) );
 
-    volkLoadDevice( device->logical_device );
+    volkLoadDevice( device->p.logical_device );
 
     VmaAllocatorCreateInfo vma_allocator_create_info {};
-    vma_allocator_create_info.instance             = device->instance;
-    vma_allocator_create_info.physicalDevice       = device->physical_device;
-    vma_allocator_create_info.device               = device->logical_device;
+    vma_allocator_create_info.instance             = device->p.instance;
+    vma_allocator_create_info.physicalDevice       = device->p.physical_device;
+    vma_allocator_create_info.device               = device->p.logical_device;
     vma_allocator_create_info.flags                = 0;
-    vma_allocator_create_info.pAllocationCallbacks = device->vulkan_allocator;
+    vma_allocator_create_info.pAllocationCallbacks = device->p.vulkan_allocator;
     vma_allocator_create_info.frameInUseCount      = desc->frame_in_use_count;
     vma_allocator_create_info.vulkanApiVersion     = FLUENT_VULKAN_API_VERSION;
 
     VK_ASSERT( vmaCreateAllocator( &vma_allocator_create_info,
-                                   &device->memory_allocator ) );
+                                   &device->p.memory_allocator ) );
 
     static constexpr u32 pool_size_count               = 11;
     VkDescriptorPoolSize pool_sizes[ pool_size_count ] = {
@@ -944,10 +945,10 @@ void create_device( const RendererBackend* backend,
     descriptor_pool_create_info.poolSizeCount = pool_size_count;
     descriptor_pool_create_info.pPoolSizes    = pool_sizes;
 
-    VK_ASSERT( vkCreateDescriptorPool( device->logical_device,
+    VK_ASSERT( vkCreateDescriptorPool( device->p.logical_device,
                                        &descriptor_pool_create_info,
-                                       device->vulkan_allocator,
-                                       &device->descriptor_pool ) );
+                                       device->p.vulkan_allocator,
+                                       &device->p.descriptor_pool ) );
 
     // TODO: move it to transfer queue
     QueueDesc queue_desc {};
@@ -965,23 +966,23 @@ void create_device( const RendererBackend* backend,
 void destroy_device( Device* device )
 {
     FT_ASSERT( device );
-    FT_ASSERT( device->descriptor_pool );
-    FT_ASSERT( device->memory_allocator );
-    FT_ASSERT( device->logical_device );
+    FT_ASSERT( device->p.descriptor_pool );
+    FT_ASSERT( device->p.memory_allocator );
+    FT_ASSERT( device->p.logical_device );
     destroy_command_buffers( device, device->command_pool, 1, &device->cmd );
     destroy_command_pool( device, device->command_pool );
     destroy_queue( device->queue );
-    vkDestroyDescriptorPool( device->logical_device,
-                             device->descriptor_pool,
-                             device->vulkan_allocator );
-    vmaDestroyAllocator( device->memory_allocator );
-    vkDestroyDevice( device->logical_device, device->vulkan_allocator );
+    vkDestroyDescriptorPool( device->p.logical_device,
+                             device->p.descriptor_pool,
+                             device->p.vulkan_allocator );
+    vmaDestroyAllocator( device->p.memory_allocator );
+    vkDestroyDevice( device->p.logical_device, device->p.vulkan_allocator );
     operator delete( device, std::nothrow );
 }
 
 void device_wait_idle( const Device* device )
 {
-    vkDeviceWaitIdle( device->logical_device );
+    vkDeviceWaitIdle( device->p.logical_device );
 }
 
 void create_queue( const Device*    device,
@@ -993,11 +994,11 @@ void create_queue( const Device*    device,
     Queue* queue = *p_queue;
 
     u32 index =
-        find_queue_family_index( device->physical_device, desc->queue_type );
+        find_queue_family_index( device->p.physical_device, desc->queue_type );
 
     queue->family_index = index;
     queue->type         = desc->queue_type;
-    vkGetDeviceQueue( device->logical_device, index, 0, &queue->queue );
+    vkGetDeviceQueue( device->p.logical_device, index, 0, &queue->p.queue );
 }
 
 void destroy_queue( Queue* queue )
@@ -1006,7 +1007,10 @@ void destroy_queue( Queue* queue )
     operator delete( queue, std::nothrow );
 }
 
-void queue_wait_idle( const Queue* queue ) { vkQueueWaitIdle( queue->queue ); }
+void queue_wait_idle( const Queue* queue )
+{
+    vkQueueWaitIdle( queue->p.queue );
+}
 
 void queue_submit( const Queue* queue, const QueueSubmitDesc* desc )
 {
@@ -1017,17 +1021,17 @@ void queue_submit( const Queue* queue, const QueueSubmitDesc* desc )
 
     for ( u32 i = 0; i < desc->wait_semaphore_count; ++i )
     {
-        wait_semaphores[ i ] = desc->wait_semaphores[ i ].semaphore;
+        wait_semaphores[ i ] = desc->wait_semaphores[ i ].p.semaphore;
     }
 
     for ( u32 i = 0; i < desc->command_buffer_count; ++i )
     {
-        command_buffers[ i ] = desc->command_buffers[ i ].command_buffer;
+        command_buffers[ i ] = desc->command_buffers[ i ].p.command_buffer;
     }
 
     for ( u32 i = 0; i < desc->signal_semaphore_count; ++i )
     {
-        signal_semaphores[ i ] = desc->signal_semaphores[ i ].semaphore;
+        signal_semaphores[ i ] = desc->signal_semaphores[ i ].p.semaphore;
     }
 
     VkSubmitInfo submit_info         = {};
@@ -1041,10 +1045,10 @@ void queue_submit( const Queue* queue, const QueueSubmitDesc* desc )
     submit_info.signalSemaphoreCount = desc->signal_semaphore_count;
     submit_info.pSignalSemaphores    = signal_semaphores.data();
 
-    vkQueueSubmit( queue->queue,
+    vkQueueSubmit( queue->p.queue,
                    1,
                    &submit_info,
-                   desc->signal_fence ? desc->signal_fence->fence
+                   desc->signal_fence ? desc->signal_fence->p.fence
                                       : VK_NULL_HANDLE );
 }
 
@@ -1062,7 +1066,7 @@ void queue_present( const Queue* queue, const QueuePresentDesc* desc )
     std::vector<VkSemaphore> wait_semaphores( desc->wait_semaphore_count );
     for ( u32 i = 0; i < desc->wait_semaphore_count; ++i )
     {
-        wait_semaphores[ i ] = desc->wait_semaphores[ i ].semaphore;
+        wait_semaphores[ i ] = desc->wait_semaphores[ i ].p.semaphore;
     }
 
     VkPresentInfoKHR present_info = {};
@@ -1072,11 +1076,11 @@ void queue_present( const Queue* queue, const QueuePresentDesc* desc )
     present_info.waitSemaphoreCount = desc->wait_semaphore_count;
     present_info.pWaitSemaphores    = wait_semaphores.data();
     present_info.swapchainCount     = 1;
-    present_info.pSwapchains        = &desc->swapchain->swapchain;
+    present_info.pSwapchains        = &desc->swapchain->p.swapchain;
     present_info.pImageIndices      = &desc->image_index;
     present_info.pResults           = nullptr;
 
-    vkQueuePresentKHR( queue->queue, &present_info );
+    vkQueuePresentKHR( queue->p.queue, &present_info );
 }
 
 void create_semaphore( const Device* device, Semaphore** p_semaphore )
@@ -1090,19 +1094,19 @@ void create_semaphore( const Device* device, Semaphore** p_semaphore )
     semaphore_create_info.pNext = nullptr;
     semaphore_create_info.flags = 0;
 
-    VK_ASSERT( vkCreateSemaphore( device->logical_device,
+    VK_ASSERT( vkCreateSemaphore( device->p.logical_device,
                                   &semaphore_create_info,
-                                  device->vulkan_allocator,
-                                  &semaphore->semaphore ) );
+                                  device->p.vulkan_allocator,
+                                  &semaphore->p.semaphore ) );
 }
 
 void destroy_semaphore( const Device* device, Semaphore* semaphore )
 {
     FT_ASSERT( semaphore );
-    FT_ASSERT( semaphore->semaphore );
-    vkDestroySemaphore( device->logical_device,
-                        semaphore->semaphore,
-                        device->vulkan_allocator );
+    FT_ASSERT( semaphore->p.semaphore );
+    vkDestroySemaphore( device->p.logical_device,
+                        semaphore->p.semaphore,
+                        device->p.vulkan_allocator );
     operator delete( semaphore, std::nothrow );
 }
 
@@ -1117,28 +1121,28 @@ void create_fence( const Device* device, Fence** p_fence )
     fence_create_info.pNext = nullptr;
     fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    VK_ASSERT( vkCreateFence( device->logical_device,
+    VK_ASSERT( vkCreateFence( device->p.logical_device,
                               &fence_create_info,
-                              device->vulkan_allocator,
-                              &fence->fence ) );
+                              device->p.vulkan_allocator,
+                              &fence->p.fence ) );
 }
 
 void destroy_fence( const Device* device, Fence* fence )
 {
     FT_ASSERT( fence );
-    FT_ASSERT( fence->fence );
-    vkDestroyFence( device->logical_device,
-                    fence->fence,
-                    device->vulkan_allocator );
+    FT_ASSERT( fence->p.fence );
+    vkDestroyFence( device->p.logical_device,
+                    fence->p.fence,
+                    device->p.vulkan_allocator );
     operator delete( fence, std::nothrow );
 }
 
 void wait_for_fences( const Device* device, u32 count, Fence** fences )
 {
     std::vector<VkFence> vk_fences( count );
-    for ( u32 i = 0; i < count; ++i ) { vk_fences[ i ] = fences[ i ]->fence; }
+    for ( u32 i = 0; i < count; ++i ) { vk_fences[ i ] = fences[ i ]->p.fence; }
 
-    vkWaitForFences( device->logical_device,
+    vkWaitForFences( device->p.logical_device,
                      count,
                      vk_fences.data(),
                      true,
@@ -1148,9 +1152,9 @@ void wait_for_fences( const Device* device, u32 count, Fence** fences )
 void reset_fences( const Device* device, u32 count, Fence** fences )
 {
     std::vector<VkFence> vk_fences( count );
-    for ( u32 i = 0; i < count; ++i ) { vk_fences[ i ] = fences[ i ]->fence; }
+    for ( u32 i = 0; i < count; ++i ) { vk_fences[ i ] = fences[ i ]->p.fence; }
 
-    vkResetFences( device->logical_device, count, vk_fences.data() );
+    vkResetFences( device->p.logical_device, count, vk_fences.data() );
 }
 
 void configure_swapchain( const Device*        device,
@@ -1158,30 +1162,30 @@ void configure_swapchain( const Device*        device,
                           const SwapchainDesc* desc )
 {
     SDL_Vulkan_CreateSurface( ( SDL_Window* ) get_app_window()->handle,
-                              device->instance,
-                              &swapchain->surface );
+                              device->p.instance,
+                              &swapchain->p.surface );
 
     VkBool32 support_surface = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR( device->physical_device,
+    vkGetPhysicalDeviceSurfaceSupportKHR( device->p.physical_device,
                                           desc->queue->family_index,
-                                          swapchain->surface,
+                                          swapchain->p.surface,
                                           &support_surface );
 
     FT_ASSERT( support_surface );
 
     // find best present mode
     uint32_t present_mode_count = 0;
-    vkGetPhysicalDeviceSurfacePresentModesKHR( device->physical_device,
-                                               swapchain->surface,
+    vkGetPhysicalDeviceSurfacePresentModesKHR( device->p.physical_device,
+                                               swapchain->p.surface,
                                                &present_mode_count,
                                                nullptr );
     std::vector<VkPresentModeKHR> present_modes( present_mode_count );
-    vkGetPhysicalDeviceSurfacePresentModesKHR( device->physical_device,
-                                               swapchain->surface,
+    vkGetPhysicalDeviceSurfacePresentModesKHR( device->p.physical_device,
+                                               swapchain->p.surface,
                                                &present_mode_count,
                                                present_modes.data() );
 
-    swapchain->present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+    swapchain->p.present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 
     VkPresentModeKHR preffered_mode =
         desc->vsync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR;
@@ -1190,18 +1194,18 @@ void configure_swapchain( const Device*        device,
     {
         if ( present_modes[ i ] == preffered_mode )
         {
-            swapchain->present_mode = preffered_mode;
+            swapchain->p.present_mode = preffered_mode;
             break;
         }
     }
 
     FT_INFO( "Swapchain present mode: {}",
-             string_VkPresentModeKHR( swapchain->present_mode ) );
+             string_VkPresentModeKHR( swapchain->p.present_mode ) );
 
     // determine present image count
     VkSurfaceCapabilitiesKHR surface_capabilities {};
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR( device->physical_device,
-                                               swapchain->surface,
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR( device->p.physical_device,
+                                               swapchain->p.surface,
                                                &surface_capabilities );
 
     // determine swapchain size
@@ -1220,13 +1224,13 @@ void configure_swapchain( const Device*        device,
 
     /// find best surface format
     u32 surface_format_count = 0;
-    vkGetPhysicalDeviceSurfaceFormatsKHR( device->physical_device,
-                                          swapchain->surface,
+    vkGetPhysicalDeviceSurfaceFormatsKHR( device->p.physical_device,
+                                          swapchain->p.surface,
                                           &surface_format_count,
                                           nullptr );
     std::vector<VkSurfaceFormatKHR> surface_formats( surface_format_count );
-    vkGetPhysicalDeviceSurfaceFormatsKHR( device->physical_device,
-                                          swapchain->surface,
+    vkGetPhysicalDeviceSurfaceFormatsKHR( device->p.physical_device,
+                                          swapchain->p.surface,
                                           &surface_format_count,
                                           surface_formats.data() );
 
@@ -1239,8 +1243,8 @@ void configure_swapchain( const Device*        device,
             surface_format = surface_formats[ i ];
     }
 
-    swapchain->format      = from_vk_format( surface_format.format );
-    swapchain->color_space = surface_format.colorSpace;
+    swapchain->format        = from_vk_format( surface_format.format );
+    swapchain->p.color_space = surface_format.colorSpace;
 
     FT_INFO( "Swapchain surface format: {}",
              string_VkFormat( surface_format.format ) );
@@ -1258,7 +1262,7 @@ void configure_swapchain( const Device*        device,
     {
         pre_transform = surface_capabilities.currentTransform;
     }
-    swapchain->pre_transform = pre_transform;
+    swapchain->p.pre_transform = pre_transform;
 }
 
 void create_configured_swapchain( const Device* device,
@@ -1271,10 +1275,10 @@ void create_configured_swapchain( const Device* device,
         FT_ASSERT( swapchain->image_count );
         for ( u32 i = 0; i < swapchain->image_count; ++i )
         {
-            FT_ASSERT( swapchain->images[ i ]->image_view );
-            vkDestroyImageView( device->logical_device,
-                                swapchain->images[ i ]->image_view,
-                                device->vulkan_allocator );
+            FT_ASSERT( swapchain->images[ i ]->p.image_view );
+            vkDestroyImageView( device->p.logical_device,
+                                swapchain->images[ i ]->p.image_view,
+                                device->p.vulkan_allocator );
             operator delete( swapchain->images[ i ], std::nothrow );
         }
     }
@@ -1284,10 +1288,10 @@ void create_configured_swapchain( const Device* device,
     swapchain_create_info.sType   = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchain_create_info.pNext   = nullptr;
     swapchain_create_info.flags   = 0;
-    swapchain_create_info.surface = swapchain->surface;
+    swapchain_create_info.surface = swapchain->p.surface;
     swapchain_create_info.minImageCount     = swapchain->min_image_count;
     swapchain_create_info.imageFormat       = to_vk_format( swapchain->format );
-    swapchain_create_info.imageColorSpace   = swapchain->color_space;
+    swapchain_create_info.imageColorSpace   = swapchain->p.color_space;
     swapchain_create_info.imageExtent.width = swapchain->width;
     swapchain_create_info.imageExtent.height = swapchain->height;
     swapchain_create_info.imageArrayLayers   = 1;
@@ -1296,25 +1300,25 @@ void create_configured_swapchain( const Device* device,
     swapchain_create_info.imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_create_info.queueFamilyIndexCount = 1;
     swapchain_create_info.pQueueFamilyIndices = &swapchain->queue->family_index;
-    swapchain_create_info.preTransform        = swapchain->pre_transform;
+    swapchain_create_info.preTransform        = swapchain->p.pre_transform;
     // TODO: choose composite alpha according to caps
     swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    swapchain_create_info.presentMode    = swapchain->present_mode;
+    swapchain_create_info.presentMode    = swapchain->p.present_mode;
     swapchain_create_info.clipped        = true;
     swapchain_create_info.oldSwapchain   = nullptr;
 
-    VK_ASSERT( vkCreateSwapchainKHR( device->logical_device,
+    VK_ASSERT( vkCreateSwapchainKHR( device->p.logical_device,
                                      &swapchain_create_info,
-                                     device->vulkan_allocator,
-                                     &swapchain->swapchain ) );
+                                     device->p.vulkan_allocator,
+                                     &swapchain->p.swapchain ) );
 
-    vkGetSwapchainImagesKHR( device->logical_device,
-                             swapchain->swapchain,
+    vkGetSwapchainImagesKHR( device->p.logical_device,
+                             swapchain->p.swapchain,
                              &swapchain->image_count,
                              nullptr );
     std::vector<VkImage> swapchain_images( swapchain->image_count );
-    vkGetSwapchainImagesKHR( device->logical_device,
-                             swapchain->swapchain,
+    vkGetSwapchainImagesKHR( device->p.logical_device,
+                             swapchain->p.swapchain,
                              &swapchain->image_count,
                              swapchain_images.data() );
     if ( !resize )
@@ -1345,7 +1349,7 @@ void create_configured_swapchain( const Device* device,
         image_view_create_info.image = swapchain_images[ i ];
 
         swapchain->images[ i ]                  = new ( std::nothrow ) Image {};
-        swapchain->images[ i ]->image           = swapchain_images[ i ];
+        swapchain->images[ i ]->p.image         = swapchain_images[ i ];
         swapchain->images[ i ]->width           = swapchain->width;
         swapchain->images[ i ]->height          = swapchain->height;
         swapchain->images[ i ]->format          = swapchain->format;
@@ -1354,10 +1358,10 @@ void create_configured_swapchain( const Device* device,
         swapchain->images[ i ]->layer_count     = 1;
         swapchain->images[ i ]->descriptor_type = DescriptorType::eSampledImage;
 
-        VK_ASSERT( vkCreateImageView( device->logical_device,
+        VK_ASSERT( vkCreateImageView( device->p.logical_device,
                                       &image_view_create_info,
-                                      device->vulkan_allocator,
-                                      &swapchain->images[ i ]->image_view ) );
+                                      device->p.vulkan_allocator,
+                                      &swapchain->images[ i ]->p.image_view ) );
     }
 }
 
@@ -1390,23 +1394,23 @@ void destroy_swapchain( const Device* device, Swapchain* swapchain )
     FT_ASSERT( swapchain->image_count );
     for ( u32 i = 0; i < swapchain->image_count; ++i )
     {
-        FT_ASSERT( swapchain->images[ i ]->image_view );
-        vkDestroyImageView( device->logical_device,
-                            swapchain->images[ i ]->image_view,
-                            device->vulkan_allocator );
+        FT_ASSERT( swapchain->images[ i ]->p.image_view );
+        vkDestroyImageView( device->p.logical_device,
+                            swapchain->images[ i ]->p.image_view,
+                            device->p.vulkan_allocator );
         operator delete( swapchain->images[ i ], std::nothrow );
     }
     operator delete[]( swapchain->images, std::nothrow );
 
-    FT_ASSERT( swapchain->swapchain );
-    vkDestroySwapchainKHR( device->logical_device,
-                           swapchain->swapchain,
-                           device->vulkan_allocator );
+    FT_ASSERT( swapchain->p.swapchain );
+    vkDestroySwapchainKHR( device->p.logical_device,
+                           swapchain->p.swapchain,
+                           device->p.vulkan_allocator );
 
-    FT_ASSERT( swapchain->surface );
-    vkDestroySurfaceKHR( device->instance,
-                         swapchain->surface,
-                         device->vulkan_allocator );
+    FT_ASSERT( swapchain->p.surface );
+    vkDestroySurfaceKHR( device->p.instance,
+                         swapchain->p.surface,
+                         device->p.vulkan_allocator );
 
     operator delete( swapchain, std::nothrow );
 }
@@ -1428,9 +1432,9 @@ void create_command_pool( const Device*          device,
         VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     command_pool_create_info.queueFamilyIndex = desc->queue->family_index;
 
-    VK_ASSERT( vkCreateCommandPool( device->logical_device,
+    VK_ASSERT( vkCreateCommandPool( device->p.logical_device,
                                     &command_pool_create_info,
-                                    device->vulkan_allocator,
+                                    device->p.vulkan_allocator,
                                     &command_pool->command_pool ) );
 }
 
@@ -1438,9 +1442,9 @@ void destroy_command_pool( const Device* device, CommandPool* command_pool )
 {
     FT_ASSERT( command_pool );
     FT_ASSERT( command_pool->command_pool );
-    vkDestroyCommandPool( device->logical_device,
+    vkDestroyCommandPool( device->p.logical_device,
                           command_pool->command_pool,
-                          device->vulkan_allocator );
+                          device->p.vulkan_allocator );
     operator delete( command_pool, std::nothrow );
 }
 
@@ -1461,7 +1465,7 @@ void create_command_buffers( const Device*      device,
     command_buffer_allocate_info.level       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     command_buffer_allocate_info.commandBufferCount = count;
 
-    VK_ASSERT( vkAllocateCommandBuffers( device->logical_device,
+    VK_ASSERT( vkAllocateCommandBuffers( device->p.logical_device,
                                          &command_buffer_allocate_info,
                                          buffers.data() ) );
 
@@ -1470,8 +1474,8 @@ void create_command_buffers( const Device*      device,
         command_buffers[ i ] = new ( std::nothrow ) CommandBuffer {};
         CommandBuffer* cmd   = command_buffers[ i ];
 
-        cmd->command_buffer = buffers[ i ];
-        cmd->queue          = command_pool->queue;
+        cmd->p.command_buffer = buffers[ i ];
+        cmd->queue            = command_pool->queue;
     }
 }
 
@@ -1486,10 +1490,10 @@ void free_command_buffers( const Device*      device,
 
     for ( u32 i = 0; i < count; ++i )
     {
-        buffers[ i ] = command_buffers[ i ]->command_buffer;
+        buffers[ i ] = command_buffers[ i ]->p.command_buffer;
     }
 
-    vkFreeCommandBuffers( device->logical_device,
+    vkFreeCommandBuffers( device->p.logical_device,
                           command_pool->command_pool,
                           count,
                           buffers.data() );
@@ -1518,13 +1522,13 @@ void begin_command_buffer( const CommandBuffer* cmd )
         VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     command_buffer_begin_info.pInheritanceInfo = nullptr;
 
-    VK_ASSERT( vkBeginCommandBuffer( cmd->command_buffer,
+    VK_ASSERT( vkBeginCommandBuffer( cmd->p.command_buffer,
                                      &command_buffer_begin_info ) );
 }
 
 void end_command_buffer( const CommandBuffer* cmd )
 {
-    VK_ASSERT( vkEndCommandBuffer( cmd->command_buffer ) );
+    VK_ASSERT( vkEndCommandBuffer( cmd->p.command_buffer ) );
 }
 
 void acquire_next_image( const Device*    device,
@@ -1534,11 +1538,11 @@ void acquire_next_image( const Device*    device,
                          u32*             image_index )
 {
     VkResult result =
-        vkAcquireNextImageKHR( device->logical_device,
-                               swapchain->swapchain,
+        vkAcquireNextImageKHR( device->p.logical_device,
+                               swapchain->p.swapchain,
                                std::numeric_limits<u64>::max(),
-                               semaphore->semaphore,
-                               fence ? fence->fence : VK_NULL_HANDLE,
+                               semaphore->p.semaphore,
+                               fence ? fence->p.fence : VK_NULL_HANDLE,
                                image_index );
 }
 
@@ -1551,17 +1555,17 @@ void create_framebuffer( const Device*         device,
     VkImageView image_views[ MAX_ATTACHMENTS_COUNT + 2 ];
     for ( u32 i = 0; i < attachment_count; ++i )
     {
-        image_views[ i ] = desc->color_attachments[ i ]->image_view;
+        image_views[ i ] = desc->color_attachments[ i ]->p.image_view;
     }
 
     if ( desc->depth_stencil )
     {
-        image_views[ attachment_count++ ] = desc->depth_stencil->image_view;
+        image_views[ attachment_count++ ] = desc->depth_stencil->p.image_view;
     }
 
     if ( desc->resolve )
     {
-        image_views[ attachment_count++ ] = desc->resolve->image_view;
+        image_views[ attachment_count++ ] = desc->resolve->p.image_view;
     }
 
     if ( desc->width > 0 && desc->height > 0 )
@@ -1571,17 +1575,17 @@ void create_framebuffer( const Device*         device,
             VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebuffer_create_info.pNext           = nullptr;
         framebuffer_create_info.flags           = 0;
-        framebuffer_create_info.renderPass      = render_pass->render_pass;
+        framebuffer_create_info.renderPass      = render_pass->p.render_pass;
         framebuffer_create_info.attachmentCount = attachment_count;
         framebuffer_create_info.pAttachments    = image_views;
         framebuffer_create_info.width           = desc->width;
         framebuffer_create_info.height          = desc->height;
         framebuffer_create_info.layers          = 1;
 
-        VK_ASSERT( vkCreateFramebuffer( device->logical_device,
+        VK_ASSERT( vkCreateFramebuffer( device->p.logical_device,
                                         &framebuffer_create_info,
-                                        device->vulkan_allocator,
-                                        &render_pass->framebuffer ) );
+                                        device->p.vulkan_allocator,
+                                        &render_pass->p.framebuffer ) );
     }
 }
 
@@ -1714,10 +1718,10 @@ void create_render_pass( const Device*         device,
     render_pass_create_info.dependencyCount = 0;
     render_pass_create_info.pDependencies   = nullptr;
 
-    VK_ASSERT( vkCreateRenderPass( device->logical_device,
+    VK_ASSERT( vkCreateRenderPass( device->p.logical_device,
                                    &render_pass_create_info,
-                                   device->vulkan_allocator,
-                                   &render_pass->render_pass ) );
+                                   device->p.vulkan_allocator,
+                                   &render_pass->p.render_pass ) );
 
     create_framebuffer( device, render_pass, desc );
 }
@@ -1727,16 +1731,16 @@ void update_render_pass( const Device*         device,
                          const RenderPassDesc* desc )
 {
     FT_ASSERT( render_pass );
-    FT_ASSERT( render_pass->render_pass );
-    FT_ASSERT( render_pass->framebuffer );
+    FT_ASSERT( render_pass->p.render_pass );
+    FT_ASSERT( render_pass->p.framebuffer );
     FT_ASSERT( desc->width > 0 && desc->height > 0 );
 
     render_pass->width  = desc->width;
     render_pass->height = desc->height;
 
-    vkDestroyFramebuffer( device->logical_device,
-                          render_pass->framebuffer,
-                          device->vulkan_allocator );
+    vkDestroyFramebuffer( device->p.logical_device,
+                          render_pass->p.framebuffer,
+                          device->p.vulkan_allocator );
 
     create_framebuffer( device, render_pass, desc );
 }
@@ -1744,16 +1748,16 @@ void update_render_pass( const Device*         device,
 void destroy_render_pass( const Device* device, RenderPass* render_pass )
 {
     FT_ASSERT( render_pass );
-    FT_ASSERT( render_pass->render_pass );
-    if ( render_pass->framebuffer )
+    FT_ASSERT( render_pass->p.render_pass );
+    if ( render_pass->p.framebuffer )
     {
-        vkDestroyFramebuffer( device->logical_device,
-                              render_pass->framebuffer,
-                              device->vulkan_allocator );
+        vkDestroyFramebuffer( device->p.logical_device,
+                              render_pass->p.framebuffer,
+                              device->p.vulkan_allocator );
     }
-    vkDestroyRenderPass( device->logical_device,
-                         render_pass->render_pass,
-                         device->vulkan_allocator );
+    vkDestroyRenderPass( device->p.logical_device,
+                         render_pass->p.render_pass,
+                         device->p.vulkan_allocator );
     operator delete( render_pass, std::nothrow );
 }
 
@@ -1772,10 +1776,10 @@ void create_shader( const Device* device, ShaderDesc* desc, Shader** p_shader )
     shader_create_info.codeSize = desc->bytecode_size;
     shader_create_info.pCode    = desc->bytecode;
 
-    VK_ASSERT( vkCreateShaderModule( device->logical_device,
+    VK_ASSERT( vkCreateShaderModule( device->p.logical_device,
                                      &shader_create_info,
-                                     device->vulkan_allocator,
-                                     &shader->shader ) );
+                                     device->p.vulkan_allocator,
+                                     &shader->p.shader ) );
 
     shader->reflect_data = reflect( desc->bytecode_size, desc->bytecode );
 }
@@ -1783,10 +1787,10 @@ void create_shader( const Device* device, ShaderDesc* desc, Shader** p_shader )
 void destroy_shader( const Device* device, Shader* shader )
 {
     FT_ASSERT( shader );
-    FT_ASSERT( shader->shader );
-    vkDestroyShaderModule( device->logical_device,
-                           shader->shader,
-                           device->vulkan_allocator );
+    FT_ASSERT( shader->p.shader );
+    vkDestroyShaderModule( device->p.logical_device,
+                           shader->p.shader,
+                           device->p.vulkan_allocator );
     operator delete( shader, std::nothrow );
 }
 
@@ -1878,9 +1882,9 @@ void create_descriptor_set_layout(
             descriptor_set_layout_create_info.pBindings = bindings[ set ];
 
             VK_ASSERT( vkCreateDescriptorSetLayout(
-                device->logical_device,
+                device->p.logical_device,
                 &descriptor_set_layout_create_info,
-                device->vulkan_allocator,
+                device->p.vulkan_allocator,
                 &descriptor_set_layout->descriptor_set_layouts[ set ] ) );
 
             descriptor_set_layout->descriptor_set_layout_count++;
@@ -1898,9 +1902,9 @@ void destroy_descriptor_set_layout( const Device*        device,
     {
         if ( layout->descriptor_set_layouts[ i ] )
         {
-            vkDestroyDescriptorSetLayout( device->logical_device,
+            vkDestroyDescriptorSetLayout( device->p.logical_device,
                                           layout->descriptor_set_layouts[ i ],
-                                          device->vulkan_allocator );
+                                          device->p.vulkan_allocator );
         }
     }
 
@@ -1927,7 +1931,7 @@ void create_compute_pipeline( const Device*       device,
     shader_stage_create_info.stage =
         to_vk_shader_stage( desc->descriptor_set_layout->shaders[ 0 ]->stage );
     shader_stage_create_info.module =
-        desc->descriptor_set_layout->shaders[ 0 ]->shader;
+        desc->descriptor_set_layout->shaders[ 0 ]->p.shader;
     shader_stage_create_info.pName               = "main";
     shader_stage_create_info.pSpecializationInfo = nullptr;
 
@@ -1947,23 +1951,23 @@ void create_compute_pipeline( const Device*       device,
     pipeline_layout_create_info.pushConstantRangeCount = 1;
     pipeline_layout_create_info.pPushConstantRanges    = &push_constant_range;
 
-    VK_ASSERT( vkCreatePipelineLayout( device->logical_device,
+    VK_ASSERT( vkCreatePipelineLayout( device->p.logical_device,
                                        &pipeline_layout_create_info,
                                        nullptr,
-                                       &pipeline->pipeline_layout ) );
+                                       &pipeline->p.pipeline_layout ) );
 
     VkComputePipelineCreateInfo compute_pipeline_create_info {};
     compute_pipeline_create_info.sType =
         VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     compute_pipeline_create_info.stage  = shader_stage_create_info;
-    compute_pipeline_create_info.layout = pipeline->pipeline_layout;
+    compute_pipeline_create_info.layout = pipeline->p.pipeline_layout;
 
-    VK_ASSERT( vkCreateComputePipelines( device->logical_device,
+    VK_ASSERT( vkCreateComputePipelines( device->p.logical_device,
                                          {},
                                          1,
                                          &compute_pipeline_create_info,
-                                         device->vulkan_allocator,
-                                         &pipeline->pipeline ) );
+                                         device->p.vulkan_allocator,
+                                         &pipeline->p.pipeline ) );
 }
 
 void create_graphics_pipeline( const Device*       device,
@@ -1990,7 +1994,7 @@ void create_graphics_pipeline( const Device*       device,
         shader_stage_create_infos[ i ].flags = 0;
         shader_stage_create_infos[ i ].stage =
             to_vk_shader_stage( desc->shaders[ i ]->stage );
-        shader_stage_create_infos[ i ].module = desc->shaders[ i ]->shader;
+        shader_stage_create_infos[ i ].module = desc->shaders[ i ]->p.shader;
         shader_stage_create_infos[ i ].pName  = "main";
         shader_stage_create_infos[ i ].pSpecializationInfo = nullptr;
     }
@@ -2136,10 +2140,10 @@ void create_graphics_pipeline( const Device*       device,
     pipeline_layout_create_info.pushConstantRangeCount = 1;
     pipeline_layout_create_info.pPushConstantRanges    = &push_constant_range;
 
-    VK_ASSERT( vkCreatePipelineLayout( device->logical_device,
+    VK_ASSERT( vkCreatePipelineLayout( device->p.logical_device,
                                        &pipeline_layout_create_info,
-                                       device->vulkan_allocator,
-                                       &pipeline->pipeline_layout ) );
+                                       device->p.vulkan_allocator,
+                                       &pipeline->p.pipeline_layout ) );
 
     VkGraphicsPipelineCreateInfo pipeline_create_info {};
     pipeline_create_info.sType =
@@ -2155,28 +2159,28 @@ void create_graphics_pipeline( const Device*       device,
     pipeline_create_info.pColorBlendState    = &color_blend_state_create_info;
     pipeline_create_info.pDepthStencilState  = &depth_stencil_state_create_info;
     pipeline_create_info.pDynamicState       = &dynamic_state_create_info;
-    pipeline_create_info.layout              = pipeline->pipeline_layout;
-    pipeline_create_info.renderPass          = desc->render_pass->render_pass;
+    pipeline_create_info.layout              = pipeline->p.pipeline_layout;
+    pipeline_create_info.renderPass          = desc->render_pass->p.render_pass;
 
-    VK_ASSERT( vkCreateGraphicsPipelines( device->logical_device,
+    VK_ASSERT( vkCreateGraphicsPipelines( device->p.logical_device,
                                           VK_NULL_HANDLE,
                                           1,
                                           &pipeline_create_info,
-                                          device->vulkan_allocator,
-                                          &pipeline->pipeline ) );
+                                          device->p.vulkan_allocator,
+                                          &pipeline->p.pipeline ) );
 }
 
 void destroy_pipeline( const Device* device, Pipeline* pipeline )
 {
     FT_ASSERT( pipeline );
-    FT_ASSERT( pipeline->pipeline_layout );
-    FT_ASSERT( pipeline->pipeline );
-    vkDestroyPipelineLayout( device->logical_device,
-                             pipeline->pipeline_layout,
-                             device->vulkan_allocator );
-    vkDestroyPipeline( device->logical_device,
-                       pipeline->pipeline,
-                       device->vulkan_allocator );
+    FT_ASSERT( pipeline->p.pipeline_layout );
+    FT_ASSERT( pipeline->p.pipeline );
+    vkDestroyPipelineLayout( device->p.logical_device,
+                             pipeline->p.pipeline_layout,
+                             device->p.vulkan_allocator );
+    vkDestroyPipeline( device->p.logical_device,
+                       pipeline->p.pipeline,
+                       device->p.vulkan_allocator );
     operator delete( pipeline, std::nothrow );
 }
 
@@ -2216,23 +2220,23 @@ void cmd_begin_render_pass( const CommandBuffer*       cmd,
     VkRenderPassBeginInfo render_pass_begin_info {};
     render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     render_pass_begin_info.pNext = nullptr;
-    render_pass_begin_info.renderPass               = render_pass->render_pass;
-    render_pass_begin_info.framebuffer              = render_pass->framebuffer;
-    render_pass_begin_info.renderArea.extent.width  = render_pass->width;
+    render_pass_begin_info.renderPass              = render_pass->p.render_pass;
+    render_pass_begin_info.framebuffer             = render_pass->p.framebuffer;
+    render_pass_begin_info.renderArea.extent.width = render_pass->width;
     render_pass_begin_info.renderArea.extent.height = render_pass->height;
     render_pass_begin_info.renderArea.offset.x      = 0;
     render_pass_begin_info.renderArea.offset.y      = 0;
     render_pass_begin_info.clearValueCount          = clear_value_count;
     render_pass_begin_info.pClearValues             = clear_values;
 
-    vkCmdBeginRenderPass( cmd->command_buffer,
+    vkCmdBeginRenderPass( cmd->p.command_buffer,
                           &render_pass_begin_info,
                           VK_SUBPASS_CONTENTS_INLINE );
 }
 
 void cmd_end_render_pass( const CommandBuffer* cmd )
 {
-    vkCmdEndRenderPass( cmd->command_buffer );
+    vkCmdEndRenderPass( cmd->p.command_buffer );
 }
 
 void cmd_barrier( const CommandBuffer* cmd,
@@ -2270,7 +2274,7 @@ void cmd_barrier( const CommandBuffer* cmd,
             buffer_barriers[ i ].src_queue->family_index;
         buffer_memory_barrier.dstQueueFamilyIndex =
             buffer_barriers[ i ].dst_queue->family_index;
-        buffer_memory_barrier.buffer = buffer_barriers[ i ].buffer->buffer;
+        buffer_memory_barrier.buffer = buffer_barriers[ i ].buffer->p.buffer;
         buffer_memory_barrier.offset = buffer_barriers[ i ].offset;
         buffer_memory_barrier.size   = buffer_barriers[ i ].size;
 
@@ -2302,7 +2306,7 @@ void cmd_barrier( const CommandBuffer* cmd,
             image_barriers[ i ].src_queue->family_index;
         image_memory_barriers[ i ].dstQueueFamilyIndex =
             image_barriers[ i ].dst_queue->family_index;
-        image_memory_barriers[ i ].image = image_barriers[ i ].image->image;
+        image_memory_barriers[ i ].image = image_barriers[ i ].image->p.image;
         image_memory_barriers[ i ].subresourceRange =
             get_image_subresource_range( image_barriers[ i ].image );
 
@@ -2315,7 +2319,7 @@ void cmd_barrier( const CommandBuffer* cmd,
     VkPipelineStageFlags dst_stage =
         determine_pipeline_stage_flags( dst_access, cmd->queue->type );
 
-    vkCmdPipelineBarrier( cmd->command_buffer,
+    vkCmdPipelineBarrier( cmd->p.command_buffer,
                           src_stage,
                           dst_stage,
                           0,
@@ -2338,7 +2342,7 @@ void cmd_set_scissor( const CommandBuffer* cmd,
     scissor.offset.y      = y;
     scissor.extent.width  = width;
     scissor.extent.height = height;
-    vkCmdSetScissor( cmd->command_buffer, 0, 1, &scissor );
+    vkCmdSetScissor( cmd->p.command_buffer, 0, 1, &scissor );
 }
 
 void cmd_set_viewport( const CommandBuffer* cmd,
@@ -2357,14 +2361,14 @@ void cmd_set_viewport( const CommandBuffer* cmd,
     viewport.minDepth = min_depth;
     viewport.maxDepth = max_depth;
 
-    vkCmdSetViewport( cmd->command_buffer, 0, 1, &viewport );
+    vkCmdSetViewport( cmd->p.command_buffer, 0, 1, &viewport );
 }
 
 void cmd_bind_pipeline( const CommandBuffer* cmd, const Pipeline* pipeline )
 {
-    vkCmdBindPipeline( cmd->command_buffer,
+    vkCmdBindPipeline( cmd->p.command_buffer,
                        to_vk_pipeline_bind_point( pipeline->type ),
-                       pipeline->pipeline );
+                       pipeline->p.pipeline );
 }
 
 void cmd_draw( const CommandBuffer* cmd,
@@ -2373,7 +2377,7 @@ void cmd_draw( const CommandBuffer* cmd,
                u32                  first_vertex,
                u32                  first_instance )
 {
-    vkCmdDraw( cmd->command_buffer,
+    vkCmdDraw( cmd->p.command_buffer,
                vertex_count,
                instance_count,
                first_vertex,
@@ -2387,7 +2391,7 @@ void cmd_draw_indexed( const CommandBuffer* cmd,
                        i32                  vertex_offset,
                        u32                  first_instance )
 {
-    vkCmdDrawIndexed( cmd->command_buffer,
+    vkCmdDrawIndexed( cmd->p.command_buffer,
                       index_count,
                       instance_count,
                       first_index,
@@ -2399,10 +2403,10 @@ void cmd_bind_vertex_buffer( const CommandBuffer* cmd,
                              const Buffer*        buffer,
                              const u64            offset )
 {
-    vkCmdBindVertexBuffers( cmd->command_buffer,
+    vkCmdBindVertexBuffers( cmd->p.command_buffer,
                             0,
                             1,
-                            &buffer->buffer,
+                            &buffer->p.buffer,
                             &offset );
 }
 
@@ -2410,8 +2414,8 @@ void cmd_bind_index_buffer_u16( const CommandBuffer* cmd,
                                 const Buffer*        buffer,
                                 const u64            offset )
 {
-    vkCmdBindIndexBuffer( cmd->command_buffer,
-                          buffer->buffer,
+    vkCmdBindIndexBuffer( cmd->p.command_buffer,
+                          buffer->p.buffer,
                           offset,
                           VK_INDEX_TYPE_UINT16 );
 }
@@ -2420,8 +2424,8 @@ void cmd_bind_index_buffer_u32( const CommandBuffer* cmd,
                                 const Buffer*        buffer,
                                 u64                  offset )
 {
-    vkCmdBindIndexBuffer( cmd->command_buffer,
-                          buffer->buffer,
+    vkCmdBindIndexBuffer( cmd->p.command_buffer,
+                          buffer->p.buffer,
                           offset,
                           VK_INDEX_TYPE_UINT32 );
 }
@@ -2438,9 +2442,9 @@ void cmd_copy_buffer( const CommandBuffer* cmd,
     buffer_copy.dstOffset = dst_offset;
     buffer_copy.size      = size;
 
-    vkCmdCopyBuffer( cmd->command_buffer,
-                     src->buffer,
-                     dst->buffer,
+    vkCmdCopyBuffer( cmd->p.command_buffer,
+                     src->p.buffer,
+                     dst->p.buffer,
                      1,
                      &buffer_copy );
 }
@@ -2462,9 +2466,9 @@ void cmd_copy_buffer_to_image( const CommandBuffer* cmd,
         VkExtent3D { dst->width, dst->height, 1 };
 
     vkCmdCopyBufferToImage(
-        cmd->command_buffer,
-        src->buffer,
-        dst->image,
+        cmd->p.command_buffer,
+        src->p.buffer,
+        dst->p.image,
         determine_image_layout( ResourceState::eTransferDst ),
         1,
         &buffer_to_image_copy_info );
@@ -2475,7 +2479,7 @@ void cmd_dispatch( const CommandBuffer* cmd,
                    u32                  group_count_y,
                    u32                  group_count_z )
 {
-    vkCmdDispatch( cmd->command_buffer,
+    vkCmdDispatch( cmd->p.command_buffer,
                    group_count_x,
                    group_count_y,
                    group_count_z );
@@ -2487,8 +2491,8 @@ void cmd_push_constants( const CommandBuffer* cmd,
                          u64                  size,
                          const void*          data )
 {
-    vkCmdPushConstants( cmd->command_buffer,
-                        pipeline->pipeline_layout,
+    vkCmdPushConstants( cmd->p.command_buffer,
+                        pipeline->p.pipeline_layout,
                         VK_SHADER_STAGE_VERTEX_BIT |
                             VK_SHADER_STAGE_COMPUTE_BIT |
                             VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -2557,10 +2561,10 @@ void cmd_blit_image( const CommandBuffer* cmd,
     image_blit_info.srcSubresource = src_layers;
     image_blit_info.dstSubresource = dst_layers;
 
-    vkCmdBlitImage( cmd->command_buffer,
-                    src->image,
+    vkCmdBlitImage( cmd->p.command_buffer,
+                    src->p.image,
                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    dst->image,
+                    dst->p.image,
                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     1,
                     &image_blit_info,
@@ -2579,8 +2583,8 @@ void cmd_clear_color_image( const CommandBuffer* cmd,
 
     VkImageSubresourceRange range = get_image_subresource_range( image );
 
-    vkCmdClearColorImage( cmd->command_buffer,
-                          image->image,
+    vkCmdClearColorImage( cmd->p.command_buffer,
+                          image->p.image,
                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                           &clear_color,
                           1,
@@ -2593,8 +2597,8 @@ void cmd_draw_indexed_indirect( const CommandBuffer* cmd,
                                 u32                  draw_count,
                                 u32                  stride )
 {
-    vkCmdDrawIndexedIndirect( cmd->command_buffer,
-                              buffer->buffer,
+    vkCmdDrawIndexedIndirect( cmd->p.command_buffer,
+                              buffer->p.buffer,
                               offset,
                               draw_count,
                               stride );
@@ -2605,12 +2609,12 @@ void cmd_bind_descriptor_set( const CommandBuffer* cmd,
                               const DescriptorSet* set,
                               const Pipeline*      pipeline )
 {
-    vkCmdBindDescriptorSets( cmd->command_buffer,
+    vkCmdBindDescriptorSets( cmd->p.command_buffer,
                              to_vk_pipeline_bind_point( pipeline->type ),
-                             pipeline->pipeline_layout,
+                             pipeline->p.pipeline_layout,
                              first_set,
                              1,
-                             &set->descriptor_set,
+                             &set->p.descriptor_set,
                              0,
                              nullptr );
 }
@@ -2643,22 +2647,22 @@ void create_buffer( const Device*     device,
     buffer_create_info.queueFamilyIndexCount = 0;
     buffer_create_info.pQueueFamilyIndices   = nullptr;
 
-    VK_ASSERT( vmaCreateBuffer( device->memory_allocator,
+    VK_ASSERT( vmaCreateBuffer( device->p.memory_allocator,
                                 &buffer_create_info,
                                 &allocation_create_info,
-                                &buffer->buffer,
-                                &buffer->allocation,
+                                &buffer->p.buffer,
+                                &buffer->p.allocation,
                                 nullptr ) );
 }
 
 void destroy_buffer( const Device* device, Buffer* buffer )
 {
     FT_ASSERT( buffer );
-    FT_ASSERT( buffer->allocation );
-    FT_ASSERT( buffer->buffer );
-    vmaDestroyBuffer( device->memory_allocator,
-                      buffer->buffer,
-                      buffer->allocation );
+    FT_ASSERT( buffer->p.allocation );
+    FT_ASSERT( buffer->p.buffer );
+    vmaDestroyBuffer( device->p.memory_allocator,
+                      buffer->p.buffer,
+                      buffer->p.allocation );
     operator delete( buffer, std::nothrow );
 }
 
@@ -2694,19 +2698,19 @@ void create_sampler( const Device*      device,
     sampler_create_info.maxLod           = desc->max_lod;
     sampler_create_info.unnormalizedCoordinates = false;
 
-    VK_ASSERT( vkCreateSampler( device->logical_device,
+    VK_ASSERT( vkCreateSampler( device->p.logical_device,
                                 &sampler_create_info,
-                                device->vulkan_allocator,
-                                &sampler->sampler ) );
+                                device->p.vulkan_allocator,
+                                &sampler->p.sampler ) );
 }
 
 void destroy_sampler( const Device* device, Sampler* sampler )
 {
     FT_ASSERT( sampler );
-    FT_ASSERT( sampler->sampler );
-    vkDestroySampler( device->logical_device,
-                      sampler->sampler,
-                      device->vulkan_allocator );
+    FT_ASSERT( sampler->p.sampler );
+    vkDestroySampler( device->p.logical_device,
+                      sampler->p.sampler,
+                      device->p.vulkan_allocator );
     operator delete( sampler, std::nothrow );
 }
 
@@ -2747,11 +2751,11 @@ void create_image( const Device*    device,
         image_create_info.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     }
 
-    VK_ASSERT( vmaCreateImage( device->memory_allocator,
+    VK_ASSERT( vmaCreateImage( device->p.memory_allocator,
                                &image_create_info,
                                &allocation_create_info,
-                               &image->image,
-                               &image->allocation,
+                               &image->p.image,
+                               &image->p.allocation,
                                nullptr ) );
 
     image->width           = desc->width;
@@ -2767,7 +2771,7 @@ void create_image( const Device*    device,
     image_view_create_info.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     image_view_create_info.pNext    = nullptr;
     image_view_create_info.flags    = 0;
-    image_view_create_info.image    = image->image;
+    image_view_create_info.image    = image->p.image;
     image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     if ( image->layer_count == 6 )
     {
@@ -2781,24 +2785,24 @@ void create_image( const Device*    device,
     image_view_create_info.subresourceRange =
         get_image_subresource_range( image );
 
-    VK_ASSERT( vkCreateImageView( device->logical_device,
+    VK_ASSERT( vkCreateImageView( device->p.logical_device,
                                   &image_view_create_info,
-                                  device->vulkan_allocator,
-                                  &image->image_view ) );
+                                  device->p.vulkan_allocator,
+                                  &image->p.image_view ) );
 }
 
 void destroy_image( const Device* device, Image* image )
 {
     FT_ASSERT( image );
-    FT_ASSERT( image->image_view );
-    FT_ASSERT( image->image );
-    FT_ASSERT( image->allocation );
-    vkDestroyImageView( device->logical_device,
-                        image->image_view,
-                        device->vulkan_allocator );
-    vmaDestroyImage( device->memory_allocator,
-                     image->image,
-                     image->allocation );
+    FT_ASSERT( image->p.image_view );
+    FT_ASSERT( image->p.image );
+    FT_ASSERT( image->p.allocation );
+    vkDestroyImageView( device->p.logical_device,
+                        image->p.image_view,
+                        device->p.vulkan_allocator );
+    vmaDestroyImage( device->p.memory_allocator,
+                     image->p.image,
+                     image->p.allocation );
     operator delete( image, std::nothrow );
 }
 
@@ -2816,24 +2820,24 @@ void create_descriptor_set( const Device*            device,
     descriptor_set_allocate_info.sType =
         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     descriptor_set_allocate_info.pNext              = nullptr;
-    descriptor_set_allocate_info.descriptorPool     = device->descriptor_pool;
+    descriptor_set_allocate_info.descriptorPool     = device->p.descriptor_pool;
     descriptor_set_allocate_info.descriptorSetCount = 1;
     descriptor_set_allocate_info.pSetLayouts =
         &desc->descriptor_set_layout->descriptor_set_layouts[ desc->set ];
 
-    VK_ASSERT( vkAllocateDescriptorSets( device->logical_device,
+    VK_ASSERT( vkAllocateDescriptorSets( device->p.logical_device,
                                          &descriptor_set_allocate_info,
-                                         &descriptor_set->descriptor_set ) );
+                                         &descriptor_set->p.descriptor_set ) );
 }
 
 void destroy_descriptor_set( const Device* device, DescriptorSet* set )
 {
     FT_ASSERT( set );
-    FT_ASSERT( set->descriptor_set );
-    vkFreeDescriptorSets( device->logical_device,
-                          device->descriptor_pool,
+    FT_ASSERT( set->p.descriptor_set );
+    vkFreeDescriptorSets( device->p.logical_device,
+                          device->p.descriptor_pool,
                           1,
-                          &set->descriptor_set );
+                          &set->p.descriptor_set );
     operator delete( set, std::nothrow );
 }
 
@@ -2862,7 +2866,7 @@ void update_descriptor_set( const Device*          device,
         write_descriptor_set.dstBinding = descriptor_write.binding;
         write_descriptor_set.descriptorCount =
             descriptor_write.descriptor_count;
-        write_descriptor_set.dstSet = set->descriptor_set;
+        write_descriptor_set.dstSet = set->p.descriptor_set;
         write_descriptor_set.descriptorType =
             to_vk_descriptor_type( descriptor_write.descriptor_type );
 
@@ -2875,7 +2879,7 @@ void update_descriptor_set( const Device*          device,
             {
                 bds[ j ] = {};
                 bds[ j ].buffer =
-                    descriptor_write.buffer_descriptors[ j ].buffer->buffer;
+                    descriptor_write.buffer_descriptors[ j ].buffer->p.buffer;
                 bds[ j ].offset =
                     descriptor_write.buffer_descriptors[ j ].offset;
                 bds[ j ].range = descriptor_write.buffer_descriptors[ j ].range;
@@ -2897,12 +2901,12 @@ void update_descriptor_set( const Device*          device,
                 {
                     ids[ j ].imageLayout =
                         determine_image_layout( image_write.resource_state );
-                    ids[ j ].imageView = image_write.image->image_view;
+                    ids[ j ].imageView = image_write.image->p.image_view;
                     ids[ j ].sampler   = nullptr;
                 }
                 else if ( image_write.sampler )
                 {
-                    ids[ j ].sampler = image_write.sampler->sampler;
+                    ids[ j ].sampler = image_write.sampler->p.sampler;
                 }
                 else
                 {
@@ -2914,7 +2918,7 @@ void update_descriptor_set( const Device*          device,
         }
     }
 
-    vkUpdateDescriptorSets( device->logical_device,
+    vkUpdateDescriptorSets( device->p.logical_device,
                             descriptor_writes.size(),
                             descriptor_writes.data(),
                             0,
@@ -2949,10 +2953,10 @@ void create_ui_context( const UiDesc* desc, UiContext** p_context )
     pool_info.poolSizeCount = std::size( pool_sizes );
     pool_info.pPoolSizes    = pool_sizes;
 
-    VK_ASSERT( vkCreateDescriptorPool( desc->device->logical_device,
+    VK_ASSERT( vkCreateDescriptorPool( desc->device->p.logical_device,
                                        &pool_info,
                                        nullptr,
-                                       &context->desriptor_pool ) );
+                                       &context->p.desriptor_pool ) );
 
     ImGui::CreateContext();
     auto& io = ImGui::GetIO();
@@ -2968,13 +2972,13 @@ void create_ui_context( const UiDesc* desc, UiContext** p_context )
     }
 
     ImGui_ImplVulkan_InitInfo init_info {};
-    init_info.Instance        = desc->backend->instance;
-    init_info.PhysicalDevice  = desc->device->physical_device;
-    init_info.Device          = desc->device->logical_device;
+    init_info.Instance        = desc->backend->p.instance;
+    init_info.PhysicalDevice  = desc->device->p.physical_device;
+    init_info.Device          = desc->device->p.logical_device;
     init_info.QueueFamily     = desc->queue->family_index;
-    init_info.Queue           = desc->queue->queue;
+    init_info.Queue           = desc->queue->p.queue;
     init_info.PipelineCache   = VkPipelineCache {};
-    init_info.Allocator       = desc->device->vulkan_allocator;
+    init_info.Allocator       = desc->device->p.vulkan_allocator;
     init_info.MinImageCount   = desc->min_image_count;
     init_info.ImageCount      = desc->image_count;
     init_info.InFlyFrameCount = desc->in_fly_frame_count;
@@ -2982,10 +2986,10 @@ void create_ui_context( const UiDesc* desc, UiContext** p_context )
     init_info.MSAASamples     = VK_SAMPLE_COUNT_1_BIT;
 
     ImGui_ImplSDL2_InitForVulkan( ( SDL_Window* ) desc->window->handle );
-    ImGui_ImplVulkan_Init( &init_info, desc->render_pass->render_pass );
+    ImGui_ImplVulkan_Init( &init_info, desc->render_pass->p.render_pass );
 
     begin_command_buffer( desc->device->cmd );
-    ImGui_ImplVulkan_CreateFontsTexture( desc->device->cmd->command_buffer );
+    ImGui_ImplVulkan_CreateFontsTexture( desc->device->cmd->p.command_buffer );
     end_command_buffer( desc->device->cmd );
     QueueSubmitDesc queue_submit_desc {};
     queue_submit_desc.command_buffer_count = 1;
@@ -2999,8 +3003,8 @@ void create_ui_context( const UiDesc* desc, UiContext** p_context )
 void destroy_ui_context( const Device* device, UiContext* context )
 {
     FT_ASSERT( context );
-    vkDestroyDescriptorPool( device->logical_device,
-                             context->desriptor_pool,
+    vkDestroyDescriptorPool( device->p.logical_device,
+                             context->p.desriptor_pool,
                              nullptr );
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL2_Shutdown();
@@ -3019,7 +3023,7 @@ void ui_end_frame( const CommandBuffer* cmd )
 {
     ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(),
-                                     cmd->command_buffer );
+                                     cmd->p.command_buffer );
 
     ImGuiIO& io = ImGui::GetIO();
     if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
@@ -3030,3 +3034,4 @@ void ui_end_frame( const CommandBuffer* cmd )
 }
 
 } // namespace fluent
+#endif
