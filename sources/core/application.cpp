@@ -103,6 +103,18 @@ void app_run()
             case SDL_MOUSEBUTTONUP:
                 app_state.input_system.buttons[ e.button.button ] = false;
                 break;
+			case SDL_MOUSEWHEEL:
+			{
+				if ( e.wheel.y > 0 )
+				{
+					app_state.input_system.mouse_scroll = 1;
+				}
+				else if ( e.wheel.y < 0 )
+				{
+					app_state.input_system.mouse_scroll = -1;
+				}
+				break;
+			}
             default: break;
             }
         }
