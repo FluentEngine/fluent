@@ -143,5 +143,4 @@ endfunction()
 
 if (FLUENT_BUILD_TESTS)
     add_subdirectory(examples)
-    add_subdirectory(sandbox)
 endif()
