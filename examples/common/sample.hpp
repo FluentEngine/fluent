@@ -115,12 +115,10 @@ void on_init()
     CommandPoolDesc command_pool_desc {};
     command_pool_desc.queue = queue;
     create_command_pool( device, &command_pool_desc, &command_pool );
-#ifdef VULKAN_BACKEND
     create_command_buffers( device,
                             command_pool,
                             FRAME_COUNT,
                             command_buffers );
-
     for ( u32 i = 0; i < FRAME_COUNT; ++i )
     {
         create_semaphore( device, &image_available_semaphores[ i ] );
@@ -138,7 +136,7 @@ void on_init()
     swapchain_desc.min_image_count = FRAME_COUNT;
 
     create_swapchain( device, &swapchain_desc, &swapchain );
-
+#ifdef VULKAN_BACKEND
     create_depth_image( swapchain->width, swapchain->height );
 
     RenderPassDesc render_pass_desc {};
@@ -327,9 +325,11 @@ void end_frame( u32 image_index )
 
 void on_update( f32 delta_time )
 {
-#ifdef VULKAN_BACKEND
     auto& cmd = command_buffers[ frame_index ];
+#ifdef VULKAN_BACKEND
     update_sample( cmd, delta_time );
+#endif
+#ifdef D3D12_BACKEND
 #endif
 }
 
@@ -346,6 +346,7 @@ void on_shutdown()
         destroy_render_pass( device, render_passes[ i ] );
     }
     delete[] render_passes;
+#endif
     destroy_swapchain( device, swapchain );
     for ( u32 i = 0; i < FRAME_COUNT; ++i )
     {
@@ -353,11 +354,11 @@ void on_shutdown()
         destroy_semaphore( device, rendering_finished_semaphores[ i ] );
         destroy_fence( device, in_flight_fences[ i ] );
     }
+
     destroy_command_buffers( device,
                              command_pool,
                              FRAME_COUNT,
                              command_buffers );
-#endif
     destroy_command_pool( device, command_pool );
     destroy_queue( queue );
     destroy_device( device );

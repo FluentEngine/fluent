@@ -1,5 +1,6 @@
 #ifdef D3D12_BACKEND
 
+#include <tinyimageformat_apis.h>
 #include "renderer/renderer_backend.hpp"
 
 #ifdef FLUENT_DEBUG
@@ -18,6 +19,12 @@
 
 namespace fluent
 {
+static inline DXGI_FORMAT to_dxgi_format( Format format )
+{
+    return static_cast<DXGI_FORMAT>( TinyImageFormat_ToDXGI_FORMAT(
+        static_cast<TinyImageFormat>( format ) ) );
+}
+
 static inline D3D12_COMMAND_LIST_TYPE to_d3d12_command_list_type(
     QueueType type )
 {
@@ -59,8 +66,9 @@ void create_device( const RendererBackend* backend,
                     Device**               p_device )
 {
     FT_ASSERT( p_device );
-    *p_device      = new ( std::nothrow ) Device {};
-    Device* device = *p_device;
+    *p_device         = new ( std::nothrow ) Device {};
+    Device* device    = *p_device;
+    device->p.factory = backend->p.factory;
 
     // TODO: choose adapter
     D3D12_ASSERT( D3D12CreateDevice( nullptr,
@@ -85,11 +93,11 @@ void create_queue( const Device*    device,
     *p_queue     = new ( std::nothrow ) Queue {};
     Queue* queue = *p_queue;
 
-    D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-    queueDesc.Type  = to_d3d12_command_list_type( desc->queue_type );
-    queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+    D3D12_COMMAND_QUEUE_DESC queue_desc = {};
+    queue_desc.Type  = to_d3d12_command_list_type( desc->queue_type );
+    queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
     D3D12_ASSERT( device->p.device->CreateCommandQueue(
-        &queueDesc,
+        &queue_desc,
         IID_PPV_ARGS( &queue->p.queue ) ) );
 }
 
@@ -97,6 +105,105 @@ void destroy_queue( Queue* queue )
 {
     FT_ASSERT( queue );
     queue->p.queue->Release();
+    operator delete( queue, std::nothrow );
+}
+
+void create_command_pool( const Device*          device,
+                          const CommandPoolDesc* desc,
+                          CommandPool**          p_command_pool )
+{
+    FT_ASSERT( device );
+    FT_ASSERT( desc->queue );
+    FT_ASSERT( p_command_pool );
+
+    *p_command_pool           = new ( std::nothrow ) CommandPool {};
+    CommandPool* command_pool = *p_command_pool;
+    command_pool->queue       = desc->queue;
+
+    D3D12_ASSERT( device->p.device->CreateCommandAllocator(
+        to_d3d12_command_list_type( command_pool->queue->type ),
+        IID_PPV_ARGS( &command_pool->p.command_allocator ) ) );
+}
+
+void destroy_command_pool( const Device* device, CommandPool* command_pool )
+{
+    FT_ASSERT( command_pool );
+    command_pool->p.command_allocator->Release();
+    operator delete( command_pool, std::nothrow );
+}
+
+void create_command_buffers( const Device*      device,
+                             const CommandPool* command_pool,
+                             u32                count,
+                             CommandBuffer**    command_buffers )
+{
+    FT_ASSERT( device );
+    FT_ASSERT( command_pool );
+    FT_ASSERT( command_buffers );
+    FT_ASSERT( count );
+
+    D3D12_COMMAND_LIST_TYPE command_list_type =
+        to_d3d12_command_list_type( command_pool->queue->type );
+
+    for ( u32 i = 0; i < count; ++i )
+    {
+        command_buffers[ i ] = new ( std::nothrow ) CommandBuffer {};
+        CommandBuffer* cmd   = command_buffers[ i ];
+        cmd->queue           = command_pool->queue;
+
+        D3D12_ASSERT( device->p.device->CreateCommandList(
+            0,
+            command_list_type,
+            command_pool->p.command_allocator,
+            nullptr,
+            IID_PPV_ARGS( &cmd->p.command_list ) ) );
+
+        cmd->p.command_list->Close();
+    }
+}
+
+void free_command_buffers( const Device*      device,
+                           const CommandPool* command_pool,
+                           u32                count,
+                           CommandBuffer**    command_buffers )
+{
+    FT_ASSERT( false );
+}
+
+void destroy_command_buffers( const Device*      device,
+                              const CommandPool* command_pool,
+                              u32                count,
+                              CommandBuffer**    command_buffers )
+{
+    FT_ASSERT( command_buffers );
+
+    for ( u32 i = 0; i < count; ++i )
+    {
+        command_buffers[ i ]->p.command_list->Release();
+        operator delete( command_buffers[ i ], std::nothrow );
+    }
+}
+
+void create_semaphore( const Device* device, Semaphore** p_semaphore ) {}
+
+void destroy_semaphore( const Device* device, Semaphore* semaphore ) {}
+
+void create_fence( const Device* device, Fence** p_fence )
+{
+    FT_ASSERT( p_fence );
+    *p_fence     = new ( std::nothrow ) Fence {};
+    Fence* fence = *p_fence;
+
+    device->p.device->CreateFence( 0,
+                                   D3D12_FENCE_FLAG_NONE,
+                                   IID_PPV_ARGS( &fence->p.fence ) );
+}
+
+void destroy_fence( const Device* device, Fence* fence )
+{
+    FT_ASSERT( fence );
+    fence->p.fence->Release();
+    operator delete( fence, std::nothrow );
 }
 
 void queue_wait_idle( const Queue* queue ) {}
@@ -107,14 +214,6 @@ void immediate_submit( const Queue* queue, const CommandBuffer* cmd ) {}
 
 void queue_present( const Queue* queue, const QueuePresentDesc* desc ) {}
 
-void create_semaphore( const Device* device, Semaphore** p_semaphore ) {}
-
-void destroy_semaphore( const Device* device, Semaphore* semaphore ) {}
-
-void create_fence( const Device* device, Fence** p_fence ) {}
-
-void destroy_fence( const Device* device, Fence* fence ) {}
-
 void wait_for_fences( const Device* device, u32 count, Fence** fences ) {}
 
 void reset_fences( const Device* device, u32 count, Fence** fences ) {}
@@ -123,6 +222,43 @@ void create_swapchain( const Device*        device,
                        const SwapchainDesc* desc,
                        Swapchain**          p_swapchain )
 {
+    FT_ASSERT( p_swapchain );
+
+    *p_swapchain         = new ( std::nothrow ) Swapchain {};
+    Swapchain* swapchain = *p_swapchain;
+    swapchain->width     = desc->width;
+    swapchain->height    = desc->height;
+    // TODO:
+    swapchain->format          = Format::eB8G8R8A8Unorm;
+    swapchain->queue           = desc->queue;
+    swapchain->min_image_count = desc->min_image_count;
+    swapchain->image_count     = desc->min_image_count;
+
+    DXGI_SWAP_CHAIN_DESC swapchain_desc {};
+    swapchain_desc.BufferDesc.Width                   = swapchain->width;
+    swapchain_desc.BufferDesc.Height                  = swapchain->height;
+    swapchain_desc.BufferDesc.RefreshRate.Numerator   = 60;
+    swapchain_desc.BufferDesc.RefreshRate.Denominator = 1;
+    swapchain_desc.BufferDesc.Format = to_dxgi_format( swapchain->format );
+    swapchain_desc.BufferDesc.ScanlineOrdering =
+        DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+    swapchain_desc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+    swapchain_desc.SampleDesc.Count   = 1;
+    swapchain_desc.SampleDesc.Quality = 0;
+    swapchain_desc.BufferUsage        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swapchain_desc.BufferCount        = swapchain->image_count;
+    swapchain_desc.OutputWindow       = GetActiveWindow();
+    swapchain_desc.Windowed           = true;
+    swapchain_desc.SwapEffect         = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+    swapchain_desc.Flags              = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+
+    // Note: Swap chain uses queue to perform flush.
+    D3D12_ASSERT(
+        device->p.factory->CreateSwapChain( swapchain->queue->p.queue,
+                                            &swapchain_desc,
+                                            &swapchain->p.swapchain ) );
+
+    swapchain->images = new ( std::nothrow ) Image*[ swapchain->image_count ];
 }
 
 void resize_swapchain( const Device* device,
@@ -132,35 +268,13 @@ void resize_swapchain( const Device* device,
 {
 }
 
-void destroy_swapchain( const Device* device, Swapchain* swapchain ) {}
-
-void create_command_pool( const Device*          device,
-                          const CommandPoolDesc* desc,
-                          CommandPool**          p_command_pool )
+void destroy_swapchain( const Device* device, Swapchain* swapchain )
 {
-}
-
-void destroy_command_pool( const Device* device, CommandPool* command_pool ) {}
-
-void create_command_buffers( const Device*      device,
-                             const CommandPool* command_pool,
-                             u32                count,
-                             CommandBuffer**    command_buffers )
-{
-}
-
-void free_command_buffers( const Device*      device,
-                           const CommandPool* command_pool,
-                           u32                count,
-                           CommandBuffer**    command_buffers )
-{
-}
-
-void destroy_command_buffers( const Device*      device,
-                              const CommandPool* command_pool,
-                              u32                count,
-                              CommandBuffer**    command_buffers )
-{
+    FT_ASSERT( swapchain );
+    FT_ASSERT( swapchain->images );
+    operator delete[]( swapchain->images, std::nothrow );
+    swapchain->p.swapchain->Release();
+    operator delete( swapchain, std::nothrow );
 }
 
 void begin_command_buffer( const CommandBuffer* cmd ) {}

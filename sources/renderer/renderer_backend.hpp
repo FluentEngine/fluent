@@ -86,7 +86,9 @@ struct Device
 #ifdef D3D12_BACKEND
     struct
     {
-        ID3D12Device* device;
+        IDXGIFactory4*        factory;
+        ID3D12Device*         device;
+        ID3D12DescriptorHeap* rtv_heap;
     } p;
 #endif
 };
@@ -105,6 +107,12 @@ struct CommandPool
         VkCommandPool command_pool;
     } p;
 #endif
+#ifdef D3D12_BACKEND
+    struct
+    {
+        ID3D12CommandAllocator* command_allocator;
+    } p;
+#endif
 };
 
 struct CommandBuffer
@@ -114,6 +122,12 @@ struct CommandBuffer
     struct
     {
         VkCommandBuffer command_buffer;
+    } p;
+#endif
+#ifdef D3D12_BACKEND
+    struct
+    {
+        ID3D12GraphicsCommandList* command_list;
     } p;
 #endif
 };
@@ -157,6 +171,12 @@ struct Fence
     struct
     {
         VkFence fence = VK_NULL_HANDLE;
+    } p;
+#endif
+#ifdef D3D12_BACKEND
+    struct
+    {
+        ID3D12Fence* fence;
     } p;
 #endif
 };
@@ -217,6 +237,13 @@ struct Image
         VmaAllocation allocation;
     } p;
 #endif
+#ifdef D3D12_BACKEND
+    struct
+    {
+        ID3D12Resource*             image;
+        D3D12_CPU_DESCRIPTOR_HANDLE image_view;
+    } p;
+#endif
 };
 
 struct BufferDesc
@@ -269,6 +296,12 @@ struct Swapchain
         VkSurfaceTransformFlagBitsKHR pre_transform;
         VkSurfaceKHR                  surface;
         VkSwapchainKHR                swapchain;
+    } p;
+#endif
+#ifdef D3D12_BACKEND
+    struct
+    {
+        IDXGISwapChain* swapchain;
     } p;
 #endif
 };
