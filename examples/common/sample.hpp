@@ -336,7 +336,7 @@ void on_update( f32 delta_time )
 void on_shutdown()
 {
 #ifdef VULKAN_BACKEND
-    device_wait_idle( device );
+    queue_wait_idle( queue );
     shutdown_sample();
     destroy_ui_context( device, ui );
     ResourceLoader::shutdown();

@@ -566,7 +566,6 @@ void create_device( const RendererBackend* backend,
                     Device**               device );
 
 void destroy_device( Device* device );
-void device_wait_idle( const Device* device );
 
 void create_queue( const Device* device, const QueueDesc* desc, Queue** queue );
 void destroy_queue( Queue* queue );

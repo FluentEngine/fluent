@@ -83,8 +83,6 @@ void destroy_device( Device* device )
     operator delete( device, std::nothrow );
 }
 
-void device_wait_idle( const Device* device ) {}
-
 void create_queue( const Device*    device,
                    const QueueDesc* desc,
                    Queue**          p_queue )
