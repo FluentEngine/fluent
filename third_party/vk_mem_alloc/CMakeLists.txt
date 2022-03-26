@@ -7,7 +7,9 @@ set(srcs vk_mem_alloc.cpp)
 
 add_library(${target} STATIC ${srcs})
 
-target_compile_options(${target} PUBLIC -Wno-nullability-completeness)
+if (UNIX)
+    target_compile_options(${target} PUBLIC -Wno-nullability-completeness)
+endif()
 
 set(include_paths ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../volk/)
 

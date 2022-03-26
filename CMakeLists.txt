@@ -11,20 +11,11 @@ set(CMAKE_CXX_STANDARD 17)
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     set(FLUENT_DEBUG_BUILD ON)
-endif()
-if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
     set(FLUENT_DEBUG_BUILD OFF)
 endif()
 
 set(FLUENT_BUILD_TESTS ON)
-
-find_package(assimp REQUIRED)
-
-if (UNIX AND NOT APPLE)
-    set(assimp_lib assimp)
-else()
-    set(assimp_lib assimp::assimp)
-endif()
 
 set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(third_party/spdlog)
@@ -52,7 +43,6 @@ set(libs
     tinyddsloader
     stb_image
     glm
-    ${assimp_lib}
     imgui
     entt)
 
@@ -117,15 +107,11 @@ target_link_libraries(${target} PUBLIC ${libs})
 
 if (FLUENT_DEBUG_BUILD)
     set(compile_definitions FLUENT_DEBUG)
-    if (MSVC)
-        set(compile_options /DEBUG)
-    elseif (UNIX)
+    if (UNIX)
         set(compile_options -g)
     endif()
 else()
-    if (MSVC)
-        # TODO: write same for windows
-    elseif (UNIX)
+    if (UNIX)
         target_compile_options(${target} PUBLIC -O3)
     endif()
 endif()
