@@ -115,7 +115,10 @@ void app_run()
                 }
                 break;
             }
-            default: break;
+            default:
+            {
+                break;
+            }
             }
         }
         i32 x, y;

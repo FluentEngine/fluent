@@ -485,6 +485,11 @@ static inline VkImageUsageFlags determine_vk_image_usage(
         image_usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     }
 
+    if ( b32( descriptor_type & DescriptorType::eTransientAttachment ) )
+    {
+        image_usage |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+    }
+
     return image_usage;
 }
 
@@ -860,8 +865,10 @@ void create_device( const RendererBackend* backend,
 
     // TODO: check support
     VkPhysicalDeviceFeatures used_features {};
-    used_features.fillModeNonSolid  = true;
-    used_features.multiDrawIndirect = true;
+    used_features.fillModeNonSolid  = VK_TRUE;
+    used_features.multiDrawIndirect = VK_TRUE;
+    used_features.sampleRateShading = VK_TRUE;
+    used_features.samplerAnisotropy = VK_TRUE;
 
     VkPhysicalDeviceDescriptorIndexingFeatures descriptor_indexing_features {};
     descriptor_indexing_features.sType =
@@ -1541,7 +1548,7 @@ void create_framebuffer( const Device*         device,
 {
     u32 attachment_count = desc->color_attachment_count;
 
-    VkImageView image_views[ MAX_ATTACHMENTS_COUNT + 1 ];
+    VkImageView image_views[ MAX_ATTACHMENTS_COUNT + 2 ];
     for ( u32 i = 0; i < attachment_count; ++i )
     {
         image_views[ i ] = desc->color_attachments[ i ]->image_view;
@@ -1550,6 +1557,11 @@ void create_framebuffer( const Device*         device,
     if ( desc->depth_stencil )
     {
         image_views[ attachment_count++ ] = desc->depth_stencil->image_view;
+    }
+
+    if ( desc->resolve )
+    {
+        image_views[ attachment_count++ ] = desc->resolve->image_view;
     }
 
     if ( desc->width > 0 && desc->height > 0 )
@@ -1584,13 +1596,15 @@ void create_render_pass( const Device*         device,
     render_pass->color_attachment_count = desc->color_attachment_count;
     render_pass->width                  = desc->width;
     render_pass->height                 = desc->height;
+    render_pass->sample_count = desc->color_attachments[ 0 ]->sample_count;
 
     u32 attachments_count = desc->color_attachment_count;
 
     VkAttachmentDescription
-                          attachment_descriptions[ MAX_ATTACHMENTS_COUNT + 1 ];
+                          attachment_descriptions[ MAX_ATTACHMENTS_COUNT + 2 ];
     VkAttachmentReference color_attachment_references[ MAX_ATTACHMENTS_COUNT ];
     VkAttachmentReference depth_attachment_reference {};
+    VkAttachmentReference resolve_attachment_reference {};
 
     for ( u32 i = 0; i < desc->color_attachment_count; ++i )
     {
@@ -1645,6 +1659,33 @@ void create_render_pass( const Device*         device,
         attachments_count++;
     }
 
+    if ( desc->resolve )
+    {
+        u32 i                              = attachments_count;
+        attachment_descriptions[ i ].flags = 0;
+        attachment_descriptions[ i ].format =
+            to_vk_format( desc->resolve->format );
+        attachment_descriptions[ i ].samples =
+            to_vk_sample_count( desc->resolve->sample_count );
+        attachment_descriptions[ i ].loadOp =
+            to_vk_load_op( desc->resolve_load_op );
+        attachment_descriptions[ i ].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachment_descriptions[ i ].stencilLoadOp =
+            VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachment_descriptions[ i ].stencilStoreOp =
+            VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachment_descriptions[ i ].initialLayout =
+            determine_image_layout( desc->resolve_state );
+        attachment_descriptions[ i ].finalLayout =
+            determine_image_layout( desc->resolve_state );
+
+        resolve_attachment_reference.attachment = i;
+        resolve_attachment_reference.layout =
+            attachment_descriptions[ i ].finalLayout;
+
+        attachments_count++;
+    }
+
     // TODO: subpass setup from user code
     VkSubpassDescription subpass_description {};
     subpass_description.flags                = 0;
@@ -1654,9 +1695,10 @@ void create_render_pass( const Device*         device,
     subpass_description.colorAttachmentCount = desc->color_attachment_count;
     subpass_description.pColorAttachments =
         attachments_count ? color_attachment_references : nullptr;
-    subpass_description.pResolveAttachments = nullptr;
     subpass_description.pDepthStencilAttachment =
         desc->depth_stencil ? &depth_attachment_reference : nullptr;
+    subpass_description.pResolveAttachments =
+        desc->resolve ? &resolve_attachment_reference : nullptr;
     subpass_description.preserveAttachmentCount = 0;
     subpass_description.pPreserveAttachments    = nullptr;
 
@@ -2026,8 +2068,10 @@ void create_graphics_pipeline( const Device*       device,
     VkPipelineMultisampleStateCreateInfo multisample_state_create_info {};
     multisample_state_create_info.sType =
         VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multisample_state_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-    multisample_state_create_info.minSampleShading     = 1.0f;
+    multisample_state_create_info.rasterizationSamples =
+        to_vk_sample_count( desc->render_pass->sample_count );
+    multisample_state_create_info.sampleShadingEnable = VK_FALSE;
+    multisample_state_create_info.minSampleShading    = 1.0f;
 
     VkPipelineColorBlendAttachmentState color_blend_attachment_state {};
     color_blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;

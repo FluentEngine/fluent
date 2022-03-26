@@ -280,7 +280,8 @@ enum class DescriptorType : u32
     eStorageBufferDynamic   = BIT( 12 ),
     eInputAttachment        = BIT( 13 ),
     eDepthStencilAttachment = BIT( 14 ),
-    eColorAttachment        = BIT( 15 )
+    eColorAttachment        = BIT( 15 ),
+    eTransientAttachment    = BIT( 16 )
 };
 MAKE_ENUM_FLAG( u32, DescriptorType );
 
