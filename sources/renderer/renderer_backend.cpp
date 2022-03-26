@@ -228,6 +228,23 @@ VkPolygonMode to_vk_polygon_mode( PolygonMode mode )
     }
 };
 
+VkPrimitiveTopology to_vk_primitive_topology( PrimitiveTopology topology )
+{
+	switch ( topology )
+	{
+	case PrimitiveTopology::eLineList: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+	case PrimitiveTopology::eLineStrip: return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+	case PrimitiveTopology::ePointList: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+	case PrimitiveTopology::eTriangleFan:
+		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+	case PrimitiveTopology::eTriangleStrip:
+		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+	case PrimitiveTopology::eTriangleList:
+		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	default: FT_ASSERT( false ); return VkPrimitiveTopology( -1 );
+	}
+}
+
 static inline VkAccessFlags determine_access_flags(
     ResourceState resource_state )
 {
@@ -1971,8 +1988,8 @@ void create_graphics_pipeline( const Device*       device,
     VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info {};
     input_assembly_state_create_info.sType =
         VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    input_assembly_state_create_info.topology =
-        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	input_assembly_state_create_info.topology =
+	    to_vk_primitive_topology( desc->topology );
     input_assembly_state_create_info.primitiveRestartEnable = false;
 
     // Dynamic states

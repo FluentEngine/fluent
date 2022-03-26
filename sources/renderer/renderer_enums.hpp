@@ -360,4 +360,14 @@ enum class Filter
     eLinear  = 1,
 };
 
+enum class PrimitiveTopology
+{
+	ePointList,
+	eLineList,
+	eLineStrip,
+	eTriangleList,
+	eTriangleStrip,
+	eTriangleFan
+};
+
 } // namespace fluent
