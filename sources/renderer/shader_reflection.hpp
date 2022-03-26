@@ -6,7 +6,6 @@
 
 namespace fluent
 {
-
 struct ShaderType
 {
     Format format;

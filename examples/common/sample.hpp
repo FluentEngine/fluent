@@ -115,7 +115,7 @@ void on_init()
     CommandPoolDesc command_pool_desc {};
     command_pool_desc.queue = queue;
     create_command_pool( device, &command_pool_desc, &command_pool );
-
+#ifdef VULKAN_BACKEND
     create_command_buffers( device,
                             command_pool,
                             FRAME_COUNT,
@@ -171,13 +171,15 @@ void on_init()
     ui_desc.render_pass        = render_passes[ 0 ];
     ui_desc.window             = get_app_window();
 
-    create_ui_context( &ui_desc, &ui );
+    create_ui_context( command_buffers[ 0 ], &ui_desc, &ui );
 
     init_sample();
+#endif
 }
 
 void on_resize( u32 width, u32 height )
 {
+#ifdef VULKAN_BACKEND
     queue_wait_idle( queue );
     destroy_image( device, depth_image );
 
@@ -202,10 +204,12 @@ void on_resize( u32 width, u32 height )
     }
 
     resize_sample( width, height );
+#endif
 }
 
 u32 begin_frame()
 {
+#ifdef VULKAN_BACKEND
     if ( !command_buffers_recorded[ frame_index ] )
     {
         wait_for_fences( device, 1, &in_flight_fences[ frame_index ] );
@@ -251,10 +255,14 @@ u32 begin_frame()
     cmd_set_scissor( cmd, 0, 0, swapchain->width, swapchain->height );
 
     return image_index;
+#else
+    return 0;
+#endif
 }
 
 void end_frame( u32 image_index )
 {
+#ifdef VULKAN_BACKEND
     auto& cmd = command_buffers[ frame_index ];
 
     ui_begin_frame();
@@ -314,16 +322,20 @@ void end_frame( u32 image_index )
 
     command_buffers_recorded[ frame_index ] = false;
     frame_index                             = ( frame_index + 1 ) % FRAME_COUNT;
+#endif
 }
 
 void on_update( f32 delta_time )
 {
+#ifdef VULKAN_BACKEND
     auto& cmd = command_buffers[ frame_index ];
     update_sample( cmd, delta_time );
+#endif
 }
 
 void on_shutdown()
 {
+#ifdef VULKAN_BACKEND
     device_wait_idle( device );
     shutdown_sample();
     destroy_ui_context( device, ui );
@@ -345,6 +357,7 @@ void on_shutdown()
                              command_pool,
                              FRAME_COUNT,
                              command_buffers );
+#endif
     destroy_command_pool( device, command_pool );
     destroy_queue( queue );
     destroy_device( device );

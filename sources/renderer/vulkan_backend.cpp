@@ -1,45 +1,46 @@
 #ifdef VULKAN_BACKEND
 
-#    include <algorithm>
-#    include <SDL_vulkan.h>
-#    include <imgui.h>
-#    include <imgui_impl_vulkan.h>
-#    include <imgui_impl_sdl.h>
-#    include <tinyimageformat_apis.h>
-#    include <vk_enum_string_helper.h>
-#    include "core/window.hpp"
-#    include "core/application.hpp"
-#    include "renderer/renderer_backend.hpp"
+#include <algorithm>
+#include <SDL_vulkan.h>
+#include <imgui.h>
+#include <imgui_impl_vulkan.h>
+#include <imgui_impl_sdl.h>
+#include <tinyimageformat_apis.h>
+#include <vk_enum_string_helper.h>
+#include "core/window.hpp"
+#include "core/application.hpp"
+#include "renderer/renderer_backend.hpp"
 
-#    ifdef FLUENT_DEBUG
-#        define VK_ASSERT( x )                                                 \
-            do {                                                               \
-                VkResult err = x;                                              \
-                if ( err )                                                     \
-                {                                                              \
-                    FT_ERROR( "Detected Vulkan error: {}", err );              \
-                    abort();                                                   \
-                }                                                              \
-            } while ( 0 )
-#    else
-#        define VK_ASSERT( x ) x
-#    endif
+#ifdef FLUENT_DEBUG
+#define VK_ASSERT( x )                                                         \
+    do {                                                                       \
+        VkResult err = x;                                                      \
+        if ( err )                                                             \
+        {                                                                      \
+            FT_ERROR( "Detected Vulkan error: {}", err );                      \
+            abort();                                                           \
+        }                                                                      \
+    } while ( 0 )
+#else
+#define VK_ASSERT( x ) x
+#endif
 
 namespace fluent
 {
-VkFormat to_vk_format( Format format )
+static inline VkFormat to_vk_format( Format format )
 {
     return static_cast<VkFormat>(
         TinyImageFormat_ToVkFormat( static_cast<TinyImageFormat>( format ) ) );
 }
 
-Format from_vk_format( VkFormat format )
+static inline Format from_vk_format( VkFormat format )
 {
     return static_cast<Format>( TinyImageFormat_FromVkFormat(
         static_cast<TinyImageFormat_VkFormat>( format ) ) );
 }
 
-VkSampleCountFlagBits to_vk_sample_count( SampleCount sample_count )
+static inline VkSampleCountFlagBits to_vk_sample_count(
+    SampleCount sample_count )
 {
     switch ( sample_count )
     {
@@ -53,7 +54,7 @@ VkSampleCountFlagBits to_vk_sample_count( SampleCount sample_count )
     }
 }
 
-VkAttachmentLoadOp to_vk_load_op( AttachmentLoadOp load_op )
+static inline VkAttachmentLoadOp to_vk_load_op( AttachmentLoadOp load_op )
 {
     switch ( load_op )
     {
@@ -553,13 +554,13 @@ static inline void get_instance_extensions( u32&         extensions_count,
             ( SDL_Window* ) get_app_window()->handle,
             &extensions_count,
             nullptr );
-#    ifdef FLUENT_DEBUG
+#ifdef FLUENT_DEBUG
         extensions_count++;
-#    endif
+#endif
     }
     else
     {
-#    ifdef FLUENT_DEBUG
+#ifdef FLUENT_DEBUG
         u32 sdl_extensions_count = extensions_count - 1;
         b32 result               = SDL_Vulkan_GetInstanceExtensions(
             ( SDL_Window* ) get_app_window()->handle,
@@ -568,12 +569,12 @@ static inline void get_instance_extensions( u32&         extensions_count,
         FT_ASSERT( result );
         extension_names[ extensions_count - 1 ] =
             VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
-#    else
+#else
         b32 result = SDL_Vulkan_GetInstanceExtensions(
             ( SDL_Window* ) get_app_window()->handle,
             &extensions_count,
             extension_names );
-#    endif
+#endif
     }
 }
 
@@ -582,17 +583,17 @@ static inline void get_instance_layers( u32&         layers_count,
 {
     if ( layer_names == nullptr )
     {
-#    ifdef FLUENT_DEBUG
+#ifdef FLUENT_DEBUG
         layers_count = 1;
-#    else
+#else
         layers_count = 0;
-#    endif
+#endif
     }
     else
     {
-#    ifdef FLUENT_DEBUG
+#ifdef FLUENT_DEBUG
         layer_names[ layers_count - 1 ] = "VK_LAYER_KHRONOS_validation";
-#    endif
+#endif
     }
 }
 
@@ -703,6 +704,7 @@ void create_renderer_backend( const RendererBackendDesc* desc,
     RendererBackend* backend = *p_backend;
 
     backend->p.vulkan_allocator = desc->p.vulkan_allocator;
+    backend->p.api_version      = desc->p.api_version;
 
     volkInitialize();
 
@@ -713,7 +715,7 @@ void create_renderer_backend( const RendererBackendDesc* desc,
     app_info.applicationVersion = VK_MAKE_VERSION( 0, 0, 1 );
     app_info.pEngineName        = "Fluent-Engine";
     app_info.engineVersion      = VK_MAKE_VERSION( 0, 0, 1 );
-    app_info.apiVersion         = FLUENT_VULKAN_API_VERSION;
+    app_info.apiVersion         = backend->p.api_version;
 
     u32 extensions_count = 0;
     get_instance_extensions( extensions_count, nullptr );
@@ -741,9 +743,9 @@ void create_renderer_backend( const RendererBackendDesc* desc,
 
     volkLoadInstance( backend->p.instance );
 
-#    ifdef FLUENT_DEBUG
+#ifdef FLUENT_DEBUG
     create_debug_messenger( backend );
-#    endif
+#endif
 
     // pick physical device
     backend->p.physical_device = VK_NULL_HANDLE;
@@ -777,11 +779,11 @@ void create_renderer_backend( const RendererBackendDesc* desc,
 void destroy_renderer_backend( RendererBackend* backend )
 {
     FT_ASSERT( backend );
-#    ifdef FLUENT_DEBUG
+#ifdef FLUENT_DEBUG
     vkDestroyDebugUtilsMessengerEXT( backend->p.instance,
                                      backend->p.debug_messenger,
                                      backend->p.vulkan_allocator );
-#    endif
+#endif
     vkDestroyInstance( backend->p.instance, backend->p.vulkan_allocator );
     operator delete( backend, std::nothrow );
 }
@@ -850,18 +852,18 @@ void create_device( const RendererBackend* backend,
             break;
     }
 
-#    ifndef __APPLE__
+#ifndef __APPLE__
     static const u32 device_extension_count = 2;
-#    else
+#else
     static const u32 device_extension_count = 3;
-#    endif
+#endif
 
     const char* device_extensions[ device_extension_count ] = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-#    ifdef __APPLE__
+#ifdef __APPLE__
         "VK_KHR_portability_subset"
-#    endif
+#endif
     };
 
     // TODO: check support
@@ -915,7 +917,7 @@ void create_device( const RendererBackend* backend,
     vma_allocator_create_info.flags                = 0;
     vma_allocator_create_info.pAllocationCallbacks = device->p.vulkan_allocator;
     vma_allocator_create_info.frameInUseCount      = desc->frame_in_use_count;
-    vma_allocator_create_info.vulkanApiVersion     = FLUENT_VULKAN_API_VERSION;
+    vma_allocator_create_info.vulkanApiVersion     = backend->p.api_version;
 
     VK_ASSERT( vmaCreateAllocator( &vma_allocator_create_info,
                                    &device->p.memory_allocator ) );
@@ -949,18 +951,6 @@ void create_device( const RendererBackend* backend,
                                        &descriptor_pool_create_info,
                                        device->p.vulkan_allocator,
                                        &device->p.descriptor_pool ) );
-
-    // TODO: move it to transfer queue
-    QueueDesc queue_desc {};
-    queue_desc.queue_type = QueueType::eGraphics;
-
-    create_queue( device, &queue_desc, &device->queue );
-
-    CommandPoolDesc command_pool_desc {};
-    command_pool_desc.queue = device->queue;
-    create_command_pool( device, &command_pool_desc, &device->command_pool );
-
-    create_command_buffers( device, device->command_pool, 1, &device->cmd );
 }
 
 void destroy_device( Device* device )
@@ -969,9 +959,6 @@ void destroy_device( Device* device )
     FT_ASSERT( device->p.descriptor_pool );
     FT_ASSERT( device->p.memory_allocator );
     FT_ASSERT( device->p.logical_device );
-    destroy_command_buffers( device, device->command_pool, 1, &device->cmd );
-    destroy_command_pool( device, device->command_pool );
-    destroy_queue( device->queue );
     vkDestroyDescriptorPool( device->p.logical_device,
                              device->p.descriptor_pool,
                              device->p.vulkan_allocator );
@@ -1435,15 +1422,15 @@ void create_command_pool( const Device*          device,
     VK_ASSERT( vkCreateCommandPool( device->p.logical_device,
                                     &command_pool_create_info,
                                     device->p.vulkan_allocator,
-                                    &command_pool->command_pool ) );
+                                    &command_pool->p.command_pool ) );
 }
 
 void destroy_command_pool( const Device* device, CommandPool* command_pool )
 {
     FT_ASSERT( command_pool );
-    FT_ASSERT( command_pool->command_pool );
+    FT_ASSERT( command_pool->p.command_pool );
     vkDestroyCommandPool( device->p.logical_device,
-                          command_pool->command_pool,
+                          command_pool->p.command_pool,
                           device->p.vulkan_allocator );
     operator delete( command_pool, std::nothrow );
 }
@@ -1461,7 +1448,7 @@ void create_command_buffers( const Device*      device,
     command_buffer_allocate_info.sType =
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     command_buffer_allocate_info.pNext       = nullptr;
-    command_buffer_allocate_info.commandPool = command_pool->command_pool;
+    command_buffer_allocate_info.commandPool = command_pool->p.command_pool;
     command_buffer_allocate_info.level       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     command_buffer_allocate_info.commandBufferCount = count;
 
@@ -1494,7 +1481,7 @@ void free_command_buffers( const Device*      device,
     }
 
     vkFreeCommandBuffers( device->p.logical_device,
-                          command_pool->command_pool,
+                          command_pool->p.command_pool,
                           count,
                           buffers.data() );
 }
@@ -1885,7 +1872,7 @@ void create_descriptor_set_layout(
                 device->p.logical_device,
                 &descriptor_set_layout_create_info,
                 device->p.vulkan_allocator,
-                &descriptor_set_layout->descriptor_set_layouts[ set ] ) );
+                &descriptor_set_layout->p.descriptor_set_layouts[ set ] ) );
 
             descriptor_set_layout->descriptor_set_layout_count++;
         }
@@ -1900,10 +1887,10 @@ void destroy_descriptor_set_layout( const Device*        device,
 
     for ( u32 i = 0; i < layout->descriptor_set_layout_count; ++i )
     {
-        if ( layout->descriptor_set_layouts[ i ] )
+        if ( layout->p.descriptor_set_layouts[ i ] )
         {
             vkDestroyDescriptorSetLayout( device->p.logical_device,
-                                          layout->descriptor_set_layouts[ i ],
+                                          layout->p.descriptor_set_layouts[ i ],
                                           device->p.vulkan_allocator );
         }
     }
@@ -1947,7 +1934,7 @@ void create_compute_pipeline( const Device*       device,
     pipeline_layout_create_info.setLayoutCount =
         desc->descriptor_set_layout->descriptor_set_layout_count;
     pipeline_layout_create_info.pSetLayouts =
-        desc->descriptor_set_layout->descriptor_set_layouts;
+        desc->descriptor_set_layout->p.descriptor_set_layouts;
     pipeline_layout_create_info.pushConstantRangeCount = 1;
     pipeline_layout_create_info.pPushConstantRanges    = &push_constant_range;
 
@@ -2136,7 +2123,7 @@ void create_graphics_pipeline( const Device*       device,
     pipeline_layout_create_info.setLayoutCount =
         desc->descriptor_set_layout->descriptor_set_layout_count;
     pipeline_layout_create_info.pSetLayouts =
-        desc->descriptor_set_layout->descriptor_set_layouts;
+        desc->descriptor_set_layout->p.descriptor_set_layouts;
     pipeline_layout_create_info.pushConstantRangeCount = 1;
     pipeline_layout_create_info.pPushConstantRanges    = &push_constant_range;
 
@@ -2823,7 +2810,7 @@ void create_descriptor_set( const Device*            device,
     descriptor_set_allocate_info.descriptorPool     = device->p.descriptor_pool;
     descriptor_set_allocate_info.descriptorSetCount = 1;
     descriptor_set_allocate_info.pSetLayouts =
-        &desc->descriptor_set_layout->descriptor_set_layouts[ desc->set ];
+        &desc->descriptor_set_layout->p.descriptor_set_layouts[ desc->set ];
 
     VK_ASSERT( vkAllocateDescriptorSets( device->p.logical_device,
                                          &descriptor_set_allocate_info,
@@ -2925,7 +2912,9 @@ void update_descriptor_set( const Device*          device,
                             nullptr );
 }
 
-void create_ui_context( const UiDesc* desc, UiContext** p_context )
+void create_ui_context( CommandBuffer* cmd,
+                        const UiDesc*  desc,
+                        UiContext**    p_context )
 {
     FT_ASSERT( p_context );
 
@@ -2988,14 +2977,10 @@ void create_ui_context( const UiDesc* desc, UiContext** p_context )
     ImGui_ImplSDL2_InitForVulkan( ( SDL_Window* ) desc->window->handle );
     ImGui_ImplVulkan_Init( &init_info, desc->render_pass->p.render_pass );
 
-    begin_command_buffer( desc->device->cmd );
-    ImGui_ImplVulkan_CreateFontsTexture( desc->device->cmd->p.command_buffer );
-    end_command_buffer( desc->device->cmd );
-    QueueSubmitDesc queue_submit_desc {};
-    queue_submit_desc.command_buffer_count = 1;
-    queue_submit_desc.command_buffers      = desc->device->cmd;
-    queue_submit( desc->device->queue, &queue_submit_desc );
-    queue_wait_idle( desc->device->queue );
+    begin_command_buffer( cmd );
+    ImGui_ImplVulkan_CreateFontsTexture( cmd->p.command_buffer );
+    end_command_buffer( cmd );
+    immediate_submit( desc->queue, cmd );
 
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
@@ -3019,7 +3004,7 @@ void ui_begin_frame()
     ImGui::NewFrame();
 }
 
-void ui_end_frame( const CommandBuffer* cmd )
+void ui_end_frame( CommandBuffer* cmd )
 {
     ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(),

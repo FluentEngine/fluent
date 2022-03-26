@@ -1,8 +1,14 @@
 #pragma once
 
 #include <mutex>
+#ifdef VULKAN_BACKEND
 #include <volk.h>
 #include <vk_mem_alloc.h>
+#endif
+#ifdef D3D12_BACKEND
+#include <dxgi1_4.h>
+#include <d3d12.h>
+#endif
 #include "core/base.hpp"
 #include "math/math.hpp"
 #include "renderer/renderer_enums.hpp"
@@ -16,8 +22,10 @@ struct RenderPass;
 struct Buffer;
 struct StagingBuffer;
 struct Image;
+struct Queue;
+struct CommandBuffer;
+struct CommandPool;
 
-static constexpr u32 FLUENT_VULKAN_API_VERSION    = VK_API_VERSION_1_2;
 static constexpr u32 MAX_ATTACHMENTS_COUNT        = 10;
 static constexpr u32 MAX_PUSH_CONSTANT_RANGE      = 128;
 static constexpr u32 MAX_STAGE_COUNT              = 5;
@@ -25,6 +33,90 @@ static constexpr u32 MAX_VERTEX_BINDING_COUNT     = 15;
 static constexpr u32 MAX_VERTEX_ATTRIBUTE_COUNT   = 15;
 static constexpr u32 MAX_DESCRIPTOR_BINDING_COUNT = 15;
 static constexpr u32 MAX_SET_COUNT                = 10;
+
+struct RendererBackendDesc
+{
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        u32                    api_version = VK_API_VERSION_1_2;
+        VkAllocationCallbacks* vulkan_allocator;
+    } p;
+#endif
+};
+
+struct RendererBackend
+{
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkAllocationCallbacks*   vulkan_allocator;
+        VkInstance               instance;
+        VkDebugUtilsMessengerEXT debug_messenger;
+        VkPhysicalDevice         physical_device;
+        u32                      api_version;
+    } p;
+#endif
+#ifdef D3D12_BACKEND
+    struct
+    {
+        IDXGIFactory4* factory;
+    } p;
+#endif
+};
+
+struct DeviceDesc
+{
+    u32 frame_in_use_count;
+};
+
+struct Device
+{
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkAllocationCallbacks* vulkan_allocator;
+        VkInstance             instance;
+        VkPhysicalDevice       physical_device;
+        VkDevice               logical_device;
+        VmaAllocator           memory_allocator;
+        VkDescriptorPool       descriptor_pool;
+    } p;
+#endif
+#ifdef D3D12_BACKEND
+    struct
+    {
+        ID3D12Device* device;
+    } p;
+#endif
+};
+
+struct CommandPoolDesc
+{
+    Queue* queue;
+};
+
+struct CommandPool
+{
+    Queue* queue;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkCommandPool command_pool;
+    } p;
+#endif
+};
+
+struct CommandBuffer
+{
+    Queue* queue;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkCommandBuffer command_buffer;
+    } p;
+#endif
+};
 
 struct QueueDesc
 {
@@ -39,6 +131,12 @@ struct Queue
     struct
     {
         VkQueue queue;
+    } p;
+#endif
+#ifdef D3D12_BACKEND
+    struct
+    {
+        ID3D12CommandQueue* queue;
     } p;
 #endif
 };
@@ -175,28 +273,6 @@ struct Swapchain
 #endif
 };
 
-struct CommandPoolDesc
-{
-    Queue* queue;
-};
-
-struct CommandPool
-{
-    Queue*        queue;
-    VkCommandPool command_pool;
-};
-
-struct CommandBuffer
-{
-    Queue* queue;
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkCommandBuffer command_buffer;
-    } p;
-#endif
-};
-
 struct QueueSubmitDesc
 {
     u32                  wait_semaphore_count;
@@ -302,10 +378,15 @@ struct Shader
 
 struct DescriptorSetLayout
 {
-    u32                   shader_count;
-    Shader**              shaders;
-    u32                   descriptor_set_layout_count = 0;
-    VkDescriptorSetLayout descriptor_set_layouts[ MAX_SET_COUNT ];
+    u32      shader_count;
+    Shader** shaders;
+    u32      descriptor_set_layout_count = 0;
+#ifdef VULKAN_BACKEND
+    struct
+    {
+        VkDescriptorSetLayout descriptor_set_layouts[ MAX_SET_COUNT ];
+    } p;
+#endif
 };
 
 struct VertexBindingDesc
@@ -369,50 +450,6 @@ struct Pipeline
 #endif
 };
 
-struct RendererBackendDesc
-{
-    struct
-    {
-        VkAllocationCallbacks* vulkan_allocator;
-    } p;
-};
-
-struct RendererBackend
-{
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkAllocationCallbacks*   vulkan_allocator;
-        VkInstance               instance;
-        VkDebugUtilsMessengerEXT debug_messenger;
-        VkPhysicalDevice         physical_device;
-    } p;
-#endif
-};
-
-struct DeviceDesc
-{
-    u32 frame_in_use_count;
-};
-
-struct Device
-{
-    Queue*         queue;
-    CommandPool*   command_pool;
-    CommandBuffer* cmd;
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkAllocationCallbacks* vulkan_allocator;
-        VkInstance             instance;
-        VkPhysicalDevice       physical_device;
-        VkDevice               logical_device;
-        VmaAllocator           memory_allocator;
-        VkDescriptorPool       descriptor_pool;
-    } p;
-#endif
-};
-
 struct DescriptorSetDesc
 {
     u32                  set = 0;
@@ -453,7 +490,9 @@ struct DescriptorWrite
 };
 
 // TODO:
+#ifdef VULKAN_BACKEND
 using DrawIndexedIndirectCommand = VkDrawIndexedIndirectCommand;
+#endif
 
 struct UiDesc
 {
@@ -701,9 +740,11 @@ void update_descriptor_set( const Device*          device,
                             u32                    count,
                             const DescriptorWrite* writes );
 
-void create_ui_context( const UiDesc* desc, UiContext** ui_context );
+void create_ui_context( CommandBuffer* cmd,
+                        const UiDesc*  desc,
+                        UiContext**    ui_context );
 void destroy_ui_context( const Device* device, UiContext* context );
 void ui_begin_frame();
-void ui_end_frame( const CommandBuffer* cmd );
+void ui_end_frame( CommandBuffer* cmd );
 
 } // namespace fluent

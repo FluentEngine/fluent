@@ -17,6 +17,13 @@ endif()
 
 set(RENDERER_BACKEND "Vulkan")
 
+if ("${RENDERER_BACKEND}" STREQUAL "Vulkan")
+    set(compile_definitions VULKAN_BACKEND)
+elseif("${RENDERER_BACKEND}" STREQUAL "D3D12")
+    set(compile_definitions D3D12_BACKEND)
+    set(libs d3d12 dxgi)
+endif()
+
 set(FLUENT_BUILD_TESTS ON)
 
 set(BUILD_SHARED_LIBS OFF)
@@ -46,7 +53,8 @@ set(libs
     stb_image
     glm
     imgui
-    entt)
+    entt
+    ${libs})
 
 set(src_dir ${CMAKE_CURRENT_SOURCE_DIR}/sources)
 
@@ -68,6 +76,7 @@ set(renderer
     ${src_dir}/renderer/shader_reflection.cpp
     ${src_dir}/renderer/renderer_backend.hpp
     ${src_dir}/renderer/vulkan_backend.cpp
+    ${src_dir}/renderer/d3d12_backend.cpp
     ${src_dir}/renderer/resource_loader.hpp
     ${src_dir}/renderer/resource_loader.cpp)
 
@@ -106,12 +115,6 @@ target_include_directories(${target}
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
 
 target_link_libraries(${target} PUBLIC ${libs})
-
-if ("${RENDERER_BACKEND}" STREQUAL "Vulkan")
-    set(compile_definitions VULKAN_BACKEND)
-elseif("${RENDERER_BACKEND}" STREQUAL "D3D12")
-    set(compile_definitions D3D12_BACKEND)
-endif()
 
 if (FLUENT_DEBUG_BUILD)
     set(compile_definitions FLUENT_DEBUG ${compile_definitions})

@@ -1,11 +1,9 @@
 #pragma once
 
-#include <volk.h>
 #include <tinyimageformat_base.h>
 
 namespace fluent
 {
-
 #define BIT( x ) 1 << x
 
 enum class QueueType : u8

@@ -30,7 +30,7 @@ Cpp11BracedListStyle: 'false'
 DerivePointerAlignment: 'true'
 FixNamespaceComments: 'true'
 IndentCaseLabels: 'false'
-IndentPPDirectives: AfterHash
+IndentPPDirectives: None
 IndentWidth: '4'
 KeepEmptyLinesAtTheStartOfBlocks: 'false'
 Language: Cpp

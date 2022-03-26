@@ -1,9 +1,11 @@
+#ifdef VULKAN_BACKEND
+#include <volk.h>
+#endif
 #include <spirv_reflect.h>
 #include "renderer/shader_reflection.hpp"
 
 namespace fluent
 {
-
 ShaderType get_type_by_reflection( const SpvReflectTypeDescription& type )
 {
     Format format = Format::eUndefined;
@@ -77,6 +79,7 @@ void recursive_uniform_visit( std::vector<ShaderType>& uniform_variables,
     }
 }
 
+#ifdef VULKAN_BACKEND
 DescriptorType to_desctriptor_type( VkDescriptorType descriptor_type )
 {
     switch ( descriptor_type )
@@ -148,4 +151,6 @@ ReflectionData reflect( u32 byte_code_size, const u32* byte_code )
 
     return result;
 }
+#endif
+
 } // namespace fluent
