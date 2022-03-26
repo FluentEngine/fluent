@@ -2227,6 +2227,8 @@ void cmd_end_render_pass( const CommandBuffer* cmd )
 }
 
 void cmd_barrier( const CommandBuffer* cmd,
+                  u32                  memory_barriers_count,
+                  const MemoryBarrier* memory_barrier,
                   u32                  buffer_barriers_count,
                   const BufferBarrier* buffer_barriers,
                   u32                  image_barriers_count,
@@ -2532,7 +2534,13 @@ void cmd_blit_image( const CommandBuffer* cmd,
 
     if ( barrier_count > 0 )
     {
-        cmd_barrier( cmd, 0, nullptr, barrier_count, &barriers[ index ] );
+        cmd_barrier( cmd,
+                     0,
+                     nullptr,
+                     0,
+                     nullptr,
+                     barrier_count,
+                     &barriers[ index ] );
     }
 
     auto src_layers = get_image_subresource_layers( src );

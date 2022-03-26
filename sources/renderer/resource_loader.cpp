@@ -15,7 +15,7 @@ static b32 need_staging( Buffer* buffer )
               buffer->memory_usage == MemoryUsage::eCpuToGpu );
 }
 
-void ResourceLoader::init( const Device* device )
+void ResourceLoader::init( const Device* device, u64 staging_buffer_size )
 {
     m_device = device;
 
@@ -31,7 +31,7 @@ void ResourceLoader::init( const Device* device )
 
     BufferDesc staging_buffer_desc {};
     staging_buffer_desc.memory_usage = MemoryUsage::eCpuToGpu;
-    staging_buffer_desc.size         = STAGING_BUFFER_SIZE;
+    staging_buffer_desc.size         = staging_buffer_size;
     m_staging_buffer.offset          = 0;
     create_buffer( m_device, &staging_buffer_desc, &m_staging_buffer.buffer );
     map_memory( m_device, m_staging_buffer.buffer );
@@ -138,14 +138,14 @@ void ResourceLoader::upload_image( Image* image, u64 size, const void* data )
     barrier.dst_queue = m_queue;
     barrier.old_state = ResourceState::eUndefined;
     barrier.new_state = ResourceState::eTransferDst;
-    cmd_barrier( m_cmd, 0, nullptr, 1, &barrier );
+    cmd_barrier( m_cmd, 0, nullptr, 0, nullptr, 1, &barrier );
     cmd_copy_buffer_to_image( m_cmd,
                               m_staging_buffer.buffer,
                               m_staging_buffer.offset,
                               image );
     barrier.old_state = ResourceState::eTransferDst;
     barrier.new_state = ResourceState::eShaderReadOnly;
-    cmd_barrier( m_cmd, 0, nullptr, 1, &barrier );
+    cmd_barrier( m_cmd, 0, nullptr, 0, nullptr, 1, &barrier );
 
     m_staging_buffer.offset += size;
 

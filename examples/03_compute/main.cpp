@@ -57,7 +57,7 @@ void create_output_texture()
     CommandBuffer* cmd = command_buffers[ 0 ];
 
     begin_command_buffer( cmd );
-    cmd_barrier( cmd, 0, nullptr, 1, &image_barrier );
+    cmd_barrier( cmd, 0, nullptr, 0, nullptr, 1, &image_barrier );
     end_command_buffer( cmd );
     immediate_submit( queue, cmd );
 }
@@ -163,7 +163,7 @@ void update_sample( CommandBuffer* cmd, f32 delta_time )
     to_present_barrier.old_state = ResourceState::eTransferDst;
     to_present_barrier.new_state = ResourceState::ePresent;
 
-    cmd_barrier( cmd, 0, nullptr, 1, &to_present_barrier );
+    cmd_barrier( cmd, 0, nullptr, 0, nullptr, 1, &to_present_barrier );
 
     ImageBarrier to_storage_barrier {};
     to_storage_barrier.src_queue = queue;
@@ -172,7 +172,7 @@ void update_sample( CommandBuffer* cmd, f32 delta_time )
     to_storage_barrier.old_state = ResourceState::eTransferSrc;
     to_storage_barrier.new_state = ResourceState::eGeneral;
 
-    cmd_barrier( cmd, 0, nullptr, 1, &to_storage_barrier );
+    cmd_barrier( cmd, 0, nullptr, 0, nullptr, 1, &to_storage_barrier );
 
     end_command_buffer( cmd );
 

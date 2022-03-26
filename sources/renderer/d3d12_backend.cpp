@@ -350,6 +350,8 @@ void cmd_begin_render_pass( const CommandBuffer*       cmd,
 void cmd_end_render_pass( const CommandBuffer* cmd ) {}
 
 void cmd_barrier( const CommandBuffer* cmd,
+                  u32                  memory_barriers_count,
+                  const MemoryBarrier* memory_barrier,
                   u32                  buffer_barriers_count,
                   const BufferBarrier* buffer_barriers,
                   u32                  image_barriers_count,

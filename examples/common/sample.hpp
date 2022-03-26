@@ -90,7 +90,7 @@ void create_depth_image( u32 width, u32 height )
     barrier.dst_queue = queue;
 
     begin_command_buffer( command_buffers[ 0 ] );
-    cmd_barrier( command_buffers[ 0 ], 0, nullptr, 1, &barrier );
+    cmd_barrier( command_buffers[ 0 ], 0, nullptr, 0, nullptr, 1, &barrier );
     end_command_buffer( command_buffers[ 0 ] );
     immediate_submit( queue, command_buffers[ 0 ] );
 }
@@ -157,7 +157,7 @@ void on_init()
         create_render_pass( device, &render_pass_desc, &render_passes[ i ] );
     }
 
-    ResourceLoader::init( device );
+    ResourceLoader::init( device, 25 * 1024 * 1024 * 8 );
 
     UiDesc ui_desc {};
     ui_desc.backend            = backend;
@@ -233,7 +233,7 @@ u32 begin_frame()
     to_clear_barrier.old_state = ResourceState::eUndefined;
     to_clear_barrier.new_state = ResourceState::eColorAttachment;
 
-    cmd_barrier( cmd, 0, nullptr, 1, &to_clear_barrier );
+    cmd_barrier( cmd, 0, nullptr, 0, nullptr, 1, &to_clear_barrier );
 
     RenderPassBeginDesc render_pass_begin_desc {};
     render_pass_begin_desc.render_pass = render_passes[ image_index ];
@@ -292,7 +292,7 @@ void end_frame( u32 image_index )
     to_present_barrier.old_state = ResourceState::eColorAttachment;
     to_present_barrier.new_state = ResourceState::ePresent;
 
-    cmd_barrier( cmd, 0, nullptr, 1, &to_present_barrier );
+    cmd_barrier( cmd, 0, nullptr, 0, nullptr, 1, &to_present_barrier );
 
     end_command_buffer( cmd );
 

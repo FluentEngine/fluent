@@ -370,6 +370,11 @@ struct RenderPassBeginDesc
     ClearValue        clear_values[ MAX_ATTACHMENTS_COUNT + 1 ];
 };
 
+// TODO:
+struct MemoryBarrier
+{
+};
+
 struct BufferBarrier
 {
     ResourceState old_state;
@@ -567,7 +572,6 @@ void create_queue( const Device* device, const QueueDesc* desc, Queue** queue );
 void destroy_queue( Queue* queue );
 void queue_wait_idle( const Queue* queue );
 void queue_submit( const Queue* queue, const QueueSubmitDesc* desc );
-// TODO: Remove it
 void immediate_submit( const Queue* queue, const CommandBuffer* cmd );
 void queue_present( const Queue* queue, const QueuePresentDesc* desc );
 
@@ -637,6 +641,7 @@ void create_descriptor_set_layout(
     u32                   shader_count,
     Shader**              shaders,
     DescriptorSetLayout** descriptor_set_layout );
+
 void destroy_descriptor_set_layout( const Device*        device,
                                     DescriptorSetLayout* layout );
 
@@ -656,6 +661,8 @@ void cmd_begin_render_pass( const CommandBuffer*       cmd,
 void cmd_end_render_pass( const CommandBuffer* cmd );
 
 void cmd_barrier( const CommandBuffer* cmd,
+                  u32                  memory_barriers_count,
+                  const MemoryBarrier* memory_barrier,
                   u32                  buffer_barriers_count,
                   const BufferBarrier* buffer_barriers,
                   u32                  image_barriers_count,

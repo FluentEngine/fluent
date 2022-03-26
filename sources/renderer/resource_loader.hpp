@@ -13,8 +13,6 @@ class ResourceLoader
     };
 
 private:
-    static constexpr u64 STAGING_BUFFER_SIZE = 25 * 1024 * 1024 * 8;
-
     static const Device*  m_device;
     static Queue*         m_queue;
     static CommandPool*   m_command_pool;
@@ -23,7 +21,7 @@ private:
     static StagingBuffer  m_staging_buffer;
 
 public:
-    static void init( const Device* m_device );
+    static void init( const Device* m_device, u64 staging_buffer_size );
     static void shutdown();
 
     static void begin_recording();
