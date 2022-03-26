@@ -10,10 +10,10 @@ project(${target} CXX)
 set(CMAKE_CXX_STANDARD 17)
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-	set(FLUENT_DEBUG_BUILD ON)
+    set(FLUENT_DEBUG_BUILD ON)
 endif()
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-	set(FLUENT_DEBUG_BUILD OFF)
+    set(FLUENT_DEBUG_BUILD OFF)
 endif()
 
 set(FLUENT_BUILD_TESTS ON)
@@ -21,9 +21,9 @@ set(FLUENT_BUILD_TESTS ON)
 find_package(assimp REQUIRED)
 
 if (UNIX AND NOT APPLE)
-	set(assimp_lib assimp)
+    set(assimp_lib assimp)
 else()
-	set(assimp_lib assimp::assimp)
+    set(assimp_lib assimp::assimp)
 endif()
 
 set(BUILD_SHARED_LIBS OFF)
@@ -40,88 +40,88 @@ add_subdirectory(third_party/imgui)
 add_subdirectory(third_party/entt)
 
 set(third_party_includes
-	${CMAKE_CURRENT_SOURCE_DIR}/third_party/vk_enum_string_helper)
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/vk_enum_string_helper)
 
 set(libs
-	spdlog
-	volk
-	vma_allocator
-	SDL2::SDL2-static
-	tiny_image_format
-	spirv_reflect
-	tinyddsloader
-	stb_image
-	glm
-	${assimp_lib}
-	imgui
-	entt)
+    spdlog
+    volk
+    vma_allocator
+    SDL2::SDL2-static
+    tiny_image_format
+    spirv_reflect
+    tinyddsloader
+    stb_image
+    glm
+    ${assimp_lib}
+    imgui
+    entt)
 
 set(src_dir ${CMAKE_CURRENT_SOURCE_DIR}/sources)
 
 set(core
-	${src_dir}/core/log.hpp
-	${src_dir}/core/log.cpp
-	${src_dir}/core/window.hpp
-	${src_dir}/core/window.cpp
-	${src_dir}/core/input.hpp
-	${src_dir}/core/input.cpp
-	${src_dir}/core/application.hpp
-	${src_dir}/core/application.cpp
-	${src_dir}/core/camera.hpp
-	${src_dir}/core/camera.cpp
-	)
+    ${src_dir}/core/log.hpp
+    ${src_dir}/core/log.cpp
+    ${src_dir}/core/window.hpp
+    ${src_dir}/core/window.cpp
+    ${src_dir}/core/input.hpp
+    ${src_dir}/core/input.cpp
+    ${src_dir}/core/application.hpp
+    ${src_dir}/core/application.cpp
+    ${src_dir}/core/camera.hpp
+    ${src_dir}/core/camera.cpp
+    )
 
 set(renderer
-	${src_dir}/renderer/shader_reflection.hpp
-	${src_dir}/renderer/shader_reflection.cpp
-	${src_dir}/renderer/renderer_backend.hpp
-	${src_dir}/renderer/renderer_backend.cpp
-	${src_dir}/renderer/resource_loader.hpp
-	${src_dir}/renderer/resource_loader.cpp)
+    ${src_dir}/renderer/shader_reflection.hpp
+    ${src_dir}/renderer/shader_reflection.cpp
+    ${src_dir}/renderer/renderer_backend.hpp
+    ${src_dir}/renderer/renderer_backend.cpp
+    ${src_dir}/renderer/resource_loader.hpp
+    ${src_dir}/renderer/resource_loader.cpp)
 
 set(util
-	${src_dir}/utils/file_loader.hpp
-	${src_dir}/utils/file_loader.cpp
-	${src_dir}/utils/image_loader.hpp
-	${src_dir}/utils/image_loader.cpp
-	${src_dir}/utils/file_system.hpp
-	${src_dir}/utils/file_system.cpp)
+    ${src_dir}/utils/file_loader.hpp
+    ${src_dir}/utils/file_loader.cpp
+    ${src_dir}/utils/image_loader.hpp
+    ${src_dir}/utils/image_loader.cpp
+    ${src_dir}/utils/file_system.hpp
+    ${src_dir}/utils/file_system.cpp)
 
 set(math
-	${src_dir}/math/math.hpp
-	${src_dir}/math/math.cpp)
+    ${src_dir}/math/math.hpp
+    ${src_dir}/math/math.cpp)
 
 set(sources 
-	${core} 
-	${renderer}
-	${resource_manager}
-	${util} 
-	${math}
-	${scene})
+    ${core}
+    ${renderer}
+    ${resource_manager}
+    ${util}
+    ${math}
+    ${scene})
 
 set(includes
-	${third_party_includes}
-	${CMAKE_CURRENT_SOURCE_DIR}/sources)
+    ${third_party_includes}
+    ${CMAKE_CURRENT_SOURCE_DIR}/sources)
 
 add_library(${target} ${sources})
 
 target_include_directories(${target}
-	PUBLIC
+    PUBLIC
     ${includes}
 
-	INTERFACE
-	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-	$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
+    INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
 
 target_link_libraries(${target} PUBLIC ${libs})
 
 if (FLUENT_DEBUG_BUILD)
-	set(compile_definitions FLUENT_DEBUG)
-	if (MSVC)
-		set(compile_options /DEBUG)
-	elseif (UNIX)
-		set(compile_options -g)
-	endif()
+    set(compile_definitions FLUENT_DEBUG)
+    if (MSVC)
+        set(compile_options /DEBUG)
+    elseif (UNIX)
+        set(compile_options -g)
+    endif()
 else()
 	if (MSVC)
 		# TODO: write same for windows

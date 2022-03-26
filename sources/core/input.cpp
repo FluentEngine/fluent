@@ -31,7 +31,7 @@ void update_input_system( InputSystem* input_system )
                  static_cast<size_t>( Button::Last ) *
                      sizeof( input_system->buttons[ 0 ] ) );
 
-	input_system->mouse_scroll = 0;
+    input_system->mouse_scroll = 0;
 }
 
 f32 get_mouse_pos_x( const InputSystem* input_system )
@@ -66,12 +66,12 @@ b32 is_button_pressed( const InputSystem* input_system, ButtonCode button )
 
 bool is_mouse_scrolled_up( const InputSystem* input_system )
 {
-	return input_system->mouse_scroll == 1;
+    return input_system->mouse_scroll == 1;
 }
 
 bool is_mouse_scrolled_down( const InputSystem* input_system )
 {
-	return input_system->mouse_scroll == -1;
+    return input_system->mouse_scroll == -1;
 }
 
 } // namespace fluent

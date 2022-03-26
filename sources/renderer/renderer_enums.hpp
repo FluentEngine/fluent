@@ -362,12 +362,12 @@ enum class Filter
 
 enum class PrimitiveTopology
 {
-	ePointList,
-	eLineList,
-	eLineStrip,
-	eTriangleList,
-	eTriangleStrip,
-	eTriangleFan
+    ePointList,
+    eLineList,
+    eLineStrip,
+    eTriangleList,
+    eTriangleStrip,
+    eTriangleFan
 };
 
 } // namespace fluent

@@ -295,7 +295,7 @@ struct PipelineDesc
 {
     VertexLayout         vertex_layout;
     RasterizerStateDesc  rasterizer_desc;
-	PrimitiveTopology    topology = PrimitiveTopology::eTriangleList;
+    PrimitiveTopology    topology = PrimitiveTopology::eTriangleList;
     DepthStateDesc       depth_state_desc;
     u32                  shader_count = 0;
     Shader*              shaders[ MAX_STAGE_COUNT ];

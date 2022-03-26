@@ -230,19 +230,19 @@ VkPolygonMode to_vk_polygon_mode( PolygonMode mode )
 
 VkPrimitiveTopology to_vk_primitive_topology( PrimitiveTopology topology )
 {
-	switch ( topology )
-	{
-	case PrimitiveTopology::eLineList: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-	case PrimitiveTopology::eLineStrip: return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
-	case PrimitiveTopology::ePointList: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-	case PrimitiveTopology::eTriangleFan:
-		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
-	case PrimitiveTopology::eTriangleStrip:
-		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-	case PrimitiveTopology::eTriangleList:
-		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	default: FT_ASSERT( false ); return VkPrimitiveTopology( -1 );
-	}
+    switch ( topology )
+    {
+    case PrimitiveTopology::eLineList: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    case PrimitiveTopology::eLineStrip: return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+    case PrimitiveTopology::ePointList: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+    case PrimitiveTopology::eTriangleFan:
+        return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+    case PrimitiveTopology::eTriangleStrip:
+        return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    case PrimitiveTopology::eTriangleList:
+        return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    default: FT_ASSERT( false ); return VkPrimitiveTopology( -1 );
+    }
 }
 
 static inline VkAccessFlags determine_access_flags(
@@ -844,10 +844,18 @@ void create_device( const RendererBackend* backend,
             break;
     }
 
-    static const u32 device_extension_count                      = 2;
-    const char*      device_extensions[ device_extension_count ] = {
+#ifndef __APPLE__
+    static const u32 device_extension_count = 2;
+#else
+    static const u32 device_extension_count = 3;
+#endif
+
+    const char* device_extensions[ device_extension_count ] = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME
+        VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+#ifdef __APPLE__
+        "VK_KHR_portability_subset"
+#endif
     };
 
     // TODO: check support
@@ -1168,20 +1176,20 @@ void configure_swapchain( const Device*        device,
 
     swapchain->present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 
-	VkPresentModeKHR preffered_mode =
-	    desc->vsync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR;
+    VkPresentModeKHR preffered_mode =
+        desc->vsync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR;
 
-	for ( u32 i = 0; i < present_mode_count; ++i )
-	{
-		if ( present_modes[ i ] == preffered_mode )
+    for ( u32 i = 0; i < present_mode_count; ++i )
+    {
+        if ( present_modes[ i ] == preffered_mode )
         {
-			swapchain->present_mode = preffered_mode;
-			break;
+            swapchain->present_mode = preffered_mode;
+            break;
         }
-	}
+    }
 
-	FT_INFO( "Swapchain present mode: {}",
-	         string_VkPresentModeKHR( swapchain->present_mode ) );
+    FT_INFO( "Swapchain present mode: {}",
+             string_VkPresentModeKHR( swapchain->present_mode ) );
 
     // determine present image count
     VkSurfaceCapabilitiesKHR surface_capabilities {};
@@ -1215,22 +1223,22 @@ void configure_swapchain( const Device*        device,
                                           &surface_format_count,
                                           surface_formats.data() );
 
-	VkSurfaceFormatKHR surface_format   = surface_formats[ 0 ];
-	VkFormat           preffered_format = to_vk_format( desc->format );
+    VkSurfaceFormatKHR surface_format   = surface_formats[ 0 ];
+    VkFormat           preffered_format = to_vk_format( desc->format );
 
     for ( u32 i = 0; i < surface_format_count; ++i )
     {
-		if ( surface_formats[ i ].format == preffered_format )
+        if ( surface_formats[ i ].format == preffered_format )
             surface_format = surface_formats[ i ];
     }
 
     swapchain->format      = from_vk_format( surface_format.format );
     swapchain->color_space = surface_format.colorSpace;
 
-	FT_INFO( "Swapchain surface format: {}",
-	         string_VkFormat( surface_format.format ) );
-	FT_INFO( "Swapchain color space: {}",
-	         string_VkColorSpaceKHR( surface_format.colorSpace ) );
+    FT_INFO( "Swapchain surface format: {}",
+             string_VkFormat( surface_format.format ) );
+    FT_INFO( "Swapchain color space: {}",
+             string_VkColorSpaceKHR( surface_format.colorSpace ) );
 
     /// fins swapchain pretransform
     VkSurfaceTransformFlagBitsKHR pre_transform;
@@ -1250,8 +1258,8 @@ void create_configured_swapchain( const Device* device,
                                   Swapchain*    swapchain,
                                   b32           resize )
 {
-	// destroy old resources if it is resize
-	if ( resize )
+    // destroy old resources if it is resize
+    if ( resize )
     {
         FT_ASSERT( swapchain->image_count );
         for ( u32 i = 0; i < swapchain->image_count; ++i )
@@ -1355,7 +1363,7 @@ void create_swapchain( const Device*        device,
     Swapchain* swapchain = *p_swapchain;
 
     configure_swapchain( device, swapchain, desc );
-	create_configured_swapchain( device, swapchain, false );
+    create_configured_swapchain( device, swapchain, false );
 }
 
 void resize_swapchain( const Device* device,
@@ -1365,14 +1373,14 @@ void resize_swapchain( const Device* device,
 {
     swapchain->width  = width;
     swapchain->height = height;
-	create_configured_swapchain( device, swapchain, true );
+    create_configured_swapchain( device, swapchain, true );
 }
 
 void destroy_swapchain( const Device* device, Swapchain* swapchain )
 {
-	FT_ASSERT( swapchain );
+    FT_ASSERT( swapchain );
 
-	FT_ASSERT( swapchain->image_count );
+    FT_ASSERT( swapchain->image_count );
     for ( u32 i = 0; i < swapchain->image_count; ++i )
     {
         FT_ASSERT( swapchain->images[ i ]->image_view );
@@ -1383,13 +1391,13 @@ void destroy_swapchain( const Device* device, Swapchain* swapchain )
     }
     operator delete[]( swapchain->images, std::nothrow );
 
-	FT_ASSERT( swapchain->swapchain );
-	vkDestroySwapchainKHR( device->logical_device,
+    FT_ASSERT( swapchain->swapchain );
+    vkDestroySwapchainKHR( device->logical_device,
                            swapchain->swapchain,
-	                       device->vulkan_allocator );
+                           device->vulkan_allocator );
 
-	FT_ASSERT( swapchain->surface );
-	vkDestroySurfaceKHR( device->instance,
+    FT_ASSERT( swapchain->surface );
+    vkDestroySurfaceKHR( device->instance,
                          swapchain->surface,
                          device->vulkan_allocator );
 
@@ -1988,8 +1996,8 @@ void create_graphics_pipeline( const Device*       device,
     VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info {};
     input_assembly_state_create_info.sType =
         VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	input_assembly_state_create_info.topology =
-	    to_vk_primitive_topology( desc->topology );
+    input_assembly_state_create_info.topology =
+        to_vk_primitive_topology( desc->topology );
     input_assembly_state_create_info.primitiveRestartEnable = false;
 
     // Dynamic states

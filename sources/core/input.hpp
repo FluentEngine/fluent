@@ -15,7 +15,7 @@ struct InputSystem
     u32 buttons[ Button::Last ];
     f32 mouse_position[ 2 ];
     f32 mouse_offset[ 2 ];
-	i32 mouse_scroll = 0;
+    i32 mouse_scroll = 0;
 };
 
 void init_input_system( InputSystem* input_system );
