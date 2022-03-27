@@ -136,7 +136,6 @@ void on_init()
     swapchain_desc.min_image_count = FRAME_COUNT;
 
     create_swapchain( device, &swapchain_desc, &swapchain );
-#ifdef VULKAN_BACKEND
     create_depth_image( swapchain->width, swapchain->height );
 
     RenderPassDesc render_pass_desc {};
@@ -172,12 +171,10 @@ void on_init()
     create_ui_context( command_buffers[ 0 ], &ui_desc, &ui );
 
     init_sample();
-#endif
 }
 
 void on_resize( u32 width, u32 height )
 {
-#ifdef VULKAN_BACKEND
     queue_wait_idle( queue );
     destroy_image( device, depth_image );
 
@@ -202,12 +199,10 @@ void on_resize( u32 width, u32 height )
     }
 
     resize_sample( width, height );
-#endif
 }
 
 u32 begin_frame()
 {
-#ifdef VULKAN_BACKEND
     if ( !command_buffers_recorded[ frame_index ] )
     {
         wait_for_fences( device, 1, &in_flight_fences[ frame_index ] );
@@ -253,14 +248,10 @@ u32 begin_frame()
     cmd_set_scissor( cmd, 0, 0, swapchain->width, swapchain->height );
 
     return image_index;
-#else
-    return 0;
-#endif
 }
 
 void end_frame( u32 image_index )
 {
-#ifdef VULKAN_BACKEND
     auto& cmd = command_buffers[ frame_index ];
 
     ui_begin_frame();
@@ -320,22 +311,16 @@ void end_frame( u32 image_index )
 
     command_buffers_recorded[ frame_index ] = false;
     frame_index                             = ( frame_index + 1 ) % FRAME_COUNT;
-#endif
 }
 
 void on_update( f32 delta_time )
 {
     auto& cmd = command_buffers[ frame_index ];
-#ifdef VULKAN_BACKEND
     update_sample( cmd, delta_time );
-#endif
-#ifdef D3D12_BACKEND
-#endif
 }
 
 void on_shutdown()
 {
-#ifdef VULKAN_BACKEND
     queue_wait_idle( queue );
     shutdown_sample();
     destroy_ui_context( device, ui );
@@ -346,7 +331,6 @@ void on_shutdown()
         destroy_render_pass( device, render_passes[ i ] );
     }
     delete[] render_passes;
-#endif
     destroy_swapchain( device, swapchain );
     for ( u32 i = 0; i < FRAME_COUNT; ++i )
     {

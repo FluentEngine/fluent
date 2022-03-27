@@ -8,6 +8,7 @@
 #ifdef D3D12_BACKEND
 #include <dxgi1_4.h>
 #include <d3d12.h>
+#include <D3D12MemAlloc.h>
 #endif
 #include "core/base.hpp"
 #include "math/math.hpp"
@@ -60,6 +61,7 @@ struct RendererBackend
 #ifdef D3D12_BACKEND
     struct
     {
+        ID3D12Debug*   debug_controller;
         IDXGIFactory4* factory;
     } p;
 #endif
@@ -87,8 +89,13 @@ struct Device
     struct
     {
         IDXGIFactory4*        factory;
+        IDXGIAdapter*         adapter;
         ID3D12Device*         device;
+        D3D12MA::Allocator*   allocator;
         ID3D12DescriptorHeap* rtv_heap;
+        u64                   rtv_descriptor_size;
+        ID3D12DescriptorHeap* dsv_heap;
+        u64                   dsv_descritptor_size;
     } p;
 #endif
 };
@@ -127,6 +134,7 @@ struct CommandBuffer
 #ifdef D3D12_BACKEND
     struct
     {
+        ID3D12CommandAllocator*    command_allocator;
         ID3D12GraphicsCommandList* command_list;
     } p;
 #endif
@@ -265,6 +273,12 @@ struct Buffer
     {
         VkBuffer      buffer;
         VmaAllocation allocation;
+    } p;
+#endif
+#ifdef D3D12_BACKEND
+    struct
+    {
+        ID3D12Resource* buffer;
     } p;
 #endif
 };

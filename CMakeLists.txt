@@ -15,21 +15,35 @@ elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
     set(FLUENT_DEBUG_BUILD OFF)
 endif()
 
-set(RENDERER_BACKEND "Vulkan")
+set(RENDERER_BACKEND_VULKAN False)
+set(RENDERER_BACKEND_D3D12 False)
 
 if ("${RENDERER_BACKEND}" STREQUAL "Vulkan")
+    set(RENDERER_BACKEND_VULKAN True)
     set(compile_definitions VULKAN_BACKEND)
 elseif("${RENDERER_BACKEND}" STREQUAL "D3D12")
-    set(compile_definitions D3D12_BACKEND)
-    set(libs d3d12 dxgi)
+    set(RENDERER_BACKEND_D3D12 True)
+else()
+    set(RENDERER_BACKEND_VULKAN True)
 endif()
 
 set(FLUENT_BUILD_TESTS ON)
 
 set(BUILD_SHARED_LIBS OFF)
+
+
+if (RENDERER_BACKEND_VULKAN)
+    add_subdirectory(third_party/volk)
+    add_subdirectory(third_party/vk_mem_alloc)
+    set(third_party_includes
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/vk_enum_string_helper)
+    set(libs volk vma_allocator)
+elseif (RENDERER_BACKEND_D3D12)
+    add_subdirectory(third_party/D3D12MemoryAllocator)
+    set(libs d3d12 dxgi D3D12MemoryAllocator)
+endif()
+
 add_subdirectory(third_party/spdlog)
-add_subdirectory(third_party/volk)
-add_subdirectory(third_party/vk_mem_alloc)
 add_subdirectory(third_party/tiny_image_format)
 add_subdirectory(third_party/spirv_reflect)
 add_subdirectory(third_party/tinyddsloader)
@@ -39,13 +53,8 @@ add_subdirectory(third_party/glm)
 add_subdirectory(third_party/imgui)
 add_subdirectory(third_party/entt)
 
-set(third_party_includes
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/vk_enum_string_helper)
-
 set(libs
     spdlog
-    volk
-    vma_allocator
     SDL2::SDL2-static
     tiny_image_format
     spirv_reflect
@@ -115,6 +124,12 @@ target_include_directories(${target}
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
 
 target_link_libraries(${target} PUBLIC ${libs})
+
+if (RENDERER_BACKEND_VULKAN)
+    set(compile_definitions VULKAN_BACKEND)
+elseif(RENDERER_BACKEND_D3D12)
+    set(compile_definitions D3D12_BACKEND)
+endif()
 
 if (FLUENT_DEBUG_BUILD)
     set(compile_definitions FLUENT_DEBUG ${compile_definitions})

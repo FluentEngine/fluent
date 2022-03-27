@@ -45,11 +45,9 @@ void create_renderer_backend( const RendererBackendDesc* desc,
     *p_backend               = new ( std::nothrow ) RendererBackend {};
     RendererBackend* backend = *p_backend;
 #ifdef FLUENT_DEBUG
-    ID3D12Debug* debug_controller;
-    D3D12_ASSERT( D3D12GetDebugInterface( IID_PPV_ARGS( &debug_controller ) ) );
-    debug_controller->EnableDebugLayer();
-    debug_controller->Release();
-    debug_controller = nullptr;
+    D3D12_ASSERT( D3D12GetDebugInterface(
+        IID_PPV_ARGS( &backend->p.debug_controller ) ) );
+    backend->p.debug_controller->EnableDebugLayer();
 #endif
     D3D12_ASSERT( CreateDXGIFactory1( IID_PPV_ARGS( &backend->p.factory ) ) );
 }
@@ -58,6 +56,7 @@ void destroy_renderer_backend( RendererBackend* backend )
 {
     FT_ASSERT( backend );
     backend->p.factory->Release();
+    backend->p.debug_controller->Release();
     operator delete( backend, std::nothrow );
 }
 
@@ -70,16 +69,54 @@ void create_device( const RendererBackend* backend,
     Device* device    = *p_device;
     device->p.factory = backend->p.factory;
 
+    D3D12_ASSERT( backend->p.factory->EnumAdapters( 0, &device->p.adapter ) );
+
     // TODO: choose adapter
-    D3D12_ASSERT( D3D12CreateDevice( nullptr,
+    D3D12_ASSERT( D3D12CreateDevice( device->p.adapter,
                                      D3D_FEATURE_LEVEL_11_0,
                                      IID_PPV_ARGS( &device->p.device ) ) );
+
+    D3D12MA::ALLOCATOR_DESC allocator_desc = {};
+    allocator_desc.Flags                   = {};
+    allocator_desc.pDevice                 = device->p.device;
+    allocator_desc.pAdapter                = device->p.adapter;
+
+    D3D12MA::CreateAllocator( &allocator_desc, &device->p.allocator );
+
+    D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc;
+    rtv_heap_desc.NumDescriptors = 1000;
+    rtv_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+    rtv_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    rtv_heap_desc.NodeMask       = 0;
+    D3D12_ASSERT( device->p.device->CreateDescriptorHeap(
+        &rtv_heap_desc,
+        IID_PPV_ARGS( &device->p.rtv_heap ) ) );
+
+    D3D12_DESCRIPTOR_HEAP_DESC dsv_heap_desc;
+    dsv_heap_desc.NumDescriptors = 1;
+    dsv_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+    dsv_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    dsv_heap_desc.NodeMask       = 0;
+    D3D12_ASSERT( device->p.device->CreateDescriptorHeap(
+        &dsv_heap_desc,
+        IID_PPV_ARGS( &device->p.dsv_heap ) ) );
+
+    device->p.rtv_descriptor_size =
+        device->p.device->GetDescriptorHandleIncrementSize(
+            D3D12_DESCRIPTOR_HEAP_TYPE_RTV );
+    device->p.dsv_descritptor_size =
+        device->p.device->GetDescriptorHandleIncrementSize(
+            D3D12_DESCRIPTOR_HEAP_TYPE_DSV );
 }
 
 void destroy_device( Device* device )
 {
     FT_ASSERT( device );
+    device->p.dsv_heap->Release();
+    device->p.rtv_heap->Release();
+    device->p.allocator->Release();
     device->p.device->Release();
+    device->p.adapter->Release();
     operator delete( device, std::nothrow );
 }
 
@@ -155,7 +192,7 @@ void create_command_buffers( const Device*      device,
             command_pool->p.command_allocator,
             nullptr,
             IID_PPV_ARGS( &cmd->p.command_list ) ) );
-
+        cmd->p.command_allocator = command_pool->p.command_allocator;
         cmd->p.command_list->Close();
     }
 }
@@ -210,7 +247,10 @@ void queue_submit( const Queue* queue, const QueueSubmitDesc* desc ) {}
 
 void immediate_submit( const Queue* queue, const CommandBuffer* cmd ) {}
 
-void queue_present( const Queue* queue, const QueuePresentDesc* desc ) {}
+void queue_present( const Queue* queue, const QueuePresentDesc* desc )
+{
+    desc->swapchain->p.swapchain->Present( 0, 0 );
+}
 
 void wait_for_fences( const Device* device, u32 count, Fence** fences ) {}
 
@@ -227,7 +267,7 @@ void create_swapchain( const Device*        device,
     swapchain->width     = desc->width;
     swapchain->height    = desc->height;
     // TODO:
-    swapchain->format          = Format::eB8G8R8A8Unorm;
+    swapchain->format          = Format::eR8G8B8A8Unorm;
     swapchain->queue           = desc->queue;
     swapchain->min_image_count = desc->min_image_count;
     swapchain->image_count     = desc->min_image_count;
@@ -256,7 +296,32 @@ void create_swapchain( const Device*        device,
                                             &swapchain_desc,
                                             &swapchain->p.swapchain ) );
 
+    D3D12_ASSERT( swapchain->p.swapchain->ResizeBuffers(
+        swapchain->image_count,
+        swapchain->width,
+        swapchain->height,
+        to_dxgi_format( swapchain->format ),
+        DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH ) );
+
     swapchain->images = new ( std::nothrow ) Image*[ swapchain->image_count ];
+
+    D3D12_CPU_DESCRIPTOR_HANDLE rtv_heap_handle(
+        device->p.rtv_heap->GetCPUDescriptorHandleForHeapStart() );
+
+    for ( u32 i = 0; i < swapchain->image_count; i++ )
+    {
+        swapchain->images[ i ] = new Image {};
+        D3D12_ASSERT( swapchain->p.swapchain->GetBuffer(
+            i,
+            IID_PPV_ARGS( &swapchain->images[ i ]->p.image ) ) );
+
+        device->p.device->CreateRenderTargetView(
+            swapchain->images[ i ]->p.image,
+            nullptr,
+            rtv_heap_handle );
+        swapchain->images[ i ]->p.image_view = rtv_heap_handle;
+        rtv_heap_handle.ptr += ( 1 * device->p.rtv_descriptor_size );
+    }
 }
 
 void resize_swapchain( const Device* device,
@@ -270,14 +335,25 @@ void destroy_swapchain( const Device* device, Swapchain* swapchain )
 {
     FT_ASSERT( swapchain );
     FT_ASSERT( swapchain->images );
+    for ( u32 i = 0; i < swapchain->image_count; i++ )
+    {
+        swapchain->images[ i ]->p.image->Release();
+        delete swapchain->images[ i ];
+    }
     operator delete[]( swapchain->images, std::nothrow );
     swapchain->p.swapchain->Release();
     operator delete( swapchain, std::nothrow );
 }
 
-void begin_command_buffer( const CommandBuffer* cmd ) {}
+void begin_command_buffer( const CommandBuffer* cmd )
+{
+    cmd->p.command_list->Reset( cmd->p.command_allocator, nullptr );
+}
 
-void end_command_buffer( const CommandBuffer* cmd ) {}
+void end_command_buffer( const CommandBuffer* cmd )
+{
+    cmd->p.command_list->Close();
+}
 
 void acquire_next_image( const Device*    device,
                          const Swapchain* swapchain,
@@ -363,6 +439,13 @@ void cmd_set_scissor( const CommandBuffer* cmd,
                       u32                  width,
                       u32                  height )
 {
+    D3D12_RECT rect;
+    rect.left   = x;
+    rect.top    = y;
+    rect.right  = width;
+    rect.bottom = height;
+
+    cmd->p.command_list->RSSetScissorRects( 1, &rect );
 }
 
 void cmd_set_viewport( const CommandBuffer* cmd,
@@ -373,6 +456,15 @@ void cmd_set_viewport( const CommandBuffer* cmd,
                        f32                  min_depth,
                        f32                  max_depth )
 {
+    D3D12_VIEWPORT viewport;
+    viewport.TopLeftX = x;
+    viewport.TopLeftY = y;
+    viewport.Width    = width;
+    viewport.Height   = height;
+    viewport.MinDepth = min_depth;
+    viewport.MaxDepth = max_depth;
+
+    cmd->p.command_list->RSSetViewports( 1, &viewport );
 }
 
 void cmd_bind_pipeline( const CommandBuffer* cmd, const Pipeline* pipeline ) {}
@@ -392,6 +484,11 @@ void cmd_draw_indexed( const CommandBuffer* cmd,
                        i32                  vertex_offset,
                        u32                  first_instance )
 {
+    cmd->p.command_list->DrawIndexedInstanced( index_count,
+                                               instance_count,
+                                               first_index,
+                                               vertex_offset,
+                                               first_instance );
 }
 
 void cmd_bind_vertex_buffer( const CommandBuffer* cmd,
