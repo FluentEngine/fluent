@@ -273,7 +273,7 @@ void end_frame( u32 image_index )
 
     style->Colors[ ImGuiCol_Text ] = old_color;
 
-    ui_end_frame( cmd );
+    ui_end_frame( ui, cmd );
     cmd_end_render_pass( cmd );
 
     ImageBarrier to_present_barrier {};

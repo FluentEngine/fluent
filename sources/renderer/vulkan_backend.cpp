@@ -1245,6 +1245,7 @@ void configure_swapchain( const Device*        device,
         pre_transform = surface_capabilities.currentTransform;
     }
     swapchain->p.pre_transform = pre_transform;
+    swapchain->vsync           = desc->vsync;
 }
 
 void create_configured_swapchain( const Device* device,
@@ -1713,8 +1714,6 @@ void update_render_pass( const Device*         device,
                          const RenderPassDesc* desc )
 {
     FT_ASSERT( render_pass );
-    FT_ASSERT( render_pass->p.render_pass );
-    FT_ASSERT( render_pass->p.framebuffer );
     FT_ASSERT( desc->width > 0 && desc->height > 0 );
 
     render_pass->width  = desc->width;
@@ -1730,7 +1729,7 @@ void update_render_pass( const Device*         device,
 void destroy_render_pass( const Device* device, RenderPass* render_pass )
 {
     FT_ASSERT( render_pass );
-    FT_ASSERT( render_pass->p.render_pass );
+
     if ( render_pass->p.framebuffer )
     {
         vkDestroyFramebuffer( device->p.logical_device,
@@ -3007,7 +3006,7 @@ void ui_begin_frame()
     ImGui::NewFrame();
 }
 
-void ui_end_frame( CommandBuffer* cmd )
+void ui_end_frame( UiContext* context, CommandBuffer* cmd )
 {
     ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(),

@@ -1,6 +1,10 @@
 #ifdef D3D12_BACKEND
 
+#include <imgui.h>
+#include <imgui_impl_dx12.h>
+#include <imgui_impl_sdl.h>
 #include <tinyimageformat_apis.h>
+#include "core/window.hpp"
 #include "renderer/renderer_backend.hpp"
 
 #ifdef FLUENT_DEBUG
@@ -34,6 +38,28 @@ static inline D3D12_COMMAND_LIST_TYPE to_d3d12_command_list_type(
     case QueueType::eCompute: return D3D12_COMMAND_LIST_TYPE_COMPUTE;
     case QueueType::eTransfer: return D3D12_COMMAND_LIST_TYPE_COPY;
     default: FT_ASSERT( false ); return D3D12_COMMAND_LIST_TYPE( -1 );
+    }
+}
+
+static inline D3D12_RESOURCE_STATES to_d3d12_resource_state(
+    ResourceState state )
+{
+    switch ( state )
+    {
+    case ResourceState::eUndefined: return D3D12_RESOURCE_STATE_COMMON;
+    case ResourceState::eGeneral: return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    case ResourceState::eColorAttachment:
+        return D3D12_RESOURCE_STATE_RENDER_TARGET;
+    case ResourceState::eDepthStencilWrite:
+        return D3D12_RESOURCE_STATE_DEPTH_WRITE;
+    case ResourceState::eDepthStencilReadOnly:
+        return D3D12_RESOURCE_STATE_DEPTH_READ;
+    case ResourceState::eShaderReadOnly:
+        return D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    case ResourceState::eTransferSrc: return D3D12_RESOURCE_STATE_COPY_SOURCE;
+    case ResourceState::eTransferDst: return D3D12_RESOURCE_STATE_COPY_DEST;
+    case ResourceState::ePresent: return D3D12_RESOURCE_STATE_PRESENT;
+    default: FT_ASSERT( false ); return D3D12_RESOURCE_STATES( -1 );
     }
 }
 
@@ -219,9 +245,23 @@ void destroy_command_buffers( const Device*      device,
     }
 }
 
-void create_semaphore( const Device* device, Semaphore** p_semaphore ) {}
+void create_semaphore( const Device* device, Semaphore** p_semaphore )
+{
+    FT_ASSERT( p_fence );
+    *p_semaphore         = new ( std::nothrow ) Semaphore {};
+    Semaphore* semaphore = *p_semaphore;
 
-void destroy_semaphore( const Device* device, Semaphore* semaphore ) {}
+    device->p.device->CreateFence( 0,
+                                   D3D12_FENCE_FLAG_NONE,
+                                   IID_PPV_ARGS( &semaphore->p.fence ) );
+}
+
+void destroy_semaphore( const Device* device, Semaphore* semaphore )
+{
+    FT_ASSERT( semaphore );
+    semaphore->p.fence->Release();
+    operator delete( semaphore, std::nothrow );
+}
 
 void create_fence( const Device* device, Fence** p_fence )
 {
@@ -243,16 +283,54 @@ void destroy_fence( const Device* device, Fence* fence )
 
 void queue_wait_idle( const Queue* queue ) {}
 
-void queue_submit( const Queue* queue, const QueueSubmitDesc* desc ) {}
+void queue_submit( const Queue* queue, const QueueSubmitDesc* desc )
+{
+    std::vector<ID3D12CommandList*> command_lists( desc->command_buffer_count );
+
+    for ( u32 i = 0; i < desc->command_buffer_count; i++ )
+    {
+        command_lists[ i ] = desc->command_buffers[ i ].p.command_list;
+    }
+
+    queue->p.queue->ExecuteCommandLists( desc->command_buffer_count,
+                                         command_lists.data() );
+}
 
 void immediate_submit( const Queue* queue, const CommandBuffer* cmd ) {}
 
 void queue_present( const Queue* queue, const QueuePresentDesc* desc )
 {
-    desc->swapchain->p.swapchain->Present( 0, 0 );
+    u32 sync_interval = desc->swapchain->vsync ? 1 : 0;
+    desc->swapchain->p.swapchain->Present( sync_interval, 0 );
+    for ( u32 i = 0; i < desc->wait_semaphore_count; i++ )
+    {
+        desc->wait_semaphores[ i ].p.fence_value++;
+        queue->p.queue->Signal( desc->wait_semaphores[ i ].p.fence,
+                                desc->wait_semaphores[ i ].p.fence_value );
+    }
 }
 
-void wait_for_fences( const Device* device, u32 count, Fence** fences ) {}
+void wait_for_fences( const Device* device, u32 count, Fence** fences )
+{
+    for ( u32 i = 0; i < count; i++ )
+    {
+        if ( fences[ i ]->p.fence->GetCompletedValue() <
+             fences[ i ]->p.fence_value )
+        {
+            HANDLE event_handle =
+                CreateEventEx( nullptr, nullptr, false, EVENT_ALL_ACCESS );
+
+            // Fire event when GPU hits current fence.
+            fences[ i ]->p.fence->SetEventOnCompletion(
+                fences[ i ]->p.fence_value,
+                event_handle );
+
+            // Wait until the GPU hits current fence event is fired.
+            WaitForSingleObject( event_handle, INFINITE );
+            CloseHandle( event_handle );
+        }
+    }
+}
 
 void reset_fences( const Device* device, u32 count, Fence** fences ) {}
 
@@ -271,6 +349,8 @@ void create_swapchain( const Device*        device,
     swapchain->queue           = desc->queue;
     swapchain->min_image_count = desc->min_image_count;
     swapchain->image_count     = desc->min_image_count;
+    swapchain->vsync           = desc->vsync;
+    swapchain->p.image_index   = 0;
 
     DXGI_SWAP_CHAIN_DESC swapchain_desc {};
     swapchain_desc.BufferDesc.Width                   = swapchain->width;
@@ -347,12 +427,13 @@ void destroy_swapchain( const Device* device, Swapchain* swapchain )
 
 void begin_command_buffer( const CommandBuffer* cmd )
 {
-    cmd->p.command_list->Reset( cmd->p.command_allocator, nullptr );
+    D3D12_ASSERT(
+        cmd->p.command_list->Reset( cmd->p.command_allocator, nullptr ) );
 }
 
 void end_command_buffer( const CommandBuffer* cmd )
 {
-    cmd->p.command_list->Close();
+    D3D12_ASSERT( cmd->p.command_list->Close() );
 }
 
 void acquire_next_image( const Device*    device,
@@ -361,6 +442,9 @@ void acquire_next_image( const Device*    device,
                          const Fence*     fence,
                          u32*             image_index )
 {
+    *image_index = swapchain->p.image_index;
+    swapchain->p.image_index =
+        ( swapchain->p.image_index + 1 ) % swapchain->image_count;
 }
 
 void create_framebuffer( const Device*         device,
@@ -429,8 +513,28 @@ void cmd_barrier( const CommandBuffer* cmd,
                   u32                  buffer_barriers_count,
                   const BufferBarrier* buffer_barriers,
                   u32                  image_barriers_count,
-                  const ImageBarrier*  image_barriers ) {
+                  const ImageBarrier*  image_barriers )
+{
+    std::vector<D3D12_RESOURCE_BARRIER> barriers( image_barriers_count );
 
+    u32 barrier_count = 0;
+
+    for ( u32 i = 0; i < image_barriers_count; i++ )
+    {
+        barriers[ i ]       = {};
+        barriers[ i ].Type  = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barriers[ i ].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        barriers[ i ].Transition.pResource = image_barriers[ i ].image->p.image;
+        barriers[ i ].Transition.StateBefore =
+            to_d3d12_resource_state( image_barriers[ i ].old_state );
+        barriers[ i ].Transition.StateAfter =
+            to_d3d12_resource_state( image_barriers[ i ].new_state );
+        barriers[ i ].Transition.Subresource =
+            D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        barrier_count++;
+    }
+
+    cmd->p.command_list->ResourceBarrier( barrier_count, barriers.data() );
 };
 
 void cmd_set_scissor( const CommandBuffer* cmd,
@@ -475,6 +579,10 @@ void cmd_draw( const CommandBuffer* cmd,
                u32                  first_vertex,
                u32                  first_instance )
 {
+    cmd->p.command_list->DrawInstanced( vertex_count,
+                                        instance_count,
+                                        first_vertex,
+                                        first_instance );
 }
 
 void cmd_draw_indexed( const CommandBuffer* cmd,
@@ -617,13 +725,73 @@ void create_ui_context( CommandBuffer* cmd,
                         const UiDesc*  desc,
                         UiContext**    p_context )
 {
+    FT_ASSERT( p_context );
+
+    *p_context         = new ( std::nothrow ) UiContext {};
+    UiContext* context = *p_context;
+
+    ImGui::CreateContext();
+    auto& io = ImGui::GetIO();
+    ( void ) io;
+    if ( desc->docking )
+    {
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    }
+
+    if ( desc->viewports )
+    {
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    }
+
+    D3D12_DESCRIPTOR_HEAP_DESC heap_desc = {};
+    heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    heap_desc.NumDescriptors = 1;
+    heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+    D3D12_ASSERT( desc->device->p.device->CreateDescriptorHeap(
+        &heap_desc,
+        IID_PPV_ARGS( &context->p.cbv_srv_heap ) ) );
+
+    ImGui_ImplSDL2_InitForD3D( ( SDL_Window* ) desc->window->handle );
+    ImGui_ImplDX12_Init(
+        desc->device->p.device,
+        desc->in_fly_frame_count,
+        to_dxgi_format( Format::eR8G8B8A8Unorm ),
+        context->p.cbv_srv_heap,
+        context->p.cbv_srv_heap->GetCPUDescriptorHandleForHeapStart(),
+        context->p.cbv_srv_heap->GetGPUDescriptorHandleForHeapStart() );
 }
 
-void destroy_ui_context( const Device* device, UiContext* context ) {}
+void destroy_ui_context( const Device* device, UiContext* context )
+{
+    FT_ASSERT( context );
+    context->p.cbv_srv_heap->Release();
+    ImGui_ImplDX12_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+    operator delete( context, std::nothrow );
+}
 
-void ui_begin_frame() {}
+void ui_begin_frame()
+{
+    ImGui_ImplDX12_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+}
 
-void ui_end_frame( CommandBuffer* cmd ) {}
+void ui_end_frame( UiContext* context, CommandBuffer* cmd )
+{
+    ImGui::Render();
+    cmd->p.command_list->SetDescriptorHeaps( 1, &context->p.cbv_srv_heap );
+    ImGui_ImplDX12_RenderDrawData( ImGui::GetDrawData(), cmd->p.command_list );
+
+    ImGuiIO& io = ImGui::GetIO();
+    if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
+    {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+    }
+}
 
 } // namespace fluent
 #endif

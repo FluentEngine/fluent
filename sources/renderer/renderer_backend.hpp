@@ -9,6 +9,7 @@
 #include <dxgi1_4.h>
 #include <d3d12.h>
 #include <D3D12MemAlloc.h>
+#undef MemoryBarrier
 #endif
 #include "core/base.hpp"
 #include "math/math.hpp"
@@ -171,6 +172,13 @@ struct Semaphore
         VkSemaphore semaphore;
     } p;
 #endif
+#ifdef D3D12_BACKEND
+    struct
+    {
+        ID3D12Fence* fence;
+        u64          fence_value;
+    } p;
+#endif
 };
 
 struct Fence
@@ -185,6 +193,7 @@ struct Fence
     struct
     {
         ID3D12Fence* fence;
+        u64          fence_value;
     } p;
 #endif
 };
@@ -302,6 +311,7 @@ struct Swapchain
     Format  format;
     Image** images;
     Queue*  queue;
+    b32     vsync;
 #ifdef VULKAN_BACKEND
     struct
     {
@@ -316,6 +326,7 @@ struct Swapchain
     struct
     {
         IDXGISwapChain* swapchain;
+        mutable u32     image_index;
     } p;
 #endif
 };
@@ -367,6 +378,13 @@ struct RenderPass
     {
         VkRenderPass  render_pass;
         VkFramebuffer framebuffer;
+    } p;
+#endif
+#ifdef D3D12_BACKEND
+    struct
+    {
+        Image* color_attachments[ MAX_ATTACHMENTS_COUNT ];
+        Image* depth_stencil;
     } p;
 #endif
 };
@@ -566,6 +584,12 @@ struct UiContext
     struct
     {
         VkDescriptorPool desriptor_pool;
+    } p;
+#endif
+#ifdef D3D12_BACKEND
+    struct
+    {
+        ID3D12DescriptorHeap* cbv_srv_heap;
     } p;
 #endif
 };
@@ -798,6 +822,6 @@ void create_ui_context( CommandBuffer* cmd,
                         UiContext**    ui_context );
 void destroy_ui_context( const Device* device, UiContext* context );
 void ui_begin_frame();
-void ui_end_frame( CommandBuffer* cmd );
+void ui_end_frame( UiContext* context, CommandBuffer* cmd );
 
 } // namespace fluent
