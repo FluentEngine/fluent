@@ -106,14 +106,14 @@ DescriptorType to_desctriptor_type( SpvReflectDescriptorType descriptor_type )
     }
 }
 
-ReflectionData reflect( u32 byte_code_size, const u32* byte_code )
+ReflectionData reflect( u32 byte_code_size, const void* byte_code )
 {
     ReflectionData result {};
 
     SpvReflectResult       spv_result;
     SpvReflectShaderModule reflected_shader;
     spv_result = spvReflectCreateShaderModule( byte_code_size,
-                                               ( const void* ) byte_code,
+                                               byte_code,
                                                &reflected_shader );
     FT_ASSERT( spv_result == SPV_REFLECT_RESULT_SUCCESS );
 

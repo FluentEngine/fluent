@@ -96,7 +96,7 @@ struct Device
         ID3D12DescriptorHeap* rtv_heap;
         u64                   rtv_descriptor_size;
         ID3D12DescriptorHeap* dsv_heap;
-        u64                   dsv_descritptor_size;
+        u64                   dsv_descriptor_size;
     } p;
 #endif
 };
@@ -160,6 +160,7 @@ struct Queue
     struct
     {
         ID3D12CommandQueue* queue;
+        ID3D12Fence*        fence;
     } p;
 #endif
 };
@@ -193,6 +194,7 @@ struct Fence
     struct
     {
         ID3D12Fence* fence;
+        HANDLE       event_handle;
         u64          fence_value;
     } p;
 #endif
@@ -241,6 +243,7 @@ struct Image
 {
     u32            width;
     u32            height;
+    u32            depth;
     Format         format;
     SampleCount    sample_count;
     u32            mip_level_count = 1;
@@ -259,6 +262,7 @@ struct Image
     {
         ID3D12Resource*             image;
         D3D12_CPU_DESCRIPTOR_HANDLE image_view;
+        D3D12MA::Allocation*        allocation;
     } p;
 #endif
 };
@@ -383,8 +387,10 @@ struct RenderPass
 #ifdef D3D12_BACKEND
     struct
     {
-        Image* color_attachments[ MAX_ATTACHMENTS_COUNT ];
-        Image* depth_stencil;
+        D3D12_CPU_DESCRIPTOR_HANDLE color_attachments[ MAX_ATTACHMENTS_COUNT ];
+        DXGI_FORMAT                 color_formats[ MAX_ATTACHMENTS_COUNT ];
+        D3D12_CPU_DESCRIPTOR_HANDLE depth_stencil;
+        DXGI_FORMAT                 depth_format;
     } p;
 #endif
 };
@@ -431,7 +437,7 @@ struct ShaderDesc
 {
     ShaderStage stage;
     u32         bytecode_size;
-    const u32*  bytecode;
+    const void* bytecode;
 };
 
 struct Shader
@@ -442,6 +448,12 @@ struct Shader
     struct
     {
         VkShaderModule shader;
+    } p;
+#endif
+#ifdef D3D12_BACKEND
+    struct
+    {
+        D3D12_SHADER_BYTECODE bytecode;
     } p;
 #endif
 };
@@ -455,6 +467,12 @@ struct DescriptorSetLayout
     struct
     {
         VkDescriptorSetLayout descriptor_set_layouts[ MAX_SET_COUNT ];
+    } p;
+#endif
+#ifdef D3D12_BACKEND
+    struct
+    {
+        ID3D12RootSignature* root_signature;
     } p;
 #endif
 };
@@ -516,6 +534,13 @@ struct Pipeline
     {
         VkPipelineLayout pipeline_layout;
         VkPipeline       pipeline;
+    } p;
+#endif
+#ifdef D3D12_BACKEND
+    struct
+    {
+        ID3D12PipelineState* pipeline;
+        ID3D12RootSignature* root_signature;
     } p;
 #endif
 };
@@ -593,6 +618,32 @@ struct UiContext
     } p;
 #endif
 };
+
+static inline b32 format_has_depth_aspect( Format format )
+{
+    switch ( format )
+    {
+    case Format::eD16Unorm:
+    case Format::eD16UnormS8Uint:
+    case Format::eD24UnormS8Uint:
+    case Format::eD32Sfloat:
+    case Format::eX8D24Unorm:
+    case Format::eD32SfloatS8Uint: return true;
+    default: return false;
+    }
+}
+
+static inline b32 format_has_stencil_aspect( Format format )
+{
+    switch ( format )
+    {
+    case Format::eD16UnormS8Uint:
+    case Format::eD24UnormS8Uint:
+    case Format::eD32SfloatS8Uint:
+    case Format::eS8Uint: return true;
+    default: return false;
+    }
+}
 
 void create_renderer_backend( const RendererBackendDesc* desc,
                               RendererBackend**          backend );

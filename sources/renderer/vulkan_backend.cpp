@@ -629,32 +629,6 @@ static inline u32 find_queue_family_index( VkPhysicalDevice physical_device,
     return index;
 }
 
-static inline b32 format_has_depth_aspect( Format format )
-{
-    switch ( format )
-    {
-    case Format::eD16Unorm:
-    case Format::eD16UnormS8Uint:
-    case Format::eD24UnormS8Uint:
-    case Format::eD32Sfloat:
-    case Format::eX8D24Unorm:
-    case Format::eD32SfloatS8Uint: return true;
-    default: return false;
-    }
-}
-
-static inline b32 format_has_stencil_aspect( Format format )
-{
-    switch ( format )
-    {
-    case Format::eD16UnormS8Uint:
-    case Format::eD24UnormS8Uint:
-    case Format::eD32SfloatS8Uint:
-    case Format::eS8Uint: return true;
-    default: return false;
-    }
-}
-
 static inline VkImageAspectFlags get_aspect_mask( Format format )
 {
     VkImageAspectFlags aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -1751,11 +1725,12 @@ void create_shader( const Device* device, ShaderDesc* desc, Shader** p_shader )
     shader->stage = desc->stage;
 
     VkShaderModuleCreateInfo shader_create_info {};
-    shader_create_info.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    shader_create_info.pNext    = nullptr;
-    shader_create_info.flags    = 0;
-    shader_create_info.codeSize = desc->bytecode_size;
-    shader_create_info.pCode    = desc->bytecode;
+    shader_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    shader_create_info.pNext = nullptr;
+    shader_create_info.flags = 0;
+    shader_create_info.codeSize =
+        desc->bytecode_size - ( desc->bytecode_size % 4 );
+    shader_create_info.pCode = reinterpret_cast<const u32*>( desc->bytecode );
 
     VK_ASSERT( vkCreateShaderModule( device->p.logical_device,
                                      &shader_create_info,
@@ -2154,8 +2129,6 @@ void create_graphics_pipeline( const Device*       device,
 void destroy_pipeline( const Device* device, Pipeline* pipeline )
 {
     FT_ASSERT( pipeline );
-    FT_ASSERT( pipeline->p.pipeline_layout );
-    FT_ASSERT( pipeline->p.pipeline );
     vkDestroyPipelineLayout( device->p.logical_device,
                              pipeline->p.pipeline_layout,
                              device->p.vulkan_allocator );
@@ -2749,6 +2722,7 @@ void create_image( const Device*    device,
 
     image->width           = desc->width;
     image->height          = desc->height;
+    image->depth           = desc->depth;
     image->format          = desc->format;
     image->sample_count    = desc->sample_count;
     image->mip_level_count = desc->mip_levels;

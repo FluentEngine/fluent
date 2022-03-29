@@ -20,7 +20,6 @@ set(RENDERER_BACKEND_D3D12 False)
 
 if ("${RENDERER_BACKEND}" STREQUAL "Vulkan")
     set(RENDERER_BACKEND_VULKAN True)
-    set(compile_definitions VULKAN_BACKEND)
 elseif("${RENDERER_BACKEND}" STREQUAL "D3D12")
     set(RENDERER_BACKEND_D3D12 True)
 else()
@@ -148,11 +147,14 @@ target_compile_options(${target} PUBLIC ${compile_options})
 # TODO: move it to separate file
 function(compile_shaders ${SHADERS})
     foreach(SHADER ${SHADERS})
-        add_custom_command(OUTPUT ${SHADER}.spv
-        COMMAND glslangValidator -V ${SHADER} -o ${SHADER}.spv
-        DEPENDS ${SHADER}
-        COMMENT "Rebuilding ${SHADER}.spv" )
-        message(STATUS "Generating build commands for ${SHADER}.spv")
+        if (RENDERER_BACKEND_VULKAN)
+            add_custom_command(OUTPUT ${SHADER}.spv
+                COMMAND glslangValidator -V ${SHADER} -o ${SHADER}.spv
+                DEPENDS ${SHADER}
+                COMMENT "Rebuilding ${SHADER}.spv" )
+            message(STATUS "Generating build commands for ${SHADER}.spv")
+        elseif(RENDERER_BACKEND_D3D12)
+        endif()
     endforeach()
 endfunction()
 

@@ -5,18 +5,21 @@ function(add_example target)
 
     project(${target} CXX)
 
-    file(GLOB SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/shaders/${target}/*.glsl)
+    if (RENDERER_BACKEND_VULKAN)
+        file(GLOB SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/shaders/${target}/*.glsl)
+        foreach(source IN LISTS SHADERS)
+            list(APPEND COMPILED_SHADERS ${source}.spv)
+        endforeach()
+    elseif(RENDERER_BACKEND_D3D12)
+    endif()
 
-    foreach(source IN LISTS SHADERS)
-        list(APPEND COMPILED_SHADERS ${source}.spv)
-    endforeach()
+
 
     compile_shaders(${SHADERS})
 
     add_executable(${target}
         common/sample.hpp
         ${target}/main.cpp
-        ${SHADERS}
         ${COMPILED_SHADERS})
 
     target_link_libraries(${target} fluent-engine)

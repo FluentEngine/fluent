@@ -4,15 +4,23 @@
 
 namespace fluent
 {
-std::vector<u32> read_file_binary( const std::string& filename )
+std::vector<char> read_file_binary( const std::string& filename )
 {
     std::ifstream file( filename, std::ios_base::binary );
     FT_ASSERT( file.is_open() && "Failed to open file" );
 
-    std::vector<char> res = { std::istreambuf_iterator( file ),
-                              std::istreambuf_iterator<char>() };
-    return std::vector<u32>(
-        reinterpret_cast<u32*>( res.data() ),
-        reinterpret_cast<u32*>( res.data() + res.size() ) );
+    return { std::istreambuf_iterator( file ),
+             std::istreambuf_iterator<char>() };
+}
+
+std::vector<char> read_shader( const std::string& shader_name )
+{
+#ifdef VULKAN_BACKEND
+    return read_file_binary( shader_name + ".glsl.spv" );
+#endif
+#ifdef D3D12_BACKEND
+    return read_file_binary( shader_name + ".hlsl.dxil" );
+#endif
+    return {};
 }
 } // namespace fluent

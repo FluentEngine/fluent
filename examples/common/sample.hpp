@@ -38,8 +38,7 @@ static Shader* load_shader_from_file( const std::string& filename )
     if ( ext == ".comp" )
         stage = ShaderStage::eCompute;
 
-    auto       code = read_file_binary( FileSystem::get_shaders_directory() +
-                                  filename + ".glsl.spv" );
+    auto code = read_shader( FileSystem::get_shaders_directory() + filename );
     ShaderDesc desc {};
     desc.bytecode      = code.data();
     desc.bytecode_size = code.size() * sizeof( code[ 0 ] );

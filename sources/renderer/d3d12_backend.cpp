@@ -63,6 +63,21 @@ static inline D3D12_RESOURCE_STATES to_d3d12_resource_state(
     }
 }
 
+static inline u32 to_d3d12_sample_count( SampleCount sample_count )
+{
+    switch ( sample_count )
+    {
+    case SampleCount::e1: return 1;
+    case SampleCount::e2: return 2;
+    case SampleCount::e4: return 4;
+    case SampleCount::e8: return 8;
+    case SampleCount::e16: return 16;
+    case SampleCount::e32: return 32;
+    case SampleCount::e64: return 64;
+    default: FT_ASSERT( false ); return -1;
+    }
+}
+
 void create_renderer_backend( const RendererBackendDesc* desc,
                               RendererBackend**          p_backend )
 {
@@ -82,7 +97,9 @@ void destroy_renderer_backend( RendererBackend* backend )
 {
     FT_ASSERT( backend );
     backend->p.factory->Release();
+#ifdef FLUENT_DEBUG
     backend->p.debug_controller->Release();
+#endif
     operator delete( backend, std::nothrow );
 }
 
@@ -99,7 +116,7 @@ void create_device( const RendererBackend* backend,
 
     // TODO: choose adapter
     D3D12_ASSERT( D3D12CreateDevice( device->p.adapter,
-                                     D3D_FEATURE_LEVEL_11_0,
+                                     D3D_FEATURE_LEVEL_12_0,
                                      IID_PPV_ARGS( &device->p.device ) ) );
 
     D3D12MA::ALLOCATOR_DESC allocator_desc = {};
@@ -119,7 +136,7 @@ void create_device( const RendererBackend* backend,
         IID_PPV_ARGS( &device->p.rtv_heap ) ) );
 
     D3D12_DESCRIPTOR_HEAP_DESC dsv_heap_desc;
-    dsv_heap_desc.NumDescriptors = 1;
+    dsv_heap_desc.NumDescriptors = 1000;
     dsv_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
     dsv_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     dsv_heap_desc.NodeMask       = 0;
@@ -130,7 +147,7 @@ void create_device( const RendererBackend* backend,
     device->p.rtv_descriptor_size =
         device->p.device->GetDescriptorHandleIncrementSize(
             D3D12_DESCRIPTOR_HEAP_TYPE_RTV );
-    device->p.dsv_descritptor_size =
+    device->p.dsv_descriptor_size =
         device->p.device->GetDescriptorHandleIncrementSize(
             D3D12_DESCRIPTOR_HEAP_TYPE_DSV );
 }
@@ -160,11 +177,16 @@ void create_queue( const Device*    device,
     D3D12_ASSERT( device->p.device->CreateCommandQueue(
         &queue_desc,
         IID_PPV_ARGS( &queue->p.queue ) ) );
+    D3D12_ASSERT(
+        device->p.device->CreateFence( 0,
+                                       D3D12_FENCE_FLAG_NONE,
+                                       IID_PPV_ARGS( &queue->p.fence ) ) );
 }
 
 void destroy_queue( Queue* queue )
 {
     FT_ASSERT( queue );
+    queue->p.fence->Release();
     queue->p.queue->Release();
     operator delete( queue, std::nothrow );
 }
@@ -247,7 +269,7 @@ void destroy_command_buffers( const Device*      device,
 
 void create_semaphore( const Device* device, Semaphore** p_semaphore )
 {
-    FT_ASSERT( p_fence );
+    FT_ASSERT( p_semaphore );
     *p_semaphore         = new ( std::nothrow ) Semaphore {};
     Semaphore* semaphore = *p_semaphore;
 
@@ -272,16 +294,31 @@ void create_fence( const Device* device, Fence** p_fence )
     device->p.device->CreateFence( 0,
                                    D3D12_FENCE_FLAG_NONE,
                                    IID_PPV_ARGS( &fence->p.fence ) );
+    fence->p.event_handle = CreateEvent( nullptr, false, false, nullptr );
 }
 
 void destroy_fence( const Device* device, Fence* fence )
 {
     FT_ASSERT( fence );
+    CloseHandle( fence->p.event_handle );
     fence->p.fence->Release();
     operator delete( fence, std::nothrow );
 }
 
-void queue_wait_idle( const Queue* queue ) {}
+void queue_wait_idle( const Queue* queue )
+{
+    u64 value = queue->p.fence->GetCompletedValue();
+    queue->p.queue->Signal( queue->p.fence, value - 1 );
+    HANDLE event_handle =
+        CreateEventEx( nullptr, nullptr, false, EVENT_ALL_ACCESS );
+
+    // Fire event when GPU hits current fence.
+    queue->p.fence->SetEventOnCompletion( value - 1, event_handle );
+
+    // Wait until the GPU hits current fence event is fired.
+    WaitForSingleObject( event_handle, INFINITE );
+    CloseHandle( event_handle );
+}
 
 void queue_submit( const Queue* queue, const QueueSubmitDesc* desc )
 {
@@ -304,9 +341,9 @@ void queue_present( const Queue* queue, const QueuePresentDesc* desc )
     desc->swapchain->p.swapchain->Present( sync_interval, 0 );
     for ( u32 i = 0; i < desc->wait_semaphore_count; i++ )
     {
-        desc->wait_semaphores[ i ].p.fence_value++;
         queue->p.queue->Signal( desc->wait_semaphores[ i ].p.fence,
                                 desc->wait_semaphores[ i ].p.fence_value );
+        desc->wait_semaphores[ i ].p.fence_value++;
     }
 }
 
@@ -314,21 +351,13 @@ void wait_for_fences( const Device* device, u32 count, Fence** fences )
 {
     for ( u32 i = 0; i < count; i++ )
     {
-        if ( fences[ i ]->p.fence->GetCompletedValue() <
-             fences[ i ]->p.fence_value )
-        {
-            HANDLE event_handle =
-                CreateEventEx( nullptr, nullptr, false, EVENT_ALL_ACCESS );
+        // Fire event when GPU hits current fence.
+        fences[ i ]->p.fence->SetEventOnCompletion(
+            fences[ i ]->p.fence_value,
+            fences[ i ]->p.event_handle );
 
-            // Fire event when GPU hits current fence.
-            fences[ i ]->p.fence->SetEventOnCompletion(
-                fences[ i ]->p.fence_value,
-                event_handle );
-
-            // Wait until the GPU hits current fence event is fired.
-            WaitForSingleObject( event_handle, INFINITE );
-            CloseHandle( event_handle );
-        }
+        // Wait until the GPU hits current fence event is fired.
+        WaitForSingleObject( fences[ i ]->p.event_handle, INFINITE );
     }
 }
 
@@ -395,10 +424,21 @@ void create_swapchain( const Device*        device,
             i,
             IID_PPV_ARGS( &swapchain->images[ i ]->p.image ) ) );
 
+        swapchain->images[ i ]->width  = swapchain->width;
+        swapchain->images[ i ]->height = swapchain->height;
+        swapchain->images[ i ]->depth  = 1;
+        swapchain->images[ i ]->format = swapchain->format;
+
+        D3D12_RENDER_TARGET_VIEW_DESC view_desc {};
+        view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+        // TODO: ...
+        view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+
         device->p.device->CreateRenderTargetView(
             swapchain->images[ i ]->p.image,
-            nullptr,
+            &view_desc,
             rtv_heap_handle );
+
         swapchain->images[ i ]->p.image_view = rtv_heap_handle;
         rtv_heap_handle.ptr += ( 1 * device->p.rtv_descriptor_size );
     }
@@ -457,6 +497,26 @@ void create_render_pass( const Device*         device,
                          const RenderPassDesc* desc,
                          RenderPass**          p_render_pass )
 {
+    FT_ASSERT( p_render_pass );
+    *p_render_pass                      = new ( std::nothrow ) RenderPass {};
+    RenderPass* render_pass             = *p_render_pass;
+    render_pass->color_attachment_count = desc->color_attachment_count;
+
+    for ( u32 i = 0; i < desc->color_attachment_count; i++ )
+    {
+        render_pass->p.color_attachments[ i ] =
+            desc->color_attachments[ i ]->p.image_view;
+        render_pass->p.color_formats[ i ] =
+            to_dxgi_format( desc->color_attachments[ i ]->format );
+    }
+
+    if ( desc->depth_stencil )
+    {
+        render_pass->has_depth_stencil = true;
+        render_pass->p.depth_stencil   = desc->depth_stencil->p.image_view;
+        render_pass->p.depth_format =
+            to_dxgi_format( desc->depth_stencil->format );
+    }
 }
 
 void update_render_pass( const Device*         device,
@@ -465,13 +525,33 @@ void update_render_pass( const Device*         device,
 {
 }
 
-void destroy_render_pass( const Device* device, RenderPass* render_pass ) {}
+void destroy_render_pass( const Device* device, RenderPass* render_pass )
+{
+    FT_ASSERT( render_pass );
+    operator delete( render_pass, std::nothrow );
+}
 
 void create_shader( const Device* device, ShaderDesc* desc, Shader** p_shader )
 {
+    FT_ASSERT( p_shader );
+    *p_shader      = new ( std::nothrow ) Shader {};
+    Shader* shader = *p_shader;
+
+    shader->stage = desc->stage;
+
+    char* dst = new char[ desc->bytecode_size ];
+    char* src = ( char* ) desc->bytecode;
+    std::memcpy( dst, src, desc->bytecode_size );
+    shader->p.bytecode.BytecodeLength  = desc->bytecode_size;
+    shader->p.bytecode.pShaderBytecode = dst;
 }
 
-void destroy_shader( const Device* device, Shader* shader ) {}
+void destroy_shader( const Device* device, Shader* shader )
+{
+    FT_ASSERT( shader );
+    operator delete( ( u8* ) shader->p.bytecode.pShaderBytecode, std::nothrow );
+    operator delete( shader, std::nothrow );
+}
 
 void create_descriptor_set_layout(
     const Device*         device,
@@ -479,11 +559,47 @@ void create_descriptor_set_layout(
     Shader**              shaders,
     DescriptorSetLayout** p_descriptor_set_layout )
 {
-}
+    FT_ASSERT( p_descriptor_set_layout );
+    FT_ASSERT( shader_count );
+
+    *p_descriptor_set_layout = new ( std::nothrow ) DescriptorSetLayout {};
+    DescriptorSetLayout* descriptor_set_layout = *p_descriptor_set_layout;
+
+    descriptor_set_layout->shader_count = shader_count;
+    descriptor_set_layout->shaders      = shaders;
+
+    D3D12_FEATURE_DATA_ROOT_SIGNATURE feature_data {};
+    feature_data.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+
+    D3D12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_desc {};
+    root_signature_desc.Version = feature_data.HighestVersion;
+    root_signature_desc.Desc_1_1.Flags =
+        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+    ID3DBlob* signature;
+    ID3DBlob* error;
+
+    D3D12_ASSERT( D3D12SerializeVersionedRootSignature( &root_signature_desc,
+                                                        &signature,
+                                                        &error ) );
+
+    D3D12_ASSERT( device->p.device->CreateRootSignature(
+        0,
+        signature->GetBufferPointer(),
+        signature->GetBufferSize(),
+        IID_PPV_ARGS( &descriptor_set_layout->p.root_signature ) ) );
+
+    signature->Release();
+    signature = nullptr;
+};
 
 void destroy_descriptor_set_layout( const Device*        device,
                                     DescriptorSetLayout* layout )
 {
+    FT_ASSERT( layout );
+    FT_ASSERT( layout->shaders );
+    layout->p.root_signature->Release();
+    operator delete( layout, std::nothrow );
 }
 
 void create_compute_pipeline( const Device*       device,
@@ -496,13 +612,119 @@ void create_graphics_pipeline( const Device*       device,
                                const PipelineDesc* desc,
                                Pipeline**          p_pipeline )
 {
+    FT_ASSERT( p_pipeline );
+    FT_ASSERT( desc->descriptor_set_layout );
+    FT_ASSERT( desc->render_pass );
+
+    *p_pipeline        = new ( std::nothrow ) Pipeline {};
+    Pipeline* pipeline = *p_pipeline;
+
+    pipeline->type             = PipelineType::eGraphics;
+    pipeline->p.root_signature = desc->descriptor_set_layout->p.root_signature;
+
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline_desc {};
+    pipeline_desc.pRootSignature =
+        desc->descriptor_set_layout->p.root_signature;
+
+    for ( u32 i = 0; i < desc->shader_count; i++ )
+    {
+        switch ( desc->shaders[ i ]->stage )
+        {
+        case ShaderStage::eVertex:
+        {
+            pipeline_desc.VS = desc->shaders[ i ]->p.bytecode;
+            break;
+        }
+        case ShaderStage::eFragment:
+        {
+            pipeline_desc.PS = desc->shaders[ i ]->p.bytecode;
+            break;
+        }
+        default: break;
+        }
+    }
+
+    D3D12_RASTERIZER_DESC rasterizer_desc {};
+    rasterizer_desc.FillMode              = D3D12_FILL_MODE_SOLID;
+    rasterizer_desc.CullMode              = D3D12_CULL_MODE_NONE;
+    rasterizer_desc.FrontCounterClockwise = false;
+    rasterizer_desc.DepthBias             = D3D12_DEFAULT_DEPTH_BIAS;
+    rasterizer_desc.DepthBiasClamp        = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
+    rasterizer_desc.MultisampleEnable     = false;
+    rasterizer_desc.ForcedSampleCount     = 0;
+    rasterizer_desc.ConservativeRaster =
+        D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+
+    D3D12_BLEND_DESC blend_desc {};
+    blend_desc.AlphaToCoverageEnable  = false;
+    blend_desc.IndependentBlendEnable = false;
+    for ( u32 i = 0; i < D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT; i++ )
+    {
+        blend_desc.RenderTarget[ i ] = { false,
+                                         false,
+                                         D3D12_BLEND_ONE,
+                                         D3D12_BLEND_ZERO,
+                                         D3D12_BLEND_OP_ADD,
+                                         D3D12_BLEND_ONE,
+                                         D3D12_BLEND_ZERO,
+                                         D3D12_BLEND_OP_ADD,
+                                         D3D12_LOGIC_OP_NOOP,
+                                         D3D12_COLOR_WRITE_ENABLE_ALL };
+    }
+
+    pipeline_desc.NumRenderTargets = desc->render_pass->color_attachment_count;
+    for ( u32 i = 0; i < pipeline_desc.NumRenderTargets; i++ )
+    {
+        // pipeline_desc.RTVFormats[ i ] = desc->render_pass->p.color_formats[ i
+        // ];
+        // TODO:
+        pipeline_desc.RTVFormats[ i ] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    }
+
+    if ( desc->render_pass->has_depth_stencil )
+    {
+        pipeline_desc.DSVFormat = desc->render_pass->p.depth_format;
+    }
+
+    pipeline_desc.RasterizerState = rasterizer_desc;
+    pipeline_desc.PrimitiveTopologyType =
+        D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    pipeline_desc.BlendState = blend_desc;
+    pipeline_desc.DepthStencilState.DepthEnable =
+        desc->depth_state_desc.depth_test;
+    pipeline_desc.DepthStencilState.StencilEnable = false;
+    pipeline_desc.SampleMask       = std::numeric_limits<u32>::max();
+    pipeline_desc.SampleDesc.Count = 1;
+
+    D3D12_ASSERT( device->p.device->CreateGraphicsPipelineState(
+        &pipeline_desc,
+        IID_PPV_ARGS( &pipeline->p.pipeline ) ) );
 }
 
-void destroy_pipeline( const Device* device, Pipeline* pipeline ) {}
+void destroy_pipeline( const Device* device, Pipeline* pipeline )
+{
+    FT_ASSERT( pipeline );
+    pipeline->p.pipeline->Release();
+    operator delete( pipeline, std::nothrow );
+}
 
 void cmd_begin_render_pass( const CommandBuffer*       cmd,
                             const RenderPassBeginDesc* desc )
 {
+    for ( u32 i = 0; i < desc->render_pass->color_attachment_count; i++ )
+    {
+        cmd->p.command_list->ClearRenderTargetView(
+            desc->render_pass->p.color_attachments[ 0 ],
+            desc->clear_values[ i ].color,
+            0,
+            nullptr );
+    }
+
+    cmd->p.command_list->OMSetRenderTargets(
+        desc->render_pass->color_attachment_count,
+        desc->render_pass->p.color_attachments,
+        desc->render_pass->has_depth_stencil,
+        &desc->render_pass->p.depth_stencil );
 }
 
 void cmd_end_render_pass( const CommandBuffer* cmd ) {}
@@ -571,7 +793,13 @@ void cmd_set_viewport( const CommandBuffer* cmd,
     cmd->p.command_list->RSSetViewports( 1, &viewport );
 }
 
-void cmd_bind_pipeline( const CommandBuffer* cmd, const Pipeline* pipeline ) {}
+void cmd_bind_pipeline( const CommandBuffer* cmd, const Pipeline* pipeline )
+{
+    cmd->p.command_list->IASetPrimitiveTopology(
+        D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+    cmd->p.command_list->SetGraphicsRootSignature( pipeline->p.root_signature );
+    cmd->p.command_list->SetPipelineState( pipeline->p.pipeline );
+}
 
 void cmd_draw( const CommandBuffer* cmd,
                u32                  vertex_count,
@@ -702,9 +930,88 @@ void create_image( const Device*    device,
                    const ImageDesc* desc,
                    Image**          p_image )
 {
+    FT_ASSERT( p_image );
+
+    *p_image     = new ( std::nothrow ) Image {};
+    Image* image = *p_image;
+
+    image->width           = desc->width;
+    image->height          = desc->height;
+    image->depth           = desc->depth;
+    image->mip_level_count = desc->mip_levels;
+    image->format          = desc->format;
+    image->sample_count    = desc->sample_count;
+
+    D3D12_RESOURCE_DESC image_desc = {};
+    // TODO:
+    image_desc.Dimension        = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    image_desc.Alignment        = 0;
+    image_desc.Width            = image->width;
+    image_desc.Height           = image->height;
+    image_desc.DepthOrArraySize = image->depth;
+    image_desc.MipLevels        = image->mip_level_count;
+    image_desc.Format           = to_dxgi_format( image->format );
+    image_desc.SampleDesc.Count = to_d3d12_sample_count( image->sample_count );
+    // TODO:
+    image_desc.SampleDesc.Quality = 0;
+    image_desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    image_desc.Flags              = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+    D3D12MA::ALLOCATION_DESC alloc_desc = {};
+    alloc_desc.HeapType                 = D3D12_HEAP_TYPE_DEFAULT;
+
+    D3D12_ASSERT( device->p.allocator->CreateResource(
+        &alloc_desc,
+        &image_desc,
+        D3D12_RESOURCE_STATE_COPY_DEST,
+        nullptr,
+        &image->p.allocation,
+        IID_PPV_ARGS( &image->p.image ) ) );
+
+    if ( format_has_depth_aspect( image->format ) ||
+         format_has_stencil_aspect( image->format ) )
+    {
+        D3D12_CPU_DESCRIPTOR_HANDLE dsv_heap_handle(
+            device->p.dsv_heap->GetCPUDescriptorHandleForHeapStart() );
+
+        D3D12_DEPTH_STENCIL_VIEW_DESC view_desc {};
+        view_desc.Flags              = D3D12_DSV_FLAG_NONE;
+        view_desc.ViewDimension      = D3D12_DSV_DIMENSION_TEXTURE2D;
+        view_desc.Format             = image_desc.Format;
+        view_desc.Texture2D.MipSlice = 0;
+        device->p.device->CreateDepthStencilView( image->p.image,
+                                                  nullptr,
+                                                  dsv_heap_handle );
+        image->p.image_view = dsv_heap_handle;
+        dsv_heap_handle.ptr += ( 1 * device->p.dsv_descriptor_size );
+    }
+    else
+    {
+        D3D12_CPU_DESCRIPTOR_HANDLE rtv_heap_handle(
+            device->p.rtv_heap->GetCPUDescriptorHandleForHeapStart() );
+
+        D3D12_RENDER_TARGET_VIEW_DESC view_desc {};
+        view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+        view_desc.Format        = image_desc.Format;
+
+        device->p.device->CreateRenderTargetView( image->p.image,
+                                                  nullptr,
+                                                  rtv_heap_handle );
+
+        image->p.image_view = rtv_heap_handle;
+        rtv_heap_handle.ptr += ( 1 * device->p.rtv_descriptor_size );
+    }
 }
 
-void destroy_image( const Device* device, Image* image ) {}
+void destroy_image( const Device* device, Image* image )
+{
+    FT_ASSERT( image );
+    if ( image->p.allocation )
+    {
+        image->p.allocation->Release();
+    }
+    image->p.image->Release();
+}
 
 void create_descriptor_set( const Device*            device,
                             const DescriptorSetDesc* desc,
@@ -756,7 +1063,7 @@ void create_ui_context( CommandBuffer* cmd,
     ImGui_ImplDX12_Init(
         desc->device->p.device,
         desc->in_fly_frame_count,
-        to_dxgi_format( Format::eR8G8B8A8Unorm ),
+        DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
         context->p.cbv_srv_heap,
         context->p.cbv_srv_heap->GetCPUDescriptorHandleForHeapStart(),
         context->p.cbv_srv_heap->GetGPUDescriptorHandleForHeapStart() );
@@ -765,9 +1072,9 @@ void create_ui_context( CommandBuffer* cmd,
 void destroy_ui_context( const Device* device, UiContext* context )
 {
     FT_ASSERT( context );
-    context->p.cbv_srv_heap->Release();
     ImGui_ImplDX12_Shutdown();
     ImGui_ImplSDL2_Shutdown();
+    context->p.cbv_srv_heap->Release();
     ImGui::DestroyContext();
     operator delete( context, std::nothrow );
 }

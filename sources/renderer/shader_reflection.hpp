@@ -27,6 +27,6 @@ struct ReflectionData
     std::vector<Binding> bindings;
 };
 
-ReflectionData reflect( u32 byte_code_size, const u32* byte_code );
+ReflectionData reflect( u32 byte_code_size, const void* byte_code );
 
 } // namespace fluent
