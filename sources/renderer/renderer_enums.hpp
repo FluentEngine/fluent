@@ -318,8 +318,7 @@ enum class SamplerAddressMode
     eRepeat,
     eMirroredRepeat,
     eClampToEdge,
-    eClampToBorder,
-    eMirrorClampToEdge,
+    eClampToBorder
 };
 
 enum class CompareOp

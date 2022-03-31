@@ -93,6 +93,154 @@ static inline u32 to_d3d12_sample_count( SampleCount sample_count )
     }
 }
 
+static inline D3D12_FILL_MODE to_d3d12_fill_mode( PolygonMode mode )
+{
+    switch ( mode )
+    {
+    case PolygonMode::eFill: return D3D12_FILL_MODE_SOLID;
+    case PolygonMode::eLine: return D3D12_FILL_MODE_WIREFRAME;
+    default: FT_ASSERT( false ); return D3D12_FILL_MODE( -1 );
+    }
+}
+
+static inline D3D12_CULL_MODE to_d3d12_cull_mode( CullMode mode )
+{
+    switch ( mode )
+    {
+    case CullMode::eNone: return D3D12_CULL_MODE_NONE;
+    case CullMode::eBack: return D3D12_CULL_MODE_BACK;
+    case CullMode::eFront: return D3D12_CULL_MODE_FRONT;
+    default: FT_ASSERT( false ); return D3D12_CULL_MODE( -1 );
+    }
+}
+
+static inline bool to_d3d12_front_face( FrontFace front_face )
+{
+    if ( front_face == FrontFace::eCounterClockwise )
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+static inline D3D12_PRIMITIVE_TOPOLOGY_TYPE to_d3d12_primitive_topology_type(
+    PrimitiveTopology topology )
+{
+    switch ( topology )
+    {
+    case PrimitiveTopology::ePointList:
+        return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+    case PrimitiveTopology::eLineList:
+        return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+    case PrimitiveTopology::eLineStrip:
+        return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+    case PrimitiveTopology::eTriangleList:
+        return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    case PrimitiveTopology::eTriangleStrip:
+        return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    case PrimitiveTopology::eTriangleFan:
+        return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    default: FT_ASSERT( false ); return D3D12_PRIMITIVE_TOPOLOGY_TYPE( -1 );
+    }
+}
+
+static inline D3D12_PRIMITIVE_TOPOLOGY to_d3d12_primitive_topology(
+    PrimitiveTopology topology )
+{
+    switch ( topology )
+    {
+    case PrimitiveTopology::ePointList: return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+    case PrimitiveTopology::eLineList: return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+    case PrimitiveTopology::eLineStrip: return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+    case PrimitiveTopology::eTriangleList:
+        return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+    case PrimitiveTopology::eTriangleStrip:
+        return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+    case PrimitiveTopology::eTriangleFan:
+        return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ;
+    default: FT_ASSERT( false ); return D3D12_PRIMITIVE_TOPOLOGY( -1 );
+    }
+}
+
+static inline D3D12_HEAP_TYPE to_d3d12_heap_type( MemoryUsage usage )
+{
+    switch ( usage )
+    {
+    case MemoryUsage::eGpuOnly: return D3D12_HEAP_TYPE_DEFAULT;
+    case MemoryUsage::eCpuOnly: return D3D12_HEAP_TYPE_UPLOAD;
+    case MemoryUsage::eCpuToGpu: return D3D12_HEAP_TYPE_UPLOAD;
+    case MemoryUsage::eGpuToCpu: return D3D12_HEAP_TYPE_READBACK;
+    case MemoryUsage::eCpuCopy: return D3D12_HEAP_TYPE_UPLOAD;
+    default: FT_ASSERT( false ); return D3D12_HEAP_TYPE( -1 );
+    }
+}
+
+static inline D3D12_FILTER_TYPE to_d3d12_filter_type( Filter filter )
+{
+    switch ( filter )
+    {
+    case Filter::eNearest: return D3D12_FILTER_TYPE_POINT;
+    case Filter::eLinear: return D3D12_FILTER_TYPE_LINEAR;
+    default: FT_ASSERT( false ); return D3D12_FILTER_TYPE( -1 );
+    }
+}
+
+static inline D3D12_FILTER to_d3d12_filter( Filter            min_filter,
+                                            Filter            mag_filter,
+                                            SamplerMipmapMode mip_map_mode,
+                                            b32               anisotropy,
+                                            b32 comparison_filter_enabled )
+{
+    if ( anisotropy )
+        return ( comparison_filter_enabled ? D3D12_FILTER_COMPARISON_ANISOTROPIC
+                                           : D3D12_FILTER_ANISOTROPIC );
+
+    i32 filter = ( static_cast<int>( min_filter ) << 4 ) |
+                 ( static_cast<int>( mag_filter ) << 2 ) |
+                 static_cast<int>( mip_map_mode );
+
+    i32 base_filter = comparison_filter_enabled
+                          ? D3D12_FILTER_COMPARISON_MIN_MAG_MIP_POINT
+                          : D3D12_FILTER_MIN_MAG_MIP_POINT;
+
+    return ( D3D12_FILTER )( base_filter + filter );
+}
+
+static inline D3D12_TEXTURE_ADDRESS_MODE to_d3d12_address_mode(
+    SamplerAddressMode mode )
+{
+    switch ( mode )
+    {
+    case SamplerAddressMode::eRepeat: return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    case SamplerAddressMode::eMirroredRepeat:
+        return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+    case SamplerAddressMode::eClampToEdge:
+        return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+    case SamplerAddressMode::eClampToBorder:
+        return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    default: FT_ASSERT( false ); return D3D12_TEXTURE_ADDRESS_MODE( -1 );
+    }
+}
+
+static inline D3D12_COMPARISON_FUNC to_d3d12_comparison_func( CompareOp op )
+{
+    switch ( op )
+    {
+    case CompareOp::eNever: return D3D12_COMPARISON_FUNC_NEVER;
+    case CompareOp::eLess: return D3D12_COMPARISON_FUNC_LESS;
+    case CompareOp::eEqual: return D3D12_COMPARISON_FUNC_EQUAL;
+    case CompareOp::eLessOrEqual: return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+    case CompareOp::eGreater: return D3D12_COMPARISON_FUNC_GREATER;
+    case CompareOp::eNotEqual: return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+    case CompareOp::eGreaterOrEqual: return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+    case CompareOp::eAlways: return D3D12_COMPARISON_FUNC_ALWAYS;
+    default: FT_ASSERT( false ); return D3D12_COMPARISON_FUNC( -1 );
+    }
+}
+
 void create_renderer_backend( const RendererBackendDesc* desc,
                               RendererBackend**          p_backend )
 {
@@ -141,7 +289,7 @@ void create_device( const RendererBackend* backend,
 
     D3D12MA::CreateAllocator( &allocator_desc, &device->p.allocator );
 
-    D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc;
+    D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc {};
     rtv_heap_desc.NumDescriptors = 1000;
     rtv_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
     rtv_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
@@ -150,7 +298,7 @@ void create_device( const RendererBackend* backend,
         &rtv_heap_desc,
         IID_PPV_ARGS( &device->p.rtv_heap ) ) );
 
-    D3D12_DESCRIPTOR_HEAP_DESC dsv_heap_desc;
+    D3D12_DESCRIPTOR_HEAP_DESC dsv_heap_desc {};
     dsv_heap_desc.NumDescriptors = 1000;
     dsv_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
     dsv_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
@@ -159,17 +307,29 @@ void create_device( const RendererBackend* backend,
         &dsv_heap_desc,
         IID_PPV_ARGS( &device->p.dsv_heap ) ) );
 
+    D3D12_DESCRIPTOR_HEAP_DESC sampler_heap_desc {};
+    dsv_heap_desc.NumDescriptors = 1000;
+    dsv_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+    dsv_heap_desc.NodeMask       = 0;
+    D3D12_ASSERT( device->p.device->CreateDescriptorHeap(
+        &sampler_heap_desc,
+        IID_PPV_ARGS( &device->p.sampler_heap ) ) );
+
     device->p.rtv_descriptor_size =
         device->p.device->GetDescriptorHandleIncrementSize(
             D3D12_DESCRIPTOR_HEAP_TYPE_RTV );
     device->p.dsv_descriptor_size =
         device->p.device->GetDescriptorHandleIncrementSize(
             D3D12_DESCRIPTOR_HEAP_TYPE_DSV );
+    device->p.sampler_descriptor_size =
+        device->p.device->GetDescriptorHandleIncrementSize(
+            D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER );
 }
 
 void destroy_device( Device* device )
 {
     FT_ASSERT( device );
+    device->p.sampler_heap->Release();
     device->p.dsv_heap->Release();
     device->p.rtv_heap->Release();
     device->p.allocator->Release();
@@ -558,6 +718,8 @@ void create_shader( const Device* device, ShaderDesc* desc, Shader** p_shader )
     std::memcpy( dst, src, desc->bytecode_size );
     shader->p.bytecode.BytecodeLength  = desc->bytecode_size;
     shader->p.bytecode.pShaderBytecode = dst;
+
+    shader->reflect_data = reflect( desc->bytecode_size, desc->bytecode );
 }
 
 void destroy_shader( const Device* device, Shader* shader )
@@ -659,13 +821,16 @@ void create_graphics_pipeline( const Device*       device,
     }
 
     D3D12_RASTERIZER_DESC rasterizer_desc {};
-    rasterizer_desc.FillMode              = D3D12_FILL_MODE_SOLID;
-    rasterizer_desc.CullMode              = D3D12_CULL_MODE_NONE;
-    rasterizer_desc.FrontCounterClockwise = false;
-    rasterizer_desc.DepthBias             = D3D12_DEFAULT_DEPTH_BIAS;
-    rasterizer_desc.DepthBiasClamp        = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
-    rasterizer_desc.MultisampleEnable     = false;
-    rasterizer_desc.ForcedSampleCount     = 0;
+    rasterizer_desc.FillMode =
+        to_d3d12_fill_mode( desc->rasterizer_desc.polygon_mode );
+    rasterizer_desc.CullMode =
+        to_d3d12_cull_mode( desc->rasterizer_desc.cull_mode );
+    rasterizer_desc.FrontCounterClockwise =
+        to_d3d12_front_face( desc->rasterizer_desc.front_face );
+    rasterizer_desc.DepthBias         = D3D12_DEFAULT_DEPTH_BIAS;
+    rasterizer_desc.DepthBiasClamp    = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
+    rasterizer_desc.MultisampleEnable = false;
+    rasterizer_desc.ForcedSampleCount = 0;
     rasterizer_desc.ConservativeRaster =
         D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 
@@ -699,7 +864,8 @@ void create_graphics_pipeline( const Device*       device,
 
     pipeline_desc.RasterizerState = rasterizer_desc;
     pipeline_desc.PrimitiveTopologyType =
-        D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+        to_d3d12_primitive_topology_type( desc->topology );
+    pipeline->p.topology     = to_d3d12_primitive_topology( desc->topology );
     pipeline_desc.BlendState = blend_desc;
     pipeline_desc.DepthStencilState.DepthEnable =
         desc->depth_state_desc.depth_test;
@@ -806,8 +972,7 @@ void cmd_set_viewport( const CommandBuffer* cmd,
 
 void cmd_bind_pipeline( const CommandBuffer* cmd, const Pipeline* pipeline )
 {
-    cmd->p.command_list->IASetPrimitiveTopology(
-        D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+    cmd->p.command_list->IASetPrimitiveTopology( pipeline->p.topology );
     cmd->p.command_list->SetGraphicsRootSignature( pipeline->p.root_signature );
     cmd->p.command_list->SetPipelineState( pipeline->p.pipeline );
 }
@@ -921,21 +1086,99 @@ void create_buffer( const Device*     device,
                     const BufferDesc* desc,
                     Buffer**          p_buffer )
 {
+    FT_ASSERT( p_buffer );
+
+    *p_buffer      = new ( std::nothrow ) Buffer {};
+    Buffer* buffer = *p_buffer;
+
+    buffer->size            = desc->size;
+    buffer->descriptor_type = desc->descriptor_type;
+    buffer->memory_usage    = desc->memory_usage;
+
+    D3D12_RESOURCE_DESC buffer_desc {};
+    buffer_desc.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
+    buffer_desc.Alignment        = 65536ul;
+    buffer_desc.Width            = buffer->size;
+    buffer_desc.Height           = 1u;
+    buffer_desc.DepthOrArraySize = 1;
+    buffer_desc.MipLevels        = 1;
+    buffer_desc.Format           = DXGI_FORMAT_UNKNOWN;
+    buffer_desc.SampleDesc       = { 1u, 0u };
+    buffer_desc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    buffer_desc.Flags            = D3D12_RESOURCE_FLAG_NONE;
+
+    D3D12MA::ALLOCATION_DESC alloc_desc = {};
+    alloc_desc.HeapType = to_d3d12_heap_type( desc->memory_usage );
+
+    D3D12_ASSERT( device->p.allocator->CreateResource(
+        &alloc_desc,
+        &buffer_desc,
+        D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr,
+        &buffer->p.allocation,
+        IID_PPV_ARGS( &buffer->p.buffer ) ) );
 }
 
-void destroy_buffer( const Device* device, Buffer* buffer ) {}
+void destroy_buffer( const Device* device, Buffer* buffer )
+{
+    FT_ASSERT( buffer );
+    buffer->p.allocation->Release();
+    buffer->p.buffer->Release();
+    operator delete( buffer, std::nothrow );
+}
 
-void* map_memory( const Device* device, Buffer* buffer ) { return nullptr; }
+void* map_memory( const Device* device, Buffer* buffer )
+{
+    FT_ASSERT( buffer != nullptr );
+    FT_ASSERT( buffer->mapped_memory == nullptr );
+    D3D12_ASSERT( buffer->p.buffer->Map( 0, nullptr, &buffer->mapped_memory ) );
+    return buffer->mapped_memory;
+}
 
-void unmap_memory( const Device* device, Buffer* buffer ) {}
+void unmap_memory( const Device* device, Buffer* buffer )
+{
+    FT_ASSERT( buffer );
+    FT_ASSERT( buffer->mapped_memory );
+    buffer->p.buffer->Unmap( 0, nullptr );
+    buffer->mapped_memory = nullptr;
+}
 
 void create_sampler( const Device*      device,
                      const SamplerDesc* desc,
                      Sampler**          p_sampler )
 {
+    FT_ASSERT( p_sampler );
+
+    *p_sampler       = new ( std::nothrow ) Sampler {};
+    Sampler* sampler = *p_sampler;
+
+    D3D12_SAMPLER_DESC sampler_desc {};
+    sampler_desc.Filter         = to_d3d12_filter( desc->min_filter,
+                                           desc->mag_filter,
+                                           desc->mipmap_mode,
+                                           desc->anisotropy_enable,
+                                           desc->compare_enable );
+    sampler_desc.AddressU       = to_d3d12_address_mode( desc->address_mode_u );
+    sampler_desc.AddressV       = to_d3d12_address_mode( desc->address_mode_v );
+    sampler_desc.AddressW       = to_d3d12_address_mode( desc->address_mode_w );
+    sampler_desc.MipLODBias     = desc->mip_lod_bias;
+    sampler_desc.MaxAnisotropy  = desc->max_anisotropy;
+    sampler_desc.ComparisonFunc = to_d3d12_comparison_func( desc->compare_op );
+    sampler_desc.MinLOD         = desc->min_lod;
+    sampler_desc.MaxLOD         = desc->max_lod;
+
+    D3D12_CPU_DESCRIPTOR_HANDLE sampler_heap_handle(
+        device->p.dsv_heap->GetCPUDescriptorHandleForHeapStart() );
+    device->p.device->CreateSampler( &sampler_desc, sampler_heap_handle );
+    sampler->p.handle = sampler_heap_handle;
+    sampler_heap_handle.ptr += ( 1 * device->p.sampler_descriptor_size );
 }
 
-void destroy_sampler( const Device* device, Sampler* sampler ) {}
+void destroy_sampler( const Device* device, Sampler* sampler )
+{
+    FT_ASSERT( sampler );
+    operator delete( sampler, std::nothrow );
+}
 
 void create_image( const Device*    device,
                    const ImageDesc* desc,
@@ -966,7 +1209,12 @@ void create_image( const Device*    device,
     // TODO:
     image_desc.SampleDesc.Quality = 0;
     image_desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-    image_desc.Flags              = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+    if ( format_has_depth_aspect( desc->format ) ||
+         format_has_stencil_aspect( desc->format ) )
+    {
+        image_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+    }
 
     D3D12MA::ALLOCATION_DESC alloc_desc = {};
     alloc_desc.HeapType                 = D3D12_HEAP_TYPE_DEFAULT;

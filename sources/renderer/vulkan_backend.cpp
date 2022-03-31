@@ -213,9 +213,6 @@ VkSamplerAddressMode to_vk_sampler_address_mode( SamplerAddressMode mode )
         return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     case SamplerAddressMode::eClampToBorder:
         return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-    case SamplerAddressMode::eMirrorClampToEdge:
-        return VkSamplerAddressMode::
-            VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
     default: FT_ASSERT( false ); return VkSamplerAddressMode( -1 );
     }
 }
@@ -2620,8 +2617,6 @@ void create_buffer( const Device*     device,
 void destroy_buffer( const Device* device, Buffer* buffer )
 {
     FT_ASSERT( buffer );
-    FT_ASSERT( buffer->p.allocation );
-    FT_ASSERT( buffer->p.buffer );
     vmaDestroyBuffer( device->p.memory_allocator,
                       buffer->p.buffer,
                       buffer->p.allocation );
@@ -2669,7 +2664,6 @@ void create_sampler( const Device*      device,
 void destroy_sampler( const Device* device, Sampler* sampler )
 {
     FT_ASSERT( sampler );
-    FT_ASSERT( sampler->p.sampler );
     vkDestroySampler( device->p.logical_device,
                       sampler->p.sampler,
                       device->p.vulkan_allocator );

@@ -97,6 +97,8 @@ struct Device
         u64                   rtv_descriptor_size;
         ID3D12DescriptorHeap* dsv_heap;
         u64                   dsv_descriptor_size;
+        ID3D12DescriptorHeap* sampler_heap;
+        u64                   sampler_descriptor_size;
     } p;
 #endif
 };
@@ -225,6 +227,12 @@ struct Sampler
         VkSampler sampler;
     } p;
 #endif
+#ifdef D3D12_BACKEND
+    struct
+    {
+        D3D12_CPU_DESCRIPTOR_HANDLE handle;
+    } p;
+#endif
 };
 
 struct ImageDesc
@@ -291,7 +299,8 @@ struct Buffer
 #ifdef D3D12_BACKEND
     struct
     {
-        ID3D12Resource* buffer;
+        ID3D12Resource*      buffer;
+        D3D12MA::Allocation* allocation;
     } p;
 #endif
 };
@@ -539,8 +548,9 @@ struct Pipeline
 #ifdef D3D12_BACKEND
     struct
     {
-        ID3D12PipelineState* pipeline;
-        ID3D12RootSignature* root_signature;
+        ID3D12PipelineState*     pipeline;
+        ID3D12RootSignature*     root_signature;
+        D3D12_PRIMITIVE_TOPOLOGY topology;
     } p;
 #endif
 };

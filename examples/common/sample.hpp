@@ -1,5 +1,11 @@
 #include "fluent/fluent.hpp"
 
+#ifdef VULKAN_BACKEND
+#define BACKEND_NAME "Vulkan"
+#elif D3D12_BACKEND
+#define BACKEND_NAME "D3D12"
+#endif
+
 using namespace fluent;
 
 void init_sample();
@@ -262,12 +268,14 @@ void end_frame( u32 image_index )
     ImGuiWindowFlags window_flags = 0;
     window_flags |= ImGuiWindowFlags_NoBackground |
                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-                    ImGuiWindowFlags_NoMove;
+                    ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove;
 
     bool open_ptr = true;
 
+    ImGui::SetNextWindowSize( { 300, 50 } );
     ImGui::Begin( "Performance", &open_ptr, window_flags );
     ImGui::Text( "FPS: %f", ImGui::GetIO().Framerate );
+    ImGui::Text( "Current API: " BACKEND_NAME );
     ImGui::End();
 
     style->Colors[ ImGuiCol_Text ] = old_color;

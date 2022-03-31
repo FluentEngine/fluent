@@ -1,8 +1,13 @@
+#ifdef VULKAN_BACKEND
 #include <spirv_reflect.h>
+#endif
+#ifdef D3D12_BACKEND
+#endif
 #include "renderer/shader_reflection.hpp"
 
 namespace fluent
 {
+#ifdef VULKAN_BACKEND
 ShaderType get_type_by_reflection( const SpvReflectTypeDescription& type )
 {
     Format format = Format::eUndefined;
@@ -106,7 +111,8 @@ DescriptorType to_desctriptor_type( SpvReflectDescriptorType descriptor_type )
     }
 }
 
-ReflectionData reflect( u32 byte_code_size, const void* byte_code )
+static inline ReflectionData spirv_reflect( u32         byte_code_size,
+                                            const void* byte_code )
 {
     ReflectionData result {};
 
@@ -148,6 +154,27 @@ ReflectionData reflect( u32 byte_code_size, const void* byte_code )
     spvReflectDestroyShaderModule( &reflected_shader );
 
     return result;
+}
+#endif
+
+#ifdef D3D12_BACKEND
+static inline ReflectionData dxil_reflect( u32         byte_code_size,
+                                           const void* byte_code )
+{
+    ReflectionData result {};
+    return result;
+}
+#endif
+
+ReflectionData reflect( u32 byte_code_size, const void* byte_code )
+{
+#ifdef VULKAN_BACKEND
+    return spirv_reflect( byte_code_size, byte_code );
+#endif
+#ifdef D3D12_BACKEND
+    return dxil_reflect( byte_code_size, byte_code );
+#endif
+    return {};
 }
 
 } // namespace fluent
