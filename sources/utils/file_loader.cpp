@@ -15,12 +15,6 @@ std::vector<char> read_file_binary( const std::string& filename )
 
 std::vector<char> read_shader( const std::string& shader_name )
 {
-#ifdef VULKAN_BACKEND
-    return read_file_binary( shader_name + ".glsl.spv" );
-#endif
-#ifdef D3D12_BACKEND
-    return read_file_binary( shader_name + ".hlsl.dxil" );
-#endif
-    return {};
+    return read_file_binary( shader_name + ".bin" );
 }
 } // namespace fluent

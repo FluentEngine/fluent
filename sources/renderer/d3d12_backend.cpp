@@ -23,6 +23,21 @@
 
 namespace fluent
 {
+static inline DXGI_FORMAT to_dxgi_image_format( Format format )
+{
+    switch ( format )
+    {
+    case Format::eR8G8B8A8Srgb: format = Format::eR8G8B8A8Unorm;
+    case Format::eB8G8R8A8Srgb: format = Format::eB8G8R8A8Unorm;
+    default:
+    {
+        return static_cast<DXGI_FORMAT>( TinyImageFormat_ToDXGI_FORMAT(
+            static_cast<TinyImageFormat>( format ) ) );
+        break;
+    }
+    }
+}
+
 static inline DXGI_FORMAT to_dxgi_format( Format format )
 {
     return static_cast<DXGI_FORMAT>( TinyImageFormat_ToDXGI_FORMAT(
@@ -369,12 +384,11 @@ void create_swapchain( const Device*        device,
 {
     FT_ASSERT( p_swapchain );
 
-    *p_swapchain         = new ( std::nothrow ) Swapchain {};
-    Swapchain* swapchain = *p_swapchain;
-    swapchain->width     = desc->width;
-    swapchain->height    = desc->height;
-    // TODO:
-    swapchain->format          = Format::eR8G8B8A8Unorm;
+    *p_swapchain               = new ( std::nothrow ) Swapchain {};
+    Swapchain* swapchain       = *p_swapchain;
+    swapchain->width           = desc->width;
+    swapchain->height          = desc->height;
+    swapchain->format          = desc->format;
     swapchain->queue           = desc->queue;
     swapchain->min_image_count = desc->min_image_count;
     swapchain->image_count     = desc->min_image_count;
@@ -386,7 +400,8 @@ void create_swapchain( const Device*        device,
     swapchain_desc.BufferDesc.Height                  = swapchain->height;
     swapchain_desc.BufferDesc.RefreshRate.Numerator   = 60;
     swapchain_desc.BufferDesc.RefreshRate.Denominator = 1;
-    swapchain_desc.BufferDesc.Format = to_dxgi_format( swapchain->format );
+    swapchain_desc.BufferDesc.Format =
+        to_dxgi_image_format( swapchain->format );
     swapchain_desc.BufferDesc.ScanlineOrdering =
         DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
     swapchain_desc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
@@ -409,7 +424,7 @@ void create_swapchain( const Device*        device,
         swapchain->image_count,
         swapchain->width,
         swapchain->height,
-        to_dxgi_format( swapchain->format ),
+        to_dxgi_image_format( swapchain->format ),
         DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH ) );
 
     swapchain->images = new ( std::nothrow ) Image*[ swapchain->image_count ];
@@ -431,8 +446,7 @@ void create_swapchain( const Device*        device,
 
         D3D12_RENDER_TARGET_VIEW_DESC view_desc {};
         view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-        // TODO: ...
-        view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+        view_desc.Format        = to_dxgi_format( swapchain->format );
 
         device->p.device->CreateRenderTargetView(
             swapchain->images[ i ]->p.image,
@@ -675,10 +689,7 @@ void create_graphics_pipeline( const Device*       device,
     pipeline_desc.NumRenderTargets = desc->render_pass->color_attachment_count;
     for ( u32 i = 0; i < pipeline_desc.NumRenderTargets; i++ )
     {
-        // pipeline_desc.RTVFormats[ i ] = desc->render_pass->p.color_formats[ i
-        // ];
-        // TODO:
-        pipeline_desc.RTVFormats[ i ] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+        pipeline_desc.RTVFormats[ i ] = desc->render_pass->p.color_formats[ i ];
     }
 
     if ( desc->render_pass->has_depth_stencil )
@@ -950,7 +961,7 @@ void create_image( const Device*    device,
     image_desc.Height           = image->height;
     image_desc.DepthOrArraySize = image->depth;
     image_desc.MipLevels        = image->mip_level_count;
-    image_desc.Format           = to_dxgi_format( image->format );
+    image_desc.Format           = to_dxgi_image_format( image->format );
     image_desc.SampleDesc.Count = to_d3d12_sample_count( image->sample_count );
     // TODO:
     image_desc.SampleDesc.Quality = 0;
@@ -963,7 +974,7 @@ void create_image( const Device*    device,
     D3D12_ASSERT( device->p.allocator->CreateResource(
         &alloc_desc,
         &image_desc,
-        D3D12_RESOURCE_STATE_COPY_DEST,
+        D3D12_RESOURCE_STATE_COMMON,
         nullptr,
         &image->p.allocation,
         IID_PPV_ARGS( &image->p.image ) ) );
@@ -1063,7 +1074,7 @@ void create_ui_context( CommandBuffer* cmd,
     ImGui_ImplDX12_Init(
         desc->device->p.device,
         desc->in_fly_frame_count,
-        DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
+        desc->render_pass->p.color_formats[ 0 ],
         context->p.cbv_srv_heap,
         context->p.cbv_srv_heap->GetCPUDescriptorHandleForHeapStart(),
         context->p.cbv_srv_heap->GetGPUDescriptorHandleForHeapStart() );

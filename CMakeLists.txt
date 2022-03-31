@@ -18,18 +18,17 @@ endif()
 set(RENDERER_BACKEND_VULKAN False)
 set(RENDERER_BACKEND_D3D12 False)
 
+set(RENDERER_BACKEND "Vulkan" CACHE STRING "D3D12")
+
 if ("${RENDERER_BACKEND}" STREQUAL "Vulkan")
     set(RENDERER_BACKEND_VULKAN True)
 elseif("${RENDERER_BACKEND}" STREQUAL "D3D12")
     set(RENDERER_BACKEND_D3D12 True)
-else()
-    set(RENDERER_BACKEND_VULKAN True)
 endif()
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_shaders.cmake)
 set(FLUENT_BUILD_TESTS ON)
-
 set(BUILD_SHARED_LIBS OFF)
-
 
 if (RENDERER_BACKEND_VULKAN)
     add_subdirectory(third_party/volk)
@@ -100,7 +99,7 @@ set(math
     ${src_dir}/math/math.hpp
     ${src_dir}/math/math.cpp)
 
-set(sources 
+set(sources
     ${core}
     ${renderer}
     ${resource_manager}
@@ -143,20 +142,6 @@ endif()
 
 target_compile_definitions(${target} PUBLIC ${compile_definitions})
 target_compile_options(${target} PUBLIC ${compile_options})
-
-# TODO: move it to separate file
-function(compile_shaders ${SHADERS})
-    foreach(SHADER ${SHADERS})
-        if (RENDERER_BACKEND_VULKAN)
-            add_custom_command(OUTPUT ${SHADER}.spv
-                COMMAND glslangValidator -V ${SHADER} -o ${SHADER}.spv
-                DEPENDS ${SHADER}
-                COMMENT "Rebuilding ${SHADER}.spv" )
-            message(STATUS "Generating build commands for ${SHADER}.spv")
-        elseif(RENDERER_BACKEND_D3D12)
-        endif()
-    endforeach()
-endfunction()
 
 if (FLUENT_BUILD_TESTS)
     add_subdirectory(examples)

@@ -1,7 +1,7 @@
 build/
 .vscode/
 
-*.spv
+*.bin
 *.user
 
 # MacOS generated files #
