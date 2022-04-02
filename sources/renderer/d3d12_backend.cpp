@@ -4,6 +4,7 @@
 #include <imgui_impl_dx12.h>
 #include <imgui_impl_sdl.h>
 #include <tinyimageformat_apis.h>
+#include <tinyimageformat_query.h>
 #include "core/window.hpp"
 #include "renderer/renderer_backend.hpp"
 
@@ -11,7 +12,7 @@
 #define D3D12_ASSERT( x )                                                      \
     do {                                                                       \
         HRESULT err = x;                                                       \
-        if ( err )                                                             \
+        if ( err != S_OK )                                                     \
         {                                                                      \
             FT_ERROR( "Detected D3D12 error: {}", err );                       \
             abort();                                                           \
@@ -241,6 +242,37 @@ static inline D3D12_COMPARISON_FUNC to_d3d12_comparison_func( CompareOp op )
     }
 }
 
+static inline D3D12_DESCRIPTOR_RANGE_TYPE to_d3d12_descriptor_range_type(
+    DescriptorType type )
+{
+    switch ( type )
+    {
+    case DescriptorType::eSampler: return D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+    case DescriptorType::eStorageBuffer:
+    case DescriptorType::eStorageImage:
+    case DescriptorType::eStorageTexelBuffer:
+        return D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    default: return D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    }
+}
+
+static inline D3D12_SHADER_VISIBILITY to_d3d12_shader_visibility(
+    ShaderStage stage )
+{
+    switch ( stage )
+    {
+    case ShaderStage::eVertex: return D3D12_SHADER_VISIBILITY_VERTEX;
+    case ShaderStage::eTessellationControl: return D3D12_SHADER_VISIBILITY_HULL;
+    case ShaderStage::eTessellationEvaluation:
+        return D3D12_SHADER_VISIBILITY_DOMAIN;
+    case ShaderStage::eGeometry: return D3D12_SHADER_VISIBILITY_GEOMETRY;
+    case ShaderStage::eFragment: return D3D12_SHADER_VISIBILITY_PIXEL;
+    case ShaderStage::eAllGraphics:
+    case ShaderStage::eAll: return D3D12_SHADER_VISIBILITY_ALL;
+    default: FT_ASSERT( false ); return D3D12_SHADER_VISIBILITY( -1 );
+    }
+}
+
 void create_renderer_backend( const RendererBackendDesc* desc,
                               RendererBackend**          p_backend )
 {
@@ -289,31 +321,38 @@ void create_device( const RendererBackend* backend,
 
     D3D12MA::CreateAllocator( &allocator_desc, &device->p.allocator );
 
-    D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc {};
-    rtv_heap_desc.NumDescriptors = 1000;
-    rtv_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-    rtv_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    rtv_heap_desc.NodeMask       = 0;
+    D3D12_DESCRIPTOR_HEAP_DESC heap_desc {};
+    heap_desc.NumDescriptors = 1000;
+    heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+    heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    heap_desc.NodeMask       = 0;
     D3D12_ASSERT( device->p.device->CreateDescriptorHeap(
-        &rtv_heap_desc,
+        &heap_desc,
         IID_PPV_ARGS( &device->p.rtv_heap ) ) );
 
-    D3D12_DESCRIPTOR_HEAP_DESC dsv_heap_desc {};
-    dsv_heap_desc.NumDescriptors = 1000;
-    dsv_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-    dsv_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    dsv_heap_desc.NodeMask       = 0;
+    heap_desc.NumDescriptors = 1000;
+    heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+    heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    heap_desc.NodeMask       = 0;
     D3D12_ASSERT( device->p.device->CreateDescriptorHeap(
-        &dsv_heap_desc,
+        &heap_desc,
         IID_PPV_ARGS( &device->p.dsv_heap ) ) );
 
-    D3D12_DESCRIPTOR_HEAP_DESC sampler_heap_desc {};
-    dsv_heap_desc.NumDescriptors = 1000;
-    dsv_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-    dsv_heap_desc.NodeMask       = 0;
+    heap_desc.NumDescriptors = 1000;
+    heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+    heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+    heap_desc.NodeMask       = 0;
     D3D12_ASSERT( device->p.device->CreateDescriptorHeap(
-        &sampler_heap_desc,
+        &heap_desc,
         IID_PPV_ARGS( &device->p.sampler_heap ) ) );
+
+    heap_desc.NumDescriptors = 1000;
+    heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+    heap_desc.NodeMask       = 0;
+    D3D12_ASSERT( device->p.device->CreateDescriptorHeap(
+        &heap_desc,
+        IID_PPV_ARGS( &device->p.cbv_srv_uav_heap ) ) );
 
     device->p.rtv_descriptor_size =
         device->p.device->GetDescriptorHandleIncrementSize(
@@ -324,6 +363,9 @@ void create_device( const RendererBackend* backend,
     device->p.sampler_descriptor_size =
         device->p.device->GetDescriptorHandleIncrementSize(
             D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER );
+    device->p.cbv_srv_uav_descriptor_size =
+        device->p.device->GetDescriptorHandleIncrementSize(
+            D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
 }
 
 void destroy_device( Device* device )
@@ -332,6 +374,7 @@ void destroy_device( Device* device )
     device->p.sampler_heap->Release();
     device->p.dsv_heap->Release();
     device->p.rtv_heap->Release();
+    device->p.cbv_srv_uav_heap->Release();
     device->p.allocator->Release();
     device->p.device->Release();
     device->p.adapter->Release();
@@ -508,7 +551,14 @@ void queue_submit( const Queue* queue, const QueueSubmitDesc* desc )
                                          command_lists.data() );
 }
 
-void immediate_submit( const Queue* queue, const CommandBuffer* cmd ) {}
+void immediate_submit( const Queue* queue, const CommandBuffer* cmd )
+{
+    QueueSubmitDesc queue_submit_desc {};
+    queue_submit_desc.command_buffer_count = 1;
+    queue_submit_desc.command_buffers      = cmd;
+    queue_submit( queue, &queue_submit_desc );
+    queue_wait_idle( queue );
+}
 
 void queue_present( const Queue* queue, const QueuePresentDesc* desc )
 {
@@ -661,12 +711,6 @@ void acquire_next_image( const Device*    device,
         ( swapchain->p.image_index + 1 ) % swapchain->image_count;
 }
 
-void create_framebuffer( const Device*         device,
-                         RenderPass*           render_pass,
-                         const RenderPassDesc* desc )
-{
-}
-
 void create_render_pass( const Device*         device,
                          const RenderPassDesc* desc,
                          RenderPass**          p_render_pass )
@@ -719,7 +763,8 @@ void create_shader( const Device* device, ShaderDesc* desc, Shader** p_shader )
     shader->p.bytecode.BytecodeLength  = desc->bytecode_size;
     shader->p.bytecode.pShaderBytecode = dst;
 
-    shader->reflect_data = reflect( desc->bytecode_size, desc->bytecode );
+    shader->reflect_data = reflect( shader->p.bytecode.BytecodeLength,
+                                    shader->p.bytecode.pShaderBytecode );
 }
 
 void destroy_shader( const Device* device, Shader* shader )
@@ -744,6 +789,84 @@ void create_descriptor_set_layout(
     descriptor_set_layout->shader_count = shader_count;
     descriptor_set_layout->shaders      = shaders;
 
+    std::vector<D3D12_ROOT_PARAMETER1>   tables;
+    std::vector<D3D12_DESCRIPTOR_RANGE1> cbv_ranges;
+    std::vector<D3D12_DESCRIPTOR_RANGE1> srv_uav_ranges;
+    std::vector<D3D12_DESCRIPTOR_RANGE1> sampler_ranges;
+
+    for ( u32 s = 0; s < shader_count; ++s )
+    {
+        u32 cbv_range_count     = cbv_ranges.size();
+        u32 srv_uav_range_count = srv_uav_ranges.size();
+        u32 sampler_range_count = sampler_ranges.size();
+
+        for ( u32 b = 0; b < shaders[ s ]->reflect_data.binding_count; ++b )
+        {
+            const auto& binding = shaders[ s ]->reflect_data.bindings[ b ];
+            D3D12_DESCRIPTOR_RANGE1 range = {};
+            range.BaseShaderRegister      = binding.binding;
+            range.RangeType =
+                to_d3d12_descriptor_range_type( binding.descriptor_type );
+            range.NumDescriptors                    = binding.descriptor_count;
+            range.RegisterSpace                     = binding.set;
+            range.OffsetInDescriptorsFromTableStart = 0;
+
+            switch ( range.RangeType )
+            {
+            case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
+                cbv_ranges.emplace_back( std::move( range ) );
+                break;
+            case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
+            case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
+                srv_uav_ranges.emplace_back( std::move( range ) );
+                break;
+            case D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER:
+                sampler_ranges.emplace_back( std::move( range ) );
+                break;
+            default: break;
+            }
+        }
+
+        if ( cbv_ranges.size() - cbv_range_count > 0 )
+        {
+            D3D12_ROOT_PARAMETER1& table = tables.emplace_back();
+            table                        = {};
+            table.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+            table.ShaderVisibility =
+                to_d3d12_shader_visibility( shaders[ s ]->stage );
+            table.DescriptorTable.NumDescriptorRanges =
+                cbv_ranges.size() - cbv_range_count;
+            table.DescriptorTable.pDescriptorRanges =
+                cbv_ranges.data() + cbv_range_count;
+        }
+
+        if ( srv_uav_ranges.size() - srv_uav_range_count > 0 )
+        {
+            D3D12_ROOT_PARAMETER1& table = tables.emplace_back();
+            table                        = {};
+            table.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+            table.ShaderVisibility =
+                to_d3d12_shader_visibility( shaders[ s ]->stage );
+            table.DescriptorTable.NumDescriptorRanges =
+                srv_uav_ranges.size() - srv_uav_range_count;
+            table.DescriptorTable.pDescriptorRanges =
+                srv_uav_ranges.data() + srv_uav_range_count;
+        }
+
+        if ( sampler_ranges.size() - sampler_range_count > 0 )
+        {
+            D3D12_ROOT_PARAMETER1& table = tables.emplace_back();
+            table                        = {};
+            table.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+            table.ShaderVisibility =
+                to_d3d12_shader_visibility( shaders[ s ]->stage );
+            table.DescriptorTable.NumDescriptorRanges =
+                sampler_ranges.size() - sampler_range_count;
+            table.DescriptorTable.pDescriptorRanges =
+                sampler_ranges.data() + sampler_range_count;
+        }
+    }
+
     D3D12_FEATURE_DATA_ROOT_SIGNATURE feature_data {};
     feature_data.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 
@@ -751,6 +874,8 @@ void create_descriptor_set_layout(
     root_signature_desc.Version = feature_data.HighestVersion;
     root_signature_desc.Desc_1_1.Flags =
         D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+    root_signature_desc.Desc_1_1.NumParameters = tables.size();
+    root_signature_desc.Desc_1_1.pParameters   = tables.data();
 
     ID3DBlob* signature;
     ID3DBlob* error;
@@ -820,6 +945,42 @@ void create_graphics_pipeline( const Device*       device,
         }
     }
 
+    const VertexLayout& vertex_layout = desc->vertex_layout;
+
+    D3D12_INPUT_LAYOUT_DESC  input_layout {};
+    D3D12_INPUT_ELEMENT_DESC input_elements[ MAX_VERTEX_ATTRIBUTE_COUNT ];
+    u32                      input_element_count = 0;
+
+    for ( u32 i = 0; i < vertex_layout.attribute_desc_count; i++ )
+    {
+        const auto& attribute     = vertex_layout.attribute_descs[ i ];
+        auto&       input_element = input_elements[ input_element_count ];
+
+        input_element.Format            = to_dxgi_format( attribute.format );
+        input_element.InputSlot         = attribute.binding;
+        input_element.AlignedByteOffset = attribute.offset;
+        input_element.SemanticIndex     = 0;
+        input_element.SemanticName      = "TODO";
+
+        if ( vertex_layout.binding_descs[ attribute.binding ].input_rate ==
+             VertexInputRate::eInstance )
+        {
+            input_element.InputSlotClass =
+                D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
+            input_element.InstanceDataStepRate = 1;
+        }
+        else
+        {
+            input_element.InputSlotClass =
+                D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+            input_element.InstanceDataStepRate = 0;
+        }
+        input_element_count++;
+    }
+
+    input_layout.NumElements        = input_element_count;
+    input_layout.pInputElementDescs = input_elements;
+
     D3D12_RASTERIZER_DESC rasterizer_desc {};
     rasterizer_desc.FillMode =
         to_d3d12_fill_mode( desc->rasterizer_desc.polygon_mode );
@@ -862,6 +1023,7 @@ void create_graphics_pipeline( const Device*       device,
         pipeline_desc.DSVFormat = desc->render_pass->p.depth_format;
     }
 
+    pipeline_desc.InputLayout     = input_layout;
     pipeline_desc.RasterizerState = rasterizer_desc;
     pipeline_desc.PrimitiveTopologyType =
         to_d3d12_primitive_topology_type( desc->topology );
@@ -1007,6 +1169,11 @@ void cmd_bind_vertex_buffer( const CommandBuffer* cmd,
                              const Buffer*        buffer,
                              const u64            offset )
 {
+    D3D12_VERTEX_BUFFER_VIEW buffer_view {};
+    buffer_view.BufferLocation = buffer->p.buffer->GetGPUVirtualAddress();
+    buffer_view.SizeInBytes    = buffer->size;
+    buffer_view.StrideInBytes  = 4 * sizeof( float );
+    cmd->p.command_list->IASetVertexBuffers( 0, 1, &buffer_view );
 }
 
 void cmd_bind_index_buffer_u16( const CommandBuffer* cmd,
@@ -1028,6 +1195,11 @@ void cmd_copy_buffer( const CommandBuffer* cmd,
                       u64                  dst_offset,
                       u64                  size )
 {
+    cmd->p.command_list->CopyBufferRegion( dst->p.buffer,
+                                           dst_offset,
+                                           src->p.buffer,
+                                           src_offset,
+                                           size );
 }
 
 void cmd_copy_buffer_to_image( const CommandBuffer* cmd,
@@ -1035,6 +1207,32 @@ void cmd_copy_buffer_to_image( const CommandBuffer* cmd,
                                u64                  src_offset,
                                Image*               dst )
 {
+    D3D12_TEXTURE_COPY_LOCATION dst_copy_location {};
+    dst_copy_location.SubresourceIndex = 0;
+    dst_copy_location.Type      = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+    dst_copy_location.pResource = dst->p.image;
+
+    u32 texel_size =
+        TinyImageFormat_BitSizeOfBlock( ( TinyImageFormat ) dst->format ) / 8;
+
+    D3D12_TEXTURE_COPY_LOCATION src_copy_location {};
+    src_copy_location.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+    src_copy_location.PlacedFootprint.Footprint.Format =
+        to_dxgi_image_format( dst->format );
+    src_copy_location.PlacedFootprint.Footprint.Width  = dst->width;
+    src_copy_location.PlacedFootprint.Footprint.Height = dst->height;
+    src_copy_location.PlacedFootprint.Footprint.Depth  = dst->depth;
+    src_copy_location.PlacedFootprint.Footprint.RowPitch =
+        texel_size * dst->width;
+    src_copy_location.PlacedFootprint.Offset = 0;
+    src_copy_location.pResource              = src->p.buffer;
+
+    cmd->p.command_list->CopyTextureRegion( &dst_copy_location,
+                                            0,
+                                            0,
+                                            0,
+                                            &src_copy_location,
+                                            nullptr );
 }
 
 void cmd_dispatch( const CommandBuffer* cmd,
@@ -1168,7 +1366,7 @@ void create_sampler( const Device*      device,
     sampler_desc.MaxLOD         = desc->max_lod;
 
     D3D12_CPU_DESCRIPTOR_HANDLE sampler_heap_handle(
-        device->p.dsv_heap->GetCPUDescriptorHandleForHeapStart() );
+        device->p.sampler_heap->GetCPUDescriptorHandleForHeapStart() );
     device->p.device->CreateSampler( &sampler_desc, sampler_heap_handle );
     sampler->p.handle = sampler_heap_handle;
     sampler_heap_handle.ptr += ( 1 * device->p.sampler_descriptor_size );
@@ -1244,7 +1442,7 @@ void create_image( const Device*    device,
         image->p.image_view = dsv_heap_handle;
         dsv_heap_handle.ptr += ( 1 * device->p.dsv_descriptor_size );
     }
-    else
+    else if ( desc->descriptor_type == DescriptorType::eColorAttachment )
     {
         D3D12_CPU_DESCRIPTOR_HANDLE rtv_heap_handle(
             device->p.rtv_heap->GetCPUDescriptorHandleForHeapStart() );
@@ -1259,6 +1457,23 @@ void create_image( const Device*    device,
 
         image->p.image_view = rtv_heap_handle;
         rtv_heap_handle.ptr += ( 1 * device->p.rtv_descriptor_size );
+    }
+    else
+    {
+        D3D12_CPU_DESCRIPTOR_HANDLE srv_uav_heap_handle(
+            device->p.cbv_srv_uav_heap->GetCPUDescriptorHandleForHeapStart() );
+
+        D3D12_SHADER_RESOURCE_VIEW_DESC view_desc {};
+        view_desc.ViewDimension       = D3D12_SRV_DIMENSION_TEXTURE2D;
+        view_desc.Format              = image_desc.Format;
+        view_desc.Texture2D.MipLevels = 1;
+
+        device->p.device->CreateShaderResourceView( image->p.image,
+                                                    nullptr,
+                                                    srv_uav_heap_handle );
+        image->p.image_view = srv_uav_heap_handle;
+        srv_uav_heap_handle.ptr +=
+            ( 1 * device->p.cbv_srv_uav_descriptor_size );
     }
 }
 

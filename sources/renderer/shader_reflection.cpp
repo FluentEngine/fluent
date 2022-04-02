@@ -2,86 +2,16 @@
 #include <spirv_reflect.h>
 #endif
 #ifdef D3D12_BACKEND
+#include <d3d12.h>
+#include <dxcapi.h>
+#include <d3d12shader.h>
 #endif
 #include "renderer/shader_reflection.hpp"
 
 namespace fluent
 {
 #ifdef VULKAN_BACKEND
-ShaderType get_type_by_reflection( const SpvReflectTypeDescription& type )
-{
-    Format format = Format::eUndefined;
-    if ( type.type_flags & SPV_REFLECT_TYPE_FLAG_FLOAT )
-    {
-        if ( type.traits.numeric.vector.component_count < 2 ||
-             type.traits.numeric.matrix.column_count < 2 )
-            format = Format::eR32Sfloat;
-        if ( type.traits.numeric.vector.component_count == 2 ||
-             type.traits.numeric.matrix.column_count == 2 )
-            format = Format::eR32G32Sfloat;
-        if ( type.traits.numeric.vector.component_count == 3 ||
-             type.traits.numeric.matrix.column_count == 3 )
-            format = Format::eR32G32B32Sfloat;
-        if ( type.traits.numeric.vector.component_count == 4 ||
-             type.traits.numeric.matrix.column_count == 4 )
-            format = Format::eR32G32B32A32Sfloat;
-    }
-    if ( type.type_flags & SPV_REFLECT_TYPE_FLAG_INT )
-    {
-        if ( type.traits.numeric.vector.component_count < 2 ||
-             type.traits.numeric.matrix.column_count < 2 )
-            format = type.traits.numeric.scalar.signedness ? Format::eR32Sint
-                                                           : Format::eR32Uint;
-        if ( type.traits.numeric.vector.component_count == 2 ||
-             type.traits.numeric.matrix.column_count == 2 )
-            format = type.traits.numeric.scalar.signedness
-                         ? Format::eR32G32Sint
-                         : Format::eR32G32Uint;
-        if ( type.traits.numeric.vector.component_count == 3 ||
-             type.traits.numeric.matrix.column_count == 3 )
-            format = type.traits.numeric.scalar.signedness
-                         ? Format::eR32G32B32Sint
-                         : Format::eR32G32B32Uint;
-        if ( type.traits.numeric.vector.component_count == 4 ||
-             type.traits.numeric.matrix.column_count == 4 )
-            format = type.traits.numeric.scalar.signedness
-                         ? Format::eR32G32B32A32Sint
-                         : Format::eR32G32B32A32Uint;
-    }
-
-    FT_ASSERT( format != Format::eUndefined );
-
-    u32 byte_size       = type.traits.numeric.scalar.width / 8;
-    u32 component_count = 1;
-
-    if ( type.traits.numeric.vector.component_count > 0 )
-        byte_size *= type.traits.numeric.vector.component_count;
-    else if ( type.traits.numeric.matrix.row_count > 0 )
-        byte_size *= type.traits.numeric.matrix.row_count;
-
-    if ( type.traits.numeric.matrix.column_count > 0 )
-        component_count = type.traits.numeric.matrix.column_count;
-
-    return ShaderType { format, component_count, byte_size };
-}
-
-void recursive_uniform_visit( std::vector<ShaderType>& uniform_variables,
-                              const SpvReflectTypeDescription& type )
-{
-    if ( type.member_count > 0 )
-    {
-        for ( uint32_t i = 0; i < type.member_count; i++ )
-            recursive_uniform_visit( uniform_variables, type.members[ i ] );
-    }
-    else
-    {
-        if ( type.type_flags &
-             ( SPV_REFLECT_TYPE_FLAG_INT | SPV_REFLECT_TYPE_FLAG_FLOAT ) )
-            uniform_variables.push_back( get_type_by_reflection( type ) );
-    }
-}
-
-DescriptorType to_desctriptor_type( SpvReflectDescriptorType descriptor_type )
+DescriptorType to_descriptor_type( SpvReflectDescriptorType descriptor_type )
 {
     switch ( descriptor_type )
     {
@@ -146,7 +76,7 @@ static inline ReflectionData spirv_reflect( u32         byte_code_size,
         result.bindings[ i ].binding          = descriptor_binding->binding;
         result.bindings[ i ].descriptor_count = descriptor_binding->count;
         result.bindings[ i ].descriptor_type =
-            to_desctriptor_type( descriptor_binding->descriptor_type );
+            to_descriptor_type( descriptor_binding->descriptor_type );
         result.bindings[ i ].set = descriptor_binding->set;
         i++;
     }
@@ -158,11 +88,75 @@ static inline ReflectionData spirv_reflect( u32         byte_code_size,
 #endif
 
 #ifdef D3D12_BACKEND
+DescriptorType to_descriptor_type( D3D_SHADER_INPUT_TYPE shader_input_type )
+{
+    switch ( shader_input_type )
+    {
+    case D3D_SIT_SAMPLER: return DescriptorType::eSampler;
+    case D3D_SIT_TEXTURE: return DescriptorType::eSampledImage;
+    case D3D_SIT_UAV_RWTYPED: return DescriptorType::eStorageImage;
+    case D3D_SIT_TBUFFER: return DescriptorType::eUniformTexelBuffer;
+    case D3D_SIT_CBUFFER: return DescriptorType::eUniformBuffer;
+    case D3D_SIT_UAV_RWBYTEADDRESS: return DescriptorType::eStorageBuffer;
+    default: FT_ASSERT( false ); return DescriptorType( -1 );
+    }
+}
+
 static inline ReflectionData dxil_reflect( u32         byte_code_size,
                                            const void* byte_code )
 {
-    ReflectionData result {};
-    return result;
+#define DXIL_FOURCC( ch0, ch1, ch2, ch3 )                                      \
+    ( ( uint32_t )( uint8_t )( ch0 ) | ( uint32_t )( uint8_t )( ch1 ) << 8 |   \
+      ( uint32_t )( uint8_t )( ch2 ) << 16 |                                   \
+      ( uint32_t )( uint8_t )( ch3 ) << 24 )
+
+    HRESULT      result;
+    IDxcLibrary* library;
+    result = DxcCreateInstance( CLSID_DxcLibrary, IID_PPV_ARGS( &library ) );
+    FT_ASSERT( result == S_OK );
+    IDxcBlobEncoding* blob;
+    library->CreateBlobWithEncodingFromPinned( byte_code,
+                                               byte_code_size,
+                                               0,
+                                               &blob );
+    IDxcContainerReflection* container_reflection;
+    ID3D12ShaderReflection*  reflection;
+    u32                      shader_idx;
+    DxcCreateInstance( CLSID_DxcContainerReflection,
+                       IID_PPV_ARGS( &container_reflection ) );
+    container_reflection->Load( blob );
+    result = ( container_reflection->FindFirstPartKind(
+        DXIL_FOURCC( 'D', 'X', 'I', 'L' ),
+        &shader_idx ) );
+    FT_ASSERT( result == S_OK );
+    result = ( container_reflection->GetPartReflection(
+        shader_idx,
+        IID_PPV_ARGS( &reflection ) ) );
+    FT_ASSERT( result == S_OK );
+
+    ReflectionData reflection_data {};
+
+    D3D12_SHADER_DESC desc {};
+    reflection->GetDesc( &desc );
+
+    reflection_data.binding_count = desc.BoundResources;
+    reflection_data.bindings.resize( reflection_data.binding_count );
+
+    for ( u32 i = 0; i < desc.BoundResources; ++i )
+    {
+        D3D12_SHADER_INPUT_BIND_DESC binding;
+        reflection->GetResourceBindingDesc( i, &binding );
+
+        reflection_data.bindings[ i ].binding          = binding.BindPoint;
+        reflection_data.bindings[ i ].descriptor_count = binding.BindCount;
+        reflection_data.bindings[ i ].descriptor_type =
+            to_descriptor_type( binding.Type );
+        reflection_data.bindings[ i ].set = binding.Space;
+    }
+
+    reflection->Release();
+    container_reflection->Release();
+    return reflection_data;
 }
 #endif
 

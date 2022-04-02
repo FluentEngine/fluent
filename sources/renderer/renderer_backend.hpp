@@ -93,6 +93,8 @@ struct Device
         IDXGIAdapter*         adapter;
         ID3D12Device*         device;
         D3D12MA::Allocator*   allocator;
+        ID3D12DescriptorHeap* cbv_srv_uav_heap;
+        u64                   cbv_srv_uav_descriptor_size;
         ID3D12DescriptorHeap* rtv_heap;
         u64                   rtv_descriptor_size;
         ID3D12DescriptorHeap* dsv_heap;

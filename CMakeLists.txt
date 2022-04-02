@@ -33,12 +33,14 @@ set(BUILD_SHARED_LIBS OFF)
 if (RENDERER_BACKEND_VULKAN)
     add_subdirectory(third_party/volk)
     add_subdirectory(third_party/vk_mem_alloc)
-    set(third_party_includes
+    set(include_dirs
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/vk_enum_string_helper)
     set(libs volk vma_allocator)
 elseif (RENDERER_BACKEND_D3D12)
     add_subdirectory(third_party/D3D12MemoryAllocator)
-    set(libs d3d12 dxgi D3D12MemoryAllocator)
+    set(include_dirs ${CMAKE_CURRENT_SOURCE_DIR}/third_party/dxc/inc)
+    set(lib_dirs ${CMAKE_CURRENT_SOURCE_DIR}/third_party/dxc/lib)
+    set(libs d3d12 dxgi dxcompiler D3D12MemoryAllocator)
 endif()
 
 add_subdirectory(third_party/spdlog)
@@ -107,20 +109,21 @@ set(sources
     ${math}
     ${scene})
 
-set(includes
-    ${third_party_includes}
-    ${CMAKE_CURRENT_SOURCE_DIR}/sources)
+set(include_dirs
+    ${CMAKE_CURRENT_SOURCE_DIR}/sources
+    ${include_dirs})
 
 add_library(${target} ${sources})
 
 target_include_directories(${target}
     PUBLIC
-    ${includes}
+    ${include_dirs}
 
     INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
 
+target_link_directories(${target} PUBLIC ${lib_dirs})
 target_link_libraries(${target} PUBLIC ${libs})
 
 if (RENDERER_BACKEND_VULKAN)

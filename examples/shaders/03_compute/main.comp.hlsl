@@ -60,7 +60,8 @@ float fractal(inout float3 p)
 
 float plane(float3 p)
 {
-    return dot(p, 0.57735002040863037109375f.xxx) - (smoothstep(0.0500000007450580596923828125f, 1.0f, (sin((iTime * 0.095399998128414154052734375f) - 2.5248000621795654296875f) * 0.5f) + 0.5f) * 6.0f);
+    return dot(p, 0.57735002040863037109375f.xxx) -
+        (smoothstep(0.0500000007450580596923828125f, 1.0f, (sin((iTime * 0.095399998128414154052734375f) - 2.5248000621795654296875f) * 0.5f) + 0.5f) * 6.0f);
 }
 
 float de(float3 p)
@@ -94,8 +95,10 @@ float3 toGray(float3 color)
     return (((color.x + color.y) + color.z) / 3.0f).xxx;
 }
 
-void comp_main()
+[numthreads(16, 16, 1)]
+void main(Input stage_input)
 {
+    gl_GlobalInvocationID = stage_input.gl_GlobalInvocationID;
     uint _261_dummy_parameter;
     int2 size = int2(imageSize(uOutputImage, _261_dummy_parameter));
     int2 coord = int2(gl_GlobalInvocationID.xy);
@@ -180,11 +183,4 @@ void comp_main()
     fragColor = float4(_525.x, _525.y, _525.z, fragColor.w);
     fragColor.w = 1.0f;
     uOutputImage[coord] = fragColor;
-}
-
-[numthreads(16, 16, 1)]
-void main(Input stage_input)
-{
-    gl_GlobalInvocationID = stage_input.gl_GlobalInvocationID;
-    comp_main();
 }
