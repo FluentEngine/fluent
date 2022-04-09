@@ -3,9 +3,13 @@ set(tools_dir "${FLUENT_ROOT_DIRECTORY}/tools")
 function(compile_shader type shader_name compiled_shader_name)
     message("Compile: \n" ${shader_name})
 
+    set(res 0)
+
     if (RENDERER_BACKEND_VULKAN)
         execute_process(COMMAND glslangValidator -e main -V ${shader_name} -o ${compiled_shader_name} OUTPUT_QUIET RESULT_VARIABLE res OUTPUT_VARIABLE out)
-    elseif(RENDERER_BACKEND_D3D12)
+    endif()
+
+    if(RENDERER_BACKEND_D3D12)
         execute_process(COMMAND dxc -T ${type} -Fo ${compiled_shader_name} ${shader_name} OUTPUT_QUIET RESULT_VARIABLE res OUTPUT_VARIABLE out)
     endif()
 

@@ -1,10 +1,17 @@
 #pragma once
 
 #include <tinyimageformat_base.h>
+#include "core/base.hpp"
 
 namespace fluent
 {
 #define BIT( x ) 1 << x
+
+enum class RendererAPI : u8
+{
+    eVulkan = 0,
+    eD3D12  = 1,
+};
 
 enum class QueueType : u8
 {

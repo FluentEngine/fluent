@@ -15,16 +15,8 @@ elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
     set(FLUENT_DEBUG_BUILD OFF)
 endif()
 
-set(RENDERER_BACKEND_VULKAN False)
-set(RENDERER_BACKEND_D3D12 False)
-
-set(RENDERER_BACKEND "Vulkan" CACHE STRING "D3D12")
-
-if ("${RENDERER_BACKEND}" STREQUAL "Vulkan")
-    set(RENDERER_BACKEND_VULKAN True)
-elseif("${RENDERER_BACKEND}" STREQUAL "D3D12")
-    set(RENDERER_BACKEND_D3D12 True)
-endif()
+option(RENDERER_BACKEND_VULKAN True)
+option(RENDERER_BACKEND_D3D12 False)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_shaders.cmake)
 set(FLUENT_BUILD_TESTS ON)
@@ -84,7 +76,9 @@ set(renderer
     ${src_dir}/renderer/shader_reflection.hpp
     ${src_dir}/renderer/shader_reflection.cpp
     ${src_dir}/renderer/renderer_backend.hpp
-    ${src_dir}/renderer/vulkan_backend.cpp
+    ${src_dir}/renderer/renderer_backend.cpp
+    ${src_dir}/renderer/vulkan/vulkan_backend.hpp
+    ${src_dir}/renderer/vulkan/vulkan_backend.cpp
     ${src_dir}/renderer/d3d12_backend.cpp
     ${src_dir}/renderer/resource_loader.hpp
     ${src_dir}/renderer/resource_loader.cpp)
@@ -128,7 +122,9 @@ target_link_libraries(${target} PUBLIC ${libs})
 
 if (RENDERER_BACKEND_VULKAN)
     set(compile_definitions VULKAN_BACKEND)
-elseif(RENDERER_BACKEND_D3D12)
+endif()
+
+if(RENDERER_BACKEND_D3D12)
     set(compile_definitions D3D12_BACKEND)
 endif()
 

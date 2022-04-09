@@ -207,7 +207,7 @@ static inline D3D12_FILTER to_d3d12_filter( Filter            min_filter,
                           ? D3D12_FILTER_COMPARISON_MIN_MAG_MIP_POINT
                           : D3D12_FILTER_MIN_MAG_MIP_POINT;
 
-    return ( D3D12_FILTER )( base_filter + filter );
+    return ( D3D12_FILTER ) ( base_filter + filter );
 }
 
 static inline D3D12_TEXTURE_ADDRESS_MODE to_d3d12_address_mode(
@@ -271,21 +271,6 @@ static inline D3D12_SHADER_VISIBILITY to_d3d12_shader_visibility(
     case ShaderStage::eAll: return D3D12_SHADER_VISIBILITY_ALL;
     default: FT_ASSERT( false ); return D3D12_SHADER_VISIBILITY( -1 );
     }
-}
-
-void create_renderer_backend( const RendererBackendDesc* desc,
-                              RendererBackend**          p_backend )
-{
-    FT_ASSERT( p_backend );
-
-    *p_backend               = new ( std::nothrow ) RendererBackend {};
-    RendererBackend* backend = *p_backend;
-#ifdef FLUENT_DEBUG
-    D3D12_ASSERT( D3D12GetDebugInterface(
-        IID_PPV_ARGS( &backend->p.debug_controller ) ) );
-    backend->p.debug_controller->EnableDebugLayer();
-#endif
-    D3D12_ASSERT( CreateDXGIFactory1( IID_PPV_ARGS( &backend->p.factory ) ) );
 }
 
 void destroy_renderer_backend( RendererBackend* backend )
@@ -1575,4 +1560,19 @@ void ui_end_frame( UiContext* context, CommandBuffer* cmd )
 }
 
 } // namespace fluent
+
+void d3d12_create_renderer_backend( const RendererBackendDesc* desc,
+                                    RendererBackend**          p_backend )
+{
+    FT_ASSERT( p_backend );
+
+    *p_backend               = new ( std::nothrow ) RendererBackend {};
+    RendererBackend* backend = *p_backend;
+#ifdef FLUENT_DEBUG
+    D3D12_ASSERT( D3D12GetDebugInterface(
+        IID_PPV_ARGS( &backend->p.debug_controller ) ) );
+    backend->p.debug_controller->EnableDebugLayer();
+#endif
+    D3D12_ASSERT( CreateDXGIFactory1( IID_PPV_ARGS( &backend->p.factory ) ) );
+}
 #endif

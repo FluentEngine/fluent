@@ -107,6 +107,7 @@ void on_init()
     FileSystem::set_textures_directory( "../../../examples/textures/" );
 
     RendererBackendDesc backend_desc {};
+    backend_desc.api = RendererAPI::eVulkan;
     create_renderer_backend( &backend_desc, &backend );
 
     DeviceDesc device_desc {};

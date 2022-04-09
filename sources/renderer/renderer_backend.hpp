@@ -1,6 +1,5 @@
 #pragma once
 
-#include <mutex>
 #ifdef VULKAN_BACKEND
 #include <volk.h>
 #include <vk_mem_alloc.h>
@@ -38,6 +37,7 @@ static constexpr u32 MAX_SET_COUNT                = 10;
 
 struct RendererBackendDesc
 {
+    RendererAPI api;
 #ifdef VULKAN_BACKEND
     struct
     {
@@ -657,234 +657,331 @@ static inline b32 format_has_stencil_aspect( Format format )
     }
 }
 
+#define DRF( ret, name, ... )                                                  \
+    typedef ret ( *name##_fun )( __VA_ARGS__ );                                \
+    extern name##_fun name;
+
 void create_renderer_backend( const RendererBackendDesc* desc,
                               RendererBackend**          backend );
 
-void destroy_renderer_backend( RendererBackend* backend );
+DRF( void, destroy_renderer_backend, RendererBackend* backend );
 
-void create_device( const RendererBackend* backend,
-                    const DeviceDesc*      desc,
-                    Device**               device );
+DRF( void,
+     create_device,
+     const RendererBackend* backend,
+     const DeviceDesc*      desc,
+     Device**               device );
 
-void destroy_device( Device* device );
+DRF( void, destroy_device, Device* device );
 
-void create_queue( const Device* device, const QueueDesc* desc, Queue** queue );
-void destroy_queue( Queue* queue );
-void queue_wait_idle( const Queue* queue );
-void queue_submit( const Queue* queue, const QueueSubmitDesc* desc );
-void immediate_submit( const Queue* queue, const CommandBuffer* cmd );
-void queue_present( const Queue* queue, const QueuePresentDesc* desc );
+DRF( void,
+     create_queue,
+     const Device*    device,
+     const QueueDesc* desc,
+     Queue**          queue );
+DRF( void, destroy_queue, Queue* queue );
+DRF( void, queue_wait_idle, const Queue* queue );
+DRF( void, queue_submit, const Queue* queue, const QueueSubmitDesc* desc );
+DRF( void, immediate_submit, const Queue* queue, const CommandBuffer* cmd );
+DRF( void, queue_present, const Queue* queue, const QueuePresentDesc* desc );
 
-void create_semaphore( const Device* device, Semaphore** semaphore );
-void destroy_semaphore( const Device* device, Semaphore* semaphore );
-void create_fence( const Device* device, Fence** fence );
-void destroy_fence( const Device* device, Fence* fence );
-void wait_for_fences( const Device* device, u32 count, Fence** fences );
-void reset_fences( const Device* device, u32 count, Fence** fences );
+DRF( void, create_semaphore, const Device* device, Semaphore** semaphore );
+DRF( void, destroy_semaphore, const Device* device, Semaphore* semaphore );
+DRF( void, create_fence, const Device* device, Fence** fence );
+DRF( void, destroy_fence, const Device* device, Fence* fence );
+DRF( void, wait_for_fences, const Device* device, u32 count, Fence** fences );
+DRF( void, reset_fences, const Device* device, u32 count, Fence** fences );
 
-void create_swapchain( const Device*        device,
-                       const SwapchainDesc* desc,
-                       Swapchain**          swapchain );
+DRF( void,
+     create_swapchain,
+     const Device*        device,
+     const SwapchainDesc* desc,
+     Swapchain**          swapchain );
 
-void resize_swapchain( const Device* device,
-                       Swapchain*    swapchain,
-                       u32           width,
-                       u32           height );
+DRF( void,
+     resize_swapchain,
+     const Device* device,
+     Swapchain*    swapchain,
+     u32           width,
+     u32           height );
 
-void destroy_swapchain( const Device* device, Swapchain* swapchain );
+DRF( void, destroy_swapchain, const Device* device, Swapchain* swapchain );
 
-void create_command_pool( const Device*          device,
-                          const CommandPoolDesc* desc,
-                          CommandPool**          command_pool );
+DRF( void,
+     create_command_pool,
+     const Device*          device,
+     const CommandPoolDesc* desc,
+     CommandPool**          command_pool );
 
-void destroy_command_pool( const Device* device, CommandPool* command_pool );
+DRF( void,
+     destroy_command_pool,
+     const Device* device,
+     CommandPool*  command_pool );
 
-void create_command_buffers( const Device*      device,
-                             const CommandPool* command_pool,
-                             u32                count,
-                             CommandBuffer**    command_buffers );
+DRF( void,
+     create_command_buffers,
+     const Device*      device,
+     const CommandPool* command_pool,
+     u32                count,
+     CommandBuffer**    command_buffers );
 
-void free_command_buffers( const Device*      device,
-                           const CommandPool* command_pool,
-                           u32                count,
-                           CommandBuffer**    command_buffers );
+DRF( void,
+     free_command_buffers,
+     const Device*      device,
+     const CommandPool* command_pool,
+     u32                count,
+     CommandBuffer**    command_buffers );
 
-void destroy_command_buffers( const Device*      device,
-                              const CommandPool* command_pool,
-                              u32                count,
-                              CommandBuffer**    command_buffers );
+DRF( void,
+     destroy_command_buffers,
+     const Device*      device,
+     const CommandPool* command_pool,
+     u32                count,
+     CommandBuffer**    command_buffers );
 
-void begin_command_buffer( const CommandBuffer* cmd );
-void end_command_buffer( const CommandBuffer* cmd );
+DRF( void, begin_command_buffer, const CommandBuffer* cmd );
+DRF( void, end_command_buffer, const CommandBuffer* cmd );
 
-void acquire_next_image( const Device*    device,
-                         const Swapchain* swapchain,
-                         const Semaphore* semaphore,
-                         const Fence*     fence,
-                         u32*             image_index );
+DRF( void,
+     acquire_next_image,
+     const Device*    device,
+     const Swapchain* swapchain,
+     const Semaphore* semaphore,
+     const Fence*     fence,
+     u32*             image_index );
 
-void create_render_pass( const Device*         device,
-                         const RenderPassDesc* desc,
-                         RenderPass**          render_pass );
+DRF( void,
+     create_render_pass,
+     const Device*         device,
+     const RenderPassDesc* desc,
+     RenderPass**          render_pass );
 
-void update_render_pass( const Device*         device,
-                         RenderPass*           render_pass,
-                         const RenderPassDesc* desc );
+DRF( void,
+     update_render_pass,
+     const Device*         device,
+     RenderPass*           render_pass,
+     const RenderPassDesc* desc );
 
-void destroy_render_pass( const Device* device, RenderPass* render_pass );
+DRF( void, destroy_render_pass, const Device* device, RenderPass* render_pass );
 
-void create_shader( const Device* device, ShaderDesc* desc, Shader** shader );
-void destroy_shader( const Device* device, Shader* shader );
+DRF( void,
+     create_shader,
+     const Device* device,
+     ShaderDesc*   desc,
+     Shader**      shader );
+DRF( void, destroy_shader, const Device* device, Shader* shader );
 
-void create_descriptor_set_layout(
-    const Device*         device,
-    u32                   shader_count,
-    Shader**              shaders,
-    DescriptorSetLayout** descriptor_set_layout );
+DRF( void,
+     create_descriptor_set_layout,
+     const Device*         device,
+     u32                   shader_count,
+     Shader**              shaders,
+     DescriptorSetLayout** descriptor_set_layout );
 
-void destroy_descriptor_set_layout( const Device*        device,
-                                    DescriptorSetLayout* layout );
+DRF( void,
+     destroy_descriptor_set_layout,
+     const Device*        device,
+     DescriptorSetLayout* layout );
 
-void create_compute_pipeline( const Device*       device,
-                              const PipelineDesc* desc,
-                              Pipeline**          pipeline );
+DRF( void,
+     create_compute_pipeline,
+     const Device*       device,
+     const PipelineDesc* desc,
+     Pipeline**          pipeline );
 
-void create_graphics_pipeline( const Device*       device,
-                               const PipelineDesc* desc,
-                               Pipeline**          pipeline );
+DRF( void,
+     create_graphics_pipeline,
+     const Device*       device,
+     const PipelineDesc* desc,
+     Pipeline**          pipeline );
 
-void destroy_pipeline( const Device* device, Pipeline* pipeline );
+DRF( void, destroy_pipeline, const Device* device, Pipeline* pipeline );
 
-void cmd_begin_render_pass( const CommandBuffer*       cmd,
-                            const RenderPassBeginDesc* desc );
+DRF( void,
+     cmd_begin_render_pass,
+     const CommandBuffer*       cmd,
+     const RenderPassBeginDesc* desc );
 
-void cmd_end_render_pass( const CommandBuffer* cmd );
+DRF( void, cmd_end_render_pass, const CommandBuffer* cmd );
 
-void cmd_barrier( const CommandBuffer* cmd,
-                  u32                  memory_barriers_count,
-                  const MemoryBarrier* memory_barrier,
-                  u32                  buffer_barriers_count,
-                  const BufferBarrier* buffer_barriers,
-                  u32                  image_barriers_count,
-                  const ImageBarrier*  image_barriers );
+DRF( void,
+     cmd_barrier,
+     const CommandBuffer* cmd,
+     u32                  memory_barriers_count,
+     const MemoryBarrier* memory_barrier,
+     u32                  buffer_barriers_count,
+     const BufferBarrier* buffer_barriers,
+     u32                  image_barriers_count,
+     const ImageBarrier*  image_barriers );
 
-void cmd_set_scissor( const CommandBuffer* cmd,
-                      i32                  x,
-                      i32                  y,
-                      u32                  width,
-                      u32                  height );
-void cmd_set_viewport( const CommandBuffer* cmd,
-                       f32                  x,
-                       f32                  y,
-                       f32                  width,
-                       f32                  height,
-                       f32                  min_depth,
-                       f32                  max_depth );
+DRF( void,
+     cmd_set_scissor,
+     const CommandBuffer* cmd,
+     i32                  x,
+     i32                  y,
+     u32                  width,
+     u32                  height );
 
-void cmd_bind_pipeline( const CommandBuffer* cmd, const Pipeline* pipeline );
-void cmd_draw( const CommandBuffer* cmd,
-               u32                  vertex_count,
-               u32                  instance_count,
-               u32                  first_vertex,
-               u32                  first_instance );
+DRF( void,
+     cmd_set_viewport,
+     const CommandBuffer* cmd,
+     f32                  x,
+     f32                  y,
+     f32                  width,
+     f32                  height,
+     f32                  min_depth,
+     f32                  max_depth );
 
-void cmd_draw_indexed( const CommandBuffer* cmd,
-                       u32                  index_count,
-                       u32                  instance_count,
-                       u32                  first_index,
-                       i32                  vertex_offset,
-                       u32                  first_instance );
+DRF( void,
+     cmd_bind_pipeline,
+     const CommandBuffer* cmd,
+     const Pipeline*      pipeline );
 
-void cmd_bind_vertex_buffer( const CommandBuffer* cmd,
-                             const Buffer*        buffer,
-                             const u64            offset );
+DRF( void,
+     cmd_draw,
+     const CommandBuffer* cmd,
+     u32                  vertex_count,
+     u32                  instance_count,
+     u32                  first_vertex,
+     u32                  first_instance );
 
-void cmd_bind_index_buffer_u16( const CommandBuffer* cmd,
-                                const Buffer*        buffer,
-                                const u64            offset );
+DRF( void,
+     cmd_draw_indexed,
+     const CommandBuffer* cmd,
+     u32                  index_count,
+     u32                  instance_count,
+     u32                  first_index,
+     i32                  vertex_offset,
+     u32                  first_instance );
 
-void cmd_bind_index_buffer_u32( const CommandBuffer* cmd,
-                                const Buffer*        buffer,
-                                const u64            offset );
+DRF( void,
+     cmd_bind_vertex_buffer,
+     const CommandBuffer* cmd,
+     const Buffer*        buffer,
+     const u64            offset );
 
-void cmd_copy_buffer( const CommandBuffer* cmd,
-                      const Buffer*        src,
-                      u64                  src_offset,
-                      Buffer*              dst,
-                      u64                  dst_offset,
-                      u64                  size );
+DRF( void,
+     cmd_bind_index_buffer_u16,
+     const CommandBuffer* cmd,
+     const Buffer*        buffer,
+     const u64            offset );
 
-void cmd_copy_buffer_to_image( const CommandBuffer* cmd,
-                               const Buffer*        src,
-                               u64                  src_offset,
-                               Image*               dst );
+DRF( void,
+     cmd_bind_index_buffer_u32,
+     const CommandBuffer* cmd,
+     const Buffer*        buffer,
+     const u64            offset );
 
-void cmd_bind_descriptor_set( const CommandBuffer* cmd,
-                              u32                  first_set,
-                              const DescriptorSet* set,
-                              const Pipeline*      pipeline );
+DRF( void,
+     cmd_copy_buffer,
+     const CommandBuffer* cmd,
+     const Buffer*        src,
+     u64                  src_offset,
+     Buffer*              dst,
+     u64                  dst_offset,
+     u64                  size );
 
-void cmd_dispatch( const CommandBuffer* cmd,
-                   u32                  group_count_x,
-                   u32                  group_count_y,
-                   u32                  group_count_z );
+DRF( void,
+     cmd_copy_buffer_to_image,
+     const CommandBuffer* cmd,
+     const Buffer*        src,
+     u64                  src_offset,
+     Image*               dst );
 
-void cmd_push_constants( const CommandBuffer* cmd,
-                         const Pipeline*      pipeline,
-                         u64                  offset,
-                         u64                  size,
-                         const void*          data );
+DRF( void,
+     cmd_bind_descriptor_set,
+     const CommandBuffer* cmd,
+     u32                  first_set,
+     const DescriptorSet* set,
+     const Pipeline*      pipeline );
 
-void cmd_blit_image( const CommandBuffer* cmd,
-                     const Image*         src,
-                     ResourceState        src_state,
-                     Image*               dst,
-                     ResourceState        dst_state,
-                     Filter               filter );
+DRF( void,
+     cmd_dispatch,
+     const CommandBuffer* cmd,
+     u32                  group_count_x,
+     u32                  group_count_y,
+     u32                  group_count_z );
 
-void cmd_clear_color_image( const CommandBuffer* cmd,
-                            Image*               image,
-                            Vector4              color );
+DRF( void,
+     cmd_push_constants,
+     const CommandBuffer* cmd,
+     const Pipeline*      pipeline,
+     u64                  offset,
+     u64                  size,
+     const void*          data );
 
-void create_buffer( const Device*     device,
-                    const BufferDesc* desc,
-                    Buffer**          buffer );
+DRF( void,
+     cmd_blit_image,
+     const CommandBuffer* cmd,
+     const Image*         src,
+     ResourceState        src_state,
+     Image*               dst,
+     ResourceState        dst_state,
+     Filter               filter );
 
-void destroy_buffer( const Device* device, Buffer* buffer );
+DRF( void,
+     cmd_clear_color_image,
+     const CommandBuffer* cmd,
+     Image*               image,
+     Vector4              color );
 
-void* map_memory( const Device* device, Buffer* buffer );
-void  unmap_memory( const Device* device, Buffer* buffer );
+DRF( void,
+     create_buffer,
+     const Device*     device,
+     const BufferDesc* desc,
+     Buffer**          buffer );
 
-void cmd_draw_indexed_indirect( const CommandBuffer* cmd,
-                                const Buffer*        buffer,
-                                u64                  offset,
-                                u32                  draw_count,
-                                u32                  stride );
+DRF( void, destroy_buffer, const Device* device, Buffer* buffer );
 
-void create_sampler( const Device*      device,
-                     const SamplerDesc* desc,
-                     Sampler**          sampler );
+DRF( void*, map_memory, const Device* device, Buffer* buffer );
+DRF( void, unmap_memory, const Device* device, Buffer* buffer );
 
-void destroy_sampler( const Device* device, Sampler* sampler );
+DRF( void,
+     cmd_draw_indexed_indirect,
+     const CommandBuffer* cmd,
+     const Buffer*        buffer,
+     u64                  offset,
+     u32                  draw_count,
+     u32                  stride );
 
-void create_image( const Device* device, const ImageDesc* desc, Image** image );
-void destroy_image( const Device* device, Image* image );
+DRF( void,
+     create_sampler,
+     const Device*      device,
+     const SamplerDesc* desc,
+     Sampler**          sampler );
 
-void create_descriptor_set( const Device*            device,
-                            const DescriptorSetDesc* desc,
-                            DescriptorSet**          descriptor_set );
+DRF( void, destroy_sampler, const Device* device, Sampler* sampler );
 
-void destroy_descriptor_set( const Device* device, DescriptorSet* set );
-void update_descriptor_set( const Device*          device,
-                            DescriptorSet*         set,
-                            u32                    count,
-                            const DescriptorWrite* writes );
+DRF( void,
+     create_image,
+     const Device*    device,
+     const ImageDesc* desc,
+     Image**          image );
 
-void create_ui_context( CommandBuffer* cmd,
-                        const UiDesc*  desc,
-                        UiContext**    ui_context );
-void destroy_ui_context( const Device* device, UiContext* context );
-void ui_begin_frame();
-void ui_end_frame( UiContext* context, CommandBuffer* cmd );
+DRF( void, destroy_image, const Device* device, Image* image );
+
+DRF( void,
+     create_descriptor_set,
+     const Device*            device,
+     const DescriptorSetDesc* desc,
+     DescriptorSet**          descriptor_set );
+
+DRF( void, destroy_descriptor_set, const Device* device, DescriptorSet* set );
+DRF( void,
+     update_descriptor_set,
+     const Device*          device,
+     DescriptorSet*         set,
+     u32                    count,
+     const DescriptorWrite* writes );
+
+DRF( void,
+     create_ui_context,
+     CommandBuffer* cmd,
+     const UiDesc*  desc,
+     UiContext**    ui_context );
+
+DRF( void, destroy_ui_context, const Device* device, UiContext* context );
+DRF( void, ui_begin_frame );
+DRF( void, ui_end_frame, UiContext* context, CommandBuffer* cmd );
 
 } // namespace fluent
