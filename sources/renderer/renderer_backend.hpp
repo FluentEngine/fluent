@@ -1,15 +1,5 @@
 #pragma once
 
-#ifdef VULKAN_BACKEND
-#include <volk.h>
-#include <vk_mem_alloc.h>
-#endif
-#ifdef D3D12_BACKEND
-#include <dxgi1_4.h>
-#include <d3d12.h>
-#include <D3D12MemAlloc.h>
-#undef MemoryBarrier
-#endif
 #include "core/base.hpp"
 #include "math/math.hpp"
 #include "renderer/renderer_enums.hpp"
@@ -35,37 +25,16 @@ static constexpr u32 MAX_VERTEX_ATTRIBUTE_COUNT   = 15;
 static constexpr u32 MAX_DESCRIPTOR_BINDING_COUNT = 15;
 static constexpr u32 MAX_SET_COUNT                = 10;
 
+using Handle = void*;
+
 struct RendererBackendDesc
 {
     RendererAPI api;
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        u32                    api_version = VK_API_VERSION_1_2;
-        VkAllocationCallbacks* vulkan_allocator;
-    } p;
-#endif
 };
 
 struct RendererBackend
 {
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkAllocationCallbacks*   vulkan_allocator;
-        VkInstance               instance;
-        VkDebugUtilsMessengerEXT debug_messenger;
-        VkPhysicalDevice         physical_device;
-        u32                      api_version;
-    } p;
-#endif
-#ifdef D3D12_BACKEND
-    struct
-    {
-        ID3D12Debug*   debug_controller;
-        IDXGIFactory4* factory;
-    } p;
-#endif
+    Handle handle;
 };
 
 struct DeviceDesc
@@ -75,34 +44,7 @@ struct DeviceDesc
 
 struct Device
 {
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkAllocationCallbacks* vulkan_allocator;
-        VkInstance             instance;
-        VkPhysicalDevice       physical_device;
-        VkDevice               logical_device;
-        VmaAllocator           memory_allocator;
-        VkDescriptorPool       descriptor_pool;
-    } p;
-#endif
-#ifdef D3D12_BACKEND
-    struct
-    {
-        IDXGIFactory4*        factory;
-        IDXGIAdapter*         adapter;
-        ID3D12Device*         device;
-        D3D12MA::Allocator*   allocator;
-        ID3D12DescriptorHeap* cbv_srv_uav_heap;
-        u64                   cbv_srv_uav_descriptor_size;
-        ID3D12DescriptorHeap* rtv_heap;
-        u64                   rtv_descriptor_size;
-        ID3D12DescriptorHeap* dsv_heap;
-        u64                   dsv_descriptor_size;
-        ID3D12DescriptorHeap* sampler_heap;
-        u64                   sampler_descriptor_size;
-    } p;
-#endif
+    Handle handle;
 };
 
 struct CommandPoolDesc
@@ -113,36 +55,13 @@ struct CommandPoolDesc
 struct CommandPool
 {
     Queue* queue;
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkCommandPool command_pool;
-    } p;
-#endif
-#ifdef D3D12_BACKEND
-    struct
-    {
-        ID3D12CommandAllocator* command_allocator;
-    } p;
-#endif
+    Handle handle;
 };
 
 struct CommandBuffer
 {
     Queue* queue;
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkCommandBuffer command_buffer;
-    } p;
-#endif
-#ifdef D3D12_BACKEND
-    struct
-    {
-        ID3D12CommandAllocator*    command_allocator;
-        ID3D12GraphicsCommandList* command_list;
-    } p;
-#endif
+    Handle handle;
 };
 
 struct QueueDesc
@@ -154,54 +73,17 @@ struct Queue
 {
     u32       family_index;
     QueueType type;
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkQueue queue;
-    } p;
-#endif
-#ifdef D3D12_BACKEND
-    struct
-    {
-        ID3D12CommandQueue* queue;
-        ID3D12Fence*        fence;
-    } p;
-#endif
+    Handle    handle;
 };
 
 struct Semaphore
 {
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkSemaphore semaphore;
-    } p;
-#endif
-#ifdef D3D12_BACKEND
-    struct
-    {
-        ID3D12Fence* fence;
-        u64          fence_value;
-    } p;
-#endif
+    Handle handle;
 };
 
 struct Fence
 {
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkFence fence = VK_NULL_HANDLE;
-    } p;
-#endif
-#ifdef D3D12_BACKEND
-    struct
-    {
-        ID3D12Fence* fence;
-        HANDLE       event_handle;
-        u64          fence_value;
-    } p;
-#endif
+    Handle handle;
 };
 
 struct SamplerDesc
@@ -223,18 +105,7 @@ struct SamplerDesc
 
 struct Sampler
 {
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkSampler sampler;
-    } p;
-#endif
-#ifdef D3D12_BACKEND
-    struct
-    {
-        D3D12_CPU_DESCRIPTOR_HANDLE handle;
-    } p;
-#endif
+    Handle handle;
 };
 
 struct ImageDesc
@@ -259,22 +130,7 @@ struct Image
     u32            mip_level_count = 1;
     u32            layer_count     = 1;
     DescriptorType descriptor_type;
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkImage       image;
-        VkImageView   image_view;
-        VmaAllocation allocation;
-    } p;
-#endif
-#ifdef D3D12_BACKEND
-    struct
-    {
-        ID3D12Resource*             image;
-        D3D12_CPU_DESCRIPTOR_HANDLE image_view;
-        D3D12MA::Allocation*        allocation;
-    } p;
-#endif
+    Handle         handle;
 };
 
 struct BufferDesc
@@ -291,20 +147,7 @@ struct Buffer
     DescriptorType descriptor_type;
     MemoryUsage    memory_usage;
     void*          mapped_memory = nullptr;
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkBuffer      buffer;
-        VmaAllocation allocation;
-    } p;
-#endif
-#ifdef D3D12_BACKEND
-    struct
-    {
-        ID3D12Resource*      buffer;
-        D3D12MA::Allocation* allocation;
-    } p;
-#endif
+    Handle         handle;
 };
 
 struct SwapchainDesc
@@ -327,42 +170,26 @@ struct Swapchain
     Image** images;
     Queue*  queue;
     b32     vsync;
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkPresentModeKHR              present_mode;
-        VkColorSpaceKHR               color_space;
-        VkSurfaceTransformFlagBitsKHR pre_transform;
-        VkSurfaceKHR                  surface;
-        VkSwapchainKHR                swapchain;
-    } p;
-#endif
-#ifdef D3D12_BACKEND
-    struct
-    {
-        IDXGISwapChain* swapchain;
-        mutable u32     image_index;
-    } p;
-#endif
+    Handle  handle;
 };
 
 struct QueueSubmitDesc
 {
-    u32                  wait_semaphore_count;
-    Semaphore*           wait_semaphores;
-    u32                  command_buffer_count;
-    const CommandBuffer* command_buffers;
-    u32                  signal_semaphore_count;
-    Semaphore*           signal_semaphores;
-    Fence*               signal_fence;
+    u32             wait_semaphore_count;
+    Semaphore**     wait_semaphores;
+    u32             command_buffer_count;
+    CommandBuffer** command_buffers;
+    u32             signal_semaphore_count;
+    Semaphore**     signal_semaphores;
+    Fence*          signal_fence;
 };
 
 struct QueuePresentDesc
 {
-    u32        wait_semaphore_count;
-    Semaphore* wait_semaphores;
-    Swapchain* swapchain;
-    u32        image_index;
+    u32         wait_semaphore_count;
+    Semaphore** wait_semaphores;
+    Swapchain*  swapchain;
+    u32         image_index;
 };
 
 struct RenderPassDesc
@@ -388,22 +215,7 @@ struct RenderPass
     SampleCount sample_count;
     u32         color_attachment_count;
     b32         has_depth_stencil;
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkRenderPass  render_pass;
-        VkFramebuffer framebuffer;
-    } p;
-#endif
-#ifdef D3D12_BACKEND
-    struct
-    {
-        D3D12_CPU_DESCRIPTOR_HANDLE color_attachments[ MAX_ATTACHMENTS_COUNT ];
-        DXGI_FORMAT                 color_formats[ MAX_ATTACHMENTS_COUNT ];
-        D3D12_CPU_DESCRIPTOR_HANDLE depth_stencil;
-        DXGI_FORMAT                 depth_format;
-    } p;
-#endif
+    Handle      handle;
 };
 
 struct ClearValue
@@ -455,18 +267,7 @@ struct Shader
 {
     ShaderStage    stage;
     ReflectionData reflect_data;
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkShaderModule shader;
-    } p;
-#endif
-#ifdef D3D12_BACKEND
-    struct
-    {
-        D3D12_SHADER_BYTECODE bytecode;
-    } p;
-#endif
+    Handle         handle;
 };
 
 struct DescriptorSetLayout
@@ -474,18 +275,7 @@ struct DescriptorSetLayout
     u32      shader_count;
     Shader** shaders;
     u32      descriptor_set_layout_count = 0;
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkDescriptorSetLayout descriptor_set_layouts[ MAX_SET_COUNT ];
-    } p;
-#endif
-#ifdef D3D12_BACKEND
-    struct
-    {
-        ID3D12RootSignature* root_signature;
-    } p;
-#endif
+    Handle   handle;
 };
 
 struct VertexBindingDesc
@@ -540,21 +330,7 @@ struct PipelineDesc
 struct Pipeline
 {
     PipelineType type;
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkPipelineLayout pipeline_layout;
-        VkPipeline       pipeline;
-    } p;
-#endif
-#ifdef D3D12_BACKEND
-    struct
-    {
-        ID3D12PipelineState*     pipeline;
-        ID3D12RootSignature*     root_signature;
-        D3D12_PRIMITIVE_TOPOLOGY topology;
-    } p;
-#endif
+    Handle       handle;
 };
 
 struct DescriptorSetDesc
@@ -565,12 +341,7 @@ struct DescriptorSetDesc
 
 struct DescriptorSet
 {
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkDescriptorSet descriptor_set;
-    } p;
-#endif
+    Handle handle;
 };
 
 struct BufferDescriptor
@@ -596,11 +367,6 @@ struct DescriptorWrite
     BufferDescriptor* buffer_descriptors;
 };
 
-// TODO:
-#ifdef VULKAN_BACKEND
-using DrawIndexedIndirectCommand = VkDrawIndexedIndirectCommand;
-#endif
-
 struct UiDesc
 {
     const Window*          window;
@@ -617,18 +383,7 @@ struct UiDesc
 
 struct UiContext
 {
-#ifdef VULKAN_BACKEND
-    struct
-    {
-        VkDescriptorPool desriptor_pool;
-    } p;
-#endif
-#ifdef D3D12_BACKEND
-    struct
-    {
-        ID3D12DescriptorHeap* cbv_srv_heap;
-    } p;
-#endif
+    Handle handle;
 };
 
 static inline b32 format_has_depth_aspect( Format format )
@@ -682,7 +437,7 @@ DRF( void,
 DRF( void, destroy_queue, Queue* queue );
 DRF( void, queue_wait_idle, const Queue* queue );
 DRF( void, queue_submit, const Queue* queue, const QueueSubmitDesc* desc );
-DRF( void, immediate_submit, const Queue* queue, const CommandBuffer* cmd );
+DRF( void, immediate_submit, const Queue* queue, CommandBuffer* cmd );
 DRF( void, queue_present, const Queue* queue, const QueuePresentDesc* desc );
 
 DRF( void, create_semaphore, const Device* device, Semaphore** semaphore );

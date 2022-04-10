@@ -179,12 +179,12 @@ void update_sample( CommandBuffer* cmd, f32 delta_time )
     QueueSubmitDesc queue_submit_desc {};
     queue_submit_desc.wait_semaphore_count = 1;
     queue_submit_desc.wait_semaphores =
-        image_available_semaphores[ frame_index ];
+        &image_available_semaphores[ frame_index ];
     queue_submit_desc.command_buffer_count   = 1;
-    queue_submit_desc.command_buffers        = cmd;
+    queue_submit_desc.command_buffers        = &cmd;
     queue_submit_desc.signal_semaphore_count = 1;
     queue_submit_desc.signal_semaphores =
-        rendering_finished_semaphores[ frame_index ];
+        &rendering_finished_semaphores[ frame_index ];
     queue_submit_desc.signal_fence = in_flight_fences[ frame_index ];
 
     queue_submit( queue, &queue_submit_desc );
@@ -192,7 +192,7 @@ void update_sample( CommandBuffer* cmd, f32 delta_time )
     QueuePresentDesc queue_present_desc {};
     queue_present_desc.wait_semaphore_count = 1;
     queue_present_desc.wait_semaphores =
-        rendering_finished_semaphores[ frame_index ];
+        &rendering_finished_semaphores[ frame_index ];
     queue_present_desc.swapchain   = swapchain;
     queue_present_desc.image_index = image_index;
 
