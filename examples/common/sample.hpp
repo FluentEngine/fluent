@@ -1,11 +1,5 @@
 #include "fluent/fluent.hpp"
 
-#ifdef VULKAN_BACKEND
-#define BACKEND_NAME "Vulkan"
-#elif D3D12_BACKEND
-#define BACKEND_NAME "D3D12"
-#endif
-
 using namespace fluent;
 
 void init_sample();
@@ -102,9 +96,8 @@ void create_depth_image( u32 width, u32 height )
 
 void on_init()
 {
-    FileSystem::set_shaders_directory(
-        "../../../examples/shaders/" SAMPLE_NAME );
-    FileSystem::set_textures_directory( "../../../examples/textures/" );
+    FileSystem::set_shaders_directory( "../../examples/shaders/" SAMPLE_NAME );
+    FileSystem::set_textures_directory( "../../examples/textures/" );
 
     RendererBackendDesc backend_desc {};
     backend_desc.api = RendererAPI::eVulkan;
@@ -276,7 +269,7 @@ void end_frame( u32 image_index )
     ImGui::SetNextWindowSize( { 300, 50 } );
     ImGui::Begin( "Performance", &open_ptr, window_flags );
     ImGui::Text( "FPS: %f", ImGui::GetIO().Framerate );
-    ImGui::Text( "Current API: " BACKEND_NAME );
+    ImGui::Text( "Current API: " );
     ImGui::End();
 
     style->Colors[ ImGuiCol_Text ] = old_color;
