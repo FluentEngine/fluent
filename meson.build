@@ -1,5 +1,9 @@
-project('fluent-engine', ['c', 'cpp', 'objcpp' ], default_options : ['default_library=static', 'cpp_std=c++17'] )
+project('fluent-engine', [ 'c', 'cpp' ], default_options : ['default_library=static', 'cpp_std=c++17'] )
 target = 'fluent-engine'
+
+if host_machine.system() == 'darwin'
+    add_project_arguments(language : 'objcpp')
+endif
 
 fluent_debug_build = true
 fluent_build_tests = true
@@ -22,11 +26,11 @@ endif
 
 if fluent_debug_build
     compile_args += ['-DFLUENT_DEBUG']
-    if host_machine.system() == 'Linux' or host_machine.system() == 'MacOS'
+    if host_machine.system() == 'linux' or host_machine.system() == 'darwin'
         compile_args += ['-g']
     endif
 else
-    if host_machine.system() == 'Linux' or host_machine.system() == 'MacOS'
+    if host_machine.system() == 'linux' or host_machine.system() == 'darwin'
         compile_args += ['-O3']
     endif
 endif
@@ -132,12 +136,12 @@ glsllang = find_program('glslangValidator')
 generate_spirv_args = [ '-e', 'main', '-V', '@INPUT@', '-o', '@OUTPUT@' ]
 
 if run_command(glsllang, [ '--quiet', '--version' ], check : false).returncode() == 0
-	generate_spirv_args += [ '--quiet' ]
+    generate_spirv_args += [ '--quiet' ]
 endif
 
 spirv_generator = generator(glsllang,
-	output    : [ '@BASENAME@.bin' ],
-	arguments : generate_spirv_args,
+    output    : [ '@BASENAME@.bin' ],
+    arguments : generate_spirv_args,
 )
 
 if fluent_build_tests
