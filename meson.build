@@ -52,9 +52,9 @@ if renderer_backend_d3d12
     libs += [ 'd3d12', 'dxgi', 'dxcompiler', 'D3D12MemoryAllocator' ]
 endif
 
-subproject('sdl2')
-subproject('spdlog')
-subproject('glm')
+sdl2 = subproject('sdl2')
+spdlog = subproject('spdlog')
+glm = subproject('glm')
 subdir('third_party/tiny_image_format')
 subdir('third_party/tinyddsloader')
 subdir('third_party/stb_image')
@@ -72,6 +72,9 @@ deps += [
     volk_dep,
     tinyddsloader_dep,
     stb_image_dep,
+    sdl2.get_variable('sdl2_dep'),
+    spdlog.get_variable('spdlog_dep'),
+    glm.get_variable('glm_dep')
 ]
 
 src_dir = 'sources'
@@ -125,16 +128,16 @@ sources = [
 target_lib = library(target, sources, dependencies: deps, include_directories: 'sources', cpp_args: compile_args)
 fluent_engine_dep = declare_dependency(include_directories: 'sources', link_with: target_lib, dependencies : deps)
 
-glsl_compiler = find_program('glslangValidator')
-glsl_args = [ '-e', 'main', '-V', '@INPUT@', '-o', '@OUTPUT@' ]
+glsllang = find_program('glslangValidator')
+generate_spirv_args = [ '-e', 'main', '-V', '@INPUT@', '-o', '@OUTPUT@' ]
 
-if run_command(glsl_compiler, [ '--quiet', '--version' ], check : false).returncode() == 0
-	glsl_args += [ '--quiet' ]
+if run_command(glsllang, [ '--quiet', '--version' ], check : false).returncode() == 0
+	generate_spirv_args += [ '--quiet' ]
 endif
 
-glsl_generator = generator(glsl_compiler,
+spirv_generator = generator(glsllang,
 	output    : [ '@BASENAME@.bin' ],
-	arguments : glsl_args,
+	arguments : generate_spirv_args,
 )
 
 if fluent_build_tests

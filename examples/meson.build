@@ -5,17 +5,17 @@ examples = [
 ]
 
 shaders = {
-	'01_hello_triangle': [
+	'01_hello_triangle': files([
 		'shaders/01_hello_triangle/main.vert.hlsl',
 		'shaders/01_hello_triangle/main.frag.hlsl',
-	],
+	]),
 	'02_load_texture': files([
 		'shaders/02_load_texture/main.vert.hlsl',
 		'shaders/02_load_texture/main.frag.hlsl',
 	]),
-	'03_compute': [
+	'03_compute': files([
 		'shaders/03_compute/main.comp.hlsl'
-	]
+	])
 }
 
 foreach example : examples
@@ -23,8 +23,9 @@ foreach example : examples
 		example/'main.cpp',
 		'common/sample.hpp'
 	]
-		executable(example, srcs, glsl_generator.process(shaders[example]),
+
+	executable(example, srcs, spirv_generator.process(shaders[example]),
 		dependencies	: fluent_engine_dep, 
 		cpp_args		: compile_args,
-		)
+	)
 endforeach
