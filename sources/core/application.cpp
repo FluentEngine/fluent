@@ -5,7 +5,7 @@
 #include "core/window.hpp"
 #include "core/application.hpp"
 #include "core/input.hpp"
-#include "utils/file_system.hpp"
+#include "fs/file_system.hpp"
 
 namespace fluent
 {
@@ -48,7 +48,7 @@ void app_init( const ApplicationConfig* config )
 
     init_input_system( &app_state.input_system );
 
-    FileSystem::init( config->argv );
+    fs::init( config->argv );
 
     app_state.is_inited = true;
 }

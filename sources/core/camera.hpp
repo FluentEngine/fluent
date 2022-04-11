@@ -3,6 +3,8 @@
 #include "core/base.hpp"
 #include "core/input.hpp"
 #include "math/math.hpp"
+#undef near
+#undef far
 
 namespace fluent
 {

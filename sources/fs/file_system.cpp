@@ -1,11 +1,75 @@
+#include <filesystem>
 #include <fstream>
 #include <tinyimageformat_apis.h>
 #include <tinyddsloader.h>
 #include <stb_image.h>
-#include "utils/image_loader.hpp"
+#include "fs/file_system.hpp"
 
-namespace fluent
+namespace fluent::fs
 {
+struct
+{
+    std::string exec_path;
+    std::string shaders_directory;
+    std::string textures_directory;
+    std::string models_directory;
+} fs_data;
+
+std::string get_exec_path( char** argv )
+{
+    std::string exec_path =
+        std::filesystem::weakly_canonical( std::filesystem::path( argv[ 0 ] ) )
+            .parent_path()
+            .string() +
+        "/";
+
+    return exec_path;
+}
+
+void init( char** argv ) { fs_data.exec_path = get_exec_path( argv ); }
+
+void set_shaders_directory( const std::string& path )
+{
+    fs_data.shaders_directory =
+        fs_data.exec_path + std::filesystem::path( path ).string() + "/";
+}
+
+void set_textures_directory( const std::string& path )
+{
+    fs_data.textures_directory =
+        fs_data.exec_path + std::filesystem::path( path ).string() + "/";
+}
+
+void set_models_directory( const std::string& path )
+{
+    fs_data.models_directory =
+        fs_data.exec_path + std::filesystem::path( path ).string() + "/";
+}
+
+const std::string& get_shaders_directory() { return fs_data.shaders_directory; }
+
+const std::string& get_textures_directory()
+{
+    return fs_data.textures_directory;
+}
+
+const std::string& get_models_directory() { return fs_data.models_directory; }
+
+std::vector<char> read_file_binary( const std::string& filename )
+{
+    std::ifstream file( filename, std::ios::ate | std::ios::binary );
+    FT_ASSERT( file.is_open() && "Failed to open file" );
+
+    size_t            file_size = static_cast<size_t>( file.tellg() );
+    std::vector<char> buffer( file_size );
+
+    file.seekg( 0 );
+    file.read( buffer.data(), file_size );
+    file.close();
+
+    return buffer;
+}
+
 ImageDesc read_dds_image( const std::string& filename,
                           b32                flip,
                           u64*               size,
@@ -94,4 +158,4 @@ ImageDesc read_image_data( const std::string& filename,
 }
 
 void release_image_data( void* data ) { delete[]( u8* ) data; }
-} // namespace fluent
+} // namespace fluent::fs

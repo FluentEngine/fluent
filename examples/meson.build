@@ -4,19 +4,30 @@ examples = [
     '03_compute'
 ]
 
-shaders = [
+vert_shaders = [
     'shaders/01_hello_triangle/main.vert.hlsl',
-    'shaders/01_hello_triangle/main.frag.hlsl',
     'shaders/02_load_texture/main.vert.hlsl',
+]
+
+frag_shaders = [
+    'shaders/01_hello_triangle/main.frag.hlsl',
     'shaders/02_load_texture/main.frag.hlsl',
+]
+
+comp_shaders = [
     'shaders/03_compute/main.comp.hlsl'
 ]
 
+shaders = []
+shaders += vert_shaders
+shaders += frag_shaders
+shaders += comp_shaders
+
 foreach shader : shaders
-    r = run_command('glslangvalidator', '-e', 'main', '-V', meson.current_source_dir()/shader, '-o', meson.current_source_dir()/shader.replace('.hlsl', '.bin'), check: false)
-    if r.returncode() != 0
-        output = r.stdout().strip()
-        errortxt = r.stderr().strip()
+    gen_spirv = run_command('glslangvalidator', '-e', 'main', '-V', meson.current_source_dir()/shader, '-o', meson.current_source_dir()/shader.replace('.hlsl', '.bin'), check: false)
+    if gen_spirv.returncode() != 0
+        output = gen_spirv.stdout().strip()
+        errortxt = gen_spirv.stderr().strip()
         message(output, errortxt)
     endif
 endforeach

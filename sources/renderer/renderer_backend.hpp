@@ -4,6 +4,7 @@
 #include "math/math.hpp"
 #include "renderer/renderer_enums.hpp"
 #include "renderer/shader_reflection.hpp"
+#undef MemoryBarrier
 
 namespace fluent
 {
@@ -739,4 +740,5 @@ DRF( void, destroy_ui_context, const Device* device, UiContext* context );
 DRF( void, ui_begin_frame );
 DRF( void, ui_end_frame, UiContext* context, CommandBuffer* cmd );
 
+DRF( std::vector<char>, read_shader, const std::string& shader_name );
 } // namespace fluent

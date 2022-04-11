@@ -9,6 +9,7 @@
 #include <vk_enum_string_helper.h>
 #include "core/window.hpp"
 #include "core/application.hpp"
+#include "fs/file_system.hpp"
 #include "vulkan_backend.hpp"
 
 #ifdef FLUENT_DEBUG
@@ -1766,11 +1767,10 @@ void vk_create_shader( const Device* idevice, ShaderDesc* desc, Shader** p )
     shader->interface.stage = desc->stage;
 
     VkShaderModuleCreateInfo shader_create_info {};
-    shader_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    shader_create_info.pNext = nullptr;
-    shader_create_info.flags = 0;
-    shader_create_info.codeSize =
-        desc->bytecode_size - ( desc->bytecode_size % 4 );
+    shader_create_info.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    shader_create_info.pNext    = nullptr;
+    shader_create_info.flags    = 0;
+    shader_create_info.codeSize = desc->bytecode_size;
     shader_create_info.pCode = reinterpret_cast<const u32*>( desc->bytecode );
 
     VK_ASSERT( vkCreateShaderModule( device->logical_device,
@@ -1779,7 +1779,7 @@ void vk_create_shader( const Device* idevice, ShaderDesc* desc, Shader** p )
                                      &shader->shader ) );
 
     shader->interface.reflect_data =
-        reflect( desc->bytecode_size, desc->bytecode );
+        spirv_reflect( desc->bytecode_size, desc->bytecode );
 }
 
 void vk_destroy_shader( const Device* idevice, Shader* ishader )
@@ -3124,6 +3124,12 @@ void vk_cmd_bind_descriptor_set( const CommandBuffer* cmd,
         nullptr );
 }
 
+std::vector<char> vk_read_shader( const std::string& shader_name )
+{
+    return fs::read_file_binary( fs::get_shaders_directory() + "vulkan/" +
+                                 shader_name + ".bin" );
+}
+
 void vk_create_renderer_backend( const RendererBackendDesc* desc,
                                  RendererBackend**          p )
 {
@@ -3199,6 +3205,8 @@ void vk_create_renderer_backend( const RendererBackendDesc* desc,
     cmd_blit_image                = vk_cmd_blit_image;
     cmd_clear_color_image         = vk_cmd_clear_color_image;
     cmd_draw_indexed_indirect     = vk_cmd_draw_indexed_indirect;
+
+    read_shader = vk_read_shader;
 
     VulkanRendererBackend* backend =
         new ( std::nothrow ) VulkanRendererBackend {};

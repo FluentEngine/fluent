@@ -1,5 +1,6 @@
 #include "renderer/renderer_backend.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
+#include "renderer/d3d12/d3d12_backend.hpp"
 
 namespace fluent
 {
@@ -73,6 +74,8 @@ cmd_push_constants_fun            cmd_push_constants;
 cmd_blit_image_fun                cmd_blit_image;
 cmd_clear_color_image_fun         cmd_clear_color_image;
 cmd_draw_indexed_indirect_fun     cmd_draw_indexed_indirect;
+
+read_shader_fun read_shader;
 
 void create_renderer_backend( const RendererBackendDesc* desc,
                               RendererBackend**          backend )

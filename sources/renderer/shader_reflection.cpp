@@ -41,8 +41,7 @@ DescriptorType to_descriptor_type( SpvReflectDescriptorType descriptor_type )
     }
 }
 
-static inline ReflectionData spirv_reflect( u32         byte_code_size,
-                                            const void* byte_code )
+ReflectionData spirv_reflect( u32 byte_code_size, const void* byte_code )
 {
     ReflectionData result {};
 
@@ -102,8 +101,7 @@ DescriptorType to_descriptor_type( D3D_SHADER_INPUT_TYPE shader_input_type )
     }
 }
 
-static inline ReflectionData dxil_reflect( u32         byte_code_size,
-                                           const void* byte_code )
+ReflectionData dxil_reflect( u32 byte_code_size, const void* byte_code )
 {
 #define DXIL_FOURCC( ch0, ch1, ch2, ch3 )                                      \
     ( ( uint32_t )( uint8_t )( ch0 ) | ( uint32_t )( uint8_t )( ch1 ) << 8 |   \
@@ -159,16 +157,4 @@ static inline ReflectionData dxil_reflect( u32         byte_code_size,
     return reflection_data;
 }
 #endif
-
-ReflectionData reflect( u32 byte_code_size, const void* byte_code )
-{
-#ifdef VULKAN_BACKEND
-    return spirv_reflect( byte_code_size, byte_code );
-#endif
-#ifdef D3D12_BACKEND
-    return dxil_reflect( byte_code_size, byte_code );
-#endif
-    return {};
-}
-
 } // namespace fluent

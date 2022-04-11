@@ -6,10 +6,8 @@ Pipeline*            pipeline;
 
 void init_sample()
 {
-    auto vert_code =
-        read_shader( FileSystem::get_shaders_directory() + "/main.vert" );
-    auto frag_code =
-        read_shader( FileSystem::get_shaders_directory() + "/main.frag" );
+    auto vert_code = read_shader( "main.vert" );
+    auto frag_code = read_shader( "main.frag" );
 
     ShaderDesc shader_descs[ 2 ];
     shader_descs[ 0 ].stage = ShaderStage::eVertex;

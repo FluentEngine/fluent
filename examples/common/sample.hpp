@@ -27,6 +27,21 @@ RenderPass** render_passes;
 
 UiContext* ui;
 
+RendererAPI current_api = RendererAPI::eVulkan;
+std::string api_name    = "Vulkan";
+
+void api_switch( RendererAPI api );
+
+static inline std::string to_api_str( RendererAPI api )
+{
+    switch ( api )
+    {
+    case RendererAPI::eD3D12: return "/d3d12/";
+    case RendererAPI::eVulkan: return "/vulkan/";
+    }
+    return "";
+}
+
 static Shader* load_shader_from_file( const std::string& filename )
 {
     std::string ext = filename.substr( filename.find_last_of( "." ) );
@@ -38,7 +53,7 @@ static Shader* load_shader_from_file( const std::string& filename )
     if ( ext == ".comp" )
         stage = ShaderStage::eCompute;
 
-    auto code = read_shader( FileSystem::get_shaders_directory() + filename );
+    auto       code = read_shader( filename );
     ShaderDesc desc {};
     desc.bytecode      = code.data();
     desc.bytecode_size = code.size() * sizeof( code[ 0 ] );
@@ -54,10 +69,10 @@ static Image* load_image_from_file( const std::string& filename, b32 flip )
     u64       size = 0;
     void*     data = nullptr;
     ImageDesc image_desc =
-        read_image_data( FileSystem::get_textures_directory() + filename,
-                         flip,
-                         &size,
-                         &data );
+        fs::read_image_data( fs::get_textures_directory() + filename,
+                             flip,
+                             &size,
+                             &data );
     image_desc.format          = Format::eR8G8B8A8Srgb;
     image_desc.descriptor_type = DescriptorType::eSampledImage;
     Image* image;
@@ -96,11 +111,11 @@ void create_depth_image( u32 width, u32 height )
 
 void on_init()
 {
-    FileSystem::set_shaders_directory( "../../examples/shaders/" SAMPLE_NAME );
-    FileSystem::set_textures_directory( "../../examples/textures/" );
+    fs::set_shaders_directory( "../../examples/shaders/" SAMPLE_NAME );
+    fs::set_textures_directory( "../../examples/textures/" );
 
     RendererBackendDesc backend_desc {};
-    backend_desc.api = RendererAPI::eVulkan;
+    backend_desc.api = current_api;
     create_renderer_backend( &backend_desc, &backend );
 
     DeviceDesc device_desc {};
@@ -266,10 +281,19 @@ void end_frame( u32 image_index )
 
     bool open_ptr = true;
 
-    ImGui::SetNextWindowSize( { 300, 50 } );
+    ImGui::SetNextWindowSize( { 400, 200 } );
     ImGui::Begin( "Performance", &open_ptr, window_flags );
     ImGui::Text( "FPS: %f", ImGui::GetIO().Framerate );
-    ImGui::Text( "Current API: " );
+    ImGui::Text( ( "Current API: " + api_name ).c_str() );
+    static int e    = static_cast<int>( current_api );
+    auto       last = e;
+    ImGui::RadioButton( "Vulkan", &e, 0 );
+    ImGui::RadioButton( "D3D12", &e, 1 );
+    if ( last != e )
+    {
+        api_switch( static_cast<RendererAPI>( e ) );
+        return;
+    }
     ImGui::End();
 
     style->Colors[ ImGuiCol_Text ] = old_color;
@@ -348,6 +372,28 @@ void on_shutdown()
     destroy_queue( queue );
     destroy_device( device );
     destroy_renderer_backend( backend );
+}
+
+void api_switch( RendererAPI api )
+{
+    switch ( api )
+    {
+    case RendererAPI::eD3D12:
+    {
+        api_name    = "D3D12";
+        current_api = RendererAPI::eD3D12;
+        break;
+    }
+    case RendererAPI::eVulkan:
+    {
+        api_name    = "Vulkan";
+        current_api = RendererAPI::eVulkan;
+        break;
+    }
+    }
+
+    on_shutdown();
+    on_init();
 }
 
 int main( int argc, char** argv )

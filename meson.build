@@ -1,5 +1,7 @@
-project('fluent-engine', [ 'c', 'cpp' ], default_options : ['default_library=static', 'cpp_std=c++17'] )
+project('fluent-engine', [ 'c', 'cpp' ], default_options : ['default_library=static', 'c_std=c17', 'cpp_std=c++17'] )
 target = 'fluent-engine'
+
+cc = meson.get_compiler('cpp')
 
 if host_machine.system() == 'darwin'
     add_project_arguments(language : 'objcpp')
@@ -51,9 +53,17 @@ endif
 
 if renderer_backend_d3d12
     subdir('third_party/D3D12MemoryAllocator')
-    include_dirs += [ include_directories('third_party/dxc/inc') ]
-    lib_dirs += [ 'third_party/dxc/lib' ]
-    libs += [ 'd3d12', 'dxgi', 'dxcompiler', 'D3D12MemoryAllocator' ]
+    subdir('third_party/dxc')
+
+    d3d12_lib = cc.find_library('d3d12', required : true)
+    dxgi_lib = cc.find_library('dxgi', required : true)
+
+    deps += [
+        d3d12_allocator_dep,
+        dxc_dep,
+        d3d12_lib,
+        dxgi_lib
+    ]
 endif
 
 sdl2 = subproject('sdl2')
@@ -63,12 +73,6 @@ subdir('third_party/tiny_image_format')
 subdir('third_party/tinyddsloader')
 subdir('third_party/stb_image')
 subdir('third_party/imgui')
-
-deps += [ 
-    dependency('sdl2'),
-    dependency('spdlog'),
-    dependency('glm') 
-]
 
 deps += [ 
     imgui_dep,
@@ -108,13 +112,9 @@ renderer = [
     src_dir/'renderer/resource_loader.cpp'
 ]
 
-util = [
-    src_dir/'utils/file_loader.hpp', 
-    src_dir/'utils/file_loader.cpp', 
-    src_dir/'utils/image_loader.hpp', 
-    src_dir/'utils/image_loader.cpp', 
-    src_dir/'utils/file_system.hpp', 
-    src_dir/'utils/file_system.cpp'
+fs = [
+    src_dir/'fs/file_system.hpp',
+    src_dir/'fs/file_system.cpp'
 ]
 
 math = [
@@ -125,8 +125,8 @@ math = [
 sources = [
     core, 
     renderer, 
-    util, 
-    math
+    math,
+    fs,
 ]
 
 target_lib = library(target, sources, dependencies: deps, include_directories: 'sources', cpp_args: compile_args)
