@@ -7,11 +7,13 @@ if host_machine.system() == 'darwin'
     add_project_arguments(language : 'objcpp')
 endif
 
-fluent_debug_build = true
-fluent_build_tests = true
+fluent_debug_build = get_option('buildtype') == 'debug'
+fluent_build_tests = get_option('fluent_build_tests')
 
-renderer_backend_vulkan = true
-renderer_backend_d3d12 = get_option('RENDERER_BACKEND_D3D12')
+dep = cc.find_library('vulkan-1', required: get_option('fluent_vulkan_backend'))
+renderer_backend_vulkan = dep.found()
+dep = cc.find_library('d3d12', required: get_option('fluent_d3d12_backend'))
+renderer_backend_d3d12 = dep.found()
 
 include_dirs = []
 libs = []
@@ -77,7 +79,6 @@ subdir('third_party/imgui')
 deps += [ 
     imgui_dep,
     tinyimageformat_dep,
-    volk_dep,
     tinyddsloader_dep,
     stb_image_dep,
     sdl2.get_variable('sdl2_dep'),
@@ -86,7 +87,7 @@ deps += [
 ]
 
 src_dir = 'sources'
-core = [ 
+core = files([
     src_dir/'core/log.hpp', 
     src_dir/'core/log.cpp', 
     src_dir/'core/window.hpp', 
@@ -97,9 +98,9 @@ core = [
     src_dir/'core/application.cpp', 
     src_dir/'core/camera.hpp', 
     src_dir/'core/camera.cpp'
-]
+])
 
-renderer = [
+renderer = files([
     src_dir/'renderer/shader_reflection.hpp', 
     src_dir/'renderer/shader_reflection.cpp', 
     src_dir/'renderer/renderer_backend.hpp', 
@@ -110,12 +111,12 @@ renderer = [
     src_dir/'renderer/d3d12/d3d12_backend.cpp', 
     src_dir/'renderer/resource_loader.hpp', 
     src_dir/'renderer/resource_loader.cpp'
-]
+])
 
-fs = [
+fs = files([
     src_dir/'fs/file_system.hpp',
     src_dir/'fs/file_system.cpp'
-]
+])
 
 math = [
     src_dir/'math/math.hpp', 
