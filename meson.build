@@ -132,18 +132,6 @@ sources = [
 target_lib = library(target, sources, dependencies: deps, include_directories: 'sources', cpp_args: compile_args)
 fluent_engine_dep = declare_dependency(include_directories: 'sources', link_with: target_lib, dependencies : deps)
 
-glsllang = find_program('glslangValidator')
-generate_spirv_args = [ '-e', 'main', '-V', '@INPUT@', '-o', '@OUTPUT@' ]
-
-if run_command(glsllang, [ '--quiet', '--version' ], check : false).returncode() == 0
-    generate_spirv_args += [ '--quiet' ]
-endif
-
-spirv_generator = generator(glsllang,
-    output    : [ '@BASENAME@.bin' ],
-    arguments : generate_spirv_args,
-)
-
 if fluent_build_tests
     subdir('examples')
 endif
