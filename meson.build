@@ -10,7 +10,7 @@ endif
 fluent_debug_build = get_option('buildtype') == 'debug'
 fluent_build_tests = get_option('fluent_build_tests')
 
-dep = cc.find_library('vulkan-1', required: get_option('fluent_vulkan_backend'))
+dep = dependency('vulkan', required: get_option('fluent_vulkan_backend'))
 renderer_backend_vulkan = dep.found()
 dep = cc.find_library('d3d12', required: get_option('fluent_d3d12_backend'))
 renderer_backend_d3d12 = dep.found()

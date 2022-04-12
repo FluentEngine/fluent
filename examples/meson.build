@@ -4,33 +4,21 @@ examples = [
     '03_compute'
 ]
 
-vert_shaders = [
-    'shaders/01_hello_triangle/main.vert.hlsl',
-    'shaders/02_load_texture/main.vert.hlsl',
-]
+shaders = {
+    examples[0] : [
+        'shaders/01_hello_triangle/main.vert.hlsl',
+        'shaders/01_hello_triangle/main.frag.hlsl',
+    ],
+    examples[1] : [
+        'shaders/02_load_texture/main.vert.hlsl',
+        'shaders/02_load_texture/main.frag.hlsl',
+    ],
+    examples[2] : [
+        'shaders/03_compute/main.comp.hlsl'
+    ]
+}
 
-frag_shaders = [
-    'shaders/01_hello_triangle/main.frag.hlsl',
-    'shaders/02_load_texture/main.frag.hlsl',
-]
-
-comp_shaders = [
-    'shaders/03_compute/main.comp.hlsl'
-]
-
-shaders = []
-shaders += vert_shaders
-shaders += frag_shaders
-shaders += comp_shaders
-
-foreach shader : shaders
-    gen_spirv = run_command('glslangvalidator', '-e', 'main', '-V', meson.current_source_dir()/shader, '-o', meson.current_source_dir()/shader.replace('.hlsl', '.bin'), check: false)
-    if gen_spirv.returncode() != 0
-        output = gen_spirv.stdout().strip()
-        errortxt = gen_spirv.stderr().strip()
-        message(output, errortxt)
-    endif
-endforeach
+prog_python = import('python').find_installation('python3')
 
 foreach example : examples
     srcs = files([
@@ -38,7 +26,16 @@ foreach example : examples
         'common/sample.hpp'
     ])
 
-    executable(example, srcs,
+    ss = shaders[example]
+    css = []
+    foreach s : ss
+        shader_bytecode_gen = generator(prog_python,
+                                        output : '@BASENAME@.bin',
+                                        arguments : [ '../tools/compile_shaders.py', '--outdir', meson.current_source_dir()/'shaders'/example, '--bytecode', 'spirv', '--shader', '@INPUT@' ])
+        css += shader_bytecode_gen.process(s)
+    endforeach
+
+    executable(example, srcs, css,
         dependencies	: fluent_engine_dep,
         cpp_args		: compile_args,
     )

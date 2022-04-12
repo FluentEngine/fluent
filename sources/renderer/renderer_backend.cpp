@@ -87,12 +87,17 @@ void create_renderer_backend( const RendererBackendDesc* desc,
 #ifdef VULKAN_BACKEND
         vk_create_renderer_backend( desc, backend );
         break;
+#else
+        FT_ASSERT( false && "Not supported api on this device" );
 #endif
     }
     case RendererAPI::eD3D12:
     {
 #ifdef D3D12_BACKEND
         d3d12_create_renderer_backend( desc, backend );
+        break;
+#else
+        FT_ASSERT( false && "Not supported api on this device" );
         break;
 #endif
     }
