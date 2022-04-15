@@ -180,7 +180,7 @@ static inline VkDescriptorType to_vk_descriptor_type(
     }
 }
 
-VkFilter to_vk_filter( Filter filter )
+static inline VkFilter to_vk_filter( Filter filter )
 {
     switch ( filter )
     {
@@ -190,7 +190,8 @@ VkFilter to_vk_filter( Filter filter )
     }
 }
 
-VkSamplerMipmapMode to_vk_sampler_mipmap_mode( SamplerMipmapMode mode )
+static inline VkSamplerMipmapMode to_vk_sampler_mipmap_mode(
+    SamplerMipmapMode mode )
 {
     switch ( mode )
     {
@@ -202,7 +203,8 @@ VkSamplerMipmapMode to_vk_sampler_mipmap_mode( SamplerMipmapMode mode )
     }
 }
 
-VkSamplerAddressMode to_vk_sampler_address_mode( SamplerAddressMode mode )
+static inline VkSamplerAddressMode to_vk_sampler_address_mode(
+    SamplerAddressMode mode )
 {
     switch ( mode )
     {
@@ -218,7 +220,7 @@ VkSamplerAddressMode to_vk_sampler_address_mode( SamplerAddressMode mode )
     }
 }
 
-VkPolygonMode to_vk_polygon_mode( PolygonMode mode )
+static inline VkPolygonMode to_vk_polygon_mode( PolygonMode mode )
 {
     switch ( mode )
     {
@@ -228,7 +230,8 @@ VkPolygonMode to_vk_polygon_mode( PolygonMode mode )
     }
 };
 
-VkPrimitiveTopology to_vk_primitive_topology( PrimitiveTopology topology )
+static inline VkPrimitiveTopology to_vk_primitive_topology(
+    PrimitiveTopology topology )
 {
     switch ( topology )
     {
@@ -520,7 +523,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(
     return VK_FALSE;
 }
 
-void create_debug_messenger( VulkanRendererBackend* backend )
+static inline void create_debug_messenger( VulkanRendererBackend* backend )
 {
     VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info {};
     debug_messenger_create_info.sType =
@@ -552,6 +555,7 @@ static inline void get_instance_extensions( u32&         extensions_count,
             ( SDL_Window* ) get_app_window()->handle,
             &extensions_count,
             nullptr );
+        FT_ASSERT( result );
 #ifdef FLUENT_DEBUG
         extensions_count++;
 #endif
@@ -646,19 +650,21 @@ static inline VkImageAspectFlags get_aspect_mask( Format format )
 }
 
 static inline VkImageSubresourceRange get_image_subresource_range(
-    const Image* image )
+    const VulkanImage* image )
 {
     VkImageSubresourceRange image_subresource_range {};
-    image_subresource_range.aspectMask     = get_aspect_mask( image->format );
+    image_subresource_range.aspectMask =
+        get_aspect_mask( image->interface.format );
     image_subresource_range.baseMipLevel   = 0;
-    image_subresource_range.levelCount     = image->mip_level_count;
+    image_subresource_range.levelCount     = image->interface.mip_level_count;
     image_subresource_range.baseArrayLayer = 0;
-    image_subresource_range.layerCount     = image->layer_count;
+    image_subresource_range.layerCount     = image->interface.layer_count;
 
     return image_subresource_range;
 }
 
-VkImageSubresourceLayers get_image_subresource_layers( const Image* image )
+static inline VkImageSubresourceLayers get_image_subresource_layers(
+    const VulkanImage* image )
 {
     auto subresourceRange = get_image_subresource_range( image );
     return VkImageSubresourceLayers { subresourceRange.aspectMask,
@@ -667,11 +673,11 @@ VkImageSubresourceLayers get_image_subresource_layers( const Image* image )
                                       subresourceRange.layerCount };
 }
 
-void vk_destroy_renderer_backend( RendererBackend* interface )
+void vk_destroy_renderer_backend( RendererBackend* ibackend )
 {
-    FT_ASSERT( interface );
+    FT_ASSERT( ibackend );
 
-    auto backend = static_cast<VulkanRendererBackend*>( interface->handle );
+    FT_FROM_HANDLE( backend, ibackend, VulkanRendererBackend );
 
 #ifdef FLUENT_DEBUG
     vkDestroyDebugUtilsMessengerEXT( backend->instance,
@@ -682,18 +688,19 @@ void vk_destroy_renderer_backend( RendererBackend* interface )
     operator delete( backend, std::nothrow );
 }
 
-void* vk_map_memory( const Device* device_interface, Buffer* buffer_interface )
+void* vk_map_memory( const Device* idevice, Buffer* ibuffer )
 {
-    FT_ASSERT( buffer_interface != nullptr );
-    FT_ASSERT( buffer_interface->mapped_memory == nullptr );
+    FT_ASSERT( ibuffer != nullptr );
+    FT_ASSERT( ibuffer->mapped_memory == nullptr );
 
-    auto device = static_cast<VulkanDevice*>( device_interface->handle );
-    auto buffer = static_cast<VulkanBuffer*>( buffer_interface->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
 
     vmaMapMemory( device->memory_allocator,
                   buffer->allocation,
-                  &buffer_interface->mapped_memory );
-    return buffer_interface->mapped_memory;
+                  &buffer->interface.mapped_memory );
+
+    return buffer->interface.mapped_memory;
 }
 
 void vk_unmap_memory( const Device* idevice, Buffer* ibuffer )
@@ -701,11 +708,11 @@ void vk_unmap_memory( const Device* idevice, Buffer* ibuffer )
     FT_ASSERT( ibuffer );
     FT_ASSERT( ibuffer->mapped_memory );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
-    auto buffer = static_cast<VulkanBuffer*>( ibuffer->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
 
     vmaUnmapMemory( device->memory_allocator, buffer->allocation );
-    ibuffer->mapped_memory = nullptr;
+    buffer->interface.mapped_memory = nullptr;
 }
 
 void vk_create_device( const RendererBackend* ibackend,
@@ -715,7 +722,7 @@ void vk_create_device( const RendererBackend* ibackend,
     FT_ASSERT( p );
     FT_ASSERT( desc->frame_in_use_count > 0 );
 
-    auto backend = static_cast<VulkanRendererBackend*>( ibackend->handle );
+    FT_FROM_HANDLE( backend, ibackend, VulkanRendererBackend );
 
     VulkanDevice* device     = new ( std::nothrow ) VulkanDevice {};
     device->interface.handle = device;
@@ -862,7 +869,7 @@ void vk_destroy_device( Device* idevice )
 {
     FT_ASSERT( idevice );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
     vkDestroyDescriptorPool( device->logical_device,
                              device->descriptor_pool,
@@ -877,7 +884,7 @@ void vk_create_queue( const Device* idevice, const QueueDesc* desc, Queue** p )
 {
     FT_ASSERT( p );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
     VulkanQueue* queue      = new ( std::nothrow ) VulkanQueue {};
     queue->interface.handle = queue;
@@ -894,17 +901,20 @@ void vk_create_queue( const Device* idevice, const QueueDesc* desc, Queue** p )
 void vk_destroy_queue( Queue* iqueue )
 {
     FT_ASSERT( iqueue );
-    operator delete( static_cast<VulkanQueue*>( iqueue->handle ),
-                     std::nothrow );
+    FT_FROM_HANDLE( queue, iqueue, VulkanQueue );
+    operator delete( queue, std::nothrow );
 }
 
 void vk_queue_wait_idle( const Queue* iqueue )
 {
-    vkQueueWaitIdle( static_cast<const VulkanQueue*>( iqueue->handle )->queue );
+    FT_FROM_HANDLE( queue, iqueue, VulkanQueue );
+    vkQueueWaitIdle( queue->queue );
 }
 
 void vk_queue_submit( const Queue* iqueue, const QueueSubmitDesc* desc )
 {
+    FT_FROM_HANDLE( queue, iqueue, VulkanQueue );
+
     VkPipelineStageFlags wait_dst_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT;
     std::vector<VkSemaphore>     wait_semaphores( desc->wait_semaphore_count );
     std::vector<VkCommandBuffer> command_buffers( desc->command_buffer_count );
@@ -912,26 +922,25 @@ void vk_queue_submit( const Queue* iqueue, const QueueSubmitDesc* desc )
 
     for ( u32 i = 0; i < desc->wait_semaphore_count; ++i )
     {
-        auto semaphore =
-            static_cast<VulkanSemaphore*>( desc->wait_semaphores[ i ]->handle )
-                ->semaphore;
-        wait_semaphores[ i ] = semaphore;
+        FT_FROM_HANDLE( semaphore,
+                        desc->wait_semaphores[ i ],
+                        VulkanSemaphore );
+
+        wait_semaphores[ i ] = semaphore->semaphore;
     }
 
     for ( u32 i = 0; i < desc->command_buffer_count; ++i )
     {
-        auto cmd = static_cast<VulkanCommandBuffer*>(
-                       desc->command_buffers[ i ]->handle )
-                       ->command_buffer;
-        command_buffers[ i ] = cmd;
+        FT_FROM_HANDLE( cmd, desc->command_buffers[ i ], VulkanCommandBuffer );
+        command_buffers[ i ] = cmd->command_buffer;
     }
 
     for ( u32 i = 0; i < desc->signal_semaphore_count; ++i )
     {
-        auto semaphore = static_cast<VulkanSemaphore*>(
-                             desc->signal_semaphores[ i ]->handle )
-                             ->semaphore;
-        signal_semaphores[ i ] = semaphore;
+        FT_FROM_HANDLE( semaphore,
+                        desc->signal_semaphores[ i ],
+                        VulkanSemaphore );
+        signal_semaphores[ i ] = semaphore->semaphore;
     }
 
     VkSubmitInfo submit_info         = {};
@@ -946,7 +955,7 @@ void vk_queue_submit( const Queue* iqueue, const QueueSubmitDesc* desc )
     submit_info.pSignalSemaphores    = signal_semaphores.data();
 
     vkQueueSubmit(
-        static_cast<VulkanQueue*>( iqueue->handle )->queue,
+        queue->queue,
         1,
         &submit_info,
         desc->signal_fence
@@ -965,13 +974,16 @@ void vk_immediate_submit( const Queue* iqueue, CommandBuffer* cmd )
 
 void vk_queue_present( const Queue* iqueue, const QueuePresentDesc* desc )
 {
+    FT_FROM_HANDLE( swapchain, desc->swapchain, VulkanSwapchain );
+    FT_FROM_HANDLE( queue, iqueue, VulkanQueue );
+
     std::vector<VkSemaphore> wait_semaphores( desc->wait_semaphore_count );
     for ( u32 i = 0; i < desc->wait_semaphore_count; ++i )
     {
-        auto semaphore =
-            static_cast<VulkanSemaphore*>( desc->wait_semaphores[ i ]->handle )
-                ->semaphore;
-        wait_semaphores[ i ] = semaphore;
+        FT_FROM_HANDLE( semaphore,
+                        desc->wait_semaphores[ i ],
+                        VulkanSemaphore );
+        wait_semaphores[ i ] = semaphore->semaphore;
     }
 
     VkPresentInfoKHR present_info = {};
@@ -981,20 +993,18 @@ void vk_queue_present( const Queue* iqueue, const QueuePresentDesc* desc )
     present_info.waitSemaphoreCount = desc->wait_semaphore_count;
     present_info.pWaitSemaphores    = wait_semaphores.data();
     present_info.swapchainCount     = 1;
-    present_info.pSwapchains =
-        &static_cast<VulkanSwapchain*>( desc->swapchain->handle )->swapchain;
-    present_info.pImageIndices = &desc->image_index;
-    present_info.pResults      = nullptr;
+    present_info.pSwapchains        = &swapchain->swapchain;
+    present_info.pImageIndices      = &desc->image_index;
+    present_info.pResults           = nullptr;
 
-    vkQueuePresentKHR( static_cast<VulkanQueue*>( iqueue->handle )->queue,
-                       &present_info );
+    vkQueuePresentKHR( queue->queue, &present_info );
 }
 
 void vk_create_semaphore( const Device* idevice, Semaphore** p )
 {
     FT_ASSERT( p );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
     VulkanSemaphore* semaphore  = new ( std::nothrow ) VulkanSemaphore {};
     semaphore->interface.handle = semaphore;
@@ -1015,8 +1025,8 @@ void vk_destroy_semaphore( const Device* idevice, Semaphore* isemaphore )
 {
     FT_ASSERT( isemaphore );
 
-    auto device    = static_cast<VulkanDevice*>( idevice->handle );
-    auto semaphore = static_cast<VulkanSemaphore*>( isemaphore->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( semaphore, isemaphore, VulkanSemaphore );
 
     vkDestroySemaphore( device->logical_device,
                         semaphore->semaphore,
@@ -1028,7 +1038,7 @@ void vk_create_fence( const Device* idevice, Fence** p )
 {
     FT_ASSERT( p );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
     VulkanFence* fence      = new ( std::nothrow ) VulkanFence {};
     fence->interface.handle = fence;
@@ -1049,8 +1059,8 @@ void vk_destroy_fence( const Device* idevice, Fence* ifence )
 {
     FT_ASSERT( ifence );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
-    auto fence  = static_cast<VulkanFence*>( ifence->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( fence, ifence, VulkanFence );
 
     vkDestroyFence( device->logical_device,
                     fence->fence,
@@ -1060,34 +1070,34 @@ void vk_destroy_fence( const Device* idevice, Fence* ifence )
 
 void vk_wait_for_fences( const Device* idevice, u32 count, Fence** ifences )
 {
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-    std::vector<VkFence> vk_fences( count );
+    std::vector<VkFence> fences( count );
     for ( u32 i = 0; i < count; ++i )
     {
-        vk_fences[ i ] =
-            static_cast<VulkanFence*>( ifences[ i ]->handle )->fence;
+        FT_FROM_HANDLE( fence, ifences[ i ], VulkanFence );
+        fences[ i ] = fence->fence;
     }
 
     vkWaitForFences( device->logical_device,
                      count,
-                     vk_fences.data(),
+                     fences.data(),
                      true,
                      std::numeric_limits<u64>::max() );
 }
 
 void vk_reset_fences( const Device* idevice, u32 count, Fence** ifences )
 {
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-    std::vector<VkFence> vk_fences( count );
+    std::vector<VkFence> fences( count );
     for ( u32 i = 0; i < count; ++i )
     {
-        vk_fences[ i ] =
-            static_cast<VulkanFence*>( ifences[ i ]->handle )->fence;
+        FT_FROM_HANDLE( fence, ifences[ i ], VulkanFence );
+        fences[ i ] = fence->fence;
     }
 
-    vkResetFences( device->logical_device, count, vk_fences.data() );
+    vkResetFences( device->logical_device, count, fences.data() );
 }
 
 void configure_swapchain( const VulkanDevice*  device,
@@ -1312,7 +1322,7 @@ void vk_create_swapchain( const Device*        idevice,
 {
     FT_ASSERT( p );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
     auto swapchain              = new ( std::nothrow ) VulkanSwapchain {};
     swapchain->interface.handle = swapchain;
@@ -1327,8 +1337,8 @@ void vk_resize_swapchain( const Device* idevice,
                           u32           width,
                           u32           height )
 {
-    auto device    = static_cast<VulkanDevice*>( idevice->handle );
-    auto swapchain = static_cast<VulkanSwapchain*>( iswapchain->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( swapchain, iswapchain, VulkanSwapchain );
 
     iswapchain->width  = width;
     iswapchain->height = height;
@@ -1340,13 +1350,12 @@ void vk_destroy_swapchain( const Device* idevice, Swapchain* iswapchain )
     FT_ASSERT( iswapchain );
     FT_ASSERT( iswapchain->image_count );
 
-    auto device    = static_cast<VulkanDevice*>( idevice->handle );
-    auto swapchain = static_cast<VulkanSwapchain*>( iswapchain->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( swapchain, iswapchain, VulkanSwapchain );
 
     for ( u32 i = 0; i < swapchain->interface.image_count; ++i )
     {
-        auto image = static_cast<VulkanImage*>(
-            swapchain->interface.images[ i ]->handle );
+        FT_FROM_HANDLE( image, swapchain->interface.images[ i ], VulkanImage );
 
         vkDestroyImageView( device->logical_device,
                             image->image_view,
@@ -1372,7 +1381,7 @@ void vk_create_command_pool( const Device*          idevice,
 {
     FT_ASSERT( p );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
     auto command_pool              = new ( std::nothrow ) VulkanCommandPool {};
     command_pool->interface.handle = command_pool;
@@ -1398,9 +1407,8 @@ void vk_destroy_command_pool( const Device* idevice,
 {
     FT_ASSERT( icommand_pool );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
-    auto command_pool =
-        static_cast<VulkanCommandPool*>( icommand_pool->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( command_pool, icommand_pool, VulkanCommandPool );
 
     vkDestroyCommandPool( device->logical_device,
                           command_pool->command_pool,
@@ -1415,9 +1423,8 @@ void vk_create_command_buffers( const Device*      idevice,
 {
     FT_ASSERT( icommand_buffers );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
-    auto command_pool =
-        static_cast<VulkanCommandPool*>( icommand_pool->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( command_pool, icommand_pool, VulkanCommandPool );
 
     std::vector<VkCommandBuffer> buffers( count );
 
@@ -1453,15 +1460,14 @@ void vk_free_command_buffers( const Device*      idevice,
 {
     FT_ASSERT( icommand_buffers );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
     std::vector<VkCommandBuffer> buffers( count );
 
     for ( u32 i = 0; i < count; ++i )
     {
-        buffers[ i ] =
-            static_cast<VulkanCommandBuffer*>( icommand_buffers[ i ]->handle )
-                ->command_buffer;
+        FT_FROM_HANDLE( cmd, icommand_buffers[ i ], VulkanCommandBuffer );
+        buffers[ i ] = cmd->command_buffer;
     }
 
     vkFreeCommandBuffers(
@@ -1480,14 +1486,15 @@ void vk_destroy_command_buffers( const Device*      idevice,
 
     for ( u32 i = 0; i < count; ++i )
     {
-        operator delete(
-            static_cast<VulkanCommandBuffer*>( icommand_buffers[ i ]->handle ),
-            std::nothrow );
+        FT_FROM_HANDLE( cmd, icommand_buffers[ i ], VulkanCommandBuffer );
+        operator delete( cmd, std::nothrow );
     }
 }
 
-void vk_begin_command_buffer( const CommandBuffer* cmd )
+void vk_begin_command_buffer( const CommandBuffer* icmd )
 {
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+
     VkCommandBufferBeginInfo command_buffer_begin_info {};
     command_buffer_begin_info.sType =
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1496,15 +1503,14 @@ void vk_begin_command_buffer( const CommandBuffer* cmd )
         VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     command_buffer_begin_info.pInheritanceInfo = nullptr;
 
-    VK_ASSERT( vkBeginCommandBuffer(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        &command_buffer_begin_info ) );
+    VK_ASSERT( vkBeginCommandBuffer( cmd->command_buffer,
+                                     &command_buffer_begin_info ) );
 }
 
-void vk_end_command_buffer( const CommandBuffer* cmd )
+void vk_end_command_buffer( const CommandBuffer* icmd )
 {
-    VK_ASSERT( vkEndCommandBuffer(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer ) );
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+    VK_ASSERT( vkEndCommandBuffer( cmd->command_buffer ) );
 }
 
 void vk_acquire_next_image( const Device*    idevice,
@@ -1513,16 +1519,20 @@ void vk_acquire_next_image( const Device*    idevice,
                             const Fence*     ifence,
                             u32*             image_index )
 {
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( swapchain, iswapchain, VulkanSwapchain );
+    FT_FROM_HANDLE( semaphore, isemaphore, VulkanSemaphore );
 
     VkResult result = vkAcquireNextImageKHR(
         device->logical_device,
-        static_cast<VulkanSwapchain*>( iswapchain->handle )->swapchain,
+        swapchain->swapchain,
         std::numeric_limits<u64>::max(),
-        static_cast<VulkanSemaphore*>( isemaphore->handle )->semaphore,
+        semaphore->semaphore,
         ifence ? static_cast<VulkanFence*>( ifence->handle )->fence
                : VK_NULL_HANDLE,
         image_index );
+    // TODO: check status
+    ( void ) result;
 }
 
 void create_framebuffer( const VulkanDevice*   device,
@@ -1534,20 +1544,19 @@ void create_framebuffer( const VulkanDevice*   device,
     VkImageView image_views[ MAX_ATTACHMENTS_COUNT + 2 ];
     for ( u32 i = 0; i < attachment_count; ++i )
     {
-        auto image =
-            static_cast<VulkanImage*>( desc->color_attachments[ i ]->handle );
+        FT_FROM_HANDLE( image, desc->color_attachments[ i ], VulkanImage );
         image_views[ i ] = image->image_view;
     }
 
     if ( desc->depth_stencil )
     {
-        auto image = static_cast<VulkanImage*>( desc->depth_stencil->handle );
+        FT_FROM_HANDLE( image, desc->depth_stencil, VulkanImage );
         image_views[ attachment_count++ ] = image->image_view;
     }
 
     if ( desc->resolve )
     {
-        auto image = static_cast<VulkanImage*>( desc->resolve->handle );
+        FT_FROM_HANDLE( image, desc->resolve, VulkanImage );
         image_views[ attachment_count++ ] = image->image_view;
     }
 
@@ -1578,7 +1587,7 @@ void vk_create_render_pass( const Device*         idevice,
 {
     FT_ASSERT( p );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
     auto render_pass              = new ( std::nothrow ) VulkanRenderPass {};
     render_pass->interface.handle = render_pass;
@@ -1722,8 +1731,8 @@ void vk_update_render_pass( const Device*         idevice,
     FT_ASSERT( irender_pass );
     FT_ASSERT( desc->width > 0 && desc->height > 0 );
 
-    auto device      = static_cast<VulkanDevice*>( idevice->handle );
-    auto render_pass = static_cast<VulkanRenderPass*>( irender_pass->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( render_pass, irender_pass, VulkanRenderPass );
 
     render_pass->interface.width  = desc->width;
     render_pass->interface.height = desc->height;
@@ -1739,8 +1748,8 @@ void vk_destroy_render_pass( const Device* idevice, RenderPass* irender_pass )
 {
     FT_ASSERT( irender_pass );
 
-    auto device      = static_cast<VulkanDevice*>( idevice->handle );
-    auto render_pass = static_cast<VulkanRenderPass*>( irender_pass->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( render_pass, irender_pass, VulkanRenderPass );
 
     if ( render_pass->framebuffer )
     {
@@ -1758,7 +1767,7 @@ void vk_create_shader( const Device* idevice, ShaderDesc* desc, Shader** p )
 {
     FT_ASSERT( p );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
     auto shader              = new ( std::nothrow ) VulkanShader {};
     shader->interface.handle = shader;
@@ -1786,8 +1795,8 @@ void vk_destroy_shader( const Device* idevice, Shader* ishader )
 {
     FT_ASSERT( ishader );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
-    auto shader = static_cast<VulkanShader*>( ishader->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( shader, ishader, VulkanShader );
 
     vkDestroyShaderModule( device->logical_device,
                            shader->shader,
@@ -1803,7 +1812,7 @@ void vk_create_descriptor_set_layout( const Device*         idevice,
     FT_ASSERT( p );
     FT_ASSERT( shader_count );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
     auto descriptor_set_layout =
         new ( std::nothrow ) VulkanDescriptorSetLayout {};
@@ -1900,8 +1909,8 @@ void vk_destroy_descriptor_set_layout( const Device*        idevice,
 {
     FT_ASSERT( ilayout );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
-    auto layout = static_cast<VulkanDescriptorSetLayout*>( ilayout->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( layout, ilayout, VulkanDescriptorSetLayout );
 
     for ( u32 i = 0; i < layout->interface.descriptor_set_layout_count; ++i )
     {
@@ -1923,7 +1932,7 @@ void vk_create_compute_pipeline( const Device*       idevice,
     FT_ASSERT( p );
     FT_ASSERT( desc->descriptor_set_layout );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
     auto pipeline              = new ( std::nothrow ) VulkanPipeline {};
     pipeline->interface.handle = pipeline;
@@ -1988,7 +1997,7 @@ void vk_create_graphics_pipeline( const Device*       idevice,
     FT_ASSERT( desc->descriptor_set_layout );
     FT_ASSERT( desc->render_pass );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
     auto pipeline              = new ( std::nothrow ) VulkanPipeline {};
     pipeline->interface.handle = pipeline;
@@ -2191,8 +2200,8 @@ void vk_destroy_pipeline( const Device* idevice, Pipeline* ipipeline )
 {
     FT_ASSERT( ipipeline );
 
-    auto device   = static_cast<VulkanDevice*>( idevice->handle );
-    auto pipeline = static_cast<VulkanPipeline*>( ipipeline->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( pipeline, ipipeline, VulkanPipeline );
 
     vkDestroyPipelineLayout( device->logical_device,
                              pipeline->pipeline_layout,
@@ -2209,7 +2218,8 @@ void vk_create_buffer( const Device*     idevice,
 {
     FT_ASSERT( p );
 
-    auto device              = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+
     auto buffer              = new ( std::nothrow ) VulkanBuffer {};
     buffer->interface.handle = buffer;
     *p                       = &buffer->interface;
@@ -2245,8 +2255,8 @@ void vk_destroy_buffer( const Device* idevice, Buffer* ibuffer )
 {
     FT_ASSERT( ibuffer );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
-    auto buffer = static_cast<VulkanBuffer*>( ibuffer->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
 
     vmaDestroyBuffer( device->memory_allocator,
                       buffer->buffer,
@@ -2260,7 +2270,8 @@ void vk_create_sampler( const Device*      idevice,
 {
     FT_ASSERT( p );
 
-    auto device               = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+
     auto sampler              = new ( std::nothrow ) VulkanSampler {};
     sampler->interface.handle = sampler;
     *p                        = &sampler->interface;
@@ -2298,8 +2309,8 @@ void vk_destroy_sampler( const Device* idevice, Sampler* isampler )
 {
     FT_ASSERT( isampler );
 
-    auto device  = static_cast<VulkanDevice*>( idevice->handle );
-    auto sampler = static_cast<VulkanSampler*>( isampler->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( sampler, isampler, VulkanSampler );
 
     vkDestroySampler( device->logical_device,
                       sampler->sampler,
@@ -2311,7 +2322,8 @@ void vk_create_image( const Device* idevice, const ImageDesc* desc, Image** p )
 {
     FT_ASSERT( p );
 
-    auto device             = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+
     auto image              = new ( std::nothrow ) VulkanImage {};
     image->interface.handle = image;
     *p                      = &image->interface;
@@ -2377,7 +2389,7 @@ void vk_create_image( const Device* idevice, const ImageDesc* desc, Image** p )
     image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
     image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
     image_view_create_info.subresourceRange =
-        get_image_subresource_range( &image->interface );
+        get_image_subresource_range( image );
 
     VK_ASSERT( vkCreateImageView( device->logical_device,
                                   &image_view_create_info,
@@ -2389,8 +2401,8 @@ void vk_destroy_image( const Device* idevice, Image* iimage )
 {
     FT_ASSERT( iimage );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
-    auto image  = static_cast<VulkanImage*>( iimage->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( image, iimage, VulkanImage );
 
     vkDestroyImageView( device->logical_device,
                         image->image_view,
@@ -2408,7 +2420,7 @@ void vk_create_descriptor_set( const Device*            idevice,
     FT_ASSERT( p );
     FT_ASSERT( desc->descriptor_set_layout );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
     auto descriptor_set = new ( std::nothrow ) VulkanDescriptorSet {};
     descriptor_set->interface.handle = descriptor_set;
@@ -2434,8 +2446,8 @@ void vk_destroy_descriptor_set( const Device* idevice, DescriptorSet* iset )
 {
     FT_ASSERT( iset );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
-    auto set    = static_cast<VulkanDescriptorSet*>( iset->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( set, iset, VulkanDescriptorSet );
 
     vkFreeDescriptorSets( device->logical_device,
                           device->descriptor_pool,
@@ -2451,8 +2463,8 @@ void vk_update_descriptor_set( const Device*          idevice,
 {
     FT_ASSERT( iset );
 
-    auto device = static_cast<VulkanDevice*>( idevice->handle );
-    auto set    = static_cast<VulkanDescriptorSet*>( iset->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( set, iset, VulkanDescriptorSet );
 
     // TODO: rewrite
     std::vector<std::vector<VkDescriptorBufferInfo>> buffer_updates( count );
@@ -2542,11 +2554,10 @@ void vk_create_ui_context( CommandBuffer* cmd,
 {
     FT_ASSERT( p );
 
-    auto backend = static_cast<VulkanRendererBackend*>( desc->backend->handle );
-    auto device  = static_cast<VulkanDevice*>( desc->device->handle );
-    auto queue   = static_cast<VulkanQueue*>( desc->queue->handle );
-    auto render_pass =
-        static_cast<VulkanRenderPass*>( desc->render_pass->handle );
+    FT_FROM_HANDLE( backend, desc->backend, VulkanRendererBackend );
+    FT_FROM_HANDLE( device, desc->device, VulkanDevice );
+    FT_FROM_HANDLE( queue, desc->queue, VulkanQueue );
+    FT_FROM_HANDLE( render_pass, desc->render_pass, VulkanRenderPass );
 
     auto context              = new ( std::nothrow ) VulkanUiContext {};
     context->interface.handle = context;
@@ -2621,8 +2632,8 @@ void vk_destroy_ui_context( const Device* idevice, UiContext* icontext )
 {
     FT_ASSERT( icontext );
 
-    auto device  = static_cast<VulkanDevice*>( idevice->handle );
-    auto context = static_cast<VulkanUiContext*>( icontext->handle );
+    FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( context, icontext, VulkanUiContext );
 
     vkDestroyDescriptorPool( device->logical_device,
                              context->desriptor_pool,
@@ -2640,12 +2651,13 @@ void vk_ui_begin_frame()
     ImGui::NewFrame();
 }
 
-void vk_ui_end_frame( UiContext* context, CommandBuffer* cmd )
+void vk_ui_end_frame( UiContext* context, CommandBuffer* icmd )
 {
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+
     ImGui::Render();
-    ImGui_ImplVulkan_RenderDrawData(
-        ImGui::GetDrawData(),
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer );
+    ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(),
+                                     cmd->command_buffer );
 
     ImGuiIO& io = ImGui::GetIO();
     if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
@@ -2655,14 +2667,15 @@ void vk_ui_end_frame( UiContext* context, CommandBuffer* cmd )
     }
 }
 
-void vk_cmd_begin_render_pass( const CommandBuffer*       cmd,
+void vk_cmd_begin_render_pass( const CommandBuffer*       icmd,
                                const RenderPassBeginDesc* desc )
 {
     FT_ASSERT( desc->render_pass );
 
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+    FT_FROM_HANDLE( render_pass, desc->render_pass, VulkanRenderPass );
+
     static VkClearValue clear_values[ MAX_ATTACHMENTS_COUNT + 1 ];
-    const auto          render_pass =
-        static_cast<VulkanRenderPass*>( desc->render_pass->handle );
     u32 clear_value_count = render_pass->interface.color_attachment_count;
 
     for ( u32 i = 0; i < render_pass->interface.color_attachment_count; ++i )
@@ -2703,19 +2716,18 @@ void vk_cmd_begin_render_pass( const CommandBuffer*       cmd,
     render_pass_begin_info.clearValueCount     = clear_value_count;
     render_pass_begin_info.pClearValues        = clear_values;
 
-    vkCmdBeginRenderPass(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        &render_pass_begin_info,
-        VK_SUBPASS_CONTENTS_INLINE );
+    vkCmdBeginRenderPass( cmd->command_buffer,
+                          &render_pass_begin_info,
+                          VK_SUBPASS_CONTENTS_INLINE );
 }
 
-void vk_cmd_end_render_pass( const CommandBuffer* cmd )
+void vk_cmd_end_render_pass( const CommandBuffer* icmd )
 {
-    vkCmdEndRenderPass(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer );
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+    vkCmdEndRenderPass( cmd->command_buffer );
 }
 
-void vk_cmd_barrier( const CommandBuffer* cmd,
+void vk_cmd_barrier( const CommandBuffer* icmd,
                      u32                  memory_barriers_count,
                      const MemoryBarrier* memory_barrier,
                      u32                  buffer_barriers_count,
@@ -2723,6 +2735,8 @@ void vk_cmd_barrier( const CommandBuffer* cmd,
                      u32                  image_barriers_count,
                      const ImageBarrier*  image_barriers )
 {
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+
     std::vector<VkBufferMemoryBarrier> buffer_memory_barriers(
         buffer_barriers_count );
     std::vector<VkImageMemoryBarrier> image_memory_barriers(
@@ -2738,25 +2752,25 @@ void vk_cmd_barrier( const CommandBuffer* cmd,
         FT_ASSERT( buffer_barriers[ i ].src_queue );
         FT_ASSERT( buffer_barriers[ i ].dst_queue );
 
+        FT_FROM_HANDLE( buffer, buffer_barriers[ i ].buffer, VulkanBuffer );
+
         VkAccessFlags src_access_mask =
             determine_access_flags( buffer_barriers[ i ].old_state );
         VkAccessFlags dst_access_mask =
             determine_access_flags( buffer_barriers[ i ].new_state );
 
-        VkBufferMemoryBarrier buffer_memory_barrier {};
-        buffer_memory_barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-        buffer_memory_barrier.pNext = nullptr;
-        buffer_memory_barrier.srcAccessMask = src_access_mask;
-        buffer_memory_barrier.dstAccessMask = dst_access_mask;
-        buffer_memory_barrier.srcQueueFamilyIndex =
+        VkBufferMemoryBarrier& barrier = buffer_memory_barriers[ i ];
+        barrier.sType         = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        barrier.pNext         = nullptr;
+        barrier.srcAccessMask = src_access_mask;
+        barrier.dstAccessMask = dst_access_mask;
+        barrier.srcQueueFamilyIndex =
             buffer_barriers[ i ].src_queue->family_index;
-        buffer_memory_barrier.dstQueueFamilyIndex =
+        barrier.dstQueueFamilyIndex =
             buffer_barriers[ i ].dst_queue->family_index;
-        buffer_memory_barrier.buffer =
-            static_cast<VulkanBuffer*>( buffer_barriers[ i ].buffer->handle )
-                ->buffer;
-        buffer_memory_barrier.offset = buffer_barriers[ i ].offset;
-        buffer_memory_barrier.size   = buffer_barriers[ i ].size;
+        barrier.buffer = buffer->buffer;
+        barrier.offset = buffer_barriers[ i ].offset;
+        barrier.size   = buffer_barriers[ i ].size;
 
         src_access |= src_access_mask;
         dst_access |= dst_access_mask;
@@ -2768,71 +2782,70 @@ void vk_cmd_barrier( const CommandBuffer* cmd,
         FT_ASSERT( image_barriers[ i ].src_queue );
         FT_ASSERT( image_barriers[ i ].dst_queue );
 
+        FT_FROM_HANDLE( image, image_barriers[ i ].image, VulkanImage );
+
         VkAccessFlags src_access_mask =
             determine_access_flags( image_barriers[ i ].old_state );
         VkAccessFlags dst_access_mask =
             determine_access_flags( image_barriers[ i ].new_state );
 
-        image_memory_barriers[ i ].sType =
-            VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        image_memory_barriers[ i ].pNext         = nullptr;
-        image_memory_barriers[ i ].srcAccessMask = src_access_mask;
-        image_memory_barriers[ i ].dstAccessMask = dst_access_mask;
-        image_memory_barriers[ i ].oldLayout =
+        VkImageMemoryBarrier& barrier = image_memory_barriers[ i ];
+
+        barrier.sType         = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.pNext         = nullptr;
+        barrier.srcAccessMask = src_access_mask;
+        barrier.dstAccessMask = dst_access_mask;
+        barrier.oldLayout =
             determine_image_layout( image_barriers[ i ].old_state );
-        image_memory_barriers[ i ].newLayout =
+        barrier.newLayout =
             determine_image_layout( image_barriers[ i ].new_state );
-        image_memory_barriers[ i ].srcQueueFamilyIndex =
+        barrier.srcQueueFamilyIndex =
             image_barriers[ i ].src_queue->family_index;
-        image_memory_barriers[ i ].dstQueueFamilyIndex =
+        barrier.dstQueueFamilyIndex =
             image_barriers[ i ].dst_queue->family_index;
-        image_memory_barriers[ i ].image =
-            static_cast<VulkanImage*>( image_barriers[ i ].image->handle )
-                ->image;
-        image_memory_barriers[ i ].subresourceRange =
-            get_image_subresource_range( image_barriers[ i ].image );
+        barrier.image            = image->image;
+        barrier.subresourceRange = get_image_subresource_range( image );
 
         src_access |= src_access_mask;
         dst_access |= dst_access_mask;
     }
 
     VkPipelineStageFlags src_stage =
-        determine_pipeline_stage_flags( src_access, cmd->queue->type );
+        determine_pipeline_stage_flags( src_access,
+                                        cmd->interface.queue->type );
     VkPipelineStageFlags dst_stage =
-        determine_pipeline_stage_flags( dst_access, cmd->queue->type );
+        determine_pipeline_stage_flags( dst_access,
+                                        cmd->interface.queue->type );
 
-    vkCmdPipelineBarrier(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        src_stage,
-        dst_stage,
-        0,
-        0,
-        nullptr,
-        buffer_barriers_count,
-        buffer_memory_barriers.data(),
-        image_barriers_count,
-        image_memory_barriers.data() );
+    vkCmdPipelineBarrier( cmd->command_buffer,
+                          src_stage,
+                          dst_stage,
+                          0,
+                          0,
+                          nullptr,
+                          buffer_barriers_count,
+                          buffer_memory_barriers.data(),
+                          image_barriers_count,
+                          image_memory_barriers.data() );
 };
 
-void vk_cmd_set_scissor( const CommandBuffer* cmd,
+void vk_cmd_set_scissor( const CommandBuffer* icmd,
                          i32                  x,
                          i32                  y,
                          u32                  width,
                          u32                  height )
 {
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+
     VkRect2D scissor {};
     scissor.offset.x      = x;
     scissor.offset.y      = y;
     scissor.extent.width  = width;
     scissor.extent.height = height;
-    vkCmdSetScissor(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        0,
-        1,
-        &scissor );
+    vkCmdSetScissor( cmd->command_buffer, 0, 1, &scissor );
 }
 
-void vk_cmd_set_viewport( const CommandBuffer* cmd,
+void vk_cmd_set_viewport( const CommandBuffer* icmd,
                           f32                  x,
                           f32                  y,
                           f32                  width,
@@ -2840,6 +2853,8 @@ void vk_cmd_set_viewport( const CommandBuffer* cmd,
                           f32                  min_depth,
                           f32                  max_depth )
 {
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+
     VkViewport viewport {};
     viewport.x        = x;
     viewport.y        = y + height;
@@ -2848,109 +2863,124 @@ void vk_cmd_set_viewport( const CommandBuffer* cmd,
     viewport.minDepth = min_depth;
     viewport.maxDepth = max_depth;
 
-    vkCmdSetViewport(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        0,
-        1,
-        &viewport );
+    vkCmdSetViewport( cmd->command_buffer, 0, 1, &viewport );
 }
 
-void vk_cmd_bind_pipeline( const CommandBuffer* cmd, const Pipeline* pipeline )
+void vk_cmd_bind_pipeline( const CommandBuffer* icmd,
+                           const Pipeline*      ipipeline )
 {
-    vkCmdBindPipeline(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        to_vk_pipeline_bind_point( pipeline->type ),
-        static_cast<VulkanPipeline*>( pipeline->handle )->pipeline );
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+    FT_FROM_HANDLE( pipeline, ipipeline, VulkanPipeline );
+
+    vkCmdBindPipeline( cmd->command_buffer,
+                       to_vk_pipeline_bind_point( pipeline->interface.type ),
+                       pipeline->pipeline );
 }
 
-void vk_cmd_draw( const CommandBuffer* cmd,
+void vk_cmd_draw( const CommandBuffer* icmd,
                   u32                  vertex_count,
                   u32                  instance_count,
                   u32                  first_vertex,
                   u32                  first_instance )
 {
-    vkCmdDraw( static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+
+    vkCmdDraw( cmd->command_buffer,
                vertex_count,
                instance_count,
                first_vertex,
                first_instance );
 }
 
-void vk_cmd_draw_indexed( const CommandBuffer* cmd,
+void vk_cmd_draw_indexed( const CommandBuffer* icmd,
                           u32                  index_count,
                           u32                  instance_count,
                           u32                  first_index,
                           i32                  vertex_offset,
                           u32                  first_instance )
 {
-    vkCmdDrawIndexed(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        index_count,
-        instance_count,
-        first_index,
-        vertex_offset,
-        first_instance );
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+
+    vkCmdDrawIndexed( cmd->command_buffer,
+                      index_count,
+                      instance_count,
+                      first_index,
+                      vertex_offset,
+                      first_instance );
 }
 
-void vk_cmd_bind_vertex_buffer( const CommandBuffer* cmd,
-                                const Buffer*        buffer,
+void vk_cmd_bind_vertex_buffer( const CommandBuffer* icmd,
+                                const Buffer*        ibuffer,
                                 const u64            offset )
 {
-    vkCmdBindVertexBuffers(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        0,
-        1,
-        &static_cast<VulkanBuffer*>( buffer->handle )->buffer,
-        &offset );
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+    FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
+
+    vkCmdBindVertexBuffers( cmd->command_buffer,
+                            0,
+                            1,
+                            &buffer->buffer,
+                            &offset );
 }
 
-void vk_cmd_bind_index_buffer_u16( const CommandBuffer* cmd,
-                                   const Buffer*        buffer,
+void vk_cmd_bind_index_buffer_u16( const CommandBuffer* icmd,
+                                   const Buffer*        ibuffer,
                                    const u64            offset )
 {
-    vkCmdBindIndexBuffer(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        static_cast<VulkanBuffer*>( buffer->handle )->buffer,
-        offset,
-        VK_INDEX_TYPE_UINT16 );
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+    FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
+
+    vkCmdBindIndexBuffer( cmd->command_buffer,
+                          buffer->buffer,
+                          offset,
+                          VK_INDEX_TYPE_UINT16 );
 }
 
-void vk_cmd_bind_index_buffer_u32( const CommandBuffer* cmd,
-                                   const Buffer*        buffer,
+void vk_cmd_bind_index_buffer_u32( const CommandBuffer* icmd,
+                                   const Buffer*        ibuffer,
                                    u64                  offset )
 {
-    vkCmdBindIndexBuffer(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        static_cast<VulkanBuffer*>( buffer->handle )->buffer,
-        offset,
-        VK_INDEX_TYPE_UINT32 );
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+    FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
+
+    vkCmdBindIndexBuffer( cmd->command_buffer,
+                          buffer->buffer,
+                          offset,
+                          VK_INDEX_TYPE_UINT32 );
 }
 
-void vk_cmd_copy_buffer( const CommandBuffer* cmd,
-                         const Buffer*        src,
+void vk_cmd_copy_buffer( const CommandBuffer* icmd,
+                         const Buffer*        isrc,
                          u64                  src_offset,
-                         Buffer*              dst,
+                         Buffer*              idst,
                          u64                  dst_offset,
                          u64                  size )
 {
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+    FT_FROM_HANDLE( src, isrc, VulkanBuffer );
+    FT_FROM_HANDLE( dst, idst, VulkanBuffer );
+
     VkBufferCopy buffer_copy {};
     buffer_copy.srcOffset = src_offset;
     buffer_copy.dstOffset = dst_offset;
     buffer_copy.size      = size;
 
-    vkCmdCopyBuffer(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        static_cast<VulkanBuffer*>( src->handle )->buffer,
-        static_cast<VulkanBuffer*>( dst->handle )->buffer,
-        1,
-        &buffer_copy );
+    vkCmdCopyBuffer( cmd->command_buffer,
+                     src->buffer,
+                     dst->buffer,
+                     1,
+                     &buffer_copy );
 }
 
-void vk_cmd_copy_buffer_to_image( const CommandBuffer* cmd,
-                                  const Buffer*        src,
+void vk_cmd_copy_buffer_to_image( const CommandBuffer* icmd,
+                                  const Buffer*        isrc,
                                   u64                  src_offset,
-                                  Image*               dst )
+                                  Image*               idst )
 {
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+    FT_FROM_HANDLE( src, isrc, VulkanBuffer );
+    FT_FROM_HANDLE( dst, idst, VulkanImage );
+
     auto dst_layers = get_image_subresource_layers( dst );
 
     VkBufferImageCopy buffer_to_image_copy_info {};
@@ -2960,66 +2990,73 @@ void vk_cmd_copy_buffer_to_image( const CommandBuffer* cmd,
     buffer_to_image_copy_info.imageSubresource  = dst_layers;
     buffer_to_image_copy_info.imageOffset       = VkOffset3D { 0, 0, 0 };
     buffer_to_image_copy_info.imageExtent =
-        VkExtent3D { dst->width, dst->height, 1 };
+        VkExtent3D { dst->interface.width, dst->interface.height, 1 };
 
     vkCmdCopyBufferToImage(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        static_cast<VulkanBuffer*>( src->handle )->buffer,
-        static_cast<VulkanImage*>( dst->handle )->image,
+        cmd->command_buffer,
+        src->buffer,
+        dst->image,
         determine_image_layout( ResourceState::eTransferDst ),
         1,
         &buffer_to_image_copy_info );
 }
 
-void vk_cmd_dispatch( const CommandBuffer* cmd,
+void vk_cmd_dispatch( const CommandBuffer* icmd,
                       u32                  group_count_x,
                       u32                  group_count_y,
                       u32                  group_count_z )
 {
-    vkCmdDispatch(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        group_count_x,
-        group_count_y,
-        group_count_z );
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+
+    vkCmdDispatch( cmd->command_buffer,
+                   group_count_x,
+                   group_count_y,
+                   group_count_z );
 }
 
-void vk_cmd_push_constants( const CommandBuffer* cmd,
-                            const Pipeline*      pipeline,
+void vk_cmd_push_constants( const CommandBuffer* icmd,
+                            const Pipeline*      ipipeline,
                             u64                  offset,
                             u64                  size,
                             const void*          data )
 {
-    vkCmdPushConstants(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        static_cast<VulkanPipeline*>( pipeline->handle )->pipeline_layout,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT |
-            VK_SHADER_STAGE_FRAGMENT_BIT,
-        offset,
-        size,
-        data );
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+    FT_FROM_HANDLE( pipeline, ipipeline, VulkanPipeline );
+
+    vkCmdPushConstants( cmd->command_buffer,
+                        pipeline->pipeline_layout,
+                        VK_SHADER_STAGE_VERTEX_BIT |
+                            VK_SHADER_STAGE_COMPUTE_BIT |
+                            VK_SHADER_STAGE_FRAGMENT_BIT,
+                        offset,
+                        size,
+                        data );
 }
 
-void vk_cmd_blit_image( const CommandBuffer* cmd,
-                        const Image*         src,
+void vk_cmd_blit_image( const CommandBuffer* icmd,
+                        const Image*         isrc,
                         ResourceState        src_state,
-                        Image*               dst,
+                        Image*               idst,
                         ResourceState        dst_state,
                         Filter               filter )
 {
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+    FT_FROM_HANDLE( src, isrc, VulkanImage );
+    FT_FROM_HANDLE( dst, idst, VulkanImage );
+
     u32 barrier_count = 0;
     u32 index         = 0;
 
     ImageBarrier barriers[ 2 ] = {};
-    // To transfer src
-    barriers[ 0 ].src_queue = cmd->queue;
-    barriers[ 0 ].dst_queue = cmd->queue;
-    barriers[ 0 ].image     = src;
-    barriers[ 0 ].old_state = src_state;
-    barriers[ 0 ].new_state = ResourceState::eTransferSrc;
-    // To transfer dst
-    barriers[ 1 ].src_queue = cmd->queue;
-    barriers[ 1 ].dst_queue = cmd->queue;
-    barriers[ 1 ].image     = dst;
+    barriers[ 0 ].src_queue    = cmd->interface.queue;
+    barriers[ 0 ].dst_queue    = cmd->interface.queue;
+    barriers[ 0 ].image        = &src->interface;
+    barriers[ 0 ].old_state    = src_state;
+    barriers[ 0 ].new_state    = ResourceState::eTransferSrc;
+
+    barriers[ 1 ].src_queue = cmd->interface.queue;
+    barriers[ 1 ].dst_queue = cmd->interface.queue;
+    barriers[ 1 ].image     = &dst->interface;
     barriers[ 1 ].old_state = dst_state;
     barriers[ 1 ].new_state = ResourceState::eTransferDst;
 
@@ -3040,7 +3077,7 @@ void vk_cmd_blit_image( const CommandBuffer* cmd,
 
     if ( barrier_count > 0 )
     {
-        cmd_barrier( cmd,
+        cmd_barrier( &cmd->interface,
                      0,
                      nullptr,
                      0,
@@ -3055,28 +3092,34 @@ void vk_cmd_blit_image( const CommandBuffer* cmd,
     VkImageBlit image_blit_info {};
     image_blit_info.srcOffsets[ 0 ] = VkOffset3D { 0, 0, 0 };
     image_blit_info.srcOffsets[ 1 ] =
-        VkOffset3D { ( i32 ) src->width, ( i32 ) src->height, 1 };
+        VkOffset3D { static_cast<i32>( src->interface.width ),
+                     static_cast<i32>( src->interface.height ),
+                     1 };
     image_blit_info.dstOffsets[ 0 ] = VkOffset3D { 0, 0, 0 };
     image_blit_info.dstOffsets[ 1 ] =
-        VkOffset3D { ( i32 ) dst->width, ( i32 ) dst->height, 1 };
+        VkOffset3D { ( i32 ) dst->interface.width,
+                     ( i32 ) dst->interface.height,
+                     1 };
     image_blit_info.srcSubresource = src_layers;
     image_blit_info.dstSubresource = dst_layers;
 
-    vkCmdBlitImage(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        static_cast<VulkanImage*>( src->handle )->image,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        static_cast<VulkanImage*>( dst->handle )->image,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        1,
-        &image_blit_info,
-        to_vk_filter( filter ) );
+    vkCmdBlitImage( cmd->command_buffer,
+                    src->image,
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    dst->image,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    1,
+                    &image_blit_info,
+                    to_vk_filter( filter ) );
 }
 
-void vk_cmd_clear_color_image( const CommandBuffer* cmd,
-                               Image*               image,
+void vk_cmd_clear_color_image( const CommandBuffer* icmd,
+                               Image*               iimage,
                                Vector4              color )
 {
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+    FT_FROM_HANDLE( image, iimage, VulkanImage );
+
     VkClearColorValue clear_color {};
     clear_color.float32[ 0 ] = color.r;
     clear_color.float32[ 1 ] = color.g;
@@ -3085,41 +3128,46 @@ void vk_cmd_clear_color_image( const CommandBuffer* cmd,
 
     VkImageSubresourceRange range = get_image_subresource_range( image );
 
-    vkCmdClearColorImage(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        static_cast<VulkanImage*>( image->handle )->image,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        &clear_color,
-        1,
-        &range );
+    vkCmdClearColorImage( cmd->command_buffer,
+                          image->image,
+                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                          &clear_color,
+                          1,
+                          &range );
 }
 
-void vk_cmd_draw_indexed_indirect( const CommandBuffer* cmd,
-                                   const Buffer*        buffer,
+void vk_cmd_draw_indexed_indirect( const CommandBuffer* icmd,
+                                   const Buffer*        ibuffer,
                                    u64                  offset,
                                    u32                  draw_count,
                                    u32                  stride )
 {
-    vkCmdDrawIndexedIndirect(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        static_cast<VulkanBuffer*>( buffer->handle )->buffer,
-        offset,
-        draw_count,
-        stride );
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+    FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
+
+    vkCmdDrawIndexedIndirect( cmd->command_buffer,
+                              buffer->buffer,
+                              offset,
+                              draw_count,
+                              stride );
 }
 
-void vk_cmd_bind_descriptor_set( const CommandBuffer* cmd,
+void vk_cmd_bind_descriptor_set( const CommandBuffer* icmd,
                                  u32                  first_set,
-                                 const DescriptorSet* set,
-                                 const Pipeline*      pipeline )
+                                 const DescriptorSet* iset,
+                                 const Pipeline*      ipipeline )
 {
+    FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+    FT_FROM_HANDLE( pipeline, ipipeline, VulkanPipeline );
+    FT_FROM_HANDLE( set, iset, VulkanDescriptorSet );
+
     vkCmdBindDescriptorSets(
-        static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer,
-        to_vk_pipeline_bind_point( pipeline->type ),
-        static_cast<VulkanPipeline*>( pipeline->handle )->pipeline_layout,
+        cmd->command_buffer,
+        to_vk_pipeline_bind_point( pipeline->interface.type ),
+        pipeline->pipeline_layout,
         first_set,
         1,
-        &static_cast<VulkanDescriptorSet*>( set->handle )->descriptor_set,
+        &set->descriptor_set,
         0,
         nullptr );
 }

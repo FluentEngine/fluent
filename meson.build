@@ -1,7 +1,19 @@
 project('fluent-engine', [ 'c', 'cpp' ], default_options : ['default_library=static', 'c_std=c17', 'cpp_std=c++17'] )
 target = 'fluent-engine'
 
+
+compile_args = []
+include_dirs = []
+libs = []
+deps = []
+
 cc = meson.get_compiler('cpp')
+
+if cc.get_id() == 'gcc'
+    compile_args += [ '-Werror', '-Wall' ]
+elif cc.get_id() == 'msvc'
+    compile_args += [ '/WX', '/Wall' ]
+endif
 
 if host_machine.system() == 'darwin'
     add_project_arguments(language : 'objcpp')
@@ -15,10 +27,7 @@ renderer_backend_vulkan = dep.found()
 dep = cc.find_library('d3d12', required: get_option('fluent_d3d12_backend'))
 renderer_backend_d3d12 = dep.found()
 
-include_dirs = []
-libs = []
-deps = []
-compile_args = []
+
 
 if renderer_backend_vulkan
     compile_args = ['-DVULKAN_BACKEND', compile_args]
@@ -118,10 +127,10 @@ fs = files([
     src_dir/'fs/file_system.cpp'
 ])
 
-math = [
+math = files([
     src_dir/'math/math.hpp', 
     src_dir/'math/math.cpp'
-]
+])
 
 sources = [
     core, 

@@ -210,7 +210,7 @@ static inline D3D12_FILTER to_d3d12_filter( Filter            min_filter,
                           ? D3D12_FILTER_COMPARISON_MIN_MAG_MIP_POINT
                           : D3D12_FILTER_MIN_MAG_MIP_POINT;
 
-    return ( D3D12_FILTER )( base_filter + filter );
+    return ( D3D12_FILTER ) ( base_filter + filter );
 }
 
 static inline D3D12_TEXTURE_ADDRESS_MODE to_d3d12_address_mode(

@@ -42,7 +42,7 @@ static inline std::string to_api_str( RendererAPI api )
     return "";
 }
 
-static Shader* load_shader_from_file( const std::string& filename )
+static inline Shader* load_shader_from_file( const std::string& filename )
 {
     std::string ext = filename.substr( filename.find_last_of( "." ) );
     ShaderStage stage;
@@ -64,7 +64,8 @@ static Shader* load_shader_from_file( const std::string& filename )
     return shader;
 }
 
-static Image* load_image_from_file( const std::string& filename, b32 flip )
+static inline Image* load_image_from_file( const std::string& filename,
+                                           b32                flip )
 {
     u64       size = 0;
     void*     data = nullptr;
@@ -284,7 +285,8 @@ void end_frame( u32 image_index )
     ImGui::SetNextWindowSize( { 400, 200 } );
     ImGui::Begin( "Performance", &open_ptr, window_flags );
     ImGui::Text( "FPS: %f", ImGui::GetIO().Framerate );
-    ImGui::Text( ( "Current API: " + api_name ).c_str() );
+    ImGui::Text( "%s",
+                 std::string( "Current API: " ).append( api_name ).c_str() );
     static int e    = static_cast<int>( current_api );
     auto       last = e;
     ImGui::RadioButton( "Vulkan", &e, 0 );
