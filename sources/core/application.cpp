@@ -41,9 +41,7 @@ void app_init( const ApplicationConfig* config )
     app_state.on_update      = config->on_update;
     app_state.on_shutdown    = config->on_shutdown;
     app_state.on_resize      = config->on_resize;
-    app_state.imgui_callback = []( const SDL_Event* e ) -> bool {
-        return false;
-    };
+	app_state.imgui_callback = []( const SDL_Event* ) -> bool { return false; };
     spdlog::set_level( to_spdlog_level( config->log_level ) );
 
     init_input_system( &app_state.input_system );
@@ -145,7 +143,7 @@ const Window* get_app_window() { return &app_state.window; }
 
 const InputSystem* get_app_input_system() { return &app_state.input_system; }
 
-void app_set_ui_context( const UiContext& context )
+void app_set_ui_context( const UiContext& )
 {
     // Bad but ok for now
     app_state.imgui_callback = ImGui_ImplSDL2_ProcessEvent;

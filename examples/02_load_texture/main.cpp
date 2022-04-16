@@ -103,9 +103,9 @@ void init_sample()
     update_descriptor_set( device, descriptor_set, 2, descriptor_writes );
 }
 
-void resize_sample( u32 width, u32 height ) {}
+void resize_sample( u32, u32 ) {}
 
-void update_sample( CommandBuffer* cmd, f32 delta_time )
+void update_sample( CommandBuffer* cmd, f32 )
 {
     u32 image_index = begin_frame();
 

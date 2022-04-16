@@ -10,7 +10,7 @@ deps = []
 cc = meson.get_compiler('cpp')
 
 if cc.get_id() == 'gcc'
-    compile_args += [ '-Werror', '-Wall' ]
+	compile_args += [ '-Werror', '-Wall', '-Wextra' ]
 elif cc.get_id() == 'msvc'
     compile_args += [ '/WX', '/Wall' ]
 endif

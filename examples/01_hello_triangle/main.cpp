@@ -41,9 +41,9 @@ void init_sample()
     for ( u32 i = 0; i < 2; ++i ) { destroy_shader( device, shaders[ i ] ); }
 }
 
-void resize_sample( u32 width, u32 height ) {}
+void resize_sample( u32, u32 ) {}
 
-void update_sample( CommandBuffer* cmd, f32 delta_time )
+void update_sample( CommandBuffer* cmd, f32 )
 {
     u32 image_index = begin_frame();
 

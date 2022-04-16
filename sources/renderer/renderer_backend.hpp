@@ -12,8 +12,8 @@ namespace fluent
     impl* name = static_cast<impl*>( interface->handle );
 
 #define DECLARE_RENDERER_FUNCTION( ret, name, ... )                            \
-    typedef ret ( *name##_fun )( __VA_ARGS__ );                                \
-    extern name##_fun name;
+	typedef ret ( *name##_fun )( __VA_ARGS__ );                                \
+	extern name##_fun name;
 
 // Forward declares
 struct Window;

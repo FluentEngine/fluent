@@ -497,10 +497,10 @@ static inline VkImageUsageFlags determine_vk_image_usage(
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT             messageType,
+	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+	VkDebugUtilsMessageTypeFlagsEXT,
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-    void*                                       pUserData )
+	void* )
 {
     if ( messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT )
     {
@@ -1477,10 +1477,10 @@ void vk_free_command_buffers( const Device*      idevice,
         buffers.data() );
 }
 
-void vk_destroy_command_buffers( const Device*      idevice,
-                                 const CommandPool* icommand_pool,
-                                 u32                count,
-                                 CommandBuffer**    icommand_buffers )
+void vk_destroy_command_buffers( const Device*,
+								 const CommandPool*,
+								 u32             count,
+								 CommandBuffer** icommand_buffers )
 {
     FT_ASSERT( icommand_buffers );
 
@@ -2651,7 +2651,7 @@ void vk_ui_begin_frame()
     ImGui::NewFrame();
 }
 
-void vk_ui_end_frame( UiContext* context, CommandBuffer* icmd )
+void vk_ui_end_frame( UiContext*, CommandBuffer* icmd )
 {
     FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 
@@ -2728,8 +2728,8 @@ void vk_cmd_end_render_pass( const CommandBuffer* icmd )
 }
 
 void vk_cmd_barrier( const CommandBuffer* icmd,
-                     u32                  memory_barriers_count,
-                     const MemoryBarrier* memory_barrier,
+					 u32,
+					 const MemoryBarrier*,
                      u32                  buffer_barriers_count,
                      const BufferBarrier* buffer_barriers,
                      u32                  image_barriers_count,
@@ -3178,8 +3178,8 @@ std::vector<char> vk_read_shader( const std::string& shader_name )
                                  shader_name + ".bin" );
 }
 
-void vk_create_renderer_backend( const RendererBackendDesc* desc,
-                                 RendererBackend**          p )
+void vk_create_renderer_backend( const RendererBackendDesc*,
+								 RendererBackend** p )
 {
     FT_ASSERT( p );
 
