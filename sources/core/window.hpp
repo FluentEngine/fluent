@@ -30,12 +30,18 @@ struct Window
     u32   data[ static_cast<int>( WindowParams::eLast ) ];
 };
 
-Window create_window( const WindowDesc& desc );
-void   destroy_window( Window& window );
+Window
+create_window( const WindowDesc& desc );
+void
+destroy_window( Window& window );
 
-u32  window_get_width( const Window* window );
-u32  window_get_height( const Window* window );
-f32  window_get_aspect( const Window* window );
-void window_show_cursor( b32 show );
+u32
+window_get_width( const Window* window );
+u32
+window_get_height( const Window* window );
+f32
+window_get_aspect( const Window* window );
+void
+window_show_cursor( b32 show );
 
 } // namespace fluent

@@ -9,13 +9,15 @@ CommandBuffer*                ResourceLoader::m_cmd          = nullptr;
 ResourceLoader::StagingBuffer ResourceLoader::m_staging_buffer;
 b32                           ResourceLoader::m_is_recording = false;
 
-static b32 need_staging( Buffer* buffer )
+static b32
+need_staging( Buffer* buffer )
 {
     return !( buffer->memory_usage == MemoryUsage::eCpuOnly ||
               buffer->memory_usage == MemoryUsage::eCpuToGpu );
 }
 
-void ResourceLoader::init( const Device* device, u64 staging_buffer_size )
+void
+ResourceLoader::init( const Device* device, u64 staging_buffer_size )
 {
     m_device = device;
 
@@ -37,7 +39,8 @@ void ResourceLoader::init( const Device* device, u64 staging_buffer_size )
     map_memory( m_device, m_staging_buffer.buffer );
 }
 
-void ResourceLoader::shutdown()
+void
+ResourceLoader::shutdown()
 {
     unmap_memory( m_device, m_staging_buffer.buffer );
     destroy_buffer( m_device, m_staging_buffer.buffer );
@@ -46,10 +49,11 @@ void ResourceLoader::shutdown()
     destroy_queue( m_queue );
 }
 
-void ResourceLoader::upload_buffer( Buffer*     buffer,
-                                    u64         offset,
-                                    u64         size,
-                                    const void* data )
+void
+ResourceLoader::upload_buffer( Buffer*     buffer,
+                               u64         offset,
+                               u64         size,
+                               const void* data )
 {
     FT_ASSERT( buffer );
     FT_ASSERT( data );
@@ -91,7 +95,8 @@ void ResourceLoader::upload_buffer( Buffer*     buffer,
     }
 }
 
-void* ResourceLoader::begin_upload_buffer( Buffer* buffer )
+void*
+ResourceLoader::begin_upload_buffer( Buffer* buffer )
 {
     FT_ASSERT( buffer );
     if ( need_staging( buffer ) )
@@ -106,7 +111,8 @@ void* ResourceLoader::begin_upload_buffer( Buffer* buffer )
     }
 }
 
-void ResourceLoader::end_upload_buffer( Buffer* buffer )
+void
+ResourceLoader::end_upload_buffer( Buffer* buffer )
 {
     FT_ASSERT( buffer );
     if ( need_staging( buffer ) )
@@ -119,7 +125,8 @@ void ResourceLoader::end_upload_buffer( Buffer* buffer )
     }
 }
 
-void ResourceLoader::upload_image( Image* image, u64 size, const void* data )
+void
+ResourceLoader::upload_image( Image* image, u64 size, const void* data )
 {
     std::memcpy( ( u8* ) m_staging_buffer.buffer->mapped_memory +
                      m_staging_buffer.offset,
@@ -156,15 +163,21 @@ void ResourceLoader::upload_image( Image* image, u64 size, const void* data )
     }
 }
 
-void ResourceLoader::reset_staging_buffer() { m_staging_buffer.offset = 0; }
+void
+ResourceLoader::reset_staging_buffer()
+{
+    m_staging_buffer.offset = 0;
+}
 
-void ResourceLoader::begin_recording()
+void
+ResourceLoader::begin_recording()
 {
     begin_command_buffer( m_cmd );
     m_is_recording = true;
 }
 
-void ResourceLoader::end_recording()
+void
+ResourceLoader::end_recording()
 {
     m_is_recording = false;
     end_command_buffer( m_cmd );

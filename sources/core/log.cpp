@@ -3,7 +3,8 @@
 namespace fluent
 {
 
-spdlog::level::level_enum to_spdlog_level( LogLevel log_level )
+spdlog::level::level_enum
+to_spdlog_level( LogLevel log_level )
 {
     switch ( log_level )
     {

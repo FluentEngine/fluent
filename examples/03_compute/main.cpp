@@ -22,8 +22,6 @@ struct PushConstantBlock
     f32 mouse_y;
 };
 
-const InputSystem* input_system = nullptr;
-
 DescriptorSetLayout* descriptor_set_layout;
 Pipeline*            pipeline;
 
@@ -33,7 +31,8 @@ Buffer* uniform_buffer;
 
 DescriptorSet* descriptor_set;
 
-void create_output_texture()
+void
+create_output_texture()
 {
     ImageDesc image_desc {};
     image_desc.layer_count = 1;
@@ -62,7 +61,8 @@ void create_output_texture()
     immediate_submit( queue, cmd );
 }
 
-void init_sample()
+void
+init_sample()
 {
     Shader* shader = load_shader_from_file( "main.comp" );
 
@@ -103,13 +103,15 @@ void init_sample()
     descriptor_write.image_descriptors = &image_descriptor;
 
     update_descriptor_set( device, descriptor_set, 1, &descriptor_write );
-
-    input_system = get_app_input_system();
 }
 
-void resize_sample( u32, u32 ) {}
+void
+resize_sample( u32, u32 )
+{
+}
 
-void update_sample( CommandBuffer* cmd, f32 )
+void
+update_sample( CommandBuffer* cmd, f32 )
 {
     if ( !command_buffers_recorded[ frame_index ] )
     {
@@ -141,8 +143,8 @@ void update_sample( CommandBuffer* cmd, f32 )
 
     PushConstantBlock pcb;
     pcb.time    = get_time() / 400.0f;
-    pcb.mouse_x = get_mouse_pos_x( input_system );
-    pcb.mouse_y = get_mouse_pos_y( input_system );
+	pcb.mouse_x = get_mouse_pos_x();
+	pcb.mouse_y = get_mouse_pos_y();
     cmd_push_constants( cmd, pipeline, 0, sizeof( PushConstantBlock ), &pcb );
     cmd_dispatch( cmd,
                   output_texture->width / 16,
@@ -202,7 +204,8 @@ void update_sample( CommandBuffer* cmd, f32 )
     frame_index                             = ( frame_index + 1 ) % FRAME_COUNT;
 }
 
-void shutdown_sample()
+void
+shutdown_sample()
 {
     destroy_image( device, output_texture );
     destroy_buffer( device, uniform_buffer );

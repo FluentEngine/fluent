@@ -3,7 +3,8 @@
 
 namespace fluent
 {
-void Camera::init_camera( const CameraDesc& desc )
+void
+Camera::init_camera( const CameraDesc& desc )
 {
     m_fov    = desc.fov;
     m_aspect = desc.aspect;
@@ -25,17 +26,20 @@ void Camera::init_camera( const CameraDesc& desc )
     m_mouse_sensitivity = desc.sensitivity;
 }
 
-void Camera::recalculate_projection_matrix()
+void
+Camera::recalculate_projection_matrix()
 {
     m_projection = create_perspective_matrix( m_fov, m_aspect, m_near, m_far );
 }
 
-void Camera::recalculate_view_matrix()
+void
+Camera::recalculate_view_matrix()
 {
     m_view = create_look_at_matrix( m_position, m_direction, m_up );
 }
 
-void Camera::on_move( CameraDirection direction, f32 delta_time )
+void
+Camera::on_move( CameraDirection direction, f32 delta_time )
 {
     f32 velocity = m_speed * delta_time;
 
@@ -50,7 +54,8 @@ void Camera::on_move( CameraDirection direction, f32 delta_time )
     recalculate_view_matrix();
 }
 
-void Camera::on_rotate( f32 x_offset, f32 y_offset )
+void
+Camera::on_rotate( f32 x_offset, f32 y_offset )
 {
     x_offset *= m_mouse_sensitivity;
     y_offset *= m_mouse_sensitivity;
@@ -75,40 +80,40 @@ void Camera::on_rotate( f32 x_offset, f32 y_offset )
     recalculate_view_matrix();
 }
 
-void Camera::on_resize( u32 width, u32 height )
+void
+Camera::on_resize( u32 width, u32 height )
 {
     m_aspect = ( f32 ) width / ( f32 ) height;
     recalculate_projection_matrix();
 }
 
-void CameraController::init( const fluent::InputSystem* input_system,
-                             Camera&                    camera )
+void
+CameraController::init( Camera& camera )
 {
-    m_input_system = input_system;
-    m_camera       = &camera;
+	m_camera = &camera;
 }
 
-void CameraController::update( f32 delta_time )
+void
+CameraController::update( f32 delta_time )
 {
-    if ( is_key_pressed( m_input_system, Key::W ) )
+	if ( is_key_pressed( Key::W ) )
     {
         m_camera->on_move( CameraDirection::eForward, delta_time );
     }
-    else if ( is_key_pressed( m_input_system, Key::S ) )
+	else if ( is_key_pressed( Key::S ) )
     {
         m_camera->on_move( CameraDirection::eBack, delta_time );
     }
 
-    if ( is_key_pressed( m_input_system, Key::A ) )
+	if ( is_key_pressed( Key::A ) )
     {
         m_camera->on_move( CameraDirection::eLeft, delta_time );
     }
-    else if ( is_key_pressed( m_input_system, Key::D ) )
+	else if ( is_key_pressed( Key::D ) )
     {
         m_camera->on_move( CameraDirection::eRight, delta_time );
     }
 
-    m_camera->on_rotate( get_mouse_offset_x( m_input_system ),
-                         -get_mouse_offset_y( m_input_system ) );
+	m_camera->on_rotate( get_mouse_offset_x(), -get_mouse_offset_y() );
 }
 } // namespace fluent

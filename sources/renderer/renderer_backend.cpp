@@ -1,6 +1,7 @@
 #include "renderer/renderer_backend.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "renderer/d3d12/d3d12_backend.hpp"
+#include "renderer/metal/metal_backend.hpp"
 
 namespace fluent
 {
@@ -77,8 +78,9 @@ cmd_draw_indexed_indirect_fun     cmd_draw_indexed_indirect;
 
 read_shader_fun read_shader;
 
-void create_renderer_backend( const RendererBackendDesc* desc,
-                              RendererBackend**          backend )
+void
+create_renderer_backend( const RendererBackendDesc* desc,
+                         RendererBackend**          backend )
 {
     switch ( desc->api )
     {
@@ -87,8 +89,6 @@ void create_renderer_backend( const RendererBackendDesc* desc,
 #ifdef VULKAN_BACKEND
         vk_create_renderer_backend( desc, backend );
         break;
-#else
-        FT_ASSERT( false && "Not supported api on this device" );
 #endif
     }
     case RendererAPI::eD3D12:
@@ -96,12 +96,16 @@ void create_renderer_backend( const RendererBackendDesc* desc,
 #ifdef D3D12_BACKEND
         d3d12_create_renderer_backend( desc, backend );
         break;
-#else
-        FT_ASSERT( false && "Not supported api on this device" );
+#endif
+    }
+    case RendererAPI::eMetal:
+    {
+#ifdef METAL_BACKEND
+        mtl_create_renderer_backend( desc, backend );
         break;
 #endif
     }
-    default: FT_ASSERT( false && "At least one api should be enabled" );
+    default: FT_ASSERT( false && "no supported api available" );
     }
 }
 } // namespace fluent

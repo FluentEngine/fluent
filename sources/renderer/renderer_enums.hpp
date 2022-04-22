@@ -11,6 +11,7 @@ enum class RendererAPI : u8
 {
     eVulkan = 0,
     eD3D12  = 1,
+    eMetal  = 2,
 };
 
 enum class QueueType : u8

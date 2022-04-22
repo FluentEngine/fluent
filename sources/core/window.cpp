@@ -5,7 +5,8 @@
 namespace fluent
 {
 
-Window create_window( const WindowDesc& desc )
+Window
+create_window( const WindowDesc& desc )
 {
     int init_result = SDL_Init( SDL_INIT_VIDEO );
     FT_ASSERT( init_result == 0 && "SDL Init failed" );
@@ -34,30 +35,35 @@ Window create_window( const WindowDesc& desc )
     return result;
 }
 
-void destroy_window( Window& window )
+void
+destroy_window( Window& window )
 {
     FT_ASSERT( window.handle && "Window is nullptr" );
     SDL_DestroyWindow( ( SDL_Window* ) window.handle );
     SDL_Quit();
 }
 
-u32 window_get_width( const Window* window )
+u32
+window_get_width( const Window* window )
 {
     return window->data[ WindowParams::eWidth ];
 }
 
-u32 window_get_height( const Window* window )
+u32
+window_get_height( const Window* window )
 {
     return window->data[ WindowParams::eHeight ];
 }
 
-f32 window_get_aspect( const Window* window )
+f32
+window_get_aspect( const Window* window )
 {
     return ( f32 ) window->data[ WindowParams::eWidth ] /
            ( f32 ) window->data[ WindowParams::eHeight ];
 }
 
-void window_show_cursor( b32 show )
+void
+window_show_cursor( b32 show )
 {
     SDL_SetRelativeMouseMode( show ? SDL_FALSE : SDL_TRUE );
 }

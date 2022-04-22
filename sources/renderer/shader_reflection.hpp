@@ -27,7 +27,9 @@ struct ReflectionData
     std::vector<Binding> bindings;
 };
 
-ReflectionData spirv_reflect( u32 byte_code_size, const void* byte_code );
-ReflectionData dxil_reflect( u32 byte_code_size, const void* byte_code );
+ReflectionData
+spirv_reflect( u32 byte_code_size, const void* byte_code );
+ReflectionData
+dxil_reflect( u32 byte_code_size, const void* byte_code );
 
 } // namespace fluent

@@ -2,10 +2,14 @@
 
 using namespace fluent;
 
-void init_sample();
-void update_sample( CommandBuffer* cmd, f32 delta_time );
-void resize_sample( u32 width, u32 height );
-void shutdown_sample();
+void
+init_sample();
+void
+update_sample( CommandBuffer* cmd, f32 delta_time );
+void
+resize_sample( u32 width, u32 height );
+void
+shutdown_sample();
 
 static constexpr u32 FRAME_COUNT = 2;
 u32                  frame_index = 0;
@@ -30,19 +34,23 @@ UiContext* ui;
 RendererAPI current_api = RendererAPI::eVulkan;
 std::string api_name    = "Vulkan";
 
-void api_switch( RendererAPI api );
+void
+api_switch( RendererAPI api );
 
-static inline std::string to_api_str( RendererAPI api )
+static inline std::string
+to_api_str( RendererAPI api )
 {
     switch ( api )
     {
     case RendererAPI::eD3D12: return "/d3d12/";
     case RendererAPI::eVulkan: return "/vulkan/";
+    case RendererAPI::eMetal: return "/metal/";
     }
     return "";
 }
 
-static inline Shader* load_shader_from_file( const std::string& filename )
+static inline Shader*
+load_shader_from_file( const std::string& filename )
 {
     std::string ext = filename.substr( filename.find_last_of( "." ) );
     ShaderStage stage;
@@ -64,8 +72,8 @@ static inline Shader* load_shader_from_file( const std::string& filename )
     return shader;
 }
 
-static inline Image* load_image_from_file( const std::string& filename,
-                                           b32                flip )
+static inline Image*
+load_image_from_file( const std::string& filename, b32 flip )
 {
     u64       size = 0;
     void*     data = nullptr;
@@ -83,7 +91,8 @@ static inline Image* load_image_from_file( const std::string& filename,
     return image;
 }
 
-void create_depth_image( u32 width, u32 height )
+void
+create_depth_image( u32 width, u32 height )
 {
     ImageDesc depth_image_desc {};
     depth_image_desc.width           = width;
@@ -110,7 +119,8 @@ void create_depth_image( u32 width, u32 height )
     immediate_submit( queue, command_buffers[ 0 ] );
 }
 
-void on_init()
+void
+on_init()
 {
     fs::set_shaders_directory( "../../examples/shaders/" SAMPLE_NAME );
     fs::set_textures_directory( "../../examples/textures/" );
@@ -188,7 +198,8 @@ void on_init()
     init_sample();
 }
 
-void on_resize( u32 width, u32 height )
+void
+on_resize( u32 width, u32 height )
 {
     queue_wait_idle( queue );
     destroy_image( device, depth_image );
@@ -216,7 +227,8 @@ void on_resize( u32 width, u32 height )
     resize_sample( width, height );
 }
 
-u32 begin_frame()
+u32
+begin_frame()
 {
     if ( !command_buffers_recorded[ frame_index ] )
     {
@@ -265,7 +277,8 @@ u32 begin_frame()
     return image_index;
 }
 
-void end_frame( u32 image_index )
+void
+end_frame( u32 image_index )
 {
     auto& cmd = command_buffers[ frame_index ];
 
@@ -291,7 +304,8 @@ void end_frame( u32 image_index )
     auto       last = e;
     ImGui::RadioButton( "Vulkan", &e, 0 );
     ImGui::RadioButton( "D3D12", &e, 1 );
-    if ( last != e )
+	ImGui::RadioButton( "Metal", &e, 2 );
+	if ( last != e )
     {
         api_switch( static_cast<RendererAPI>( e ) );
         return;
@@ -340,13 +354,15 @@ void end_frame( u32 image_index )
     frame_index                             = ( frame_index + 1 ) % FRAME_COUNT;
 }
 
-void on_update( f32 delta_time )
+void
+on_update( f32 delta_time )
 {
     auto& cmd = command_buffers[ frame_index ];
     update_sample( cmd, delta_time );
 }
 
-void on_shutdown()
+void
+on_shutdown()
 {
     queue_wait_idle( queue );
     shutdown_sample();
@@ -376,7 +392,8 @@ void on_shutdown()
     destroy_renderer_backend( backend );
 }
 
-void api_switch( RendererAPI api )
+void
+api_switch( RendererAPI api )
 {
     switch ( api )
     {
@@ -392,13 +409,19 @@ void api_switch( RendererAPI api )
         current_api = RendererAPI::eVulkan;
         break;
     }
+    case RendererAPI::eMetal:
+    {
+        api_name    = "Metal";
+        current_api = RendererAPI::eMetal;
+    }
     }
 
     on_shutdown();
     on_init();
 }
 
-int main( int argc, char** argv )
+int
+main( int argc, char** argv )
 {
     ApplicationConfig config;
     config.argc        = argc;

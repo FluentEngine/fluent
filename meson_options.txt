@@ -2,6 +2,7 @@
 option('fluent_build_tests', type: 'boolean', value : 'true')
 option('fluent_vulkan_backend', type: 'feature', value : 'auto')
 option('fluent_d3d12_backend', type: 'feature', value : 'auto')
+option('fluent_metal_backend', type: 'feature', value : 'auto')
 # imgui
 option('dx9', type : 'feature', value : 'disabled')
 option('dx10', type : 'feature', value : 'disabled')

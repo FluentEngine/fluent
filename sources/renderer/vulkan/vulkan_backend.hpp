@@ -127,7 +127,8 @@ struct VulkanUiContext
     UiContext        interface;
 };
 
-void vk_create_renderer_backend( const RendererBackendDesc* desc,
-                                 RendererBackend**          p_backend );
+void
+vk_create_renderer_backend( const RendererBackendDesc* desc,
+                            RendererBackend**          p_backend );
 } // namespace fluent
 #endif

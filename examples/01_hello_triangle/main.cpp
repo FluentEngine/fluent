@@ -4,7 +4,8 @@
 DescriptorSetLayout* descriptor_set_layout;
 Pipeline*            pipeline;
 
-void init_sample()
+void
+init_sample()
 {
     auto vert_code = read_shader( "main.vert" );
     auto frag_code = read_shader( "main.frag" );
@@ -41,9 +42,13 @@ void init_sample()
     for ( u32 i = 0; i < 2; ++i ) { destroy_shader( device, shaders[ i ] ); }
 }
 
-void resize_sample( u32, u32 ) {}
+void
+resize_sample( u32, u32 )
+{
+}
 
-void update_sample( CommandBuffer* cmd, f32 )
+void
+update_sample( CommandBuffer* cmd, f32 )
 {
     u32 image_index = begin_frame();
 
@@ -53,7 +58,8 @@ void update_sample( CommandBuffer* cmd, f32 )
     end_frame( image_index );
 }
 
-void shutdown_sample()
+void
+shutdown_sample()
 {
     destroy_pipeline( device, pipeline );
     destroy_descriptor_set_layout( device, descriptor_set_layout );

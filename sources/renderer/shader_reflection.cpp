@@ -11,7 +11,8 @@
 namespace fluent
 {
 #ifdef VULKAN_BACKEND
-DescriptorType to_descriptor_type( SpvReflectDescriptorType descriptor_type )
+DescriptorType
+to_descriptor_type( SpvReflectDescriptorType descriptor_type )
 {
     switch ( descriptor_type )
     {
@@ -41,7 +42,8 @@ DescriptorType to_descriptor_type( SpvReflectDescriptorType descriptor_type )
     }
 }
 
-ReflectionData spirv_reflect( u32 byte_code_size, const void* byte_code )
+ReflectionData
+spirv_reflect( u32 byte_code_size, const void* byte_code )
 {
     ReflectionData result {};
 
@@ -87,7 +89,8 @@ ReflectionData spirv_reflect( u32 byte_code_size, const void* byte_code )
 #endif
 
 #ifdef D3D12_BACKEND
-DescriptorType to_descriptor_type( D3D_SHADER_INPUT_TYPE shader_input_type )
+DescriptorType
+to_descriptor_type( D3D_SHADER_INPUT_TYPE shader_input_type )
 {
     switch ( shader_input_type )
     {
@@ -101,12 +104,14 @@ DescriptorType to_descriptor_type( D3D_SHADER_INPUT_TYPE shader_input_type )
     }
 }
 
-ReflectionData dxil_reflect( u32 byte_code_size, const void* byte_code )
+ReflectionData
+dxil_reflect( u32 byte_code_size, const void* byte_code )
 {
 #define DXIL_FOURCC( ch0, ch1, ch2, ch3 )                                      \
-    ( ( uint32_t )( uint8_t )( ch0 ) | ( uint32_t )( uint8_t )( ch1 ) << 8 |   \
-      ( uint32_t )( uint8_t )( ch2 ) << 16 |                                   \
-      ( uint32_t )( uint8_t )( ch3 ) << 24 )
+    ( ( uint32_t ) ( uint8_t ) ( ch0 ) |                                       \
+      ( uint32_t ) ( uint8_t ) ( ch1 ) << 8 |                                  \
+      ( uint32_t ) ( uint8_t ) ( ch2 ) << 16 |                                 \
+      ( uint32_t ) ( uint8_t ) ( ch3 ) << 24 )
 
     HRESULT      result;
     IDxcLibrary* library;

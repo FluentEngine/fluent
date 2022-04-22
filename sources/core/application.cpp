@@ -5,10 +5,14 @@
 #include "core/window.hpp"
 #include "core/application.hpp"
 #include "core/input.hpp"
-#include "fs/file_system.hpp"
+#include "fs/fs.hpp"
 
 namespace fluent
 {
+// defined in input.cpp
+InputSystem*
+get_input_system();
+
 using ImGuiCallback = bool ( * )( const SDL_Event* e );
 
 struct ApplicationState
@@ -21,13 +25,13 @@ struct ApplicationState
     ShutdownCallback on_shutdown;
     ResizeCallback   on_resize;
     f32              delta_time;
-    InputSystem      input_system;
     ImGuiCallback    imgui_callback;
 };
 
-static ApplicationState app_state {};
+static ApplicationState app_state;
 
-void app_init( const ApplicationConfig* config )
+void
+app_init( const ApplicationConfig* config )
 {
     FT_ASSERT( config->argv );
     FT_ASSERT( config->on_init );
@@ -41,17 +45,18 @@ void app_init( const ApplicationConfig* config )
     app_state.on_update      = config->on_update;
     app_state.on_shutdown    = config->on_shutdown;
     app_state.on_resize      = config->on_resize;
-	app_state.imgui_callback = []( const SDL_Event* ) -> bool { return false; };
+    app_state.imgui_callback = []( const SDL_Event* ) -> bool { return false; };
     spdlog::set_level( to_spdlog_level( config->log_level ) );
 
-    init_input_system( &app_state.input_system );
+	init_input_system( &app_state.window );
 
     fs::init( config->argv );
 
     app_state.is_inited = true;
 }
 
-void app_run()
+void
+app_run()
 {
     FT_ASSERT( app_state.is_inited );
 
@@ -64,9 +69,11 @@ void app_run()
     u32 last_frame       = 0.0f;
     app_state.delta_time = 0.0;
 
+	InputSystem* input_system = get_input_system();
+
     while ( app_state.is_running )
     {
-        update_input_system( &app_state.input_system );
+		update_input_system();
 
         u32 current_frame    = get_time();
         app_state.delta_time = ( current_frame - last_frame ) / 1000.0f;
@@ -90,26 +97,26 @@ void app_run()
                 }
                 break;
             case SDL_KEYDOWN:
-                app_state.input_system.keys[ e.key.keysym.scancode ] = true;
+				input_system->keys[ e.key.keysym.scancode ] = true;
                 break;
             case SDL_KEYUP:
-                app_state.input_system.keys[ e.key.keysym.scancode ] = false;
+				input_system->keys[ e.key.keysym.scancode ] = false;
                 break;
             case SDL_MOUSEBUTTONDOWN:
-                app_state.input_system.buttons[ e.button.button ] = true;
+				input_system->buttons[ e.button.button ] = true;
                 break;
             case SDL_MOUSEBUTTONUP:
-                app_state.input_system.buttons[ e.button.button ] = false;
+				input_system->buttons[ e.button.button ] = false;
                 break;
             case SDL_MOUSEWHEEL:
             {
                 if ( e.wheel.y > 0 )
                 {
-                    app_state.input_system.mouse_scroll = 1;
+					input_system->mouse_scroll = 1;
                 }
                 else if ( e.wheel.y < 0 )
                 {
-                    app_state.input_system.mouse_scroll = -1;
+					input_system->mouse_scroll = -1;
                 }
                 break;
             }
@@ -119,38 +126,42 @@ void app_run()
             }
             }
         }
-        i32 x, y;
-        SDL_GetRelativeMouseState( &x, &y );
-        app_state.input_system.mouse_offset[ 0 ] = x;
-        app_state.input_system.mouse_offset[ 1 ] = y;
-        SDL_GetGlobalMouseState( &x, &y );
-        app_state.input_system.mouse_position[ 0 ] = x;
-        app_state.input_system.mouse_position[ 1 ] = y;
-
         app_state.on_update( app_state.delta_time );
     }
 
     app_state.on_shutdown();
 }
 
-void app_shutdown()
+void
+app_shutdown()
 {
     FT_ASSERT( app_state.is_inited );
     fluent::destroy_window( app_state.window );
 }
 
-const Window* get_app_window() { return &app_state.window; }
+const Window*
+get_app_window()
+{
+    return &app_state.window;
+}
 
-const InputSystem* get_app_input_system() { return &app_state.input_system; }
-
-void app_set_ui_context( const UiContext& )
+void
+app_set_ui_context( const UiContext& )
 {
     // Bad but ok for now
     app_state.imgui_callback = ImGui_ImplSDL2_ProcessEvent;
 }
 
-u32 get_time() { return SDL_GetTicks(); }
+u32
+get_time()
+{
+    return SDL_GetTicks();
+}
 
-f32 get_delta_time() { return app_state.delta_time; }
+f32
+get_delta_time()
+{
+    return app_state.delta_time;
+}
 
 } // namespace fluent

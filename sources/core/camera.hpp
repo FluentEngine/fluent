@@ -50,34 +50,57 @@ private:
     f32 m_speed;
     f32 m_mouse_sensitivity;
 
-    void recalculate_projection_matrix();
-    void recalculate_view_matrix();
+    void
+    recalculate_projection_matrix();
+    void
+    recalculate_view_matrix();
 
 public:
-    void init_camera( const CameraDesc& desc );
+    void
+    init_camera( const CameraDesc& desc );
 
-    void on_move( CameraDirection direction, f32 delta_time );
-    void on_rotate( f32 x_offset, f32 y_offset );
+    void
+    on_move( CameraDirection direction, f32 delta_time );
+    void
+    on_rotate( f32 x_offset, f32 y_offset );
 
-    void on_resize( u32 width, u32 height );
+    void
+    on_resize( u32 width, u32 height );
 
-    const Matrix4& get_projection_matrix() const { return m_projection; }
+    const Matrix4&
+    get_projection_matrix() const
+    {
+        return m_projection;
+    }
 
-    const Matrix4& get_view_matrix() const { return m_view; }
+    const Matrix4&
+    get_view_matrix() const
+    {
+        return m_view;
+    }
 
-    const Vector3& get_position() const { return m_position; }
+    const Vector3&
+    get_position() const
+    {
+        return m_position;
+    }
 
-    const Vector3& get_direction() const { return m_direction; }
+    const Vector3&
+    get_direction() const
+    {
+        return m_direction;
+    }
 };
 
 class CameraController
 {
 private:
-    const InputSystem* m_input_system = nullptr;
-    Camera*            m_camera       = nullptr;
+	Camera* m_camera = nullptr;
 
 public:
-    void init( const InputSystem* input_system, Camera& camera );
-    void update( f32 delta_time );
+    void
+	init( Camera& camera );
+    void
+    update( f32 delta_time );
 };
 } // namespace fluent

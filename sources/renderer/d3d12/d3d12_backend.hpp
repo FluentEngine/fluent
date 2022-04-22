@@ -140,7 +140,8 @@ struct D3D12UiContext
     UiContext             interface;
 };
 
-void d3d12_create_renderer_backend( const RendererBackendDesc* desc,
-                                    RendererBackend**          p_backend );
+void
+d3d12_create_renderer_backend( const RendererBackendDesc* desc,
+                               RendererBackend**          p_backend );
 } // namespace fluent
 #endif

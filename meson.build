@@ -1,23 +1,12 @@
 project('fluent-engine', [ 'c', 'cpp' ], default_options : ['default_library=static', 'c_std=c17', 'cpp_std=c++17'] )
 target = 'fluent-engine'
 
-
 compile_args = []
 include_dirs = []
 libs = []
 deps = []
 
 cc = meson.get_compiler('cpp')
-
-if cc.get_id() == 'gcc'
-	compile_args += [ '-Werror', '-Wall', '-Wextra' ]
-elif cc.get_id() == 'msvc'
-    compile_args += [ '/WX', '/Wall' ]
-endif
-
-if host_machine.system() == 'darwin'
-    add_project_arguments(language : 'objcpp')
-endif
 
 fluent_debug_build = get_option('buildtype') == 'debug'
 fluent_build_tests = get_option('fluent_build_tests')
@@ -26,8 +15,8 @@ dep = dependency('vulkan', required: get_option('fluent_vulkan_backend'))
 renderer_backend_vulkan = dep.found()
 dep = cc.find_library('d3d12', required: get_option('fluent_d3d12_backend'))
 renderer_backend_d3d12 = dep.found()
-
-
+dep = dependency('appleframeworks', modules : 'metal', required: get_option('fluent_metal_backend'))
+renderer_backend_metal = dep.found()
 
 if renderer_backend_vulkan
     compile_args = ['-DVULKAN_BACKEND', compile_args]
@@ -37,15 +26,17 @@ if renderer_backend_d3d12
     compile_args += ['-DD3D12_BACKEND']
 endif
 
-if fluent_debug_build
-    compile_args += ['-DFLUENT_DEBUG']
-    if host_machine.system() == 'linux' or host_machine.system() == 'darwin'
-        compile_args += ['-g']
-    endif
-else
-    if host_machine.system() == 'linux' or host_machine.system() == 'darwin'
-        compile_args += ['-O3']
-    endif
+if renderer_backend_metal
+    add_languages( [ 'objc', 'objcpp' ])
+    compile_args += ['-DMETAL_BACKEND']
+endif
+
+if host_machine.system() == 'linux' or host_machine.system() == 'darwin'
+    if fluent_debug_build
+	    compile_args += ['-g', '-DFLUENT_DEBUG' ]
+	else
+	    compile_args += ['-O3']
+	endif
 endif
 
 if renderer_backend_vulkan
@@ -55,7 +46,7 @@ if renderer_backend_vulkan
     subdir('third_party/vk_enum_string_helper')
 
     deps += [
-        volk_dep,
+	    volk_dep,
         vma_allocator_dep,
         spirv_reflect_dep,
         vk_enum_string_helper_dep
@@ -112,19 +103,27 @@ core = files([
 renderer = files([
     src_dir/'renderer/shader_reflection.hpp', 
     src_dir/'renderer/shader_reflection.cpp', 
+    src_dir/'renderer/renderer_enums.hpp',
     src_dir/'renderer/renderer_backend.hpp', 
     src_dir/'renderer/renderer_backend.cpp', 
     src_dir/'renderer/vulkan/vulkan_backend.hpp', 
     src_dir/'renderer/vulkan/vulkan_backend.cpp', 
     src_dir/'renderer/d3d12/d3d12_backend.hpp', 
-    src_dir/'renderer/d3d12/d3d12_backend.cpp', 
+    src_dir/'renderer/d3d12/d3d12_backend.cpp',
     src_dir/'renderer/resource_loader.hpp', 
     src_dir/'renderer/resource_loader.cpp'
 ])
 
+if renderer_backend_metal
+    renderer += files([
+        src_dir/'renderer/metal/metal_backend.hpp', 
+        src_dir/'renderer/metal/metal_backend.mm'  
+    ])
+endif
+
 fs = files([
-    src_dir/'fs/file_system.hpp',
-    src_dir/'fs/file_system.cpp'
+    src_dir/'fs/fs.hpp',
+    src_dir/'fs/fs.cpp'
 ])
 
 math = files([

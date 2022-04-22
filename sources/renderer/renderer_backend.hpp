@@ -12,8 +12,8 @@ namespace fluent
     impl* name = static_cast<impl*>( interface->handle );
 
 #define DECLARE_RENDERER_FUNCTION( ret, name, ... )                            \
-	typedef ret ( *name##_fun )( __VA_ARGS__ );                                \
-	extern name##_fun name;
+    typedef ret ( *name##_fun )( __VA_ARGS__ );                                \
+    extern name##_fun name;
 
 // Forward declares
 struct Window;
@@ -394,7 +394,8 @@ struct UiContext
     Handle handle;
 };
 
-inline b32 format_has_depth_aspect( Format format )
+inline b32
+format_has_depth_aspect( Format format )
 {
     switch ( format )
     {
@@ -408,7 +409,8 @@ inline b32 format_has_depth_aspect( Format format )
     }
 }
 
-inline b32 format_has_stencil_aspect( Format format )
+inline b32
+format_has_stencil_aspect( Format format )
 {
     switch ( format )
     {
@@ -420,8 +422,9 @@ inline b32 format_has_stencil_aspect( Format format )
     }
 }
 
-void create_renderer_backend( const RendererBackendDesc* desc,
-                              RendererBackend**          backend );
+void
+create_renderer_backend( const RendererBackendDesc* desc,
+                         RendererBackend**          backend );
 
 DECLARE_RENDERER_FUNCTION( void,
                            destroy_renderer_backend,

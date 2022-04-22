@@ -3,7 +3,7 @@
 #include <tinyimageformat_apis.h>
 #include <tinyddsloader.h>
 #include <stb_image.h>
-#include "fs/file_system.hpp"
+#include "fs/fs.hpp"
 
 namespace fluent::fs
 {

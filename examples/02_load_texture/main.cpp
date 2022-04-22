@@ -21,7 +21,8 @@ DescriptorSet* descriptor_set;
 Sampler*       sampler;
 Image*         texture;
 
-void init_sample()
+void
+init_sample()
 {
     Shader* shaders[ 2 ];
     shaders[ 0 ] = load_shader_from_file( "main.vert" );
@@ -52,7 +53,7 @@ void init_sample()
     pipeline_desc.depth_state_desc.depth_test   = false;
     pipeline_desc.depth_state_desc.depth_write  = false;
     pipeline_desc.descriptor_set_layout         = descriptor_set_layout;
-	pipeline_desc.render_pass                   = render_passes[ 0 ];
+    pipeline_desc.render_pass                   = render_passes[ 0 ];
 
     create_graphics_pipeline( device, &pipeline_desc, &pipeline );
 
@@ -103,9 +104,13 @@ void init_sample()
     update_descriptor_set( device, descriptor_set, 2, descriptor_writes );
 }
 
-void resize_sample( u32, u32 ) {}
+void
+resize_sample( u32, u32 )
+{
+}
 
-void update_sample( CommandBuffer* cmd, f32 )
+void
+update_sample( CommandBuffer* cmd, f32 )
 {
     u32 image_index = begin_frame();
 
@@ -117,7 +122,8 @@ void update_sample( CommandBuffer* cmd, f32 )
     end_frame( image_index );
 }
 
-void shutdown_sample()
+void
+shutdown_sample()
 {
     destroy_descriptor_set( device, descriptor_set );
     destroy_image( device, texture );

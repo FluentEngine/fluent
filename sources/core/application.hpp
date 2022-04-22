@@ -25,16 +25,22 @@ struct ApplicationConfig
     ResizeCallback   on_resize;
 };
 
-void app_init( const ApplicationConfig* state );
-void app_run();
-void app_shutdown();
+void
+app_init( const ApplicationConfig* state );
+void
+app_run();
+void
+app_shutdown();
 
-void app_set_ui_context( const UiContext& context );
+void
+app_set_ui_context( const UiContext& context );
 
-const Window*      get_app_window();
-const InputSystem* get_app_input_system();
+const Window*
+get_app_window();
 
-u32 get_time();
-f32 get_delta_time();
+u32
+get_time();
+f32
+get_delta_time();
 
 } // namespace fluent

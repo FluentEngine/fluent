@@ -1,4 +1,5 @@
 examples = [ 
+    '00_minimal',
     '01_hello_triangle',
     '02_load_texture',
     '03_compute'
@@ -6,14 +7,16 @@ examples = [
 
 shaders = {
     examples[0] : [
+	],
+	examples[1] : [
         'shaders/01_hello_triangle/main.vert.hlsl',
         'shaders/01_hello_triangle/main.frag.hlsl',
     ],
-    examples[1] : [
+	examples[2] : [
         'shaders/02_load_texture/main.vert.hlsl',
         'shaders/02_load_texture/main.frag.hlsl',
     ],
-    examples[2] : [
+	examples[3] : [
         'shaders/03_compute/main.comp.hlsl'
     ]
 }
