@@ -1,24 +1,4 @@
 # fluent-engine
-option('fluent_build_tests', type: 'boolean', value : 'true')
 option('fluent_vulkan_backend', type: 'feature', value : 'auto')
 option('fluent_d3d12_backend', type: 'feature', value : 'auto')
 option('fluent_metal_backend', type: 'feature', value : 'auto')
-# imgui
-option('dx9', type : 'feature', value : 'disabled')
-option('dx10', type : 'feature', value : 'disabled')
-option('dx11', type : 'feature', value : 'disabled')
-option('dx12', type : 'feature', value : 'auto')
-option('metal', type : 'feature', value : 'disabled')
-option('opengl', type : 'feature', value : 'disabled')
-option('sdl_renderer', type : 'feature', value : 'disabled')
-option('vulkan', type : 'feature', value : 'auto')
-option('webgpu', type : 'feature', value : 'disabled')
-
-# platform backends
-option('glfw', type : 'feature', value : 'disabled')
-option('sdl2', type : 'feature', value : 'auto')
-option('osx', type : 'feature', value : 'disabled')
-option('win', type : 'feature', value : 'disabled')
-
-# frameworks (renderer + platform)
-option('allegro5', type : 'feature', value : 'auto')

@@ -119,7 +119,7 @@ read_dds_image( const std::string& filename, b32 flip, u64* size, void** data )
     *size                  = image_data->m_memSlicePitch;
 
     u8* loaded_data = new u8[ image_data->m_memSlicePitch ];
-    std::memcpy( *data, image_data->m_mem, image_data->m_memSlicePitch );
+    std::memcpy( loaded_data, image_data->m_mem, image_data->m_memSlicePitch );
     *data = loaded_data;
     return image_desc;
 }

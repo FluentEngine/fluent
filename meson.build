@@ -9,7 +9,6 @@ deps = []
 cc = meson.get_compiler('cpp')
 
 fluent_debug_build = get_option('buildtype') == 'debug'
-fluent_build_tests = get_option('fluent_build_tests')
 
 dep = dependency('vulkan', required: get_option('fluent_vulkan_backend'))
 renderer_backend_vulkan = dep.found()
@@ -71,19 +70,19 @@ endif
 sdl2 = subproject('sdl2')
 spdlog = subproject('spdlog')
 glm = subproject('glm')
+imgui = subproject('imgui')
 subdir('third_party/tiny_image_format')
 subdir('third_party/tinyddsloader')
 subdir('third_party/stb_image')
-subdir('third_party/imgui')
 
 deps += [ 
-    imgui_dep,
     tinyimageformat_dep,
     tinyddsloader_dep,
     stb_image_dep,
     sdl2.get_variable('sdl2_dep'),
     spdlog.get_variable('spdlog_dep'),
-    glm.get_variable('glm_dep')
+    glm.get_variable('glm_dep'),
+    imgui.get_variable('imgui_dep')
 ]
 
 src_dir = 'sources'
@@ -141,6 +140,3 @@ sources = [
 target_lib = library(target, sources, dependencies: deps, include_directories: 'sources', cpp_args: compile_args)
 fluent_engine_dep = declare_dependency(include_directories: 'sources', link_with: target_lib, dependencies : deps)
 
-if fluent_build_tests
-    subdir('examples')
-endif
