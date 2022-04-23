@@ -14,11 +14,34 @@ create_window( const WindowDesc& desc )
     FT_ASSERT( desc.width > 0 && desc.height > 0 &&
                "Width, height should be greater than zero" );
 
-    uint32_t window_flags = ( SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN );
+    u32 window_flags = 0;
+    u32 x            = desc.x;
+    u32 y            = desc.y;
+
+    if ( desc.resizable )
+    {
+        window_flags |= SDL_WINDOW_RESIZABLE;
+    }
+
+    if ( desc.fullscreen )
+    {
+        window_flags |= SDL_WINDOW_FULLSCREEN;
+    }
+
+    if ( desc.centered )
+    {
+        x = SDL_WINDOWPOS_CENTERED;
+        y = SDL_WINDOWPOS_CENTERED;
+    }
+
+    if ( VULKAN_BACKEND )
+    {
+        window_flags |= SDL_WINDOW_VULKAN;
+    }
 
     SDL_Window* window = SDL_CreateWindow( desc.title,
-                                           desc.x,
-                                           desc.y,
+                                           x,
+                                           y,
                                            desc.width,
                                            desc.height,
                                            window_flags );
@@ -27,8 +50,8 @@ create_window( const WindowDesc& desc )
 
     Window result {};
     result.handle                           = window;
-    result.data[ WindowParams::ePositionX ] = desc.x;
-    result.data[ WindowParams::ePositionY ] = desc.y;
+    result.data[ WindowParams::ePositionX ] = x;
+    result.data[ WindowParams::ePositionY ] = y;
     result.data[ WindowParams::eWidth ]     = desc.width;
     result.data[ WindowParams::eHeight ]    = desc.height;
 

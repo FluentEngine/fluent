@@ -21,6 +21,9 @@ struct WindowDesc
     u32         y          = 0;
     u32         width      = 0;
     u32         height     = 0;
+    b32         resizable  = false;
+    b32         centered   = false;
+    b32         fullscreen = false;
     b32         grab_mouse = false;
 };
 
