@@ -5,15 +5,6 @@
 namespace fluent
 {
 
-enum WindowParams : u8
-{
-    ePositionX = 0,
-    ePositionY = 1,
-    eWidth     = 2,
-    eHeight    = 3,
-    eLast      = 4
-};
-
 struct WindowDesc
 {
     const char* title      = nullptr;
@@ -30,7 +21,6 @@ struct WindowDesc
 struct Window
 {
     void* handle;
-    u32   data[ static_cast<int>( WindowParams::eLast ) ];
 };
 
 Window
@@ -38,6 +28,8 @@ create_window( const WindowDesc& desc );
 void
 destroy_window( Window& window );
 
+void
+window_get_size( const Window* window, u32* width, u32* height );
 u32
 window_get_width( const Window* window );
 u32

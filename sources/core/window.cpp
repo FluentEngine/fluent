@@ -36,15 +36,13 @@ create_window( const WindowDesc& desc )
         y = SDL_WINDOWPOS_CENTERED;
     }
 
-    if ( VULKAN_BACKEND )
-    {
-        window_flags |= SDL_WINDOW_VULKAN;
-    }
+#ifdef VULKAN_BACKEND
+    window_flags |= SDL_WINDOW_VULKAN;
+#endif
 
-    if ( METAL_BACKEND )
-    {
-        window_flags |= SDL_WINDOW_METAL;
-    }
+#ifdef METAL_BACKEND
+    window_flags |= SDL_WINDOW_METAL;
+#endif
 
     SDL_Window* window = SDL_CreateWindow( desc.title,
                                            x,
@@ -55,15 +53,8 @@ create_window( const WindowDesc& desc )
 
     FT_ASSERT( window && "Failed to create window" );
 
-    i32 w, h;
-    SDL_Vulkan_GetDrawableSize( window, &w, &h );
-
     Window result {};
-    result.handle                           = window;
-    result.data[ WindowParams::ePositionX ] = x;
-    result.data[ WindowParams::ePositionY ] = y;
-    result.data[ WindowParams::eWidth ]     = w;
-    result.data[ WindowParams::eHeight ]    = h;
+    result.handle = window;
 
     return result;
 }
@@ -76,23 +67,43 @@ destroy_window( Window& window )
     SDL_Quit();
 }
 
+void
+window_get_size( const Window* window, u32* width, u32* height )
+{
+    SDL_Window* handle = static_cast<SDL_Window*>( window->handle );
+    i32         w, h;
+#if defined( METAL_BACKEND )
+    SDL_Metal_GetDrawableSize( handle, &w, &h );
+#elif defined( VULKAN_BACKEND )
+    SDL_Vulkan_GetDrawableSize( handle, &w, &h );
+#endif
+
+    *width  = static_cast<u32>( w );
+    *height = static_cast<u32>( h );
+}
+
 u32
 window_get_width( const Window* window )
 {
-    return window->data[ WindowParams::eWidth ];
+    u32 w, h;
+    window_get_size( window, &w, &h );
+    return w;
 }
 
 u32
 window_get_height( const Window* window )
 {
-    return window->data[ WindowParams::eHeight ];
+    u32 w, h;
+    window_get_size( window, &w, &h );
+    return h;
 }
 
 f32
 window_get_aspect( const Window* window )
 {
-    return ( f32 ) window->data[ WindowParams::eWidth ] /
-           ( f32 ) window->data[ WindowParams::eHeight ];
+    u32 w, h;
+    window_get_size( window, &w, &h );
+    return static_cast<f32>( w ) / static_cast<f32>( h );
 }
 
 void

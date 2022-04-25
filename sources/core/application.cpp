@@ -88,12 +88,9 @@ app_run()
             case SDL_WINDOWEVENT:
                 if ( e.window.event == SDL_WINDOWEVENT_RESIZED )
                 {
-                    app_state.window.data[ WindowParams::eWidth ] =
-                        e.window.data1;
-                    app_state.window.data[ WindowParams::eHeight ] =
-                        e.window.data2;
-
-                    app_state.on_resize( e.window.data1, e.window.data2 );
+                    u32 w, h;
+                    window_get_size( &app_state.window, &w, &h );
+                    app_state.on_resize( w, h );
                 }
                 break;
             case SDL_KEYDOWN:

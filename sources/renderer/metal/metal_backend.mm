@@ -553,35 +553,34 @@ mtl_ui_end_frame( UiContext*, CommandBuffer* icmd )
 }
 
 void
-mtl_cmd_begin_render_pass( const Device*         idevice,
-                           const CommandBuffer*  icmd,
-                           const RenderPassDesc* desc )
+mtl_cmd_begin_render_pass( const CommandBuffer*  icmd,
+                           const RenderPassBeginDesc* desc )
 {
-    FT_ASSERT( idevice );
-    FT_ASSERT( icmd );
-    FT_ASSERT( desc );
-
-    FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
-
-    MTLRenderPassDescriptor* pass =
-        [MTLRenderPassDescriptor renderPassDescriptor];
-
-    for ( u32 i = 0; i < desc->color_attachment_count; ++i )
-    {
-        FT_FROM_HANDLE( image, desc->color_attachments[ i ], MetalImage );
-        pass.colorAttachments[ 0 ].texture =
-            ( __bridge id<MTLTexture> ) ( image->texture );
-        pass.colorAttachments[ 0 ].loadAction =
-            to_mtl_load_action( desc->color_attachment_load_ops[ i ] );
-        pass.colorAttachments[ 0 ].storeAction = MTLStoreActionStore;
-        const auto& color                      = desc->clear_values[ i ].color;
-        pass.colorAttachments[ 0 ].clearColor =
-            MTLClearColorMake( color[ 0 ], color[ 1 ], color[ 2 ], color[ 3 ] );
-    }
-
-    cmd->encoder         = [( __bridge id<MTLCommandBuffer> ) ( cmd->cmd )
-        renderCommandEncoderWithDescriptor:pass];
-    cmd->pass_descriptor = pass;
+//    FT_ASSERT( idevice );
+//    FT_ASSERT( icmd );
+//    FT_ASSERT( desc );
+//
+//    FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
+//
+//    MTLRenderPassDescriptor* pass =
+//        [MTLRenderPassDescriptor renderPassDescriptor];
+//
+//    for ( u32 i = 0; i < desc->color_attachment_count; ++i )
+//    {
+//        FT_FROM_HANDLE( image, desc->color_attachments[ i ], MetalImage );
+//        pass.colorAttachments[ 0 ].texture =
+//            ( __bridge id<MTLTexture> ) ( image->texture );
+//        pass.colorAttachments[ 0 ].loadAction =
+//            to_mtl_load_action( desc->color_attachment_load_ops[ i ] );
+//        pass.colorAttachments[ 0 ].storeAction = MTLStoreActionStore;
+//        const auto& color                      = desc->clear_values[ i ].color;
+//        pass.colorAttachments[ 0 ].clearColor =
+//            MTLClearColorMake( color[ 0 ], color[ 1 ], color[ 2 ], color[ 3 ] );
+//    }
+//
+//    cmd->encoder         = [( __bridge id<MTLCommandBuffer> ) ( cmd->cmd )
+//        renderCommandEncoderWithDescriptor:pass];
+//    cmd->pass_descriptor = pass;
 }
 
 void
