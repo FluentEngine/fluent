@@ -559,57 +559,51 @@ create_debug_messenger( VulkanRendererBackend* backend )
                                     &backend->debug_messenger );
 }
 
-static inline void
-get_instance_extensions( u32& extensions_count, const char** extension_names )
+static inline std::vector<const char*>
+get_instance_extensions(u32& instance_create_flags)
 {
-    if ( extension_names == nullptr )
+    instance_create_flags = 0;
+    
+    u32 extension_count = 0;
+    b32 result = SDL_Vulkan_GetInstanceExtensions(
+        ( SDL_Window* ) get_app_window()->handle,
+        &extension_count,
+        nullptr );
+    FT_ASSERT( result );
+    std::vector<const char*> instance_extensions(extension_count);
+    SDL_Vulkan_GetInstanceExtensions(
+        ( SDL_Window* ) get_app_window()->handle,
+        &extension_count,
+        instance_extensions.data() );
+    
+    vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
+    std::vector<VkExtensionProperties> extension_properties(extension_count);
+    vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, extension_properties.data());
+    
+    for (u32 i = 0; i < extension_count; ++i)
     {
-        b32 result = SDL_Vulkan_GetInstanceExtensions(
-            ( SDL_Window* ) get_app_window()->handle,
-            &extensions_count,
-            nullptr );
-        FT_ASSERT( result );
-#ifdef FLUENT_DEBUG
-        extensions_count++;
-#endif
+        if (!std::strcmp("VK_KHR_portability_enumeration", extension_properties[i].extensionName))
+        {
+            instance_extensions.emplace_back("VK_KHR_portability_enumeration");
+            instance_create_flags |= 0x00000001;
+        }
     }
-    else
-    {
+    
 #ifdef FLUENT_DEBUG
-        u32 sdl_extensions_count = extensions_count - 1;
-        b32 result               = SDL_Vulkan_GetInstanceExtensions(
-            ( SDL_Window* ) get_app_window()->handle,
-            &sdl_extensions_count,
-            extension_names );
-        FT_ASSERT( result );
-        extension_names[ extensions_count - 1 ] =
-            VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
-#else
-        b32 result = SDL_Vulkan_GetInstanceExtensions(
-            ( SDL_Window* ) get_app_window()->handle,
-            &extensions_count,
-            extension_names );
+    instance_extensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
-    }
+    
+    return instance_extensions;
 }
 
-static inline void
-get_instance_layers( u32& layers_count, const char** layer_names )
+static inline std::vector<const char*>
+get_instance_layers()
 {
-    if ( layer_names == nullptr )
-    {
+    std::vector<const char*> instance_layers;
 #ifdef FLUENT_DEBUG
-        layers_count = 1;
-#else
-        layers_count = 0;
+    instance_layers.emplace_back("VK_LAYER_KHRONOS_validation");
 #endif
-    }
-    else
-    {
-#ifdef FLUENT_DEBUG
-        layer_names[ layers_count - 1 ] = "VK_LAYER_KHRONOS_validation";
-#endif
-    }
+    return instance_layers;
 }
 
 static inline u32
@@ -782,20 +776,24 @@ vk_create_device( const RendererBackend* ibackend,
         if ( queue_create_info_count == static_cast<i32>( QueueType::eLast ) )
             break;
     }
-
-#ifndef __APPLE__
-    static const u32 device_extension_count = 2;
-#else
-    static const u32 device_extension_count = 3;
-#endif
-
-    const char* device_extensions[ device_extension_count ] = {
+    
+    std::vector<const char*> device_extensions {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-#ifdef __APPLE__
-        "VK_KHR_portability_subset"
-#endif
+        VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME
     };
+    
+    u32 device_extension_count = 0;
+    std::vector<VkExtensionProperties> supported_device_extensions;
+    vkEnumerateDeviceExtensionProperties(device->physical_device, nullptr, &device_extension_count, nullptr);
+    supported_device_extensions.resize(device_extension_count);
+    vkEnumerateDeviceExtensionProperties(device->physical_device, nullptr, &device_extension_count, supported_device_extensions.data());
+    for (u32 i = 0; i < device_extension_count; ++i)
+    {
+        if (!std::strcmp(supported_device_extensions[i].extensionName, "VK_KHR_portability_subset"))
+        {
+            device_extensions.emplace_back("VK_KHR_portability_subset");
+        }
+    }
 
     // TODO: check support
     VkPhysicalDeviceFeatures used_features {};
@@ -830,8 +828,8 @@ vk_create_device( const RendererBackend* ibackend,
     device_create_info.pQueueCreateInfos       = queue_create_infos;
     device_create_info.enabledLayerCount       = 0;
     device_create_info.ppEnabledLayerNames     = nullptr;
-    device_create_info.enabledExtensionCount   = device_extension_count;
-    device_create_info.ppEnabledExtensionNames = device_extensions;
+    device_create_info.enabledExtensionCount   = static_cast<u32>(device_extensions.size());
+    device_create_info.ppEnabledExtensionNames = device_extensions.data();
     device_create_info.pEnabledFeatures        = &used_features;
 
     VK_ASSERT( vkCreateDevice( device->physical_device,
@@ -3358,25 +3356,19 @@ vk_create_renderer_backend( const RendererBackendDesc*, RendererBackend** p )
     app_info.engineVersion      = VK_MAKE_VERSION( 0, 0, 1 );
     app_info.apiVersion         = backend->api_version;
 
-    u32 extensions_count = 0;
-    get_instance_extensions( extensions_count, nullptr );
-    std::vector<const char*> extensions( extensions_count );
-    get_instance_extensions( extensions_count, extensions.data() );
-
-    u32 layers_count = 0;
-    get_instance_layers( layers_count, nullptr );
-    std::vector<const char*> layers( layers_count );
-    get_instance_layers( layers_count, layers.data() );
+    u32 instance_create_flags;
+    auto extensions = get_instance_extensions(instance_create_flags);
+    auto layers = get_instance_layers();
 
     VkInstanceCreateInfo instance_create_info {};
     instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instance_create_info.pNext = nullptr;
     instance_create_info.pApplicationInfo        = &app_info;
-    instance_create_info.enabledLayerCount       = layers_count;
+    instance_create_info.enabledLayerCount       = static_cast<u32>(layers.size());
     instance_create_info.ppEnabledLayerNames     = layers.data();
-    instance_create_info.enabledExtensionCount   = extensions_count;
+    instance_create_info.enabledExtensionCount   = static_cast<u32>(extensions.size());
     instance_create_info.ppEnabledExtensionNames = extensions.data();
-    instance_create_info.flags                   = 0;
+    instance_create_info.flags                   = instance_create_flags;
 
     VK_ASSERT( vkCreateInstance( &instance_create_info,
                                  backend->vulkan_allocator,
