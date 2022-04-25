@@ -21,6 +21,8 @@ struct MetalDevice
 {
 #ifdef METAL_BACKEND_INCLUDE_OBJC
     id<MTLDevice> device;
+#else
+    void* device;
 #endif
     void*  view;
     Device interface;
@@ -37,6 +39,10 @@ struct MetalCommandBuffer
     id<MTLCommandBuffer>        cmd;
     id<MTLRenderCommandEncoder> encoder;
     MTLRenderPassDescriptor*    pass_descriptor;
+#else
+    void* cmd;
+    void* encoder;
+    void* pass_descriptor;
 #endif
     CommandBuffer interface;
 };
@@ -45,6 +51,8 @@ struct MetalQueue
 {
 #ifdef METAL_BACKEND_INCLUDE_OBJC
     id<MTLCommandQueue> queue;
+#else
+    void* queue;
 #endif
     Queue interface;
 };
@@ -68,12 +76,19 @@ struct MetalImage
 {
 #ifdef METAL_BACKEND_INCLUDE_OBJC
     id<MTLTexture> texture;
+#else
+    void* texture;
 #endif
     Image interface;
 };
 
 struct MetalBuffer
 {
+#ifdef METAL_BACKEND_INCLUDE_OBJC
+    id<MTLBuffer> buffer;
+#else
+    void* buffer;
+#endif
     Buffer interface;
 };
 
@@ -82,6 +97,9 @@ struct MetalSwapchain
 #ifdef METAL_BACKEND_INCLUDE_OBJC
     CAMetalLayer*       swapchain;
     id<CAMetalDrawable> drawable;
+#else
+    void* swapchain;
+    void* drawable;
 #endif
     u32       current_image_index;
     Swapchain interface;
@@ -103,6 +121,8 @@ struct MetalShader
 {
 #ifdef METAL_BACKEND_INCLUDE_OBJC
     id<MTLFunction> shader;
+#else
+    void* shader;
 #endif
     Shader interface;
 };
@@ -114,6 +134,13 @@ struct MetalDescriptorSetLayout
 
 struct MetalPipeline
 {
+#ifdef METAL_BACKEND_INCLUDE_OBJC
+    MTLRenderPipelineDescriptor* pipeline_descriptor;
+    id<MTLRenderPipelineState> pipeline;
+#else
+    void* pipeline_descriptor;
+    void* pipeline;
+#endif
     Pipeline interface;
 };
 

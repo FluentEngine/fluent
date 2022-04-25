@@ -258,6 +258,13 @@ mtl_resize_swapchain( const Device* idevice,
                       u32           width,
                       u32           height )
 {
+    FT_ASSERT(idevice);
+    FT_ASSERT(iswapchain);
+
+    FT_FROM_HANDLE(swapchain, iswapchain, MetalSwapchain);
+    
+    swapchain->interface.width = width;
+    swapchain->interface.height = height;
 }
 
 void
@@ -453,6 +460,15 @@ mtl_resize_render_pass( const Device*         idevice,
                         RenderPass*           irender_pass,
                         const RenderPassDesc* desc )
 {
+    FT_ASSERT(idevice);
+    FT_ASSERT(irender_pass);
+    FT_ASSERT(desc);
+    
+    FT_FROM_HANDLE(render_pass, irender_pass, MetalRenderPass);
+    render_pass->render_pass.renderTargetWidth = desc->width;
+    render_pass->render_pass.renderTargetHeight = desc->height;
+    render_pass->interface.width = desc->width;
+    render_pass->interface.height = desc->height;
 }
 
 void
@@ -479,6 +495,8 @@ mtl_create_shader( const Device* idevice, ShaderDesc* desc, Shader** p )
     shader->interface.handle = shader;
     *p                       = &shader->interface;
 
+    shader->interface.stage = desc->stage;
+    
     NSError* err;
 
     dispatch_data_t lib_data = dispatch_data_create( desc->bytecode,
@@ -528,21 +546,93 @@ mtl_create_graphics_pipeline( const Device*       idevice,
                               const PipelineDesc* desc,
                               Pipeline**          p )
 {
+    FT_ASSERT(idevice);
+    FT_ASSERT(desc);
+    FT_ASSERT(p);
+    
+    FT_FROM_HANDLE(device, idevice, MetalDevice);
+    
+    auto pipeline = new (std::nothrow) MetalPipeline{};
+    pipeline->interface.handle = pipeline;
+    *p = &pipeline->interface;
+    
+    pipeline->pipeline_descriptor = [[MTLRenderPipelineDescriptor alloc] init];
+    
+    for (u32 i = 0; i < desc->shader_count; ++i)
+    {
+        FT_FROM_HANDLE(shader, desc->shaders[i], MetalShader);
+        switch (shader->interface.stage)
+        {
+            case ShaderStage::eVertex:
+            {
+                pipeline->pipeline_descriptor.vertexFunction = shader->shader;
+                break;
+            }
+            case ShaderStage::eFragment:
+            {
+                pipeline->pipeline_descriptor.fragmentFunction = shader->shader;
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
+    }
+    
+    FT_FROM_HANDLE(render_pass, desc->render_pass, MetalRenderPass);
+    for ( u32 i = 0; i < render_pass->interface.color_attachment_count; ++i )
+    {
+        pipeline->pipeline_descriptor.colorAttachments[i].pixelFormat = to_mtl_format( render_pass->color_attachments[i]->interface.format );
+    }
+    
+    NSError* err;
+    pipeline->pipeline = [device->device newRenderPipelineStateWithDescriptor:pipeline->pipeline_descriptor error:&err];
 }
 
 void
 mtl_destroy_pipeline( const Device* idevice, Pipeline* ipipeline )
 {
+    FT_ASSERT(idevice);
+    FT_ASSERT(ipipeline);
+    
+    FT_FROM_HANDLE(pipeline, ipipeline, MetalPipeline);
+    
+    [pipeline->pipeline release];
+    [pipeline->pipeline_descriptor release];
+    operator delete(pipeline, std::nothrow);
 }
 
 void
 mtl_create_buffer( const Device* idevice, const BufferDesc* desc, Buffer** p )
 {
+    FT_ASSERT(idevice);
+    FT_ASSERT(desc);
+    FT_ASSERT(p);
+    
+    FT_FROM_HANDLE(device, idevice, MetalDevice);
+    
+    auto buffer = new (std::nothrow) MetalBuffer{};
+    buffer->interface.handle = buffer;
+    *p = &buffer->interface;
+    
+    buffer->interface.size = desc->size;
+    buffer->interface.descriptor_type = desc->descriptor_type;
+    buffer->interface.memory_usage = desc->memory_usage;
+    buffer->interface.resource_state = ResourceState::eUndefined;
+    
+    buffer->buffer = [device->device newBufferWithLength:desc->size options:MTLResourceOptionCPUCacheModeDefault];
 }
 
 void
 mtl_destroy_buffer( const Device* idevice, Buffer* ibuffer )
 {
+    FT_ASSERT(idevice);
+    FT_ASSERT(ibuffer);
+    
+    FT_FROM_HANDLE(buffer, ibuffer, MetalBuffer);
+    [buffer->buffer release];
+    operator delete(buffer, std::nothrow);
 }
 
 void*
@@ -745,9 +835,9 @@ mtl_cmd_set_viewport( const CommandBuffer* icmd,
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
 
     [cmd->encoder setViewport:( MTLViewport ) { x,
-                                                y + height,
+                                                y,
                                                 width,
-                                                -height,
+                                                height,
                                                 min_depth,
                                                 max_depth }];
 }
@@ -755,6 +845,13 @@ mtl_cmd_set_viewport( const CommandBuffer* icmd,
 void
 mtl_cmd_bind_pipeline( const CommandBuffer* icmd, const Pipeline* ipipeline )
 {
+    FT_ASSERT(icmd);
+    FT_ASSERT(ipipeline);
+    
+    FT_FROM_HANDLE(cmd, icmd, MetalCommandBuffer);
+    FT_FROM_HANDLE(pipeline, ipipeline, MetalPipeline);
+    
+    [cmd->encoder setRenderPipelineState:pipeline->pipeline];
 }
 
 void
@@ -764,6 +861,11 @@ mtl_cmd_draw( const CommandBuffer* icmd,
               u32                  first_vertex,
               u32                  first_instance )
 {
+    FT_ASSERT(icmd);
+    
+    FT_FROM_HANDLE(cmd, icmd, MetalCommandBuffer);
+    
+    [cmd->encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:first_vertex vertexCount:vertex_count];
 }
 
 void
