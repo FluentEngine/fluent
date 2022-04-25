@@ -1,17 +1,25 @@
 #ifdef METAL_BACKEND
 
+#define METAL_BACKEND_INCLUDE_OBJC
+#include <unordered_map>
 #include <SDL.h>
 #include <imgui.h>
 #include <imgui_impl_metal.h>
 #include <imgui_impl_sdl.h>
-#import <Metal/Metal.h>
-#import <QuartzCore/CAMetalLayer.h>
+#include <tinyimageformat_apis.h>
 #include "core/application.hpp"
 #include "fs/fs.hpp"
 #include "metal_backend.hpp"
 
 namespace fluent
 {
+
+static inline MTLPixelFormat
+to_mtl_format( Format format )
+{
+    return static_cast<MTLPixelFormat>( TinyImageFormat_ToMTLPixelFormat(
+        static_cast<TinyImageFormat>( format ) ) );
+}
 
 static inline MTLLoadAction
 to_mtl_load_action( AttachmentLoadOp load_op )
@@ -21,6 +29,7 @@ to_mtl_load_action( AttachmentLoadOp load_op )
     case AttachmentLoadOp::eLoad: return MTLLoadActionLoad;
     case AttachmentLoadOp::eClear: return MTLLoadActionClear;
     case AttachmentLoadOp::eDontCare: return MTLLoadActionDontCare;
+    default: FT_ASSERT( false ); return MTLLoadAction( -1 );
     }
 }
 
@@ -72,7 +81,7 @@ mtl_destroy_device( Device* idevice )
     FT_FROM_HANDLE( device, idevice, MetalDevice );
 
     SDL_Metal_DestroyView( device->view );
-    [( __bridge id<MTLDevice> ) ( device->device ) release];
+    [device->device release];
     operator delete( device, std::nothrow );
 }
 
@@ -87,8 +96,7 @@ mtl_create_queue( const Device* idevice, const QueueDesc* desc, Queue** p )
     queue->interface.handle = queue;
     *p                      = &queue->interface;
 
-    id<MTLDevice> mtl_device = ( __bridge id<MTLDevice> ) ( device->device );
-    queue->queue             = [mtl_device newCommandQueue];
+    queue->queue = [device->device newCommandQueue];
 }
 
 void
@@ -98,13 +106,23 @@ mtl_destroy_queue( Queue* iqueue )
 
     FT_FROM_HANDLE( queue, iqueue, MetalQueue );
 
-    [( __bridge id<MTLCommandQueue> ) queue->queue release];
+    [queue->queue release];
     operator delete( queue, std::nothrow );
 }
 
 void
 mtl_queue_wait_idle( const Queue* iqueue )
 {
+    FT_ASSERT( iqueue );
+
+    FT_FROM_HANDLE( queue, iqueue, MetalQueue );
+
+    id<MTLCommandBuffer> wait_cmd =
+        [queue->queue commandBufferWithUnretainedReferences];
+
+    [wait_cmd commit];
+    [wait_cmd waitUntilCompleted];
+    [wait_cmd release];
 }
 
 void
@@ -128,11 +146,8 @@ mtl_queue_present( const Queue* iqueue, const QueuePresentDesc* desc )
     FT_FROM_HANDLE( queue, iqueue, MetalQueue );
     FT_FROM_HANDLE( swapchain, desc->swapchain, MetalSwapchain );
 
-    id<MTLCommandBuffer> present_cmd =
-        [( __bridge id<MTLCommandQueue> ) ( queue->queue ) commandBuffer];
-    [present_cmd
-        presentDrawable:( __bridge id<CAMetalDrawable> ) ( swapchain
-                                                               ->drawable )];
+    id<MTLCommandBuffer> present_cmd = [queue->queue commandBuffer];
+    [present_cmd presentDrawable:swapchain->drawable];
     [present_cmd commit];
 }
 
@@ -189,9 +204,12 @@ mtl_create_swapchain( const Device*        idevice,
                       const SwapchainDesc* desc,
                       Swapchain**          p )
 {
+    FT_ASSERT( idevice );
+    FT_ASSERT( desc );
     FT_ASSERT( p );
 
     FT_FROM_HANDLE( device, idevice, MetalDevice );
+    FT_FROM_HANDLE( queue, desc->queue, MetalQueue );
 
     auto swapchain              = new ( std::nothrow ) MetalSwapchain {};
     swapchain->interface.handle = swapchain;
@@ -205,11 +223,13 @@ mtl_create_swapchain( const Device*        idevice,
     swapchain->interface.queue           = desc->queue;
     swapchain->interface.vsync           = desc->vsync;
 
-    auto layer        = ( CAMetalLayer* ) SDL_Metal_GetLayer( device->view );
-    layer.device      = ( __bridge id<MTLDevice> ) ( device->device );
-    layer.pixelFormat = MTLPixelFormatBGRA8Unorm_sRGB;
-
-    swapchain->swapchain = layer;
+    swapchain->swapchain = ( CAMetalLayer* ) SDL_Metal_GetLayer( device->view );
+    swapchain->swapchain.device             = device->device;
+    swapchain->swapchain.pixelFormat        = to_mtl_format( desc->format );
+    swapchain->swapchain.displaySyncEnabled = desc->vsync;
+    
+    swapchain->interface.image_count = swapchain->swapchain.maximumDrawableCount;
+    
     swapchain->interface.images =
         new ( std::nothrow ) Image*[ swapchain->interface.image_count ];
 
@@ -242,6 +262,7 @@ mtl_destroy_swapchain( const Device* idevice, Swapchain* iswapchain )
 {
     FT_ASSERT( iswapchain );
 
+    FT_FROM_HANDLE( device, idevice, MetalDevice );
     FT_FROM_HANDLE( swapchain, iswapchain, MetalSwapchain );
 
     for ( u32 i = 0; i < swapchain->interface.image_count; i++ )
@@ -332,10 +353,7 @@ mtl_begin_command_buffer( const CommandBuffer* icmd )
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
     FT_FROM_HANDLE( queue, cmd->interface.queue, MetalQueue );
 
-    id<MTLCommandQueue> mtl_queue =
-        ( __bridge id<MTLCommandQueue> ) ( queue->queue );
-    id<MTLCommandBuffer> mtl_cmd = [mtl_queue commandBuffer];
-    cmd->cmd                     = mtl_cmd;
+    cmd->cmd = [queue->queue commandBuffer];
 }
 
 void
@@ -343,10 +361,8 @@ mtl_end_command_buffer( const CommandBuffer* icmd )
 {
     FT_ASSERT( icmd );
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
-    id<MTLCommandBuffer> mtl_cmd =
-        ( __bridge id<MTLCommandBuffer> ) ( cmd->cmd );
-
-    [mtl_cmd commit];
+    [cmd->cmd commit];
+    [cmd->cmd release];
 }
 
 void
@@ -365,10 +381,8 @@ mtl_acquire_next_image( const Device*    idevice,
         swapchain->interface.images[ swapchain->current_image_index ],
         MetalImage );
 
-    CAMetalLayer*       layer    = ( CAMetalLayer* ) ( swapchain->swapchain );
-    id<CAMetalDrawable> drawable = layer.nextDrawable;
-    swapchain->drawable          = drawable;
-    image->texture               = drawable.texture;
+    swapchain->drawable = swapchain->swapchain.nextDrawable;
+    image->texture      = swapchain->drawable.texture;
 
     *image_index                   = swapchain->current_image_index;
     swapchain->current_image_index = ( swapchain->current_image_index + 1 ) %
@@ -378,11 +392,37 @@ mtl_acquire_next_image( const Device*    idevice,
 void
 mtl_create_shader( const Device* idevice, ShaderDesc* desc, Shader** p )
 {
+    FT_ASSERT( idevice );
+    FT_ASSERT( desc );
+    FT_ASSERT( p );
+
+    FT_FROM_HANDLE( device, idevice, MetalDevice );
+
+    auto shader              = new ( std::nothrow ) MetalShader {};
+    shader->interface.handle = shader;
+    *p                       = &shader->interface;
+
+    NSError* err;
+
+    dispatch_data_t lib_data = dispatch_data_create( desc->bytecode,
+                                                     desc->bytecode_size,
+                                                     dispatch_get_main_queue(),
+                                                     ^ {} );
+    id<MTLLibrary>  library  = [device->device newLibraryWithData:lib_data
+                                                          error:&err];
+
+    shader->shader = [library newFunctionWithName:@"main0"];
 }
 
 void
 mtl_destroy_shader( const Device* idevice, Shader* ishader )
 {
+    FT_ASSERT( idevice );
+    FT_ASSERT( ishader );
+
+    FT_FROM_HANDLE( shader, ishader, MetalShader );
+    [shader->shader release];
+    operator delete( shader, std::nothrow );
 }
 
 void
@@ -505,10 +545,9 @@ mtl_create_ui_context( CommandBuffer* cmd, const UiDesc* desc, UiContext** p )
         io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     }
 
-    id<MTLDevice> mtl_device = ( __bridge id<MTLDevice> ) ( device->device );
     ImGui_ImplSDL2_InitForMetal(
         static_cast<SDL_Window*>( desc->window->handle ) );
-    ImGui_ImplMetal_Init( mtl_device );
+    ImGui_ImplMetal_Init( device->device );
 }
 
 void
@@ -528,8 +567,7 @@ void
 mtl_ui_begin_frame( UiContext*, CommandBuffer* icmd )
 {
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
-    ImGui_ImplMetal_NewFrame(
-        ( __bridge MTLRenderPassDescriptor* ) ( cmd->pass_descriptor ) );
+    ImGui_ImplMetal_NewFrame( cmd->pass_descriptor );
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 }
@@ -539,10 +577,9 @@ mtl_ui_end_frame( UiContext*, CommandBuffer* icmd )
 {
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
     ImGui::Render();
-    ImGui_ImplMetal_RenderDrawData(
-        ImGui::GetDrawData(),
-        ( __bridge id<MTLCommandBuffer>( cmd->cmd ) ),
-        ( __bridge id<MTLRenderCommandEncoder>( cmd->encoder ) ) );
+    ImGui_ImplMetal_RenderDrawData( ImGui::GetDrawData(),
+                                    cmd->cmd,
+                                    cmd->encoder );
 
     ImGuiIO& io = ImGui::GetIO();
     if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
@@ -556,31 +593,7 @@ void
 mtl_cmd_begin_render_pass( const CommandBuffer*  icmd,
                            const RenderPassBeginDesc* desc )
 {
-//    FT_ASSERT( idevice );
-//    FT_ASSERT( icmd );
-//    FT_ASSERT( desc );
-//
-//    FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
-//
-//    MTLRenderPassDescriptor* pass =
-//        [MTLRenderPassDescriptor renderPassDescriptor];
-//
-//    for ( u32 i = 0; i < desc->color_attachment_count; ++i )
-//    {
-//        FT_FROM_HANDLE( image, desc->color_attachments[ i ], MetalImage );
-//        pass.colorAttachments[ 0 ].texture =
-//            ( __bridge id<MTLTexture> ) ( image->texture );
-//        pass.colorAttachments[ 0 ].loadAction =
-//            to_mtl_load_action( desc->color_attachment_load_ops[ i ] );
-//        pass.colorAttachments[ 0 ].storeAction = MTLStoreActionStore;
-//        const auto& color                      = desc->clear_values[ i ].color;
-//        pass.colorAttachments[ 0 ].clearColor =
-//            MTLClearColorMake( color[ 0 ], color[ 1 ], color[ 2 ], color[ 3 ] );
-//    }
-//
-//    cmd->encoder         = [( __bridge id<MTLCommandBuffer> ) ( cmd->cmd )
-//        renderCommandEncoderWithDescriptor:pass];
-//    cmd->pass_descriptor = pass;
+
 }
 
 void
@@ -588,7 +601,7 @@ mtl_cmd_end_render_pass( const CommandBuffer* icmd )
 {
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
 
-    [( __bridge id<MTLRenderCommandEncoder> ) ( cmd->encoder ) endEncoding];
+    [cmd->encoder endEncoding];
 }
 
 void
@@ -607,6 +620,12 @@ mtl_cmd_set_scissor( const CommandBuffer* icmd,
                      u32                  width,
                      u32                  height )
 {
+    FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
+
+    [cmd->encoder setScissorRect:( MTLScissorRect ) { static_cast<u32>( x ),
+                                                      static_cast<u32>( y ),
+                                                      width,
+                                                      height }];
 }
 
 void
@@ -620,13 +639,12 @@ mtl_cmd_set_viewport( const CommandBuffer* icmd,
 {
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
 
-    [( __bridge id<MTLRenderCommandEncoder> ) ( cmd->encoder )
-        setViewport:( MTLViewport ) { 0.0,
-                                      static_cast<float>( height ),
-                                      static_cast<float>( width ),
-                                      -static_cast<float>( height ),
-                                      0.1,
-                                      1000.0 }];
+    [cmd->encoder setViewport:( MTLViewport ) { x,
+                                                y + height,
+                                                width,
+                                                -height,
+                                                min_depth,
+                                                max_depth }];
 }
 
 void
