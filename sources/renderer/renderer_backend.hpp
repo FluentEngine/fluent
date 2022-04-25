@@ -566,7 +566,7 @@ DECLARE_RENDERER_FUNCTION( void,
                            RenderPass**          render_pass );
 
 DECLARE_RENDERER_FUNCTION( void,
-                           update_render_pass,
+                           resize_render_pass,
                            const Device*         device,
                            RenderPass*           render_pass,
                            const RenderPassDesc* desc );

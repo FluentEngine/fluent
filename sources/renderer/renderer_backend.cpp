@@ -32,7 +32,7 @@ begin_command_buffer_fun          begin_command_buffer;
 end_command_buffer_fun            end_command_buffer;
 acquire_next_image_fun            acquire_next_image;
 create_render_pass_fun            create_render_pass;
-update_render_pass_fun            update_render_pass;
+resize_render_pass_fun            resize_render_pass;
 destroy_render_pass_fun           destroy_render_pass;
 create_shader_fun                 create_shader;
 destroy_shader_fun                destroy_shader;

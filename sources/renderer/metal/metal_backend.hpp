@@ -91,7 +91,12 @@ struct MetalRenderPass
 {
 #ifdef METAL_BACKEND_INCLUDE_OBJC
     MTLRenderPassDescriptor* render_pass;
+#else
+    void* render_pass;
 #endif
+    b32         swapchain_render_pass;
+    MetalImage* color_attachments[ MAX_ATTACHMENTS_COUNT ];
+    RenderPass  interface;
 };
 
 struct MetalShader

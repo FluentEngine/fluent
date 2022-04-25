@@ -227,15 +227,18 @@ mtl_create_swapchain( const Device*        idevice,
     swapchain->swapchain.device             = device->device;
     swapchain->swapchain.pixelFormat        = to_mtl_format( desc->format );
     swapchain->swapchain.displaySyncEnabled = desc->vsync;
-    
-    swapchain->interface.image_count = swapchain->swapchain.maximumDrawableCount;
-    
+
+    swapchain->interface.image_count =
+        swapchain->swapchain.maximumDrawableCount;
+
     swapchain->interface.images =
         new ( std::nothrow ) Image*[ swapchain->interface.image_count ];
 
     for ( u32 i = 0; i < swapchain->interface.image_count; i++ )
     {
-        auto image                       = new ( std::nothrow ) MetalImage {};
+        auto image     = new ( std::nothrow ) MetalImage {};
+        image->texture = nil;
+
         image->interface.handle          = image;
         image->interface.width           = desc->width;
         image->interface.height          = desc->height;
@@ -262,7 +265,6 @@ mtl_destroy_swapchain( const Device* idevice, Swapchain* iswapchain )
 {
     FT_ASSERT( iswapchain );
 
-    FT_FROM_HANDLE( device, idevice, MetalDevice );
     FT_FROM_HANDLE( swapchain, iswapchain, MetalSwapchain );
 
     for ( u32 i = 0; i < swapchain->interface.image_count; i++ )
@@ -387,6 +389,81 @@ mtl_acquire_next_image( const Device*    idevice,
     *image_index                   = swapchain->current_image_index;
     swapchain->current_image_index = ( swapchain->current_image_index + 1 ) %
                                      swapchain->interface.image_count;
+}
+
+void
+mtl_create_render_pass( const Device*         idevice,
+                        const RenderPassDesc* desc,
+                        RenderPass**          p )
+{
+    FT_ASSERT( p );
+
+    auto render_pass              = new ( std::nothrow ) MetalRenderPass {};
+    render_pass->interface.handle = render_pass;
+    *p                            = &render_pass->interface;
+
+    MTLRenderPassDescriptor* pass =
+        [MTLRenderPassDescriptor renderPassDescriptor];
+
+    render_pass->render_pass = pass;
+
+    render_pass->interface.color_attachment_count =
+        desc->color_attachment_count;
+    render_pass->interface.width  = desc->width;
+    render_pass->interface.height = desc->height;
+    render_pass->interface.sample_count =
+        desc->color_attachments[ 0 ]->sample_count;
+
+    pass.renderTargetWidth  = desc->width;
+    pass.renderTargetHeight = desc->height;
+    pass.defaultRasterSampleCount =
+        to_mtl_sample_count( desc->color_attachments[ 0 ]->sample_count );
+
+    for ( u32 i = 0; i < desc->color_attachment_count; ++i )
+    {
+        FT_FROM_HANDLE( image, desc->color_attachments[ i ], MetalImage );
+
+        if ( image->texture == nil )
+        {
+            render_pass->swapchain_render_pass = true;
+        }
+
+        pass.colorAttachments[ 0 ].texture = image->texture;
+        pass.colorAttachments[ 0 ].loadAction =
+            to_mtl_load_action( desc->color_attachment_load_ops[ i ] );
+        pass.colorAttachments[ 0 ].storeAction = MTLStoreActionStore;
+
+        render_pass->color_attachments[ i ] = image;
+    }
+
+    if ( desc->depth_stencil )
+    {
+        FT_FROM_HANDLE( image, desc->depth_stencil, MetalImage );
+        pass.depthAttachment.texture = image->texture;
+        pass.depthAttachment.loadAction =
+            to_mtl_load_action( desc->depth_stencil_load_op );
+        pass.depthAttachment.storeAction = MTLStoreActionStore;
+
+        render_pass->interface.has_depth_stencil = true;
+    }
+}
+
+void
+mtl_resize_render_pass( const Device*         idevice,
+                        RenderPass*           irender_pass,
+                        const RenderPassDesc* desc )
+{
+}
+
+void
+mtl_destroy_render_pass( const Device* idevice, RenderPass* irender_pass )
+{
+    FT_ASSERT( irender_pass );
+
+    FT_FROM_HANDLE( render_pass, irender_pass, MetalRenderPass );
+
+    [render_pass->render_pass release];
+    operator delete( render_pass, std::nothrow );
 }
 
 void
@@ -577,6 +654,7 @@ mtl_ui_end_frame( UiContext*, CommandBuffer* icmd )
 {
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
     ImGui::Render();
+    FT_ASSERT( cmd->encoder != nil );
     ImGui_ImplMetal_RenderDrawData( ImGui::GetDrawData(),
                                     cmd->cmd,
                                     cmd->encoder );
@@ -590,10 +668,37 @@ mtl_ui_end_frame( UiContext*, CommandBuffer* icmd )
 }
 
 void
-mtl_cmd_begin_render_pass( const CommandBuffer*  icmd,
+mtl_cmd_begin_render_pass( const CommandBuffer*       icmd,
                            const RenderPassBeginDesc* desc )
 {
+    FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
+    FT_FROM_HANDLE( render_pass, desc->render_pass, MetalRenderPass );
 
+    if ( render_pass->swapchain_render_pass )
+    {
+        render_pass->render_pass.colorAttachments[ 0 ].texture =
+            render_pass->color_attachments[ 0 ]->texture;
+    }
+
+    for ( u32 i = 0; i < render_pass->interface.color_attachment_count; ++i )
+    {
+        render_pass->render_pass.colorAttachments[ i ].clearColor =
+            MTLClearColorMake( desc->clear_values[ i ].color[ 0 ],
+                               desc->clear_values[ i ].color[ 1 ],
+                               desc->clear_values[ i ].color[ 2 ],
+                               desc->clear_values[ i ].color[ 3 ] );
+    }
+
+    if ( render_pass->interface.has_depth_stencil )
+    {
+        render_pass->render_pass.depthAttachment.clearDepth =
+            desc->clear_values[ render_pass->interface.color_attachment_count ]
+                .depth;
+    }
+
+    cmd->encoder =
+        [cmd->cmd renderCommandEncoderWithDescriptor:render_pass->render_pass];
+    cmd->pass_descriptor = render_pass->render_pass;
 }
 
 void
@@ -799,6 +904,9 @@ mtl_create_renderer_backend( const RendererBackendDesc*, RendererBackend** p )
     begin_command_buffer          = mtl_begin_command_buffer;
     end_command_buffer            = mtl_end_command_buffer;
     acquire_next_image            = mtl_acquire_next_image;
+    create_render_pass            = mtl_create_render_pass;
+    resize_render_pass            = mtl_resize_render_pass;
+    destroy_render_pass           = mtl_destroy_render_pass;
     create_shader                 = mtl_create_shader;
     destroy_shader                = mtl_destroy_shader;
     create_descriptor_set_layout  = mtl_create_descriptor_set_layout;

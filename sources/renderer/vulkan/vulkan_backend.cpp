@@ -1771,7 +1771,7 @@ vk_create_render_pass( const Device*         idevice,
 }
 
 void
-vk_update_render_pass( const Device*         idevice,
+vk_resize_render_pass( const Device*         idevice,
                        RenderPass*           irender_pass,
                        const RenderPassDesc* desc )
 {
@@ -3291,7 +3291,7 @@ vk_create_renderer_backend( const RendererBackendDesc*, RendererBackend** p )
     end_command_buffer            = vk_end_command_buffer;
     acquire_next_image            = vk_acquire_next_image;
     create_render_pass            = vk_create_render_pass;
-    update_render_pass            = vk_update_render_pass;
+    resize_render_pass            = vk_resize_render_pass;
     destroy_render_pass           = vk_destroy_render_pass;
     create_shader                 = vk_create_shader;
     destroy_shader                = vk_destroy_shader;
