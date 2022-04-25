@@ -90,30 +90,30 @@ Camera::on_resize( u32 width, u32 height )
 void
 CameraController::init( Camera& camera )
 {
-	m_camera = &camera;
+    m_camera = &camera;
 }
 
 void
 CameraController::update( f32 delta_time )
 {
-	if ( is_key_pressed( Key::W ) )
+    if ( is_key_pressed( Key::W ) )
     {
         m_camera->on_move( CameraDirection::eForward, delta_time );
     }
-	else if ( is_key_pressed( Key::S ) )
+    else if ( is_key_pressed( Key::S ) )
     {
         m_camera->on_move( CameraDirection::eBack, delta_time );
     }
 
-	if ( is_key_pressed( Key::A ) )
+    if ( is_key_pressed( Key::A ) )
     {
         m_camera->on_move( CameraDirection::eLeft, delta_time );
     }
-	else if ( is_key_pressed( Key::D ) )
+    else if ( is_key_pressed( Key::D ) )
     {
         m_camera->on_move( CameraDirection::eRight, delta_time );
     }
 
-	m_camera->on_rotate( get_mouse_offset_x(), -get_mouse_offset_y() );
+    m_camera->on_rotate( get_mouse_offset_x(), -get_mouse_offset_y() );
 }
 } // namespace fluent

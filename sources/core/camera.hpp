@@ -95,11 +95,11 @@ public:
 class CameraController
 {
 private:
-	Camera* m_camera = nullptr;
+    Camera* m_camera = nullptr;
 
 public:
     void
-	init( Camera& camera );
+    init( Camera& camera );
     void
     update( f32 delta_time );
 };

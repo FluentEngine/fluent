@@ -2705,7 +2705,7 @@ vk_destroy_ui_context( const Device* idevice, UiContext* icontext )
 }
 
 void
-vk_ui_begin_frame()
+vk_ui_begin_frame( UiContext*, CommandBuffer* icmd )
 {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL2_NewFrame();

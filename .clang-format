@@ -33,7 +33,6 @@ IndentCaseLabels: 'false'
 IndentPPDirectives: None
 IndentWidth: '4'
 KeepEmptyLinesAtTheStartOfBlocks: 'false'
-Language: Cpp
 NamespaceIndentation: Inner
 PointerAlignment: Left
 SortIncludes: 'false'

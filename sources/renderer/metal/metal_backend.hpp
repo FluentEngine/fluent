@@ -27,6 +27,7 @@ struct MetalCommandBuffer
 {
     void*         cmd;
     void*         encoder;
+    void*         pass_descriptor;
     CommandBuffer interface;
 };
 
@@ -65,14 +66,14 @@ struct MetalBuffer
 struct MetalSwapchain
 {
     void*     swapchain;
+    void*     drawable;
     u32       current_image_index;
     Swapchain interface;
 };
 
 struct MetalRenderPass
 {
-    void*      render_pass;
-    RenderPass interface;
+    void* render_pass;
 };
 
 struct MetalShader

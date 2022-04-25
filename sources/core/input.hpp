@@ -11,12 +11,12 @@ struct Window;
 
 struct InputSystem
 {
-	Window* window;
-	u32     keys[ Key::Last ];
-	u32     buttons[ Button::Last ];
-	f32     mouse_position[ 2 ];
-	f32     mouse_offset[ 2 ];
-	i32     mouse_scroll = 0;
+    Window* window;
+    u32     keys[ Key::Last ];
+    u32     buttons[ Button::Last ];
+    f32     mouse_position[ 2 ];
+    f32     mouse_offset[ 2 ];
+    i32     mouse_scroll = 0;
 };
 
 void

@@ -826,7 +826,10 @@ DECLARE_RENDERER_FUNCTION( void,
                            const Device* device,
                            UiContext*    context );
 
-DECLARE_RENDERER_FUNCTION( void, ui_begin_frame );
+DECLARE_RENDERER_FUNCTION( void,
+                           ui_begin_frame,
+                           UiContext*,
+                           CommandBuffer* icmd );
 
 DECLARE_RENDERER_FUNCTION( void,
                            ui_end_frame,

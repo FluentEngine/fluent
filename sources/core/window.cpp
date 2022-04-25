@@ -18,6 +18,8 @@ create_window( const WindowDesc& desc )
     u32 x            = desc.x;
     u32 y            = desc.y;
 
+    window_flags |= SDL_WINDOW_ALLOW_HIGHDPI;
+
     if ( desc.resizable )
     {
         window_flags |= SDL_WINDOW_RESIZABLE;
@@ -39,6 +41,11 @@ create_window( const WindowDesc& desc )
         window_flags |= SDL_WINDOW_VULKAN;
     }
 
+    if ( METAL_BACKEND )
+    {
+        window_flags |= SDL_WINDOW_METAL;
+    }
+
     SDL_Window* window = SDL_CreateWindow( desc.title,
                                            x,
                                            y,
@@ -48,12 +55,15 @@ create_window( const WindowDesc& desc )
 
     FT_ASSERT( window && "Failed to create window" );
 
+    i32 w, h;
+    SDL_Vulkan_GetDrawableSize( window, &w, &h );
+
     Window result {};
     result.handle                           = window;
     result.data[ WindowParams::ePositionX ] = x;
     result.data[ WindowParams::ePositionY ] = y;
-    result.data[ WindowParams::eWidth ]     = desc.width;
-    result.data[ WindowParams::eHeight ]    = desc.height;
+    result.data[ WindowParams::eWidth ]     = w;
+    result.data[ WindowParams::eHeight ]    = h;
 
     return result;
 }
@@ -90,4 +100,5 @@ window_show_cursor( b32 show )
 {
     SDL_SetRelativeMouseMode( show ? SDL_FALSE : SDL_TRUE );
 }
+
 } // namespace fluent

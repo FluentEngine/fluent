@@ -48,7 +48,7 @@ app_init( const ApplicationConfig* config )
     app_state.imgui_callback = []( const SDL_Event* ) -> bool { return false; };
     spdlog::set_level( to_spdlog_level( config->log_level ) );
 
-	init_input_system( &app_state.window );
+    init_input_system( &app_state.window );
 
     fs::init( config->argv );
 
@@ -69,11 +69,11 @@ app_run()
     u32 last_frame       = 0.0f;
     app_state.delta_time = 0.0;
 
-	InputSystem* input_system = get_input_system();
+    InputSystem* input_system = get_input_system();
 
     while ( app_state.is_running )
     {
-		update_input_system();
+        update_input_system();
 
         u32 current_frame    = get_time();
         app_state.delta_time = ( current_frame - last_frame ) / 1000.0f;
@@ -97,26 +97,26 @@ app_run()
                 }
                 break;
             case SDL_KEYDOWN:
-				input_system->keys[ e.key.keysym.scancode ] = true;
+                input_system->keys[ e.key.keysym.scancode ] = true;
                 break;
             case SDL_KEYUP:
-				input_system->keys[ e.key.keysym.scancode ] = false;
+                input_system->keys[ e.key.keysym.scancode ] = false;
                 break;
             case SDL_MOUSEBUTTONDOWN:
-				input_system->buttons[ e.button.button ] = true;
+                input_system->buttons[ e.button.button ] = true;
                 break;
             case SDL_MOUSEBUTTONUP:
-				input_system->buttons[ e.button.button ] = false;
+                input_system->buttons[ e.button.button ] = false;
                 break;
             case SDL_MOUSEWHEEL:
             {
                 if ( e.wheel.y > 0 )
                 {
-					input_system->mouse_scroll = 1;
+                    input_system->mouse_scroll = 1;
                 }
                 else if ( e.wheel.y < 0 )
                 {
-					input_system->mouse_scroll = -1;
+                    input_system->mouse_scroll = -1;
                 }
                 break;
             }
