@@ -8,6 +8,11 @@
 
 namespace fluent
 {
+#define FT_INIT_INTERNAL( name, ptr, type )                                    \
+    auto name              = new ( std::nothrow ) type {};                     \
+    name->interface.handle = name;                                             \
+    ptr                    = &name->interface;
+
 #define FT_FROM_HANDLE( name, interface, impl )                                \
     impl* name = static_cast<impl*>( interface->handle );
 

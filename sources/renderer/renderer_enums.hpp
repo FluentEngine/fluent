@@ -357,7 +357,8 @@ enum class ShaderStage
     eFragment,
     eCompute,
     eAllGraphics,
-    eAll
+    eAll,
+    eCount
 };
 
 enum class Filter

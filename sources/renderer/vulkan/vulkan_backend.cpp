@@ -560,39 +560,44 @@ create_debug_messenger( VulkanRendererBackend* backend )
 }
 
 static inline std::vector<const char*>
-get_instance_extensions(u32& instance_create_flags)
+get_instance_extensions( u32& instance_create_flags )
 {
     instance_create_flags = 0;
-    
+
     u32 extension_count = 0;
-    b32 result = SDL_Vulkan_GetInstanceExtensions(
+    b32 result          = SDL_Vulkan_GetInstanceExtensions(
         ( SDL_Window* ) get_app_window()->handle,
         &extension_count,
         nullptr );
     FT_ASSERT( result );
-    std::vector<const char*> instance_extensions(extension_count);
-    SDL_Vulkan_GetInstanceExtensions(
-        ( SDL_Window* ) get_app_window()->handle,
-        &extension_count,
-        instance_extensions.data() );
-    
-    vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
-    std::vector<VkExtensionProperties> extension_properties(extension_count);
-    vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, extension_properties.data());
-    
-    for (u32 i = 0; i < extension_count; ++i)
+    std::vector<const char*> instance_extensions( extension_count );
+    SDL_Vulkan_GetInstanceExtensions( ( SDL_Window* ) get_app_window()->handle,
+                                      &extension_count,
+                                      instance_extensions.data() );
+
+    vkEnumerateInstanceExtensionProperties( nullptr,
+                                            &extension_count,
+                                            nullptr );
+    std::vector<VkExtensionProperties> extension_properties( extension_count );
+    vkEnumerateInstanceExtensionProperties( nullptr,
+                                            &extension_count,
+                                            extension_properties.data() );
+
+    for ( u32 i = 0; i < extension_count; ++i )
     {
-        if (!std::strcmp("VK_KHR_portability_enumeration", extension_properties[i].extensionName))
+        if ( !std::strcmp( "VK_KHR_portability_enumeration",
+                           extension_properties[ i ].extensionName ) )
         {
-            instance_extensions.emplace_back("VK_KHR_portability_enumeration");
+            instance_extensions.emplace_back(
+                "VK_KHR_portability_enumeration" );
             instance_create_flags |= 0x00000001;
         }
     }
-    
+
 #ifdef FLUENT_DEBUG
-    instance_extensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    instance_extensions.emplace_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
 #endif
-    
+
     return instance_extensions;
 }
 
@@ -601,7 +606,7 @@ get_instance_layers()
 {
     std::vector<const char*> instance_layers;
 #ifdef FLUENT_DEBUG
-    instance_layers.emplace_back("VK_LAYER_KHRONOS_validation");
+    instance_layers.emplace_back( "VK_LAYER_KHRONOS_validation" );
 #endif
     return instance_layers;
 }
@@ -737,9 +742,7 @@ vk_create_device( const RendererBackend* ibackend,
 
     FT_FROM_HANDLE( backend, ibackend, VulkanRendererBackend );
 
-    VulkanDevice* device     = new ( std::nothrow ) VulkanDevice {};
-    device->interface.handle = device;
-    *p                       = &device->interface;
+    FT_INIT_INTERNAL( device, *p, VulkanDevice );
 
     device->vulkan_allocator = backend->vulkan_allocator;
     device->instance         = backend->instance;
@@ -776,22 +779,29 @@ vk_create_device( const RendererBackend* ibackend,
         if ( queue_create_info_count == static_cast<i32>( QueueType::eLast ) )
             break;
     }
-    
+
     std::vector<const char*> device_extensions {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME
     };
-    
-    u32 device_extension_count = 0;
+
+    u32                                device_extension_count = 0;
     std::vector<VkExtensionProperties> supported_device_extensions;
-    vkEnumerateDeviceExtensionProperties(device->physical_device, nullptr, &device_extension_count, nullptr);
-    supported_device_extensions.resize(device_extension_count);
-    vkEnumerateDeviceExtensionProperties(device->physical_device, nullptr, &device_extension_count, supported_device_extensions.data());
-    for (u32 i = 0; i < device_extension_count; ++i)
+    vkEnumerateDeviceExtensionProperties( device->physical_device,
+                                          nullptr,
+                                          &device_extension_count,
+                                          nullptr );
+    supported_device_extensions.resize( device_extension_count );
+    vkEnumerateDeviceExtensionProperties( device->physical_device,
+                                          nullptr,
+                                          &device_extension_count,
+                                          supported_device_extensions.data() );
+    for ( u32 i = 0; i < device_extension_count; ++i )
     {
-        if (!std::strcmp(supported_device_extensions[i].extensionName, "VK_KHR_portability_subset"))
+        if ( !std::strcmp( supported_device_extensions[ i ].extensionName,
+                           "VK_KHR_portability_subset" ) )
         {
-            device_extensions.emplace_back("VK_KHR_portability_subset");
+            device_extensions.emplace_back( "VK_KHR_portability_subset" );
         }
     }
 
@@ -824,11 +834,12 @@ vk_create_device( const RendererBackend* ibackend,
     device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_create_info.pNext = &shader_draw_parameters_features;
     device_create_info.flags = 0;
-    device_create_info.queueCreateInfoCount    = queue_create_info_count;
-    device_create_info.pQueueCreateInfos       = queue_create_infos;
-    device_create_info.enabledLayerCount       = 0;
-    device_create_info.ppEnabledLayerNames     = nullptr;
-    device_create_info.enabledExtensionCount   = static_cast<u32>(device_extensions.size());
+    device_create_info.queueCreateInfoCount = queue_create_info_count;
+    device_create_info.pQueueCreateInfos    = queue_create_infos;
+    device_create_info.enabledLayerCount    = 0;
+    device_create_info.ppEnabledLayerNames  = nullptr;
+    device_create_info.enabledExtensionCount =
+        static_cast<u32>( device_extensions.size() );
     device_create_info.ppEnabledExtensionNames = device_extensions.data();
     device_create_info.pEnabledFeatures        = &used_features;
 
@@ -905,9 +916,7 @@ vk_create_queue( const Device* idevice, const QueueDesc* desc, Queue** p )
 
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-    VulkanQueue* queue      = new ( std::nothrow ) VulkanQueue {};
-    queue->interface.handle = queue;
-    *p                      = &queue->interface;
+    FT_INIT_INTERNAL( queue, *p, VulkanQueue );
 
     u32 index =
         find_queue_family_index( device->physical_device, desc->queue_type );
@@ -1031,9 +1040,7 @@ vk_create_semaphore( const Device* idevice, Semaphore** p )
 
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-    VulkanSemaphore* semaphore  = new ( std::nothrow ) VulkanSemaphore {};
-    semaphore->interface.handle = semaphore;
-    *p                          = &semaphore->interface;
+    FT_INIT_INTERNAL( semaphore, *p, VulkanSemaphore );
 
     VkSemaphoreCreateInfo semaphore_create_info {};
     semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -1067,9 +1074,7 @@ vk_create_fence( const Device* idevice, Fence** p )
 
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-    VulkanFence* fence      = new ( std::nothrow ) VulkanFence {};
-    fence->interface.handle = fence;
-    *p                      = &fence->interface;
+    FT_INIT_INTERNAL( fence, *p, VulkanFence );
 
     VkFenceCreateInfo fence_create_info {};
     fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -1251,8 +1256,9 @@ create_configured_swapchain( const VulkanDevice* device,
     {
         for ( u32 i = 0; i < swapchain->interface.image_count; ++i )
         {
-            auto image = static_cast<VulkanImage*>(
-                swapchain->interface.images[ i ]->handle );
+            FT_FROM_HANDLE( image,
+                            swapchain->interface.images[ i ],
+                            VulkanImage );
             vkDestroyImageView( device->logical_device,
                                 image->image_view,
                                 device->vulkan_allocator );
@@ -1326,9 +1332,9 @@ create_configured_swapchain( const VulkanDevice* device,
 
     for ( u32 i = 0; i < swapchain->interface.image_count; ++i )
     {
-        auto image                       = new ( std::nothrow ) VulkanImage {};
-        image->interface.handle          = image;
-        swapchain->interface.images[ i ] = &image->interface;
+        FT_INIT_INTERNAL( image,
+                          swapchain->interface.images[ i ],
+                          VulkanImage );
 
         image_view_create_info.image = swapchain_images[ i ];
 
@@ -1357,9 +1363,7 @@ vk_create_swapchain( const Device*        idevice,
 
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-    auto swapchain              = new ( std::nothrow ) VulkanSwapchain {};
-    swapchain->interface.handle = swapchain;
-    *p                          = &swapchain->interface;
+    FT_INIT_INTERNAL( swapchain, *p, VulkanSwapchain );
 
     configure_swapchain( device, swapchain, desc );
     create_configured_swapchain( device, swapchain, false );
@@ -1419,9 +1423,7 @@ vk_create_command_pool( const Device*          idevice,
 
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-    auto command_pool              = new ( std::nothrow ) VulkanCommandPool {};
-    command_pool->interface.handle = command_pool;
-    *p                             = &command_pool->interface;
+    FT_INIT_INTERNAL( command_pool, *p, VulkanCommandPool );
 
     command_pool->interface.queue = desc->queue;
 
@@ -1480,10 +1482,7 @@ vk_create_command_buffers( const Device*      idevice,
     // TODO: FIX ME!
     for ( u32 i = 0; i < count; ++i )
     {
-        auto cmd              = new ( std::nothrow ) VulkanCommandBuffer {};
-        cmd->interface.handle = cmd;
-
-        icommand_buffers[ i ] = &cmd->interface;
+        FT_INIT_INTERNAL( cmd, icommand_buffers[ i ], VulkanCommandBuffer );
 
         cmd->command_buffer  = buffers[ i ];
         cmd->interface.queue = command_pool->interface.queue;
@@ -1633,9 +1632,7 @@ vk_create_render_pass( const Device*         idevice,
 
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-    auto render_pass              = new ( std::nothrow ) VulkanRenderPass {};
-    render_pass->interface.handle = render_pass;
-    *p                            = &render_pass->interface;
+    FT_INIT_INTERNAL( render_pass, *p, VulkanRenderPass );
 
     render_pass->interface.color_attachment_count =
         desc->color_attachment_count;
@@ -1816,9 +1813,7 @@ vk_create_shader( const Device* idevice, ShaderDesc* desc, Shader** p )
 
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-    auto shader              = new ( std::nothrow ) VulkanShader {};
-    shader->interface.handle = shader;
-    *p                       = &shader->interface;
+    FT_INIT_INTERNAL( shader, *p, VulkanShader );
 
     shader->interface.stage = desc->stage;
 
@@ -1863,10 +1858,7 @@ vk_create_descriptor_set_layout( const Device*         idevice,
 
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-    auto descriptor_set_layout =
-        new ( std::nothrow ) VulkanDescriptorSetLayout {};
-    descriptor_set_layout->interface.handle = descriptor_set_layout;
-    *p                                      = &descriptor_set_layout->interface;
+    FT_INIT_INTERNAL( descriptor_set_layout, *p, VulkanDescriptorSetLayout );
 
     descriptor_set_layout->interface.shader_count = shader_count;
     descriptor_set_layout->interface.shaders      = ishaders;
@@ -1985,9 +1977,7 @@ vk_create_compute_pipeline( const Device*       idevice,
 
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-    auto pipeline              = new ( std::nothrow ) VulkanPipeline {};
-    pipeline->interface.handle = pipeline;
-    *p                         = &pipeline->interface;
+    FT_INIT_INTERNAL( pipeline, *p, VulkanPipeline );
 
     pipeline->interface.type = PipelineType::eCompute;
 
@@ -2051,9 +2041,7 @@ vk_create_graphics_pipeline( const Device*       idevice,
 
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-    auto pipeline              = new ( std::nothrow ) VulkanPipeline {};
-    pipeline->interface.handle = pipeline;
-    *p                         = &pipeline->interface;
+    FT_INIT_INTERNAL( pipeline, *p, VulkanPipeline );
 
     pipeline->interface.type = PipelineType::eGraphics;
 
@@ -2272,9 +2260,7 @@ vk_create_buffer( const Device* idevice, const BufferDesc* desc, Buffer** p )
 
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-    auto buffer              = new ( std::nothrow ) VulkanBuffer {};
-    buffer->interface.handle = buffer;
-    *p                       = &buffer->interface;
+    FT_INIT_INTERNAL( buffer, *p, VulkanBuffer );
 
     buffer->interface.size            = desc->size;
     buffer->interface.descriptor_type = desc->descriptor_type;
@@ -2324,9 +2310,7 @@ vk_create_sampler( const Device* idevice, const SamplerDesc* desc, Sampler** p )
 
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-    auto sampler              = new ( std::nothrow ) VulkanSampler {};
-    sampler->interface.handle = sampler;
-    *p                        = &sampler->interface;
+    FT_INIT_INTERNAL( sampler, *p, VulkanSampler );
 
     VkSamplerCreateInfo sampler_create_info {};
     sampler_create_info.sType     = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -2378,9 +2362,7 @@ vk_create_image( const Device* idevice, const ImageDesc* desc, Image** p )
 
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-    auto image              = new ( std::nothrow ) VulkanImage {};
-    image->interface.handle = image;
-    *p                      = &image->interface;
+    FT_INIT_INTERNAL( image, *p, VulkanImage );
 
     VmaAllocationCreateInfo allocation_create_info {};
     allocation_create_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -2478,9 +2460,7 @@ vk_create_descriptor_set( const Device*            idevice,
 
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-    auto descriptor_set = new ( std::nothrow ) VulkanDescriptorSet {};
-    descriptor_set->interface.handle = descriptor_set;
-    *p                               = &descriptor_set->interface;
+    FT_INIT_INTERNAL( descriptor_set, *p, VulkanDescriptorSet );
 
     VkDescriptorSetAllocateInfo descriptor_set_allocate_info {};
     descriptor_set_allocate_info.sType =
@@ -2616,9 +2596,7 @@ vk_create_ui_context( CommandBuffer* cmd, const UiDesc* desc, UiContext** p )
     FT_FROM_HANDLE( queue, desc->queue, VulkanQueue );
     FT_FROM_HANDLE( render_pass, desc->render_pass, VulkanRenderPass );
 
-    auto context              = new ( std::nothrow ) VulkanUiContext {};
-    context->interface.handle = context;
-    *p                        = &context->interface;
+    FT_INIT_INTERNAL( context, *p, VulkanUiContext );
 
     VkDescriptorPoolSize pool_sizes[] = {
         { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
@@ -3335,10 +3313,7 @@ vk_create_renderer_backend( const RendererBackendDesc*, RendererBackend** p )
 
     read_shader = vk_read_shader;
 
-    VulkanRendererBackend* backend =
-        new ( std::nothrow ) VulkanRendererBackend {};
-    backend->interface.handle = backend;
-    *p                        = &backend->interface;
+    FT_INIT_INTERNAL( backend, *p, VulkanRendererBackend );
 
     // TODO: provide posibility to set allocator from user code
     backend->vulkan_allocator = nullptr;
@@ -3356,17 +3331,18 @@ vk_create_renderer_backend( const RendererBackendDesc*, RendererBackend** p )
     app_info.engineVersion      = VK_MAKE_VERSION( 0, 0, 1 );
     app_info.apiVersion         = backend->api_version;
 
-    u32 instance_create_flags;
-    auto extensions = get_instance_extensions(instance_create_flags);
-    auto layers = get_instance_layers();
+    u32  instance_create_flags;
+    auto extensions = get_instance_extensions( instance_create_flags );
+    auto layers     = get_instance_layers();
 
     VkInstanceCreateInfo instance_create_info {};
     instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instance_create_info.pNext = nullptr;
-    instance_create_info.pApplicationInfo        = &app_info;
-    instance_create_info.enabledLayerCount       = static_cast<u32>(layers.size());
-    instance_create_info.ppEnabledLayerNames     = layers.data();
-    instance_create_info.enabledExtensionCount   = static_cast<u32>(extensions.size());
+    instance_create_info.pApplicationInfo  = &app_info;
+    instance_create_info.enabledLayerCount = static_cast<u32>( layers.size() );
+    instance_create_info.ppEnabledLayerNames = layers.data();
+    instance_create_info.enabledExtensionCount =
+        static_cast<u32>( extensions.size() );
     instance_create_info.ppEnabledExtensionNames = extensions.data();
     instance_create_info.flags                   = instance_create_flags;
 

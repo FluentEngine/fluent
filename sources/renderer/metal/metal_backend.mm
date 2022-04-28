@@ -49,6 +49,150 @@ to_mtl_sample_count( SampleCount sample_count )
     }
 }
 
+static inline MTLStorageMode
+to_mtl_storage_mode( MemoryUsage usage )
+{
+    // TODO:
+    switch ( usage )
+    {
+    case MemoryUsage::eCpuToGpu: return MTLStorageModeShared;
+    case MemoryUsage::eGpuOnly: return MTLStorageModeManaged;
+    default: return MTLStorageModeManaged;
+    }
+}
+
+static inline MTLTextureUsage
+to_mtl_texture_usage( DescriptorType type )
+{
+    switch ( type )
+    {
+    case DescriptorType::eSampledImage: return MTLTextureUsageShaderRead;
+    case DescriptorType::eStorageImage: return MTLTextureUsageShaderWrite;
+    case DescriptorType::eColorAttachment:
+    case DescriptorType::eInputAttachment:
+    case DescriptorType::eDepthStencilAttachment:
+        return MTLTextureUsageRenderTarget;
+    default: FT_ASSERT( false ); return MTLTextureUsage( -1 );
+    }
+}
+
+static inline MTLVertexFormat
+to_mtl_vertex_format( Format format )
+{
+    switch ( format )
+    {
+    case Format::eR8G8Unorm: return MTLVertexFormatUChar2Normalized;
+    case Format::eR8G8B8Unorm: return MTLVertexFormatUChar3Normalized;
+    case Format::eR8G8B8A8Unorm: return MTLVertexFormatUChar4Normalized;
+
+    case Format::eR8G8Snorm: return MTLVertexFormatChar2Normalized;
+    case Format::eR8G8B8Snorm: return MTLVertexFormatChar3Normalized;
+    case Format::eR8G8B8A8Snorm: return MTLVertexFormatChar4Normalized;
+
+    case Format::eR16G16Unorm: return MTLVertexFormatUShort2Normalized;
+    case Format::eR16G16B16Unorm: return MTLVertexFormatUShort3Normalized;
+    case Format::eR16G16B16A16Unorm: return MTLVertexFormatUShort4Normalized;
+
+    case Format::eR16G16Snorm: return MTLVertexFormatShort2Normalized;
+    case Format::eR16G16B16Snorm: return MTLVertexFormatShort3Normalized;
+    case Format::eR16G16B16A16Snorm: return MTLVertexFormatShort4Normalized;
+
+    case Format::eR16G16Sint: return MTLVertexFormatShort2;
+    case Format::eR16G16B16Sint: return MTLVertexFormatShort3;
+    case Format::eR16G16B16A16Sint: return MTLVertexFormatShort4;
+
+    case Format::eR16G16Uint: return MTLVertexFormatUShort2;
+    case Format::eR16G16B16Uint: return MTLVertexFormatUShort3;
+    case Format::eR16G16B16A16Uint: return MTLVertexFormatUShort4;
+
+    case Format::eR16G16Sfloat: return MTLVertexFormatHalf2;
+    case Format::eR16G16B16Sfloat: return MTLVertexFormatHalf3;
+    case Format::eR16G16B16A16Sfloat: return MTLVertexFormatHalf4;
+
+    case Format::eR32Sfloat: return MTLVertexFormatFloat;
+    case Format::eR32G32Sfloat: return MTLVertexFormatFloat2;
+    case Format::eR32G32B32Sfloat: return MTLVertexFormatFloat3;
+    case Format::eR32G32B32A32Sfloat: return MTLVertexFormatFloat4;
+
+    case Format::eR32Sint: return MTLVertexFormatInt;
+    case Format::eR32G32Sint: return MTLVertexFormatInt2;
+    case Format::eR32G32B32Sint: return MTLVertexFormatInt3;
+    case Format::eR32G32B32A32Sint: return MTLVertexFormatInt4;
+
+    case Format::eR32Uint: return MTLVertexFormatUInt;
+    case Format::eR32G32Uint: return MTLVertexFormatUInt2;
+    case Format::eR32G32B32Uint: return MTLVertexFormatUInt3;
+    case Format::eR32G32B32A32Uint: return MTLVertexFormatUInt4;
+    default: FT_ASSERT( false ); return MTLVertexFormatInvalid;
+    }
+}
+
+static inline MTLVertexStepFunction
+to_mtl_vertex_step_function( VertexInputRate input_rate )
+{
+    switch ( input_rate )
+    {
+    case VertexInputRate::eVertex: return MTLVertexStepFunctionPerVertex;
+    case VertexInputRate::eInstance: return MTLVertexStepFunctionPerInstance;
+    default: FT_ASSERT( false ); return MTLVertexStepFunction( -1 );
+    }
+}
+
+static inline MTLSamplerMinMagFilter
+to_mtl_sampler_min_mag_filter( Filter filter )
+{
+    switch ( filter )
+    {
+    case Filter::eLinear: return MTLSamplerMinMagFilterLinear;
+    case Filter::eNearest: return MTLSamplerMinMagFilterNearest;
+    default: FT_ASSERT( false ); return MTLSamplerMinMagFilter( -1 );
+    }
+}
+
+static inline MTLSamplerMipFilter
+to_mtl_sampler_mip_filter( SamplerMipmapMode mode )
+{
+    switch ( mode )
+    {
+    case SamplerMipmapMode::eLinear: return MTLSamplerMipFilterLinear;
+    case SamplerMipmapMode::eNearest: return MTLSamplerMipFilterNearest;
+    default: FT_ASSERT( false ); return MTLSamplerMipFilter( -1 );
+    }
+}
+
+static inline MTLSamplerAddressMode
+to_mtl_sampler_address_mode( SamplerAddressMode mode )
+{
+    switch ( mode )
+    {
+    case SamplerAddressMode::eRepeat: return MTLSamplerAddressModeRepeat;
+    case SamplerAddressMode::eMirroredRepeat:
+        return MTLSamplerAddressModeMirrorRepeat;
+    case SamplerAddressMode::eClampToEdge:
+        return MTLSamplerAddressModeClampToEdge;
+    case SamplerAddressMode::eClampToBorder:
+        return MTLSamplerAddressModeClampToEdge;
+    default: FT_ASSERT( false ); return MTLSamplerAddressMode( -1 );
+    }
+}
+
+static inline MTLCompareFunction
+to_mtl_compare_function( CompareOp op )
+{
+    switch ( op )
+    {
+    case CompareOp::eNever: return MTLCompareFunctionNever;
+    case CompareOp::eLess: return MTLCompareFunctionLess;
+    case CompareOp::eEqual: return MTLCompareFunctionEqual;
+    case CompareOp::eLessOrEqual: return MTLCompareFunctionLessEqual;
+    case CompareOp::eGreater: return MTLCompareFunctionGreater;
+    case CompareOp::eNotEqual: return MTLCompareFunctionNotEqual;
+    case CompareOp::eGreaterOrEqual: return MTLCompareFunctionGreaterEqual;
+    case CompareOp::eAlways: return MTLCompareFunctionAlways;
+    default: FT_ASSERT( false ); return MTLCompareFunction( -1 );
+    }
+}
+
 void
 mtl_destroy_renderer_backend( RendererBackend* ibackend )
 {
@@ -209,11 +353,8 @@ mtl_create_swapchain( const Device*        idevice,
     FT_ASSERT( p );
 
     FT_FROM_HANDLE( device, idevice, MetalDevice );
-    FT_FROM_HANDLE( queue, desc->queue, MetalQueue );
 
-    auto swapchain              = new ( std::nothrow ) MetalSwapchain {};
-    swapchain->interface.handle = swapchain;
-    *p                          = &swapchain->interface;
+    FT_INIT_INTERNAL( swapchain, *p, MetalSwapchain );
 
     swapchain->interface.min_image_count = desc->min_image_count;
     swapchain->interface.image_count     = desc->min_image_count;
@@ -236,10 +377,9 @@ mtl_create_swapchain( const Device*        idevice,
 
     for ( u32 i = 0; i < swapchain->interface.image_count; i++ )
     {
-        auto image     = new ( std::nothrow ) MetalImage {};
-        image->texture = nil;
+        FT_INIT_INTERNAL( image, swapchain->interface.images[ i ], MetalImage );
 
-        image->interface.handle          = image;
+        image->texture                   = nil;
         image->interface.width           = desc->width;
         image->interface.height          = desc->height;
         image->interface.depth           = 1;
@@ -248,7 +388,6 @@ mtl_create_swapchain( const Device*        idevice,
         image->interface.descriptor_type = DescriptorType::eColorAttachment;
         image->interface.mip_level_count = 1;
         image->interface.sample_count    = SampleCount::e1;
-        swapchain->interface.images[ i ] = &image->interface;
     }
 }
 
@@ -258,12 +397,12 @@ mtl_resize_swapchain( const Device* idevice,
                       u32           width,
                       u32           height )
 {
-    FT_ASSERT(idevice);
-    FT_ASSERT(iswapchain);
+    FT_ASSERT( idevice );
+    FT_ASSERT( iswapchain );
 
-    FT_FROM_HANDLE(swapchain, iswapchain, MetalSwapchain);
-    
-    swapchain->interface.width = width;
+    FT_FROM_HANDLE( swapchain, iswapchain, MetalSwapchain );
+
+    swapchain->interface.width  = width;
     swapchain->interface.height = height;
 }
 
@@ -292,9 +431,7 @@ mtl_create_command_pool( const Device*          idevice,
     FT_ASSERT( desc );
     FT_ASSERT( p );
 
-    auto cmd_pool              = new ( std::nothrow ) MetalCommandPool {};
-    cmd_pool->interface.handle = cmd_pool;
-    *p                         = &cmd_pool->interface;
+    FT_INIT_INTERNAL( cmd_pool, *p, MetalCommandPool );
 
     cmd_pool->interface.queue = desc->queue;
 }
@@ -405,9 +542,7 @@ mtl_create_render_pass( const Device*         idevice,
 {
     FT_ASSERT( p );
 
-    auto render_pass              = new ( std::nothrow ) MetalRenderPass {};
-    render_pass->interface.handle = render_pass;
-    *p                            = &render_pass->interface;
+    FT_INIT_INTERNAL( render_pass, *p, MetalRenderPass );
 
     MTLRenderPassDescriptor* pass =
         [MTLRenderPassDescriptor renderPassDescriptor];
@@ -452,6 +587,7 @@ mtl_create_render_pass( const Device*         idevice,
         pass.depthAttachment.storeAction = MTLStoreActionStore;
 
         render_pass->interface.has_depth_stencil = true;
+        render_pass->depth_attachment            = image;
     }
 }
 
@@ -460,15 +596,15 @@ mtl_resize_render_pass( const Device*         idevice,
                         RenderPass*           irender_pass,
                         const RenderPassDesc* desc )
 {
-    FT_ASSERT(idevice);
-    FT_ASSERT(irender_pass);
-    FT_ASSERT(desc);
-    
-    FT_FROM_HANDLE(render_pass, irender_pass, MetalRenderPass);
-    render_pass->render_pass.renderTargetWidth = desc->width;
+    FT_ASSERT( idevice );
+    FT_ASSERT( irender_pass );
+    FT_ASSERT( desc );
+
+    FT_FROM_HANDLE( render_pass, irender_pass, MetalRenderPass );
+    render_pass->render_pass.renderTargetWidth  = desc->width;
     render_pass->render_pass.renderTargetHeight = desc->height;
-    render_pass->interface.width = desc->width;
-    render_pass->interface.height = desc->height;
+    render_pass->interface.width                = desc->width;
+    render_pass->interface.height               = desc->height;
 }
 
 void
@@ -491,20 +627,17 @@ mtl_create_shader( const Device* idevice, ShaderDesc* desc, Shader** p )
 
     FT_FROM_HANDLE( device, idevice, MetalDevice );
 
-    auto shader              = new ( std::nothrow ) MetalShader {};
-    shader->interface.handle = shader;
-    *p                       = &shader->interface;
+    FT_INIT_INTERNAL( shader, *p, MetalShader );
 
     shader->interface.stage = desc->stage;
-    
-    NSError* err;
 
-    dispatch_data_t lib_data = dispatch_data_create( desc->bytecode,
-                                                     desc->bytecode_size,
-                                                     dispatch_get_main_queue(),
-                                                     ^ {} );
-    id<MTLLibrary>  library  = [device->device newLibraryWithData:lib_data
-                                                          error:&err];
+    dispatch_data_t lib_data =
+        dispatch_data_create( desc->bytecode,
+                              desc->bytecode_size,
+                              nil,
+                              DISPATCH_DATA_DESTRUCTOR_DEFAULT );
+    id<MTLLibrary> library = [device->device newLibraryWithData:lib_data
+                                                          error:nil];
 
     shader->shader = [library newFunctionWithName:@"main0"];
 }
@@ -546,104 +679,143 @@ mtl_create_graphics_pipeline( const Device*       idevice,
                               const PipelineDesc* desc,
                               Pipeline**          p )
 {
-    FT_ASSERT(idevice);
-    FT_ASSERT(desc);
-    FT_ASSERT(p);
-    
-    FT_FROM_HANDLE(device, idevice, MetalDevice);
-    
-    auto pipeline = new (std::nothrow) MetalPipeline{};
-    pipeline->interface.handle = pipeline;
-    *p = &pipeline->interface;
-    
+    FT_ASSERT( idevice );
+    FT_ASSERT( desc );
+    FT_ASSERT( p );
+
+    FT_FROM_HANDLE( device, idevice, MetalDevice );
+
+    FT_INIT_INTERNAL( pipeline, *p, MetalPipeline );
+
     pipeline->pipeline_descriptor = [[MTLRenderPipelineDescriptor alloc] init];
-    
-    for (u32 i = 0; i < desc->shader_count; ++i)
+
+    for ( u32 i = 0; i < desc->shader_count; ++i )
     {
-        FT_FROM_HANDLE(shader, desc->shaders[i], MetalShader);
-        switch (shader->interface.stage)
+        FT_FROM_HANDLE( shader, desc->shaders[ i ], MetalShader );
+        switch ( shader->interface.stage )
         {
-            case ShaderStage::eVertex:
-            {
-                pipeline->pipeline_descriptor.vertexFunction = shader->shader;
-                break;
-            }
-            case ShaderStage::eFragment:
-            {
-                pipeline->pipeline_descriptor.fragmentFunction = shader->shader;
-                break;
-            }
-            default:
-            {
-                break;
-            }
+        case ShaderStage::eVertex:
+        {
+            pipeline->pipeline_descriptor.vertexFunction = shader->shader;
+            break;
+        }
+        case ShaderStage::eFragment:
+        {
+            pipeline->pipeline_descriptor.fragmentFunction = shader->shader;
+            break;
+        }
+        default:
+        {
+            break;
+        }
         }
     }
-    
-    FT_FROM_HANDLE(render_pass, desc->render_pass, MetalRenderPass);
+
+    MTLVertexDescriptor* vertex_layout = [MTLVertexDescriptor vertexDescriptor];
+
+    for ( u32 i = 0; i < desc->vertex_layout.binding_desc_count; ++i )
+    {
+        u32 binding = desc->vertex_layout.binding_descs[ i ].binding;
+        vertex_layout.layouts[ binding ].stepFunction =
+            to_mtl_vertex_step_function(
+                desc->vertex_layout.binding_descs[ i ].input_rate );
+        vertex_layout.layouts[ binding ].stride =
+            desc->vertex_layout.binding_descs[ i ].stride;
+    }
+
+    for ( u32 i = 0; i < desc->vertex_layout.attribute_desc_count; ++i )
+    {
+        u32 location = desc->vertex_layout.attribute_descs[ i ].location;
+        vertex_layout.attributes[ location ].format = to_mtl_vertex_format(
+            desc->vertex_layout.attribute_descs[ i ].format );
+        vertex_layout.attributes[ location ].offset =
+            desc->vertex_layout.attribute_descs[ i ].offset;
+        vertex_layout.attributes[ location ].bufferIndex =
+            desc->vertex_layout.attribute_descs[ i ].binding;
+    }
+
+    pipeline->pipeline_descriptor.vertexDescriptor = vertex_layout;
+
+    FT_FROM_HANDLE( render_pass, desc->render_pass, MetalRenderPass );
     for ( u32 i = 0; i < render_pass->interface.color_attachment_count; ++i )
     {
-        pipeline->pipeline_descriptor.colorAttachments[i].pixelFormat = to_mtl_format( render_pass->color_attachments[i]->interface.format );
+        pipeline->pipeline_descriptor.colorAttachments[ i ].pixelFormat =
+            to_mtl_format(
+                render_pass->color_attachments[ i ]->interface.format );
     }
-    
-    NSError* err;
-    pipeline->pipeline = [device->device newRenderPipelineStateWithDescriptor:pipeline->pipeline_descriptor error:&err];
+
+    if ( render_pass->interface.has_depth_stencil )
+    {
+        pipeline->pipeline_descriptor.depthAttachmentPixelFormat =
+            to_mtl_format( render_pass->depth_attachment->interface.format );
+    }
+
+    NSError*                     err;
+    MTLRenderPipelineReflection* reflection;
+    pipeline->pipeline = [device->device
+        newRenderPipelineStateWithDescriptor:pipeline->pipeline_descriptor
+                                     options:MTLPipelineOptionArgumentInfo
+                                  reflection:&reflection
+                                       error:&err];
 }
 
 void
 mtl_destroy_pipeline( const Device* idevice, Pipeline* ipipeline )
 {
-    FT_ASSERT(idevice);
-    FT_ASSERT(ipipeline);
-    
-    FT_FROM_HANDLE(pipeline, ipipeline, MetalPipeline);
-    
+    FT_ASSERT( idevice );
+    FT_ASSERT( ipipeline );
+
+    FT_FROM_HANDLE( pipeline, ipipeline, MetalPipeline );
+
     [pipeline->pipeline release];
     [pipeline->pipeline_descriptor release];
-    operator delete(pipeline, std::nothrow);
+    operator delete( pipeline, std::nothrow );
 }
 
 void
 mtl_create_buffer( const Device* idevice, const BufferDesc* desc, Buffer** p )
 {
-    FT_ASSERT(idevice);
-    FT_ASSERT(desc);
-    FT_ASSERT(p);
-    
-    FT_FROM_HANDLE(device, idevice, MetalDevice);
-    
-    auto buffer = new (std::nothrow) MetalBuffer{};
-    buffer->interface.handle = buffer;
-    *p = &buffer->interface;
-    
-    buffer->interface.size = desc->size;
+    FT_ASSERT( idevice );
+    FT_ASSERT( desc );
+    FT_ASSERT( p );
+
+    FT_FROM_HANDLE( device, idevice, MetalDevice );
+
+    FT_INIT_INTERNAL( buffer, *p, MetalBuffer );
+
+    buffer->interface.size            = desc->size;
     buffer->interface.descriptor_type = desc->descriptor_type;
-    buffer->interface.memory_usage = desc->memory_usage;
-    buffer->interface.resource_state = ResourceState::eUndefined;
-    
-    buffer->buffer = [device->device newBufferWithLength:desc->size options:MTLResourceOptionCPUCacheModeDefault];
+    buffer->interface.memory_usage    = desc->memory_usage;
+    buffer->interface.resource_state  = ResourceState::eUndefined;
+
+    buffer->buffer = [device->device
+        newBufferWithLength:desc->size
+                    options:MTLResourceCPUCacheModeDefaultCache];
 }
 
 void
 mtl_destroy_buffer( const Device* idevice, Buffer* ibuffer )
 {
-    FT_ASSERT(idevice);
-    FT_ASSERT(ibuffer);
-    
-    FT_FROM_HANDLE(buffer, ibuffer, MetalBuffer);
+    FT_ASSERT( idevice );
+    FT_ASSERT( ibuffer );
+
+    FT_FROM_HANDLE( buffer, ibuffer, MetalBuffer );
     [buffer->buffer release];
-    operator delete(buffer, std::nothrow);
+    operator delete( buffer, std::nothrow );
 }
 
 void*
 mtl_map_memory( const Device* idevice, Buffer* ibuffer )
 {
-    return nullptr;
+    FT_FROM_HANDLE( buffer, ibuffer, MetalBuffer );
+    buffer->interface.mapped_memory = buffer->buffer.contents;
+    return buffer->interface.mapped_memory;
 }
 
 void
 mtl_unmap_memory( const Device* idevice, Buffer* ibuffer )
 {
+    ibuffer->mapped_memory = nullptr;
 }
 
 void
@@ -651,21 +823,99 @@ mtl_create_sampler( const Device*      idevice,
                     const SamplerDesc* desc,
                     Sampler**          p )
 {
+    FT_ASSERT( idevice );
+    FT_ASSERT( desc );
+    FT_ASSERT( p );
+
+    FT_FROM_HANDLE( device, idevice, MetalDevice );
+
+    FT_INIT_INTERNAL( sampler, *p, MetalSampler );
+
+    MTLSamplerDescriptor* sampler_descriptor =
+        [[MTLSamplerDescriptor alloc] init];
+    sampler_descriptor.minFilter =
+        to_mtl_sampler_min_mag_filter( desc->min_filter );
+    sampler_descriptor.magFilter =
+        to_mtl_sampler_min_mag_filter( desc->mag_filter );
+    sampler_descriptor.mipFilter =
+        to_mtl_sampler_mip_filter( desc->mipmap_mode );
+    sampler_descriptor.sAddressMode =
+        to_mtl_sampler_address_mode( desc->address_mode_u );
+    sampler_descriptor.tAddressMode =
+        to_mtl_sampler_address_mode( desc->address_mode_v );
+    sampler_descriptor.rAddressMode =
+        to_mtl_sampler_address_mode( desc->address_mode_w );
+    sampler_descriptor.maxAnisotropy = desc->max_anisotropy;
+    sampler_descriptor.compareFunction =
+        to_mtl_compare_function( desc->compare_op );
+    sampler_descriptor.lodMinClamp = desc->min_lod;
+    sampler_descriptor.lodMaxClamp = desc->max_lod;
+
+    sampler->sampler =
+        [device->device newSamplerStateWithDescriptor:sampler_descriptor];
 }
 
 void
 mtl_destroy_sampler( const Device* idevice, Sampler* isampler )
 {
+    FT_ASSERT( idevice );
+    FT_ASSERT( isampler );
+
+    FT_FROM_HANDLE( sampler, isampler, MetalSampler );
+
+    operator delete( sampler, std::nothrow );
 }
 
 void
 mtl_create_image( const Device* idevice, const ImageDesc* desc, Image** p )
 {
+    FT_ASSERT( idevice );
+    FT_ASSERT( desc );
+    FT_ASSERT( p );
+
+    FT_FROM_HANDLE( device, idevice, MetalDevice );
+
+    FT_INIT_INTERNAL( image, *p, MetalImage );
+
+    image->interface.width           = desc->width;
+    image->interface.height          = desc->height;
+    image->interface.depth           = desc->depth;
+    image->interface.format          = desc->format;
+    image->interface.descriptor_type = desc->descriptor_type;
+    image->interface.sample_count    = desc->sample_count;
+    image->interface.layer_count     = desc->layer_count;
+    image->interface.mip_level_count = desc->mip_levels;
+
+    image->texture_descriptor = [[MTLTextureDescriptor alloc] init];
+
+    image->texture_descriptor.width            = desc->width;
+    image->texture_descriptor.height           = desc->height;
+    image->texture_descriptor.depth            = desc->depth;
+    image->texture_descriptor.arrayLength      = desc->layer_count;
+    image->texture_descriptor.mipmapLevelCount = desc->mip_levels;
+    image->texture_descriptor.sampleCount =
+        to_mtl_sample_count( desc->sample_count );
+    image->texture_descriptor.storageMode = MTLStorageModeManaged; // TODO:
+    image->texture_descriptor.textureType = MTLTextureType2D;      // TODO:
+    image->texture_descriptor.usage =
+        to_mtl_texture_usage( desc->descriptor_type );
+    image->texture_descriptor.pixelFormat = to_mtl_format( desc->format );
+
+    image->texture =
+        [device->device newTextureWithDescriptor:image->texture_descriptor];
 }
 
 void
 mtl_destroy_image( const Device* idevice, Image* iimage )
 {
+    FT_ASSERT( idevice );
+    FT_ASSERT( iimage );
+
+    FT_FROM_HANDLE( image, iimage, MetalImage );
+
+    [image->texture_descriptor release];
+    [image->texture release];
+    operator delete( image, std::nothrow );
 }
 
 void
@@ -673,11 +923,53 @@ mtl_create_descriptor_set( const Device*            idevice,
                            const DescriptorSetDesc* desc,
                            DescriptorSet**          p )
 {
+    FT_ASSERT( idevice );
+    FT_ASSERT( desc );
+    FT_ASSERT( p );
+
+    FT_INIT_INTERNAL( set, *p, MetalDescriptorSet );
+
+    for ( u32 i = 0; i < static_cast<u32>( ShaderStage::eCount ); ++i ) {}
+
+    auto& stage =
+        set->descriptors[ static_cast<u32>( ShaderStage::eFragment ) ];
+    stage.sampler_count = 1;
+    stage.texture_count = 1;
+    stage.samplers      = static_cast<id<MTLSamplerState>*>(
+        malloc( stage.sampler_count * sizeof( id<MTLSamplerState> ) ) );
+    stage.textures = static_cast<id<MTLTexture>*>(
+        malloc( stage.texture_count * sizeof( id<MTLTexture> ) ) );
 }
 
 void
 mtl_destroy_descriptor_set( const Device* idevice, DescriptorSet* iset )
 {
+    FT_ASSERT( idevice );
+    FT_ASSERT( iset );
+
+    FT_FROM_HANDLE( set, iset, MetalDescriptorSet );
+
+    for ( u32 i = 0; i < static_cast<u32>( ShaderStage::eCount ); ++i )
+    {
+        auto& stage = set->descriptors[ i ];
+
+        if ( stage.samplers )
+        {
+            free( stage.samplers );
+        }
+
+        if ( stage.textures )
+        {
+            free( stage.textures );
+        }
+
+        if ( stage.buffers )
+        {
+            free( stage.buffers );
+        }
+    }
+
+    operator delete( set, std::nothrow );
 }
 
 void
@@ -686,6 +978,17 @@ mtl_update_descriptor_set( const Device*          idevice,
                            u32                    count,
                            const DescriptorWrite* writes )
 {
+    FT_FROM_HANDLE( set, iset, MetalDescriptorSet );
+    FT_FROM_HANDLE( s,
+                    writes[ 0 ].image_descriptors[ 0 ].sampler,
+                    MetalSampler );
+    FT_FROM_HANDLE( t, writes[ 1 ].image_descriptors[ 0 ].image, MetalImage );
+
+    auto& stage =
+        set->descriptors[ static_cast<u32>( ShaderStage::eFragment ) ];
+
+    stage.samplers[ 0 ] = s->sampler;
+    stage.textures[ 0 ] = t->texture;
 }
 
 void
@@ -845,12 +1148,12 @@ mtl_cmd_set_viewport( const CommandBuffer* icmd,
 void
 mtl_cmd_bind_pipeline( const CommandBuffer* icmd, const Pipeline* ipipeline )
 {
-    FT_ASSERT(icmd);
-    FT_ASSERT(ipipeline);
-    
-    FT_FROM_HANDLE(cmd, icmd, MetalCommandBuffer);
-    FT_FROM_HANDLE(pipeline, ipipeline, MetalPipeline);
-    
+    FT_ASSERT( icmd );
+    FT_ASSERT( ipipeline );
+
+    FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
+    FT_FROM_HANDLE( pipeline, ipipeline, MetalPipeline );
+
     [cmd->encoder setRenderPipelineState:pipeline->pipeline];
 }
 
@@ -861,11 +1164,13 @@ mtl_cmd_draw( const CommandBuffer* icmd,
               u32                  first_vertex,
               u32                  first_instance )
 {
-    FT_ASSERT(icmd);
-    
-    FT_FROM_HANDLE(cmd, icmd, MetalCommandBuffer);
-    
-    [cmd->encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:first_vertex vertexCount:vertex_count];
+    FT_ASSERT( icmd );
+
+    FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
+
+    [cmd->encoder drawPrimitives:MTLPrimitiveTypeTriangle
+                     vertexStart:first_vertex
+                     vertexCount:vertex_count];
 }
 
 void
@@ -876,6 +1181,15 @@ mtl_cmd_draw_indexed( const CommandBuffer* icmd,
                       i32                  vertex_offset,
                       u32                  first_instance )
 {
+    FT_ASSERT( icmd );
+
+    FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
+
+    [cmd->encoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+                             indexCount:index_count
+                              indexType:MTLIndexTypeUInt32
+                            indexBuffer:cmd->index_buffer
+                      indexBufferOffset:first_index];
 }
 
 void
@@ -883,6 +1197,13 @@ mtl_cmd_bind_vertex_buffer( const CommandBuffer* icmd,
                             const Buffer*        ibuffer,
                             const u64            offset )
 {
+    FT_ASSERT( icmd );
+    FT_ASSERT( ibuffer );
+
+    FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
+    FT_FROM_HANDLE( buffer, ibuffer, MetalBuffer );
+
+    [cmd->encoder setVertexBuffer:buffer->buffer offset:offset atIndex:0];
 }
 
 void
@@ -890,6 +1211,14 @@ mtl_cmd_bind_index_buffer_u16( const CommandBuffer* icmd,
                                const Buffer*        ibuffer,
                                const u64            offset )
 {
+    FT_ASSERT( icmd );
+    FT_ASSERT( ibuffer );
+
+    FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
+    FT_FROM_HANDLE( buffer, ibuffer, MetalBuffer );
+
+    cmd->index_type   = MTLIndexTypeUInt16;
+    cmd->index_buffer = buffer->buffer;
 }
 
 void
@@ -897,6 +1226,14 @@ mtl_cmd_bind_index_buffer_u32( const CommandBuffer* icmd,
                                const Buffer*        ibuffer,
                                u64                  offset )
 {
+    FT_ASSERT( icmd );
+    FT_ASSERT( ibuffer );
+
+    FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
+    FT_FROM_HANDLE( buffer, ibuffer, MetalBuffer );
+
+    cmd->index_type   = MTLIndexTypeUInt32;
+    cmd->index_buffer = buffer->buffer;
 }
 
 void
@@ -907,6 +1244,13 @@ mtl_cmd_copy_buffer( const CommandBuffer* icmd,
                      u64                  dst_offset,
                      u64                  size )
 {
+    FT_FROM_HANDLE( src, isrc, MetalBuffer );
+    FT_FROM_HANDLE( dst, idst, MetalBuffer );
+
+    u8* src_ptr = static_cast<u8*>( src->buffer.contents );
+    u8* dst_ptr = static_cast<u8*>( dst->buffer.contents );
+
+    std::memcpy( dst_ptr + dst_offset, src_ptr + src_offset, size );
 }
 
 void
@@ -915,6 +1259,21 @@ mtl_cmd_copy_buffer_to_image( const CommandBuffer* icmd,
                               u64                  src_offset,
                               Image*               idst )
 {
+    FT_FROM_HANDLE( src, isrc, MetalBuffer );
+    FT_FROM_HANDLE( dst, idst, MetalImage );
+
+    u8* src_ptr = static_cast<u8*>( src->buffer.contents );
+
+    MTLRegion region = {
+        { 0, 0, 0 },
+        { dst->interface.width, dst->interface.height, dst->interface.depth }
+    };
+
+    NSUInteger bytesPerRow = 4 * dst->interface.width;
+    [dst->texture replaceRegion:region
+                    mipmapLevel:0
+                      withBytes:src_ptr + src_offset
+                    bytesPerRow:bytesPerRow];
 }
 
 void
@@ -966,6 +1325,23 @@ mtl_cmd_bind_descriptor_set( const CommandBuffer* icmd,
                              const DescriptorSet* iset,
                              const Pipeline*      ipipeline )
 {
+    FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
+    FT_FROM_HANDLE( set, iset, MetalDescriptorSet );
+
+    for ( u32 i = 0; i < static_cast<u32>( ShaderStage::eCount ); ++i )
+    {
+        auto& stage = set->descriptors[ i ];
+
+        [cmd->encoder
+            setFragmentSamplerStates:stage.samplers
+                           withRange:NSMakeRange( 0, stage.sampler_count )];
+        [cmd->encoder
+            setFragmentTextures:stage.textures
+                      withRange:NSMakeRange( 0, stage.texture_count )];
+        [cmd->encoder setFragmentBuffers:stage.buffers
+                                 offsets:nil
+                               withRange:NSMakeRange( 0, stage.buffer_count )];
+    }
 }
 
 std::vector<char>
@@ -1053,9 +1429,7 @@ mtl_create_renderer_backend( const RendererBackendDesc*, RendererBackend** p )
 
     read_shader = mtl_read_shader;
 
-    auto renderer_backend = new ( std::nothrow ) MetalRendererBackend {};
-    renderer_backend->interface.handle = renderer_backend;
-    *p                                 = &renderer_backend->interface;
+    FT_INIT_INTERNAL( render_backend, *p, MetalRendererBackend );
 }
 
 }

@@ -39,10 +39,16 @@ struct MetalCommandBuffer
     id<MTLCommandBuffer>        cmd;
     id<MTLRenderCommandEncoder> encoder;
     MTLRenderPassDescriptor*    pass_descriptor;
+    id<MTLBuffer>               index_buffer;
+    MTLIndexType                index_type;
+    MTLPrimitiveType            primitive_type;
 #else
     void* cmd;
     void* encoder;
     void* pass_descriptor;
+    void* index_buffer;
+    u32   index_type;
+    u32   primitive_type;
 #endif
     CommandBuffer interface;
 };
@@ -69,14 +75,23 @@ struct MetalFence
 
 struct MetalSampler
 {
+#ifdef METAL_BACKEND_INCLUDE_OBJC
+    MTLSamplerDescriptor* sampler_descriptor;
+    id<MTLSamplerState>   sampler;
+#else
+    void* sampler_descriptor;
+    void* sampler;
+#endif
     Sampler interface;
 };
 
 struct MetalImage
 {
 #ifdef METAL_BACKEND_INCLUDE_OBJC
-    id<MTLTexture> texture;
+    MTLTextureDescriptor* texture_descriptor;
+    id<MTLTexture>        texture;
 #else
+    void* texture_descriptor;
     void* texture;
 #endif
     Image interface;
@@ -114,6 +129,7 @@ struct MetalRenderPass
 #endif
     b32         swapchain_render_pass;
     MetalImage* color_attachments[ MAX_ATTACHMENTS_COUNT ];
+    MetalImage* depth_attachment;
     RenderPass  interface;
 };
 
@@ -136,7 +152,7 @@ struct MetalPipeline
 {
 #ifdef METAL_BACKEND_INCLUDE_OBJC
     MTLRenderPipelineDescriptor* pipeline_descriptor;
-    id<MTLRenderPipelineState> pipeline;
+    id<MTLRenderPipelineState>   pipeline;
 #else
     void* pipeline_descriptor;
     void* pipeline;
@@ -144,8 +160,26 @@ struct MetalPipeline
     Pipeline interface;
 };
 
+struct MetalStageDescriptors
+{
+    u32 sampler_count;
+    u32 texture_count;
+    u32 buffer_count;
+#ifdef METAL_BACKEND_INCLUDE_OBJC
+    id<MTLSamplerState>* samplers;
+    id<MTLTexture>*      textures;
+    id<MTLBuffer>*       buffers;
+#else
+    void* samplers;
+    void* textures;
+    void* buffers;
+#endif
+};
+
 struct MetalDescriptorSet
 {
+    MetalStageDescriptors
+                  descriptors[ static_cast<u32>( ShaderStage::eCount ) ];
     DescriptorSet interface;
 };
 
