@@ -1815,22 +1815,45 @@ vk_create_shader( const Device* idevice, ShaderDesc* desc, Shader** p )
 
     FT_INIT_INTERNAL( shader, *p, VulkanShader );
 
-    shader->interface.stage = desc->stage;
+    auto create_module = []( const VulkanDevice*     device,
+                             VulkanShader*           shader,
+                             ShaderStage             stage,
+                             const ShaderModuleDesc& desc )
+    {
+        if ( desc.bytecode )
+        {
+            VkShaderModuleCreateInfo shader_create_info {};
+            shader_create_info.sType =
+                VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+            shader_create_info.pNext    = nullptr;
+            shader_create_info.flags    = 0;
+            shader_create_info.codeSize = desc.bytecode_size;
+            shader_create_info.pCode =
+                reinterpret_cast<const u32*>( desc.bytecode );
 
-    VkShaderModuleCreateInfo shader_create_info {};
-    shader_create_info.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    shader_create_info.pNext    = nullptr;
-    shader_create_info.flags    = 0;
-    shader_create_info.codeSize = desc->bytecode_size;
-    shader_create_info.pCode = reinterpret_cast<const u32*>( desc->bytecode );
+            VK_ASSERT( vkCreateShaderModule(
+                device->logical_device,
+                &shader_create_info,
+                device->vulkan_allocator,
+                &shader->shaders[ static_cast<u32>( stage ) ] ) );
 
-    VK_ASSERT( vkCreateShaderModule( device->logical_device,
-                                     &shader_create_info,
-                                     device->vulkan_allocator,
-                                     &shader->shader ) );
+            shader->interface.reflect_data[ static_cast<u32>( stage ) ] =
+                spirv_reflect( desc.bytecode_size, desc.bytecode );
+        }
+    };
 
-    shader->interface.reflect_data =
-        spirv_reflect( desc->bytecode_size, desc->bytecode );
+    create_module( device, shader, ShaderStage::eCompute, desc->compute );
+    create_module( device, shader, ShaderStage::eVertex, desc->vertex );
+    create_module( device,
+                   shader,
+                   ShaderStage::eTessellationControl,
+                   desc->tessellation_control );
+    create_module( device,
+                   shader,
+                   ShaderStage::eTessellationEvaluation,
+                   desc->tessellation_evaluation );
+    create_module( device, shader, ShaderStage::eGeometry, desc->geometry );
+    create_module( device, shader, ShaderStage::eFragment, desc->fragment );
 }
 
 void
@@ -1841,27 +1864,40 @@ vk_destroy_shader( const Device* idevice, Shader* ishader )
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
     FT_FROM_HANDLE( shader, ishader, VulkanShader );
 
-    vkDestroyShaderModule( device->logical_device,
-                           shader->shader,
-                           device->vulkan_allocator );
+    auto destroy_module = []( const VulkanDevice* device,
+                              ShaderStage         stage,
+                              VulkanShader*       shader )
+    {
+        if ( shader->shaders[ static_cast<u32>( stage ) ] )
+        {
+            vkDestroyShaderModule( device->logical_device,
+                                   shader->shaders[ static_cast<u32>( stage ) ],
+                                   device->vulkan_allocator );
+        }
+    };
+
+    destroy_module( device, ShaderStage::eCompute, shader );
+    destroy_module( device, ShaderStage::eVertex, shader );
+    destroy_module( device, ShaderStage::eTessellationControl, shader );
+    destroy_module( device, ShaderStage::eTessellationEvaluation, shader );
+    destroy_module( device, ShaderStage::eGeometry, shader );
+    destroy_module( device, ShaderStage::eFragment, shader );
+
     operator delete( shader, std::nothrow );
 }
 
 void
 vk_create_descriptor_set_layout( const Device*         idevice,
-                                 u32                   shader_count,
-                                 Shader**              ishaders,
+                                 Shader*               ishader,
                                  DescriptorSetLayout** p )
 {
     FT_ASSERT( p );
-    FT_ASSERT( shader_count );
 
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
     FT_INIT_INTERNAL( descriptor_set_layout, *p, VulkanDescriptorSetLayout );
 
-    descriptor_set_layout->interface.shader_count = shader_count;
-    descriptor_set_layout->interface.shaders      = ishaders;
+    descriptor_set_layout->interface.shader = ishader;
 
     // count bindings in all shaders
     u32                      binding_counts[ MAX_SET_COUNT ] = { 0 };
@@ -1873,16 +1909,13 @@ vk_create_descriptor_set_layout( const Device*         idevice,
 
     u32 set_count = 0;
 
-    for ( u32 i = 0; i < descriptor_set_layout->interface.shader_count; ++i )
+    for ( u32 i = 0; i < static_cast<u32>( ShaderStage::eCount ); ++i )
     {
-        for ( u32 j = 0; j < descriptor_set_layout->interface.shaders[ i ]
-                                 ->reflect_data.binding_count;
-              ++j )
+        for ( u32 j = 0; j < ishader->reflect_data[ i ].binding_count; ++j )
         {
-            auto& binding = descriptor_set_layout->interface.shaders[ i ]
-                                ->reflect_data.bindings[ j ];
-            u32  set           = binding.set;
-            u32& binding_count = binding_counts[ set ];
+            auto& binding       = ishader->reflect_data[ i ].bindings[ j ];
+            u32   set           = binding.set;
+            u32&  binding_count = binding_counts[ set ];
 
             bindings[ set ][ binding_count ].binding = binding.binding;
             bindings[ set ][ binding_count ].descriptorCount =
@@ -1891,8 +1924,8 @@ vk_create_descriptor_set_layout( const Device*         idevice,
                 to_vk_descriptor_type( binding.descriptor_type );
             bindings[ set ][ binding_count ].pImmutableSamplers =
                 nullptr; // ??? TODO
-            bindings[ set ][ binding_count ].stageFlags = to_vk_shader_stage(
-                descriptor_set_layout->interface.shaders[ i ]->stage );
+            bindings[ set ][ binding_count ].stageFlags =
+                to_vk_shader_stage( static_cast<ShaderStage>( i ) );
 
             if ( binding.descriptor_count > 1 )
             {
@@ -1976,6 +2009,7 @@ vk_create_compute_pipeline( const Device*       idevice,
     FT_ASSERT( desc->descriptor_set_layout );
 
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( shader, desc->shader, VulkanShader );
 
     FT_INIT_INTERNAL( pipeline, *p, VulkanPipeline );
 
@@ -1986,10 +2020,9 @@ vk_create_compute_pipeline( const Device*       idevice,
         VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     shader_stage_create_info.pNext = nullptr;
     shader_stage_create_info.flags = 0;
-    shader_stage_create_info.stage =
-        to_vk_shader_stage( desc->shaders[ 0 ]->stage );
+    shader_stage_create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
     shader_stage_create_info.module =
-        static_cast<VulkanShader*>( desc->shaders[ 0 ]->handle )->shader;
+        shader->shaders[ static_cast<u32>( ShaderStage::eCompute ) ];
     shader_stage_create_info.pName               = "main";
     shader_stage_create_info.pSpecializationInfo = nullptr;
 
@@ -2040,27 +2073,38 @@ vk_create_graphics_pipeline( const Device*       idevice,
     FT_ASSERT( desc->render_pass );
 
     FT_FROM_HANDLE( device, idevice, VulkanDevice );
+    FT_FROM_HANDLE( shader, desc->shader, VulkanShader );
 
     FT_INIT_INTERNAL( pipeline, *p, VulkanPipeline );
 
     pipeline->interface.type = PipelineType::eGraphics;
 
-    u32 shader_stage_count = desc->shader_count;
+    u32 shader_stage_count = 0;
     VkPipelineShaderStageCreateInfo
         shader_stage_create_infos[ MAX_STAGE_COUNT ];
-    for ( u32 i = 0; i < shader_stage_count; ++i )
+
+    for ( u32 i = 0; i < static_cast<u32>( ShaderStage::eCount ); ++i )
     {
-        shader_stage_create_infos[ i ].sType =
+        if ( shader->shaders[ i ] == VK_NULL_HANDLE )
+        {
+            continue;
+        }
+
+        shader_stage_create_infos[ shader_stage_count ].sType =
             VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        shader_stage_create_infos[ i ].pNext = nullptr;
-        shader_stage_create_infos[ i ].flags = 0;
-        shader_stage_create_infos[ i ].stage =
-            to_vk_shader_stage( desc->shaders[ i ]->stage );
-        shader_stage_create_infos[ i ].module =
-            static_cast<VulkanShader*>( desc->shaders[ i ]->handle )->shader;
-        shader_stage_create_infos[ i ].pName               = "main";
-        shader_stage_create_infos[ i ].pSpecializationInfo = nullptr;
+        shader_stage_create_infos[ shader_stage_count ].pNext = nullptr;
+        shader_stage_create_infos[ shader_stage_count ].flags = 0;
+        shader_stage_create_infos[ shader_stage_count ].stage =
+            to_vk_shader_stage( static_cast<ShaderStage>( i ) );
+        shader_stage_create_infos[ shader_stage_count ].module =
+            shader->shaders[ i ];
+        shader_stage_create_infos[ shader_stage_count ].pName = "main";
+        shader_stage_create_infos[ shader_stage_count ].pSpecializationInfo =
+            nullptr;
+        shader_stage_count++;
     }
+
+    FT_ASSERT( shader_stage_count > 0 );
 
     const VertexLayout& vertex_layout = desc->vertex_layout;
 

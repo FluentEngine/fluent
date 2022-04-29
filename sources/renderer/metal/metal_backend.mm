@@ -629,17 +629,34 @@ mtl_create_shader( const Device* idevice, ShaderDesc* desc, Shader** p )
 
     FT_INIT_INTERNAL( shader, *p, MetalShader );
 
-    shader->interface.stage = desc->stage;
+    auto create_function = []( const MetalDevice*      device,
+                               MetalShader*            shader,
+                               ShaderStage             stage,
+                               const ShaderModuleDesc& desc )
+    {
+        dispatch_data_t lib_data =
+            dispatch_data_create( desc.bytecode,
+                                  desc.bytecode_size,
+                                  nil,
+                                  DISPATCH_DATA_DESTRUCTOR_DEFAULT );
+        id<MTLLibrary> library = [device->device newLibraryWithData:lib_data
+                                                              error:nil];
 
-    dispatch_data_t lib_data =
-        dispatch_data_create( desc->bytecode,
-                              desc->bytecode_size,
-                              nil,
-                              DISPATCH_DATA_DESTRUCTOR_DEFAULT );
-    id<MTLLibrary> library = [device->device newLibraryWithData:lib_data
-                                                          error:nil];
+        shader->shaders[ static_cast<u32>( stage ) ] =
+            [library newFunctionWithName:@"main0"];
+    };
 
-    shader->shader = [library newFunctionWithName:@"main0"];
+    create_function( device, shader, ShaderStage::eCompute, desc->compute );
+    create_function( device, shader, ShaderStage::eVertex, desc->vertex );
+    create_function( device,
+                     shader,
+                     ShaderStage::eTessellationControl,
+                     desc->tessellation_control );
+    create_function( device,
+                     shader,
+                     ShaderStage::eTessellationEvaluation,
+                     desc->tessellation_evaluation );
+    create_function( device, shader, ShaderStage::eFragment, desc->fragment );
 }
 
 void
@@ -649,14 +666,20 @@ mtl_destroy_shader( const Device* idevice, Shader* ishader )
     FT_ASSERT( ishader );
 
     FT_FROM_HANDLE( shader, ishader, MetalShader );
-    [shader->shader release];
+
+    for ( u32 i = 0; i < static_cast<u32>( ShaderStage::eCount ); ++i )
+    {
+        if ( shader->shaders[ i ] )
+        {
+            [shader->shaders[ i ] release];
+        }
+    }
     operator delete( shader, std::nothrow );
 }
 
 void
 mtl_create_descriptor_set_layout( const Device*         idevice,
-                                  u32                   shader_count,
-                                  Shader**              ishaders,
+                                  Shader*               ishader,
                                   DescriptorSetLayout** p )
 {
 }
@@ -684,24 +707,30 @@ mtl_create_graphics_pipeline( const Device*       idevice,
     FT_ASSERT( p );
 
     FT_FROM_HANDLE( device, idevice, MetalDevice );
+    FT_FROM_HANDLE( shader, desc->shader, MetalShader );
 
     FT_INIT_INTERNAL( pipeline, *p, MetalPipeline );
 
     pipeline->pipeline_descriptor = [[MTLRenderPipelineDescriptor alloc] init];
 
-    for ( u32 i = 0; i < desc->shader_count; ++i )
+    for ( u32 i = 0; i < static_cast<u32>( ShaderStage::eCount ); ++i )
     {
-        FT_FROM_HANDLE( shader, desc->shaders[ i ], MetalShader );
-        switch ( shader->interface.stage )
+        if ( shader->shaders[ i ] == nil )
+        {
+            continue;
+        }
+
+        switch ( static_cast<ShaderStage>( i ) )
         {
         case ShaderStage::eVertex:
         {
-            pipeline->pipeline_descriptor.vertexFunction = shader->shader;
+            pipeline->pipeline_descriptor.vertexFunction = shader->shaders[ i ];
             break;
         }
         case ShaderStage::eFragment:
         {
-            pipeline->pipeline_descriptor.fragmentFunction = shader->shader;
+            pipeline->pipeline_descriptor.fragmentFunction =
+                shader->shaders[ i ];
             break;
         }
         default:

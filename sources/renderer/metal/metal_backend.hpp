@@ -136,9 +136,9 @@ struct MetalRenderPass
 struct MetalShader
 {
 #ifdef METAL_BACKEND_INCLUDE_OBJC
-    id<MTLFunction> shader;
+    id<MTLFunction> shaders[ static_cast<u32>( ShaderStage::eCount ) ];
 #else
-    void* shader;
+    void* shaders[ static_cast<u32>( ShaderStage::eCount ) ];
 #endif
     Shader interface;
 };

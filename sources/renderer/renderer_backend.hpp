@@ -269,41 +269,48 @@ struct ImageBarrier
     const Queue*  dst_queue;
 };
 
-struct ShaderDesc
+struct ShaderModuleDesc
 {
-    ShaderStage stage;
     u32         bytecode_size;
     const void* bytecode;
 };
 
+struct ShaderDesc
+{
+    ShaderModuleDesc compute;
+    ShaderModuleDesc vertex;
+    ShaderModuleDesc tessellation_control;
+    ShaderModuleDesc tessellation_evaluation;
+    ShaderModuleDesc geometry;
+    ShaderModuleDesc fragment;
+};
+
 struct Shader
 {
-    ShaderStage    stage;
-    ReflectionData reflect_data;
+    ReflectionData reflect_data[ static_cast<u32>( ShaderStage::eCount ) ];
     Handle         handle;
 };
 
 struct DescriptorSetLayout
 {
-    u32      shader_count;
-    Shader** shaders;
-    u32      descriptor_set_layout_count = 0;
-    Handle   handle;
+    Shader* shader;
+    u32     descriptor_set_layout_count = 0; // TODO: move to private ?
+    Handle  handle;
 };
 
 struct VertexBindingDesc
 {
-    uint32_t        binding;
-    uint32_t        stride;
+    u32             binding;
+    u32             stride;
     VertexInputRate input_rate;
 };
 
 struct VertexAttributeDesc
 {
-    uint32_t location;
-    uint32_t binding;
-    Format   format;
-    uint32_t offset;
+    u32    location;
+    u32    binding;
+    Format format;
+    u32    offset;
 };
 
 struct VertexLayout
@@ -334,8 +341,7 @@ struct PipelineDesc
     RasterizerStateDesc  rasterizer_desc;
     PrimitiveTopology    topology = PrimitiveTopology::eTriangleList;
     DepthStateDesc       depth_state_desc;
-    u32                  shader_count = 0;
-    Shader*              shaders[ MAX_STAGE_COUNT ];
+    Shader*              shader;
     DescriptorSetLayout* descriptor_set_layout;
     const RenderPass*    render_pass;
 };
@@ -595,8 +601,7 @@ DECLARE_RENDERER_FUNCTION( void,
 DECLARE_RENDERER_FUNCTION( void,
                            create_descriptor_set_layout,
                            const Device*         device,
-                           u32                   shader_count,
-                           Shader**              shaders,
+                           Shader*               shader,
                            DescriptorSetLayout** descriptor_set_layout );
 
 DECLARE_RENDERER_FUNCTION( void,
