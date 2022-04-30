@@ -1060,7 +1060,7 @@ mtl_update_descriptor_set( const Device*          idevice,
 {
     FT_FROM_HANDLE( set, iset, MetalDescriptorSet );
     FT_FROM_HANDLE( s,
-                    writes[ 0 ].image_descriptors[ 0 ].sampler,
+                    writes[ 0 ].sampler_descriptors[ 0 ].sampler,
                     MetalSampler );
     FT_FROM_HANDLE( t, writes[ 1 ].image_descriptors[ 0 ].image, MetalImage );
 

@@ -371,18 +371,23 @@ struct BufferDescriptor
 
 struct ImageDescriptor
 {
-    Sampler*      sampler;
     Image*        image;
     ResourceState resource_state;
 };
 
+struct SamplerDescriptor
+{
+    Sampler* sampler;
+};
+
 struct DescriptorWrite
 {
-    u32               descriptor_count;
-    u32               binding;
-    DescriptorType    descriptor_type;
-    ImageDescriptor*  image_descriptors;
-    BufferDescriptor* buffer_descriptors;
+    u32                descriptor_count;
+    u32                binding;
+    DescriptorType     descriptor_type;
+    SamplerDescriptor* sampler_descriptors;
+    ImageDescriptor*   image_descriptors;
+    BufferDescriptor*  buffer_descriptors;
 };
 
 struct UiDesc

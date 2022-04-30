@@ -2587,7 +2587,7 @@ vk_update_descriptor_set( const Device*          idevice,
 
             write_descriptor_set.pBufferInfo = bds.data();
         }
-        else
+        else if ( descriptor_write.image_descriptors )
         {
             auto& ids = image_updates.emplace_back();
             ids.resize( descriptor_write.descriptor_count );
@@ -2606,7 +2606,25 @@ vk_update_descriptor_set( const Device*          idevice,
                             ->image_view;
                     ids[ j ].sampler = nullptr;
                 }
-                else if ( image_write.sampler )
+                else
+                {
+                    FT_ASSERT( false && "Null descriptor" );
+                }
+            }
+
+            write_descriptor_set.pImageInfo = ids.data();
+        }
+        else
+        {
+            auto& ids = image_updates.emplace_back();
+            ids.resize( descriptor_write.descriptor_count );
+
+            for ( u32 j = 0; j < descriptor_write.descriptor_count; ++j )
+            {
+                auto& image_write = descriptor_write.sampler_descriptors[ j ];
+                ids[ j ]          = {};
+
+                if ( image_write.sampler )
                 {
                     ids[ j ].sampler = static_cast<VulkanSampler*>(
                                            image_write.sampler->handle )
