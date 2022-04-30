@@ -570,10 +570,10 @@ mtl_create_render_pass( const Device*         idevice,
             render_pass->swapchain_render_pass = true;
         }
 
-        pass.colorAttachments[ 0 ].texture = image->texture;
-        pass.colorAttachments[ 0 ].loadAction =
+        pass.colorAttachments[ i ].texture = image->texture;
+        pass.colorAttachments[ i ].loadAction =
             to_mtl_load_action( desc->color_attachment_load_ops[ i ] );
-        pass.colorAttachments[ 0 ].storeAction = MTLStoreActionStore;
+        pass.colorAttachments[ i ].storeAction = MTLStoreActionStore;
 
         render_pass->color_attachments[ i ] = image;
     }
