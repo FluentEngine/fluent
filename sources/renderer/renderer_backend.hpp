@@ -32,7 +32,6 @@ struct CommandPool;
 
 static constexpr u32 MAX_ATTACHMENTS_COUNT        = 10;
 static constexpr u32 MAX_PUSH_CONSTANT_RANGE      = 128;
-static constexpr u32 MAX_STAGE_COUNT              = 5;
 static constexpr u32 MAX_VERTEX_BINDING_COUNT     = 15;
 static constexpr u32 MAX_VERTEX_ATTRIBUTE_COUNT   = 15;
 static constexpr u32 MAX_DESCRIPTOR_BINDING_COUNT = 15;

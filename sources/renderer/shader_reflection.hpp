@@ -6,12 +6,10 @@
 
 namespace fluent
 {
-struct ShaderType
-{
-    Format format;
-    u32    component_count;
-    u32    byte_size;
-};
+
+struct Device;
+struct Shader;
+struct ShaderDesc;
 
 struct Binding
 {
@@ -27,9 +25,13 @@ struct ReflectionData
     std::vector<Binding> bindings;
 };
 
-ReflectionData
-spirv_reflect( u32 byte_code_size, const void* byte_code );
-ReflectionData
-dxil_reflect( u32 byte_code_size, const void* byte_code );
+void
+dxil_reflect( const Device* device, const ShaderDesc* desc, Shader* shader );
+
+void
+spirv_reflect( const Device* device, const ShaderDesc* desc, Shader* shader );
+
+void
+mtl_reflect( const Device* device, const ShaderDesc* desc, Shader* shader );
 
 } // namespace fluent

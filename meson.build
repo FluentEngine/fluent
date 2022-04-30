@@ -101,14 +101,15 @@ core = files([
 
 renderer = files([
     src_dir/'renderer/shader_reflection.hpp', 
-    src_dir/'renderer/shader_reflection.cpp', 
     src_dir/'renderer/renderer_enums.hpp',
     src_dir/'renderer/renderer_backend.hpp', 
     src_dir/'renderer/renderer_backend.cpp', 
     src_dir/'renderer/vulkan/vulkan_backend.hpp', 
-    src_dir/'renderer/vulkan/vulkan_backend.cpp', 
+    src_dir/'renderer/vulkan/vulkan_backend.cpp',
+    src_dir/'renderer/vulkan/vulkan_reflection.cpp',
     src_dir/'renderer/d3d12/d3d12_backend.hpp', 
     src_dir/'renderer/d3d12/d3d12_backend.cpp',
+    src_dir/'renderer/d3d12/d3d12_reflection.cpp',
     src_dir/'renderer/resource_loader.hpp', 
     src_dir/'renderer/resource_loader.cpp'
 ])
@@ -116,7 +117,8 @@ renderer = files([
 if renderer_backend_metal
     renderer += files([
         src_dir/'renderer/metal/metal_backend.hpp', 
-        src_dir/'renderer/metal/metal_backend.mm'  
+        src_dir/'renderer/metal/metal_backend.mm',
+        src_dir/'renderer/metal/metal_reflection.mm'
     ])
 endif
 

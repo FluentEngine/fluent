@@ -657,6 +657,8 @@ mtl_create_shader( const Device* idevice, ShaderDesc* desc, Shader** p )
                      ShaderStage::eTessellationEvaluation,
                      desc->tessellation_evaluation );
     create_function( device, shader, ShaderStage::eFragment, desc->fragment );
+
+    mtl_reflect( idevice, desc, &shader->interface );
 }
 
 void
@@ -682,12 +684,18 @@ mtl_create_descriptor_set_layout( const Device*         idevice,
                                   Shader*               ishader,
                                   DescriptorSetLayout** p )
 {
+    FT_INIT_INTERNAL( layout, *p, MetalDescriptorSetLayout );
+
+    layout->interface.shader = ishader;
 }
 
 void
 mtl_destroy_descriptor_set_layout( const Device*        idevice,
                                    DescriptorSetLayout* ilayout )
 {
+    FT_FROM_HANDLE( layout, ilayout, MetalDescriptorSetLayout );
+
+    operator delete( layout, std::nothrow );
 }
 
 void
@@ -954,20 +962,63 @@ mtl_create_descriptor_set( const Device*            idevice,
 {
     FT_ASSERT( idevice );
     FT_ASSERT( desc );
+    FT_ASSERT( desc->descriptor_set_layout );
     FT_ASSERT( p );
 
     FT_INIT_INTERNAL( set, *p, MetalDescriptorSet );
 
-    for ( u32 i = 0; i < static_cast<u32>( ShaderStage::eCount ); ++i ) {}
+    auto* ishader = desc->descriptor_set_layout->shader;
 
-    auto& stage =
-        set->descriptors[ static_cast<u32>( ShaderStage::eFragment ) ];
-    stage.sampler_count = 1;
-    stage.texture_count = 1;
-    stage.samplers      = static_cast<id<MTLSamplerState>*>(
-        malloc( stage.sampler_count * sizeof( id<MTLSamplerState> ) ) );
-    stage.textures = static_cast<id<MTLTexture>*>(
-        malloc( stage.texture_count * sizeof( id<MTLTexture> ) ) );
+    for ( u32 i = 0; i < static_cast<u32>( ShaderStage::eCount ); ++i )
+    {
+        auto& stage = set->descriptors[ i ];
+
+        for ( u32 b = 0; b < ishader->reflect_data[ i ].binding_count; ++b )
+        {
+            auto& binding = ishader->reflect_data[ i ].bindings[ b ];
+
+            switch ( binding.descriptor_type )
+            {
+            case DescriptorType::eUniformBuffer:
+            {
+                stage.buffer_count++;
+                break;
+            }
+            case DescriptorType::eSampler:
+            {
+                stage.sampler_count++;
+                break;
+            }
+            case DescriptorType::eSampledImage:
+            {
+                stage.texture_count++;
+                break;
+            }
+            default:
+            {
+                break;
+            }
+            }
+        }
+
+        if ( stage.buffer_count != 0 )
+        {
+            stage.buffers = static_cast<id<MTLBuffer>*>(
+                malloc( stage.buffer_count * sizeof( id<MTLBuffer> ) ) );
+        }
+
+        if ( stage.sampler_count != 0 )
+        {
+            stage.samplers = static_cast<id<MTLSamplerState>*>(
+                malloc( stage.sampler_count * sizeof( id<MTLSamplerState> ) ) );
+        }
+
+        if ( stage.texture_count != 0 )
+        {
+            stage.textures = static_cast<id<MTLTexture>*>(
+                malloc( stage.texture_count * sizeof( id<MTLTexture> ) ) );
+        }
+    }
 }
 
 void
@@ -1357,20 +1408,30 @@ mtl_cmd_bind_descriptor_set( const CommandBuffer* icmd,
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
     FT_FROM_HANDLE( set, iset, MetalDescriptorSet );
 
-    for ( u32 i = 0; i < static_cast<u32>( ShaderStage::eCount ); ++i )
-    {
-        auto& stage = set->descriptors[ i ];
+    auto* stage = &set->descriptors[ static_cast<u32>( ShaderStage::eVertex ) ];
 
-        [cmd->encoder
-            setFragmentSamplerStates:stage.samplers
-                           withRange:NSMakeRange( 0, stage.sampler_count )];
-        [cmd->encoder
-            setFragmentTextures:stage.textures
-                      withRange:NSMakeRange( 0, stage.texture_count )];
-        [cmd->encoder setFragmentBuffers:stage.buffers
-                                 offsets:nil
-                               withRange:NSMakeRange( 0, stage.buffer_count )];
-    }
+    [cmd->encoder
+        setVertexSamplerStates:stage->samplers
+                     withRange:NSMakeRange( 0, stage->sampler_count )];
+
+    [cmd->encoder setVertexTextures:stage->textures
+                          withRange:NSMakeRange( 0, stage->texture_count )];
+    //    [cmd->encoder setVertexBuffers:stage->buffers
+    //                             offsets:nil
+    //                           withRange:NSMakeRange( 0, stage->buffer_count
+    //                           )];
+
+    stage = &set->descriptors[ static_cast<u32>( ShaderStage::eFragment ) ];
+
+    [cmd->encoder
+        setFragmentSamplerStates:stage->samplers
+                       withRange:NSMakeRange( 0, stage->sampler_count )];
+    [cmd->encoder setFragmentTextures:stage->textures
+                            withRange:NSMakeRange( 0, stage->texture_count )];
+    //    [cmd->encoder setFragmentBuffers:stage->buffers
+    //                             offsets:nil
+    //                           withRange:NSMakeRange( 0, stage->buffer_count
+    //                           )];
 }
 
 std::vector<char>

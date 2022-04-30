@@ -1836,9 +1836,6 @@ vk_create_shader( const Device* idevice, ShaderDesc* desc, Shader** p )
                 &shader_create_info,
                 device->vulkan_allocator,
                 &shader->shaders[ static_cast<u32>( stage ) ] ) );
-
-            shader->interface.reflect_data[ static_cast<u32>( stage ) ] =
-                spirv_reflect( desc.bytecode_size, desc.bytecode );
         }
     };
 
@@ -1854,6 +1851,8 @@ vk_create_shader( const Device* idevice, ShaderDesc* desc, Shader** p )
                    desc->tessellation_evaluation );
     create_module( device, shader, ShaderStage::eGeometry, desc->geometry );
     create_module( device, shader, ShaderStage::eFragment, desc->fragment );
+
+    spirv_reflect( idevice, desc, &shader->interface );
 }
 
 void
@@ -2081,7 +2080,7 @@ vk_create_graphics_pipeline( const Device*       idevice,
 
     u32 shader_stage_count = 0;
     VkPipelineShaderStageCreateInfo
-        shader_stage_create_infos[ MAX_STAGE_COUNT ];
+        shader_stage_create_infos[ static_cast<u32>( ShaderStage::eCount ) ];
 
     for ( u32 i = 0; i < static_cast<u32>( ShaderStage::eCount ); ++i )
     {
