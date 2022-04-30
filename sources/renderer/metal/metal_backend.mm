@@ -955,43 +955,50 @@ mtl_destroy_image( const Device* idevice, Image* iimage )
     operator delete( image, std::nothrow );
 }
 
-void
-mtl_create_descriptor_set( const Device*            idevice,
-                           const DescriptorSetDesc* desc,
-                           DescriptorSet**          p )
+static inline void
+count_binding_types( MetalShader*                      shader,
+                     std::vector<MetalSamplerBinding>& sampler_bindings,
+                     std::vector<MetalImageBinding>&   image_bindings,
+                     std::vector<MetalBufferBinding>&  buffer_bindings )
 {
-    FT_ASSERT( idevice );
-    FT_ASSERT( desc );
-    FT_ASSERT( desc->descriptor_set_layout );
-    FT_ASSERT( p );
-
-    FT_INIT_INTERNAL( set, *p, MetalDescriptorSet );
-
-    auto* ishader = desc->descriptor_set_layout->shader;
-
     for ( u32 i = 0; i < static_cast<u32>( ShaderStage::eCount ); ++i )
     {
-        auto& stage = set->descriptors[ i ];
-
-        for ( u32 b = 0; b < ishader->reflect_data[ i ].binding_count; ++b )
+        if ( shader->shaders[ i ] == nil )
         {
-            auto& binding = ishader->reflect_data[ i ].bindings[ b ];
+            continue;
+        }
 
+        ShaderStage stage = static_cast<ShaderStage>( i );
+
+        for ( u32 b = 0; b < shader->interface.reflect_data[ i ].binding_count;
+              ++b )
+        {
+            auto& binding = shader->interface.reflect_data[ i ].bindings[ b ];
             switch ( binding.descriptor_type )
             {
-            case DescriptorType::eUniformBuffer:
-            {
-                stage.buffer_count++;
-                break;
-            }
             case DescriptorType::eSampler:
             {
-                stage.sampler_count++;
+                auto& b   = sampler_bindings.emplace_back();
+                b         = {};
+                b.stage   = stage;
+                b.binding = binding.binding;
                 break;
             }
             case DescriptorType::eSampledImage:
             {
-                stage.texture_count++;
+                auto& b   = image_bindings.emplace_back();
+                b         = {};
+                b.stage   = stage;
+                b.binding = binding.binding;
+
+                break;
+            }
+            case DescriptorType::eUniformBuffer:
+            {
+                auto& b   = buffer_bindings.emplace_back();
+                b         = {};
+                b.stage   = stage;
+                b.binding = binding.binding;
                 break;
             }
             default:
@@ -1000,24 +1007,60 @@ mtl_create_descriptor_set( const Device*            idevice,
             }
             }
         }
+    }
+}
 
-        if ( stage.buffer_count != 0 )
-        {
-            stage.buffers = static_cast<id<MTLBuffer>*>(
-                malloc( stage.buffer_count * sizeof( id<MTLBuffer> ) ) );
-        }
+void
+mtl_create_descriptor_set( const Device*            idevice,
+                           const DescriptorSetDesc* desc,
+                           DescriptorSet**          p )
+{
+    FT_ASSERT( idevice );
+    FT_ASSERT( desc );
+    FT_ASSERT( p );
 
-        if ( stage.sampler_count != 0 )
-        {
-            stage.samplers = static_cast<id<MTLSamplerState>*>(
-                malloc( stage.sampler_count * sizeof( id<MTLSamplerState> ) ) );
-        }
+    FT_FROM_HANDLE( shader, desc->descriptor_set_layout->shader, MetalShader );
 
-        if ( stage.texture_count != 0 )
-        {
-            stage.textures = static_cast<id<MTLTexture>*>(
-                malloc( stage.texture_count * sizeof( id<MTLTexture> ) ) );
-        }
+    FT_INIT_INTERNAL( set, *p, MetalDescriptorSet );
+
+    std::vector<MetalSamplerBinding> sampler_bindings;
+    std::vector<MetalImageBinding>   image_bindings;
+    std::vector<MetalBufferBinding>  buffer_bindings;
+
+    count_binding_types( shader,
+                         sampler_bindings,
+                         image_bindings,
+                         buffer_bindings );
+
+    set->sampler_binding_count = sampler_bindings.size();
+    set->buffer_binding_count  = buffer_bindings.size();
+    set->image_binding_count   = image_bindings.size();
+
+    if ( set->sampler_binding_count > 0 )
+    {
+        set->sampler_bindings = new ( std::nothrow )
+            MetalSamplerBinding[ set->sampler_binding_count ];
+        std::copy( sampler_bindings.begin(),
+                   sampler_bindings.end(),
+                   set->sampler_bindings );
+    }
+
+    if ( set->image_binding_count > 0 )
+    {
+        set->image_bindings =
+            new ( std::nothrow ) MetalImageBinding[ set->image_binding_count ];
+        std::copy( image_bindings.begin(),
+                   image_bindings.end(),
+                   set->image_bindings );
+    }
+
+    if ( set->buffer_binding_count > 0 )
+    {
+        set->buffer_bindings = new ( std::nothrow )
+            MetalBufferBinding[ set->buffer_binding_count ];
+        std::copy( buffer_bindings.begin(),
+                   buffer_bindings.end(),
+                   set->buffer_bindings );
     }
 }
 
@@ -1029,24 +1072,19 @@ mtl_destroy_descriptor_set( const Device* idevice, DescriptorSet* iset )
 
     FT_FROM_HANDLE( set, iset, MetalDescriptorSet );
 
-    for ( u32 i = 0; i < static_cast<u32>( ShaderStage::eCount ); ++i )
+    if ( set->sampler_bindings )
     {
-        auto& stage = set->descriptors[ i ];
+        operator delete( set->sampler_bindings, std::nothrow );
+    }
 
-        if ( stage.samplers )
-        {
-            free( stage.samplers );
-        }
+    if ( set->image_bindings )
+    {
+        operator delete( set->image_bindings, std::nothrow );
+    }
 
-        if ( stage.textures )
-        {
-            free( stage.textures );
-        }
-
-        if ( stage.buffers )
-        {
-            free( stage.buffers );
-        }
+    if ( set->buffer_bindings )
+    {
+        operator delete( set->buffer_bindings, std::nothrow );
     }
 
     operator delete( set, std::nothrow );
@@ -1059,16 +1097,70 @@ mtl_update_descriptor_set( const Device*          idevice,
                            const DescriptorWrite* writes )
 {
     FT_FROM_HANDLE( set, iset, MetalDescriptorSet );
-    FT_FROM_HANDLE( s,
-                    writes[ 0 ].sampler_descriptors[ 0 ].sampler,
-                    MetalSampler );
-    FT_FROM_HANDLE( t, writes[ 1 ].image_descriptors[ 0 ].image, MetalImage );
 
-    auto& stage =
-        set->descriptors[ static_cast<u32>( ShaderStage::eFragment ) ];
+    for ( u32 i = 0; i < count; ++i )
+    {
+        u32 binding = writes[ i ].binding;
 
-    stage.samplers[ 0 ] = s->sampler;
-    stage.textures[ 0 ] = t->texture;
+        switch ( writes[ i ].descriptor_type )
+        {
+        case DescriptorType::eSampler:
+        {
+            auto it = std::find_if(
+                set->sampler_bindings,
+                set->sampler_bindings + set->sampler_binding_count,
+                [ binding ]( MetalSamplerBinding& sampler_binding )
+                { return sampler_binding.binding == binding; } );
+
+            if ( it != set->sampler_bindings + set->sampler_binding_count )
+            {
+                FT_FROM_HANDLE( sampler,
+                                writes[ i ].sampler_descriptors[ 0 ].sampler,
+                                MetalSampler );
+                it->sampler = sampler->sampler;
+            }
+            break;
+        }
+        case DescriptorType::eSampledImage:
+        {
+            auto it =
+                std::find_if( set->image_bindings,
+                              set->image_bindings + set->image_binding_count,
+                              [ binding ]( MetalImageBinding& image_binding )
+                              { return image_binding.binding == binding; } );
+
+            if ( it != set->image_bindings + set->image_binding_count )
+            {
+                FT_FROM_HANDLE( image,
+                                writes[ i ].image_descriptors[ 0 ].image,
+                                MetalImage );
+                it->image = image->texture;
+            }
+            break;
+        }
+        case DescriptorType::eUniformBuffer:
+        {
+            auto it =
+                std::find_if( set->buffer_bindings,
+                              set->buffer_bindings + set->buffer_binding_count,
+                              [ binding ]( MetalBufferBinding& buffer_binding )
+                              { return buffer_binding.binding == binding; } );
+
+            if ( it != set->buffer_bindings + set->buffer_binding_count )
+            {
+                FT_FROM_HANDLE( buffer,
+                                writes[ i ].buffer_descriptors[ 0 ].buffer,
+                                MetalBuffer );
+                it->buffer = buffer->buffer;
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
+    }
 }
 
 void
@@ -1408,30 +1500,78 @@ mtl_cmd_bind_descriptor_set( const CommandBuffer* icmd,
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
     FT_FROM_HANDLE( set, iset, MetalDescriptorSet );
 
-    auto* stage = &set->descriptors[ static_cast<u32>( ShaderStage::eVertex ) ];
+    for ( u32 i = 0; i < set->sampler_binding_count; ++i )
+    {
+        switch ( set->sampler_bindings[ i ].stage )
+        {
+        case ShaderStage::eVertex:
+        {
+            [cmd->encoder
+                setVertexSamplerState:set->sampler_bindings[ i ].sampler
+                              atIndex:set->sampler_bindings[ i ].binding];
+            break;
+        }
+        case ShaderStage::eFragment:
+        {
+            [cmd->encoder
+                setFragmentSamplerState:set->sampler_bindings[ i ].sampler
+                                atIndex:set->sampler_bindings[ i ].binding];
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
+    }
 
-    [cmd->encoder
-        setVertexSamplerStates:stage->samplers
-                     withRange:NSMakeRange( 0, stage->sampler_count )];
+    for ( u32 i = 0; i < set->image_binding_count; ++i )
+    {
+        switch ( set->image_bindings[ i ].stage )
+        {
+        case ShaderStage::eVertex:
+        {
+            [cmd->encoder setVertexTexture:set->image_bindings[ i ].image
+                                   atIndex:set->image_bindings[ i ].binding];
+            break;
+        }
+        case ShaderStage::eFragment:
+        {
+            [cmd->encoder setFragmentTexture:set->image_bindings[ i ].image
+                                     atIndex:set->image_bindings[ i ].binding];
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
+    }
 
-    [cmd->encoder setVertexTextures:stage->textures
-                          withRange:NSMakeRange( 0, stage->texture_count )];
-    //    [cmd->encoder setVertexBuffers:stage->buffers
-    //                             offsets:nil
-    //                           withRange:NSMakeRange( 0, stage->buffer_count
-    //                           )];
-
-    stage = &set->descriptors[ static_cast<u32>( ShaderStage::eFragment ) ];
-
-    [cmd->encoder
-        setFragmentSamplerStates:stage->samplers
-                       withRange:NSMakeRange( 0, stage->sampler_count )];
-    [cmd->encoder setFragmentTextures:stage->textures
-                            withRange:NSMakeRange( 0, stage->texture_count )];
-    //    [cmd->encoder setFragmentBuffers:stage->buffers
-    //                             offsets:nil
-    //                           withRange:NSMakeRange( 0, stage->buffer_count
-    //                           )];
+    for ( u32 i = 0; i < set->buffer_binding_count; ++i )
+    {
+        switch ( set->buffer_bindings[ i ].stage )
+        {
+        case ShaderStage::eVertex:
+        {
+            [cmd->encoder setVertexBuffer:set->buffer_bindings[ i ].buffer
+                                   offset:0
+                                  atIndex:set->buffer_bindings[ i ].binding];
+            break;
+        }
+        case ShaderStage::eFragment:
+        {
+            [cmd->encoder setFragmentBuffer:set->buffer_bindings[ i ].buffer
+                                     offset:0
+                                    atIndex:set->buffer_bindings[ i ].binding];
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
+    }
 }
 
 std::vector<char>

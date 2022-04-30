@@ -65,7 +65,7 @@ mtl_reflect( const Device* idevice, const ShaderDesc* desc, Shader* ishader )
             auto& binding            = vertex.bindings.emplace_back();
             binding.descriptor_count = arg.arrayLength;
             binding.descriptor_type  = to_descriptor_type( arg.type );
-            binding.binding          = arg.index;
+            binding.binding          = static_cast<u32>( arg.index );
             binding.set              = 0;
 
             vertex.binding_count++;
@@ -80,7 +80,7 @@ mtl_reflect( const Device* idevice, const ShaderDesc* desc, Shader* ishader )
         auto& binding            = fragment.bindings.emplace_back();
         binding.descriptor_count = arg.arrayLength;
         binding.descriptor_type  = to_descriptor_type( arg.type );
-        binding.binding          = arg.index;
+        binding.binding          = static_cast<u32>( arg.index );
         binding.set              = 0;
 
         fragment.binding_count++;

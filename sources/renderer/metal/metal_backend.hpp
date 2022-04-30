@@ -160,27 +160,48 @@ struct MetalPipeline
     Pipeline interface;
 };
 
-struct MetalStageDescriptors
+struct MetalSamplerBinding
 {
-    u32 sampler_count;
-    u32 texture_count;
-    u32 buffer_count;
+    ShaderStage stage;
+    u32         binding;
 #ifdef METAL_BACKEND_INCLUDE_OBJC
-    id<MTLSamplerState>* samplers;
-    id<MTLTexture>*      textures;
-    id<MTLBuffer>*       buffers;
+    id<MTLSamplerState> sampler;
 #else
-    void* samplers;
-    void* textures;
-    void* buffers;
+    void* sampler;
+#endif
+};
+
+struct MetalImageBinding
+{
+    ShaderStage stage;
+    u32         binding;
+#ifdef METAL_BACKEND_INCLUDE_OBJC
+    id<MTLTexture> image;
+#else
+    void* image;
+#endif
+};
+
+struct MetalBufferBinding
+{
+    ShaderStage stage;
+    u32         binding;
+#ifdef METAL_BACKEND_INCLUDE_OBJC
+    id<MTLBuffer> buffer;
+#else
+    void* buffer;
 #endif
 };
 
 struct MetalDescriptorSet
 {
-    MetalStageDescriptors
-                  descriptors[ static_cast<u32>( ShaderStage::eCount ) ];
-    DescriptorSet interface;
+    u32                  sampler_binding_count;
+    MetalSamplerBinding* sampler_bindings;
+    u32                  image_binding_count;
+    MetalImageBinding*   image_bindings;
+    u32                  buffer_binding_count;
+    MetalBufferBinding*  buffer_bindings;
+    DescriptorSet        interface;
 };
 
 struct MetalUiContext
