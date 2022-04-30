@@ -215,9 +215,6 @@ struct RenderPassDesc
     Image*           depth_stencil;
     AttachmentLoadOp depth_stencil_load_op;
     ResourceState    depth_stencil_state;
-    Image*           resolve;
-    AttachmentLoadOp resolve_load_op;
-    ResourceState    resolve_state;
 };
 
 struct RenderPass

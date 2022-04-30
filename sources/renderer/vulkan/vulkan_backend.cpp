@@ -1596,12 +1596,6 @@ create_framebuffer( const VulkanDevice*   device,
         image_views[ attachment_count++ ] = image->image_view;
     }
 
-    if ( desc->resolve )
-    {
-        FT_FROM_HANDLE( image, desc->resolve, VulkanImage );
-        image_views[ attachment_count++ ] = image->image_view;
-    }
-
     if ( desc->width > 0 && desc->height > 0 )
     {
         VkFramebufferCreateInfo framebuffer_create_info {};
@@ -1647,7 +1641,6 @@ vk_create_render_pass( const Device*         idevice,
                           attachment_descriptions[ MAX_ATTACHMENTS_COUNT + 2 ];
     VkAttachmentReference color_attachment_references[ MAX_ATTACHMENTS_COUNT ];
     VkAttachmentReference depth_attachment_reference {};
-    VkAttachmentReference resolve_attachment_reference {};
 
     for ( u32 i = 0; i < desc->color_attachment_count; ++i )
     {
@@ -1702,33 +1695,6 @@ vk_create_render_pass( const Device*         idevice,
         attachments_count++;
     }
 
-    if ( desc->resolve )
-    {
-        u32 i                              = attachments_count;
-        attachment_descriptions[ i ].flags = 0;
-        attachment_descriptions[ i ].format =
-            to_vk_format( desc->resolve->format );
-        attachment_descriptions[ i ].samples =
-            to_vk_sample_count( desc->resolve->sample_count );
-        attachment_descriptions[ i ].loadOp =
-            to_vk_load_op( desc->resolve_load_op );
-        attachment_descriptions[ i ].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachment_descriptions[ i ].stencilLoadOp =
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment_descriptions[ i ].stencilStoreOp =
-            VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment_descriptions[ i ].initialLayout =
-            determine_image_layout( desc->resolve_state );
-        attachment_descriptions[ i ].finalLayout =
-            determine_image_layout( desc->resolve_state );
-
-        resolve_attachment_reference.attachment = i;
-        resolve_attachment_reference.layout =
-            attachment_descriptions[ i ].finalLayout;
-
-        attachments_count++;
-    }
-
     // TODO: subpass setup from user code
     VkSubpassDescription subpass_description {};
     subpass_description.flags                = 0;
@@ -1740,8 +1706,7 @@ vk_create_render_pass( const Device*         idevice,
         attachments_count ? color_attachment_references : nullptr;
     subpass_description.pDepthStencilAttachment =
         desc->depth_stencil ? &depth_attachment_reference : nullptr;
-    subpass_description.pResolveAttachments =
-        desc->resolve ? &resolve_attachment_reference : nullptr;
+    subpass_description.pResolveAttachments = nullptr;
     subpass_description.preserveAttachmentCount = 0;
     subpass_description.pPreserveAttachments    = nullptr;
 
