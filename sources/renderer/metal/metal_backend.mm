@@ -752,7 +752,9 @@ mtl_create_graphics_pipeline( const Device*       idevice,
 
     for ( u32 i = 0; i < desc->vertex_layout.binding_desc_count; ++i )
     {
-        u32 binding = desc->vertex_layout.binding_descs[ i ].binding;
+        // TODO: rewrite more elegant? binding should not conflict with uniform bindings
+        u32 binding = desc->vertex_layout.binding_descs[ i ].binding +
+                      MAX_VERTEX_BINDING_COUNT;
         vertex_layout.layouts[ binding ].stepFunction =
             to_mtl_vertex_step_function(
                 desc->vertex_layout.binding_descs[ i ].input_rate );
@@ -768,7 +770,8 @@ mtl_create_graphics_pipeline( const Device*       idevice,
         vertex_layout.attributes[ location ].offset =
             desc->vertex_layout.attribute_descs[ i ].offset;
         vertex_layout.attributes[ location ].bufferIndex =
-            desc->vertex_layout.attribute_descs[ i ].binding;
+            desc->vertex_layout.attribute_descs[ i ].binding +
+            MAX_VERTEX_BINDING_COUNT;
     }
 
     pipeline->pipeline_descriptor.vertexDescriptor = vertex_layout;
@@ -787,13 +790,21 @@ mtl_create_graphics_pipeline( const Device*       idevice,
             to_mtl_format( render_pass->depth_attachment->interface.format );
     }
 
-    NSError*                     err;
-    MTLRenderPipelineReflection* reflection;
+    if ( desc->depth_state_desc.depth_test )
+    {
+        MTLDepthStencilDescriptor* depth_stencil_descriptor =
+            [MTLDepthStencilDescriptor new];
+        depth_stencil_descriptor.depthCompareFunction =
+            to_mtl_compare_function( desc->depth_state_desc.compare_op );
+        depth_stencil_descriptor.depthWriteEnabled =
+            desc->depth_state_desc.depth_write;
+        pipeline->depth_stencil_state = [device->device
+            newDepthStencilStateWithDescriptor:depth_stencil_descriptor];
+    }
+
     pipeline->pipeline = [device->device
         newRenderPipelineStateWithDescriptor:pipeline->pipeline_descriptor
-                                     options:MTLPipelineOptionArgumentInfo
-                                  reflection:&reflection
-                                       error:&err];
+                                       error:nil];
 }
 
 void
@@ -803,6 +814,11 @@ mtl_destroy_pipeline( const Device* idevice, Pipeline* ipipeline )
     FT_ASSERT( ipipeline );
 
     FT_FROM_HANDLE( pipeline, ipipeline, MetalPipeline );
+
+    if ( pipeline->depth_stencil_state )
+    {
+        [pipeline->depth_stencil_state release];
+    }
 
     [pipeline->pipeline release];
     [pipeline->pipeline_descriptor release];
@@ -1326,6 +1342,7 @@ mtl_cmd_bind_pipeline( const CommandBuffer* icmd, const Pipeline* ipipeline )
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
     FT_FROM_HANDLE( pipeline, ipipeline, MetalPipeline );
 
+    [cmd->encoder setDepthStencilState:pipeline->depth_stencil_state];
     [cmd->encoder setRenderPipelineState:pipeline->pipeline];
 }
 
@@ -1359,9 +1376,12 @@ mtl_cmd_draw_indexed( const CommandBuffer* icmd,
 
     [cmd->encoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
                              indexCount:index_count
-                              indexType:MTLIndexTypeUInt32
+                              indexType:cmd->index_type
                             indexBuffer:cmd->index_buffer
-                      indexBufferOffset:first_index];
+                      indexBufferOffset:first_index
+                          instanceCount:1
+                             baseVertex:vertex_offset
+                           baseInstance:first_instance];
 }
 
 void
@@ -1375,7 +1395,9 @@ mtl_cmd_bind_vertex_buffer( const CommandBuffer* icmd,
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
     FT_FROM_HANDLE( buffer, ibuffer, MetalBuffer );
 
-    [cmd->encoder setVertexBuffer:buffer->buffer offset:offset atIndex:0];
+    [cmd->encoder setVertexBuffer:buffer->buffer
+                           offset:offset
+                          atIndex:MAX_VERTEX_BINDING_COUNT];
 }
 
 void

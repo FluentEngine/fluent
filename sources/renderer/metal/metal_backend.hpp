@@ -153,9 +153,11 @@ struct MetalPipeline
 #ifdef METAL_BACKEND_INCLUDE_OBJC
     MTLRenderPipelineDescriptor* pipeline_descriptor;
     id<MTLRenderPipelineState>   pipeline;
+    id<MTLDepthStencilState>     depth_stencil_state;
 #else
     void* pipeline_descriptor;
     void* pipeline;
+    void* depth_stencil_state;
 #endif
     Pipeline interface;
 };

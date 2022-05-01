@@ -1706,7 +1706,7 @@ vk_create_render_pass( const Device*         idevice,
         attachments_count ? color_attachment_references : nullptr;
     subpass_description.pDepthStencilAttachment =
         desc->depth_stencil ? &depth_attachment_reference : nullptr;
-    subpass_description.pResolveAttachments = nullptr;
+    subpass_description.pResolveAttachments     = nullptr;
     subpass_description.preserveAttachmentCount = 0;
     subpass_description.pPreserveAttachments    = nullptr;
 
