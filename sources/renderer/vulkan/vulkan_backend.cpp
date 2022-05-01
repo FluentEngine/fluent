@@ -2737,6 +2737,13 @@ vk_ui_end_frame( UiContext*, CommandBuffer* icmd )
     }
 }
 
+void*
+vk_get_imgui_texture_id( Image* iimage )
+{
+    FT_FROM_HANDLE( image, iimage, VulkanImage );
+    return image->image_view;
+}
+
 void
 vk_cmd_begin_render_pass( const CommandBuffer*       icmd,
                           const RenderPassBeginDesc* desc )
@@ -3323,6 +3330,7 @@ vk_create_renderer_backend( const RendererBackendDesc*, RendererBackend** p )
     destroy_ui_context            = vk_destroy_ui_context;
     ui_begin_frame                = vk_ui_begin_frame;
     ui_end_frame                  = vk_ui_end_frame;
+    get_imgui_texture_id          = vk_get_imgui_texture_id;
     cmd_begin_render_pass         = vk_cmd_begin_render_pass;
     cmd_end_render_pass           = vk_cmd_end_render_pass;
     cmd_barrier                   = vk_cmd_barrier;

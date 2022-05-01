@@ -56,6 +56,7 @@ create_ui_context_fun             create_ui_context;
 destroy_ui_context_fun            destroy_ui_context;
 ui_begin_frame_fun                ui_begin_frame;
 ui_end_frame_fun                  ui_end_frame;
+get_imgui_texture_id_fun          get_imgui_texture_id;
 cmd_begin_render_pass_fun         cmd_begin_render_pass;
 cmd_end_render_pass_fun           cmd_end_render_pass;
 cmd_barrier_fun                   cmd_barrier;
