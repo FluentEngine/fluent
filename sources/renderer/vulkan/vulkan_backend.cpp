@@ -2738,7 +2738,7 @@ vk_ui_end_frame( UiContext*, CommandBuffer* icmd )
 }
 
 void*
-vk_get_imgui_texture_id( Image* iimage )
+vk_get_imgui_texture_id( const Image* iimage )
 {
     FT_FROM_HANDLE( image, iimage, VulkanImage );
     return image->image_view;

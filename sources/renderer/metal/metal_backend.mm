@@ -310,6 +310,8 @@ mtl_queue_present( const Queue* iqueue, const QueuePresentDesc* desc )
     id<MTLCommandBuffer> present_cmd = [queue->queue commandBuffer];
     [present_cmd presentDrawable:swapchain->drawable];
     [present_cmd commit];
+    [present_cmd release];
+    [swapchain->drawable release];
 }
 
 void
@@ -544,7 +546,7 @@ mtl_acquire_next_image( const Device*    idevice,
         swapchain->interface.images[ swapchain->current_image_index ],
         MetalImage );
 
-    swapchain->drawable = swapchain->swapchain.nextDrawable;
+    swapchain->drawable = [swapchain->swapchain nextDrawable];
     image->texture      = swapchain->drawable.texture;
 
     *image_index                   = swapchain->current_image_index;
@@ -622,6 +624,18 @@ mtl_resize_render_pass( const Device*         idevice,
     render_pass->render_pass.renderTargetHeight = desc->height;
     render_pass->interface.width                = desc->width;
     render_pass->interface.height               = desc->height;
+
+    for ( u32 i = 0; i < desc->color_attachment_count; ++i )
+    {
+        FT_FROM_HANDLE( image, desc->color_attachments[ i ], MetalImage );
+        render_pass->render_pass.colorAttachments[ i ].texture = image->texture;
+    }
+
+    if ( render_pass->interface.has_depth_stencil )
+    {
+        FT_FROM_HANDLE( image, desc->depth_stencil, MetalImage );
+        render_pass->render_pass.depthAttachment.texture = image->texture;
+    }
 }
 
 void
@@ -835,7 +849,7 @@ mtl_destroy_pipeline( const Device* idevice, Pipeline* ipipeline )
 
     FT_FROM_HANDLE( pipeline, ipipeline, MetalPipeline );
 
-    if ( pipeline->depth_stencil_state )
+    if ( pipeline->depth_stencil_state != nil )
     {
         [pipeline->depth_stencil_state release];
     }
@@ -959,23 +973,24 @@ mtl_create_image( const Device* idevice, const ImageDesc* desc, Image** p )
     image->interface.layer_count     = desc->layer_count;
     image->interface.mip_level_count = desc->mip_levels;
 
-    image->texture_descriptor = [[MTLTextureDescriptor alloc] init];
+    MTLTextureDescriptor* texture_descriptor =
+        [[MTLTextureDescriptor alloc] init];
 
-    image->texture_descriptor.width            = desc->width;
-    image->texture_descriptor.height           = desc->height;
-    image->texture_descriptor.depth            = desc->depth;
-    image->texture_descriptor.arrayLength      = desc->layer_count;
-    image->texture_descriptor.mipmapLevelCount = desc->mip_levels;
-    image->texture_descriptor.sampleCount =
-        to_mtl_sample_count( desc->sample_count );
-    image->texture_descriptor.storageMode = MTLStorageModeManaged; // TODO:
-    image->texture_descriptor.textureType = MTLTextureType2D;      // TODO:
-    image->texture_descriptor.usage =
-        to_mtl_texture_usage( desc->descriptor_type );
-    image->texture_descriptor.pixelFormat = to_mtl_format( desc->format );
+    texture_descriptor.width            = desc->width;
+    texture_descriptor.height           = desc->height;
+    texture_descriptor.depth            = desc->depth;
+    texture_descriptor.arrayLength      = desc->layer_count;
+    texture_descriptor.mipmapLevelCount = desc->mip_levels;
+    texture_descriptor.sampleCount = to_mtl_sample_count( desc->sample_count );
+    texture_descriptor.storageMode = MTLStorageModeManaged; // TODO:
+    texture_descriptor.textureType = MTLTextureType2D;      // TODO:
+    texture_descriptor.usage = to_mtl_texture_usage( desc->descriptor_type );
+    texture_descriptor.pixelFormat = to_mtl_format( desc->format );
 
     image->texture =
-        [device->device newTextureWithDescriptor:image->texture_descriptor];
+        [device->device newTextureWithDescriptor:texture_descriptor];
+
+    [texture_descriptor release];
 }
 
 void
@@ -986,7 +1001,6 @@ mtl_destroy_image( const Device* idevice, Image* iimage )
 
     FT_FROM_HANDLE( image, iimage, MetalImage );
 
-    [image->texture_descriptor release];
     [image->texture release];
     operator delete( image, std::nothrow );
 }
@@ -1142,52 +1156,47 @@ mtl_update_descriptor_set( const Device*          idevice,
         {
         case DescriptorType::eSampler:
         {
-            auto it = std::find_if(
-                set->sampler_bindings,
-                set->sampler_bindings + set->sampler_binding_count,
-                [ binding ]( MetalSamplerBinding& sampler_binding )
-                { return sampler_binding.binding == binding; } );
-
-            if ( it != set->sampler_bindings + set->sampler_binding_count )
+            for ( u32 j = 0; j < set->sampler_binding_count; ++j )
             {
-                FT_FROM_HANDLE( sampler,
-                                writes[ i ].sampler_descriptors[ 0 ].sampler,
-                                MetalSampler );
-                it->sampler = sampler->sampler;
+                if ( set->sampler_bindings[ j ].binding == binding )
+                {
+                    FT_FROM_HANDLE(
+                        sampler,
+                        writes[ i ].sampler_descriptors[ 0 ].sampler,
+                        MetalSampler );
+
+                    set->sampler_bindings[ j ].sampler = sampler->sampler;
+                }
             }
             break;
         }
         case DescriptorType::eSampledImage:
         {
-            auto it =
-                std::find_if( set->image_bindings,
-                              set->image_bindings + set->image_binding_count,
-                              [ binding ]( MetalImageBinding& image_binding )
-                              { return image_binding.binding == binding; } );
-
-            if ( it != set->image_bindings + set->image_binding_count )
+            for ( u32 j = 0; j < set->image_binding_count; ++j )
             {
-                FT_FROM_HANDLE( image,
-                                writes[ i ].image_descriptors[ 0 ].image,
-                                MetalImage );
-                it->image = image->texture;
+                if ( set->image_bindings[ j ].binding == binding )
+                {
+                    FT_FROM_HANDLE( image,
+                                    writes[ i ].image_descriptors[ 0 ].image,
+                                    MetalImage );
+
+                    set->image_bindings[ j ].image = image->texture;
+                }
             }
             break;
         }
         case DescriptorType::eUniformBuffer:
         {
-            auto it =
-                std::find_if( set->buffer_bindings,
-                              set->buffer_bindings + set->buffer_binding_count,
-                              [ binding ]( MetalBufferBinding& buffer_binding )
-                              { return buffer_binding.binding == binding; } );
-
-            if ( it != set->buffer_bindings + set->buffer_binding_count )
+            for ( u32 j = 0; j < set->buffer_binding_count; ++j )
             {
-                FT_FROM_HANDLE( buffer,
-                                writes[ i ].buffer_descriptors[ 0 ].buffer,
-                                MetalBuffer );
-                it->buffer = buffer->buffer;
+                if ( set->buffer_bindings[ i ].binding == binding )
+                {
+                    FT_FROM_HANDLE( buffer,
+                                    writes[ i ].buffer_descriptors[ 0 ].buffer,
+                                    MetalBuffer );
+
+                    set->buffer_bindings[ j ].buffer = buffer->buffer;
+                }
             }
             break;
         }
@@ -1268,6 +1277,13 @@ mtl_ui_end_frame( UiContext*, CommandBuffer* icmd )
     }
 }
 
+void*
+mtl_get_imgui_texture_id( const Image* iimage )
+{
+    FT_FROM_HANDLE( image, iimage, MetalImage );
+    return image->texture;
+}
+
 void
 mtl_cmd_begin_render_pass( const CommandBuffer*       icmd,
                            const RenderPassBeginDesc* desc )
@@ -1308,6 +1324,7 @@ mtl_cmd_end_render_pass( const CommandBuffer* icmd )
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
 
     [cmd->encoder endEncoding];
+    [cmd->encoder release];
 }
 
 void
@@ -1684,6 +1701,7 @@ mtl_create_renderer_backend( const RendererBackendDesc*, RendererBackend** p )
     destroy_ui_context            = mtl_destroy_ui_context;
     ui_begin_frame                = mtl_ui_begin_frame;
     ui_end_frame                  = mtl_ui_end_frame;
+    get_imgui_texture_id          = mtl_get_imgui_texture_id;
     cmd_begin_render_pass         = mtl_cmd_begin_render_pass;
     cmd_end_render_pass           = mtl_cmd_end_render_pass;
     cmd_barrier                   = mtl_cmd_barrier;

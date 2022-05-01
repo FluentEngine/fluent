@@ -847,7 +847,7 @@ DECLARE_RENDERER_FUNCTION( void,
                            UiContext*     context,
                            CommandBuffer* cmd );
 
-DECLARE_RENDERER_FUNCTION( void*, get_imgui_texture_id, Image* image );
+DECLARE_RENDERER_FUNCTION( void*, get_imgui_texture_id, const Image* image );
 
 DECLARE_RENDERER_FUNCTION( std::vector<char>,
                            read_shader,

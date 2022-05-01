@@ -88,10 +88,8 @@ struct MetalSampler
 struct MetalImage
 {
 #ifdef METAL_BACKEND_INCLUDE_OBJC
-    MTLTextureDescriptor* texture_descriptor;
-    id<MTLTexture>        texture;
+    id<MTLTexture> texture;
 #else
-    void* texture_descriptor;
     void* texture;
 #endif
     Image interface;
