@@ -2148,23 +2148,29 @@ vk_create_graphics_pipeline( const Device*       idevice,
     multisample_state_create_info.sampleShadingEnable = VK_FALSE;
     multisample_state_create_info.minSampleShading    = 1.0f;
 
-    VkPipelineColorBlendAttachmentState color_blend_attachment_state {};
-    color_blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-    color_blend_attachment_state.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-    color_blend_attachment_state.colorBlendOp        = VK_BLEND_OP_ADD;
-    color_blend_attachment_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-    color_blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-    color_blend_attachment_state.colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-        VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    std::vector<VkPipelineColorBlendAttachmentState> attachment_states(
+        desc->render_pass->color_attachment_count );
+    for ( u32 i = 0; i < attachment_states.size(); ++i )
+    {
+        attachment_states[ i ]                     = {};
+        attachment_states[ i ].srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+        attachment_states[ i ].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+        attachment_states[ i ].colorBlendOp        = VK_BLEND_OP_ADD;
+        attachment_states[ i ].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        attachment_states[ i ].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        attachment_states[ i ].colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+            VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    }
 
     VkPipelineColorBlendStateCreateInfo color_blend_state_create_info {};
     color_blend_state_create_info.sType =
         VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    color_blend_state_create_info.logicOpEnable   = false;
-    color_blend_state_create_info.logicOp         = VK_LOGIC_OP_COPY;
-    color_blend_state_create_info.attachmentCount = 1;
-    color_blend_state_create_info.pAttachments = &color_blend_attachment_state;
+    color_blend_state_create_info.logicOpEnable = false;
+    color_blend_state_create_info.logicOp       = VK_LOGIC_OP_COPY;
+    color_blend_state_create_info.attachmentCount =
+        desc->render_pass->color_attachment_count;
+    color_blend_state_create_info.pAttachments = attachment_states.data();
 
     VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info {};
     depth_stencil_state_create_info.sType =
