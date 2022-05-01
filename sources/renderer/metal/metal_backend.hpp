@@ -154,10 +154,12 @@ struct MetalPipeline
     MTLRenderPipelineDescriptor* pipeline_descriptor;
     id<MTLRenderPipelineState>   pipeline;
     id<MTLDepthStencilState>     depth_stencil_state;
+    MTLPrimitiveType             primitive_type;
 #else
     void* pipeline_descriptor;
     void* pipeline;
     void* depth_stencil_state;
+    u32   primitive_type;
 #endif
     Pipeline interface;
 };

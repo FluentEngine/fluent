@@ -64,16 +64,18 @@ to_mtl_storage_mode( MemoryUsage usage )
 static inline MTLTextureUsage
 to_mtl_texture_usage( DescriptorType type )
 {
-    switch ( type )
-    {
-    case DescriptorType::eSampledImage: return MTLTextureUsageShaderRead;
-    case DescriptorType::eStorageImage: return MTLTextureUsageShaderWrite;
-    case DescriptorType::eColorAttachment:
-    case DescriptorType::eInputAttachment:
-    case DescriptorType::eDepthStencilAttachment:
-        return MTLTextureUsageRenderTarget;
-    default: FT_ASSERT( false ); return MTLTextureUsage( -1 );
-    }
+    MTLTextureUsage usage = 0;
+    if ( ( b32 ) ( type & DescriptorType::eSampledImage ) )
+        usage |= MTLTextureUsageShaderRead;
+    if ( ( b32 ) ( type & DescriptorType::eStorageImage ) )
+        usage |= MTLTextureUsageShaderWrite;
+    if ( ( b32 ) ( type & DescriptorType::eColorAttachment ) )
+        usage |= MTLTextureUsageRenderTarget;
+    if ( ( b32 ) ( type & DescriptorType::eInputAttachment ) )
+        usage |= MTLTextureUsageRenderTarget;
+    if ( ( b32 ) ( type & DescriptorType::eDepthStencilAttachment ) )
+        usage |= MTLTextureUsageRenderTarget;
+    return usage;
 }
 
 static inline MTLVertexFormat
@@ -190,6 +192,21 @@ to_mtl_compare_function( CompareOp op )
     case CompareOp::eGreaterOrEqual: return MTLCompareFunctionGreaterEqual;
     case CompareOp::eAlways: return MTLCompareFunctionAlways;
     default: FT_ASSERT( false ); return MTLCompareFunction( -1 );
+    }
+}
+
+static inline MTLPrimitiveType
+to_mtl_primitive_type( PrimitiveTopology topology )
+{
+    switch ( topology )
+    {
+    case PrimitiveTopology::ePointList: return MTLPrimitiveTypePoint;
+    case PrimitiveTopology::eLineList: return MTLPrimitiveTypeLine;
+    case PrimitiveTopology::eLineStrip: return MTLPrimitiveTypeLineStrip;
+    case PrimitiveTopology::eTriangleList: return MTLPrimitiveTypeTriangle;
+    case PrimitiveTopology::eTriangleStrip:
+        return MTLPrimitiveTypeTriangleStrip;
+    default: FT_ASSERT( false ); return MTLPrimitiveType( -1 );
     }
 }
 
@@ -752,7 +769,8 @@ mtl_create_graphics_pipeline( const Device*       idevice,
 
     for ( u32 i = 0; i < desc->vertex_layout.binding_desc_count; ++i )
     {
-        // TODO: rewrite more elegant? binding should not conflict with uniform bindings
+        // TODO: rewrite more elegant? binding should not conflict with uniform
+        // bindings
         u32 binding = desc->vertex_layout.binding_descs[ i ].binding +
                       MAX_VERTEX_BINDING_COUNT;
         vertex_layout.layouts[ binding ].stepFunction =
@@ -805,6 +823,8 @@ mtl_create_graphics_pipeline( const Device*       idevice,
     pipeline->pipeline = [device->device
         newRenderPipelineStateWithDescriptor:pipeline->pipeline_descriptor
                                        error:nil];
+
+    pipeline->primitive_type = to_mtl_primitive_type( desc->topology );
 }
 
 void
@@ -1342,8 +1362,13 @@ mtl_cmd_bind_pipeline( const CommandBuffer* icmd, const Pipeline* ipipeline )
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
     FT_FROM_HANDLE( pipeline, ipipeline, MetalPipeline );
 
-    [cmd->encoder setDepthStencilState:pipeline->depth_stencil_state];
+    if ( pipeline->depth_stencil_state )
+    {
+        [cmd->encoder setDepthStencilState:pipeline->depth_stencil_state];
+    }
     [cmd->encoder setRenderPipelineState:pipeline->pipeline];
+
+    cmd->primitive_type = pipeline->primitive_type;
 }
 
 void
@@ -1357,7 +1382,7 @@ mtl_cmd_draw( const CommandBuffer* icmd,
 
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
 
-    [cmd->encoder drawPrimitives:MTLPrimitiveTypeTriangle
+    [cmd->encoder drawPrimitives:cmd->primitive_type
                      vertexStart:first_vertex
                      vertexCount:vertex_count];
 }
@@ -1374,7 +1399,7 @@ mtl_cmd_draw_indexed( const CommandBuffer* icmd,
 
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
 
-    [cmd->encoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+    [cmd->encoder drawIndexedPrimitives:cmd->primitive_type
                              indexCount:index_count
                               indexType:cmd->index_type
                             indexBuffer:cmd->index_buffer
