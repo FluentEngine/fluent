@@ -71,6 +71,9 @@ app_run()
 
     InputSystem* input_system = get_input_system();
 
+    static u32 width, height;
+    window_get_size( &app_state.window, &width, &height );
+
     while ( app_state.is_running )
     {
         update_input_system();
@@ -84,27 +87,45 @@ app_run()
             app_state.imgui_callback( &e );
             switch ( e.type )
             {
-            case SDL_QUIT: app_state.is_running = false; break;
+            case SDL_QUIT:
+            {
+                app_state.is_running = false;
+                break;
+            }
             case SDL_WINDOWEVENT:
-                if ( e.window.event == SDL_WINDOWEVENT_RESIZED )
+            {
+                if ( e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED )
                 {
                     u32 w, h;
                     window_get_size( &app_state.window, &w, &h );
+                    if ( width == w && height == h )
+                    {
+                        break;
+                    }
                     app_state.on_resize( w, h );
                 }
                 break;
+            }
             case SDL_KEYDOWN:
+            {
                 input_system->keys[ e.key.keysym.scancode ] = true;
                 break;
+            }
             case SDL_KEYUP:
+            {
                 input_system->keys[ e.key.keysym.scancode ] = false;
                 break;
+            }
             case SDL_MOUSEBUTTONDOWN:
+            {
                 input_system->buttons[ e.button.button ] = true;
                 break;
+            }
             case SDL_MOUSEBUTTONUP:
+            {
                 input_system->buttons[ e.button.button ] = false;
                 break;
+            }
             case SDL_MOUSEWHEEL:
             {
                 if ( e.wheel.y > 0 )
