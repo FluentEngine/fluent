@@ -118,7 +118,8 @@ read_dds_image( const std::string& filename, b32 flip, u64* size, void** data )
     image_desc.layer_count = dds.GetArraySize();
     *size                  = image_data->m_memSlicePitch;
 
-    u8* loaded_data = new u8[ image_data->m_memSlicePitch ];
+    u8* loaded_data = static_cast<u8*>(
+        malloc( image_data->m_memSlicePitch * sizeof( u8 ) ) );
     std::memcpy( loaded_data, image_data->m_mem, image_data->m_memSlicePitch );
     *data = loaded_data;
     return image_desc;
@@ -172,6 +173,6 @@ read_image_data( const std::string& filename, b32 flip, u64* size, void** data )
 void
 release_image_data( void* data )
 {
-    delete[]( u8* ) data;
+    free( data );
 }
 } // namespace fluent::fs
