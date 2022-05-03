@@ -1,7 +1,8 @@
 project('fluent-engine', [ 'c', 'cpp' ], default_options : ['default_library=static', 'c_std=c17', 'cpp_std=c++17'] )
 target = 'fluent-engine'
 
-compile_args = []
+ft_cpp_args = []
+ft_objcpp_args = []
 include_dirs = []
 libs = []
 deps = []
@@ -18,23 +19,24 @@ dep = dependency('appleframeworks', modules : 'metal', required: get_option('flu
 renderer_backend_metal = dep.found()
 
 if renderer_backend_vulkan
-    compile_args = ['-DVULKAN_BACKEND', compile_args]
+    ft_cpp_args += [ '-DVULKAN_BACKEND' ]
 endif
 
 if renderer_backend_d3d12
-    compile_args += ['-DD3D12_BACKEND']
+    ft_cpp_args += [ '-DD3D12_BACKEND' ]
 endif
 
 if renderer_backend_metal
     add_languages( [ 'objc', 'objcpp' ])
-    compile_args += ['-DMETAL_BACKEND']
+    ft_cpp_args += [ '-DMETAL_BACKEND' ]
+    ft_objcpp_args += [ '-fobjc-arc', '-fobjc-weak', '-fmodules' ]
 endif
 
 if host_machine.system() == 'linux' or host_machine.system() == 'darwin'
     if fluent_debug_build
-	    compile_args += ['-g', '-DFLUENT_DEBUG' ]
+	    ft_cpp_args += [ '-g', '-DFLUENT_DEBUG' ]
 	else
-	    compile_args += ['-O3']
+	    ft_cpp_args += [ '-O3' ]
 	endif
 endif
 
@@ -139,6 +141,12 @@ sources = [
     fs,
 ]
 
-target_lib = library(target, sources, dependencies: deps, include_directories: 'sources', cpp_args: compile_args)
+target_lib = library(target, sources, 
+    dependencies: deps, 
+    include_directories: 'sources', 
+    cpp_args: ft_cpp_args,
+    objc_args: ft_objcpp_args,
+    objcpp_args: ft_objcpp_args)
+
 fluent_engine_dep = declare_dependency(include_directories: 'sources', link_with: target_lib, dependencies : deps)
 

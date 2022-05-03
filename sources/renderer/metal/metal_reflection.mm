@@ -19,7 +19,7 @@ to_descriptor_type( MTLArgumentType type )
 
 void
 mtl_reflect( const Device* idevice, const ShaderDesc* desc, Shader* ishader )
-{
+{ @autoreleasepool {
     FT_FROM_HANDLE( device, idevice, MetalDevice );
     FT_FROM_HANDLE( shader, ishader, MetalShader );
 
@@ -86,11 +86,11 @@ mtl_reflect( const Device* idevice, const ShaderDesc* desc, Shader* ishader )
         fragment.binding_count++;
     }
 
-    [pipeline_state release];
-    [reflection release];
-    [descriptor release];
-    [vertex_descriptor release];
-}
+    pipeline_state = nil;
+    reflection = nil;
+    descriptor = nil;
+    vertex_descriptor = nil;
+}}
 
 } // namespace fluent
 #endif

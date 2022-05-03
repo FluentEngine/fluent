@@ -222,7 +222,7 @@ void
 mtl_create_device( const RendererBackend* ibackend,
                    const DeviceDesc*      desc,
                    Device**               p )
-{
+{ @autoreleasepool {
     FT_ASSERT( p );
 
     auto device              = new ( std::nothrow ) MetalDevice {};
@@ -232,23 +232,23 @@ mtl_create_device( const RendererBackend* ibackend,
     auto* window   = static_cast<SDL_Window*>( get_app_window()->handle );
     device->device = MTLCreateSystemDefaultDevice();
     device->view   = SDL_Metal_CreateView( window );
-}
+}}
 
 void
 mtl_destroy_device( Device* idevice )
-{
+{ @autoreleasepool {
     FT_ASSERT( idevice );
 
     FT_FROM_HANDLE( device, idevice, MetalDevice );
 
     SDL_Metal_DestroyView( device->view );
-    [device->device release];
+    device->device = nil;
     operator delete( device, std::nothrow );
-}
+}}
 
 void
 mtl_create_queue( const Device* idevice, const QueueDesc* desc, Queue** p )
-{
+{ @autoreleasepool {
     FT_ASSERT( p );
 
     FT_FROM_HANDLE( device, idevice, MetalDevice );
@@ -258,22 +258,22 @@ mtl_create_queue( const Device* idevice, const QueueDesc* desc, Queue** p )
     *p                      = &queue->interface;
 
     queue->queue = [device->device newCommandQueue];
-}
+}}
 
 void
 mtl_destroy_queue( Queue* iqueue )
-{
+{ @autoreleasepool {
     FT_ASSERT( iqueue );
 
     FT_FROM_HANDLE( queue, iqueue, MetalQueue );
 
-    [queue->queue release];
+    queue->queue = nil;
     operator delete( queue, std::nothrow );
-}
+}}
 
 void
 mtl_queue_wait_idle( const Queue* iqueue )
-{
+{ @autoreleasepool {
     FT_ASSERT( iqueue );
 
     FT_FROM_HANDLE( queue, iqueue, MetalQueue );
@@ -283,8 +283,8 @@ mtl_queue_wait_idle( const Queue* iqueue )
 
     [wait_cmd commit];
     [wait_cmd waitUntilCompleted];
-    [wait_cmd release];
-}
+    wait_cmd = nil;
+}}
 
 void
 mtl_queue_submit( const Queue* iqueue, const QueueSubmitDesc* desc )
@@ -303,16 +303,19 @@ mtl_immediate_submit( const Queue* iqueue, CommandBuffer* cmd )
 
 void
 mtl_queue_present( const Queue* iqueue, const QueuePresentDesc* desc )
-{
+{ @autoreleasepool {
     FT_FROM_HANDLE( queue, iqueue, MetalQueue );
     FT_FROM_HANDLE( swapchain, desc->swapchain, MetalSwapchain );
-
+    FT_FROM_HANDLE( image, swapchain->interface.images[swapchain->current_image_index], MetalImage);
+    
     id<MTLCommandBuffer> present_cmd = [queue->queue commandBuffer];
     [present_cmd presentDrawable:swapchain->drawable];
     [present_cmd commit];
-    [present_cmd release];
-    [swapchain->drawable release];
-}
+    present_cmd = nil;
+    swapchain->drawable = nil;
+    image->texture = nil;
+    
+}}
 
 void
 mtl_create_semaphore( const Device* idevice, Semaphore** p )
@@ -366,7 +369,7 @@ void
 mtl_create_swapchain( const Device*        idevice,
                       const SwapchainDesc* desc,
                       Swapchain**          p )
-{
+{ @autoreleasepool {
     FT_ASSERT( idevice );
     FT_ASSERT( desc );
     FT_ASSERT( p );
@@ -383,7 +386,7 @@ mtl_create_swapchain( const Device*        idevice,
     swapchain->interface.queue           = desc->queue;
     swapchain->interface.vsync           = desc->vsync;
 
-    swapchain->swapchain = ( CAMetalLayer* ) SDL_Metal_GetLayer( device->view );
+    swapchain->swapchain = ( __bridge CAMetalLayer* ) SDL_Metal_GetLayer( device->view );
     swapchain->swapchain.device             = device->device;
     swapchain->swapchain.pixelFormat        = to_mtl_format( desc->format );
     swapchain->swapchain.displaySyncEnabled = desc->vsync;
@@ -408,7 +411,7 @@ mtl_create_swapchain( const Device*        idevice,
         image->interface.mip_level_count = 1;
         image->interface.sample_count    = SampleCount::e1;
     }
-}
+}}
 
 void
 mtl_resize_swapchain( const Device* idevice,
@@ -513,22 +516,22 @@ mtl_destroy_command_buffers( const Device*      idevice,
 
 void
 mtl_begin_command_buffer( const CommandBuffer* icmd )
-{
+{ @autoreleasepool {
     FT_ASSERT( icmd );
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
     FT_FROM_HANDLE( queue, cmd->interface.queue, MetalQueue );
 
     cmd->cmd = [queue->queue commandBuffer];
-}
+}}
 
 void
 mtl_end_command_buffer( const CommandBuffer* icmd )
-{
+{ @autoreleasepool {
     FT_ASSERT( icmd );
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
     [cmd->cmd commit];
-    [cmd->cmd release];
-}
+    cmd->cmd = nil;
+}}
 
 void
 mtl_acquire_next_image( const Device*    idevice,
@@ -536,7 +539,7 @@ mtl_acquire_next_image( const Device*    idevice,
                         const Semaphore* isemaphore,
                         const Fence*     ifence,
                         u32*             image_index )
-{
+{ @autoreleasepool {
     FT_ASSERT( idevice );
     FT_ASSERT( iswapchain );
 
@@ -552,13 +555,13 @@ mtl_acquire_next_image( const Device*    idevice,
     *image_index                   = swapchain->current_image_index;
     swapchain->current_image_index = ( swapchain->current_image_index + 1 ) %
                                      swapchain->interface.image_count;
-}
+}}
 
 void
 mtl_create_render_pass( const Device*         idevice,
                         const RenderPassDesc* desc,
                         RenderPass**          p )
-{
+{ @autoreleasepool {
     FT_ASSERT( p );
 
     FT_INIT_INTERNAL( render_pass, *p, MetalRenderPass );
@@ -608,13 +611,13 @@ mtl_create_render_pass( const Device*         idevice,
         render_pass->interface.has_depth_stencil = true;
         render_pass->depth_attachment            = image;
     }
-}
+}}
 
 void
 mtl_resize_render_pass( const Device*         idevice,
                         RenderPass*           irender_pass,
                         const RenderPassDesc* desc )
-{
+{ @autoreleasepool {
     FT_ASSERT( idevice );
     FT_ASSERT( irender_pass );
     FT_ASSERT( desc );
@@ -636,22 +639,22 @@ mtl_resize_render_pass( const Device*         idevice,
         FT_FROM_HANDLE( image, desc->depth_stencil, MetalImage );
         render_pass->render_pass.depthAttachment.texture = image->texture;
     }
-}
+}}
 
 void
 mtl_destroy_render_pass( const Device* idevice, RenderPass* irender_pass )
-{
+{ @autoreleasepool {
     FT_ASSERT( irender_pass );
 
     FT_FROM_HANDLE( render_pass, irender_pass, MetalRenderPass );
 
-    [render_pass->render_pass release];
+    render_pass->render_pass = nil;
     operator delete( render_pass, std::nothrow );
-}
+}}
 
 void
 mtl_create_shader( const Device* idevice, ShaderDesc* desc, Shader** p )
-{
+{ @autoreleasepool {
     FT_ASSERT( idevice );
     FT_ASSERT( desc );
     FT_ASSERT( p );
@@ -690,11 +693,11 @@ mtl_create_shader( const Device* idevice, ShaderDesc* desc, Shader** p )
     create_function( device, shader, ShaderStage::eFragment, desc->fragment );
 
     mtl_reflect( idevice, desc, &shader->interface );
-}
+}}
 
 void
 mtl_destroy_shader( const Device* idevice, Shader* ishader )
-{
+{ @autoreleasepool {
     FT_ASSERT( idevice );
     FT_ASSERT( ishader );
 
@@ -704,11 +707,11 @@ mtl_destroy_shader( const Device* idevice, Shader* ishader )
     {
         if ( shader->shaders[ i ] )
         {
-            [shader->shaders[ i ] release];
+            shader->shaders[ i ] = nil;
         }
     }
     operator delete( shader, std::nothrow );
-}
+}}
 
 void
 mtl_create_descriptor_set_layout( const Device*         idevice,
@@ -740,7 +743,7 @@ void
 mtl_create_graphics_pipeline( const Device*       idevice,
                               const PipelineDesc* desc,
                               Pipeline**          p )
-{
+{ @autoreleasepool {
     FT_ASSERT( idevice );
     FT_ASSERT( desc );
     FT_ASSERT( p );
@@ -839,11 +842,11 @@ mtl_create_graphics_pipeline( const Device*       idevice,
                                        error:nil];
 
     pipeline->primitive_type = to_mtl_primitive_type( desc->topology );
-}
+}}
 
 void
 mtl_destroy_pipeline( const Device* idevice, Pipeline* ipipeline )
-{
+{ @autoreleasepool {
     FT_ASSERT( idevice );
     FT_ASSERT( ipipeline );
 
@@ -851,17 +854,17 @@ mtl_destroy_pipeline( const Device* idevice, Pipeline* ipipeline )
 
     if ( pipeline->depth_stencil_state != nil )
     {
-        [pipeline->depth_stencil_state release];
+        pipeline->depth_stencil_state = nil;
     }
 
-    [pipeline->pipeline release];
-    [pipeline->pipeline_descriptor release];
+    pipeline->pipeline = nil;
+    pipeline->pipeline_descriptor = nil;
     operator delete( pipeline, std::nothrow );
-}
+}}
 
 void
 mtl_create_buffer( const Device* idevice, const BufferDesc* desc, Buffer** p )
-{
+{ @autoreleasepool {
     FT_ASSERT( idevice );
     FT_ASSERT( desc );
     FT_ASSERT( p );
@@ -878,38 +881,38 @@ mtl_create_buffer( const Device* idevice, const BufferDesc* desc, Buffer** p )
     buffer->buffer = [device->device
         newBufferWithLength:desc->size
                     options:MTLResourceCPUCacheModeDefaultCache];
-}
+}}
 
 void
 mtl_destroy_buffer( const Device* idevice, Buffer* ibuffer )
-{
+{ @autoreleasepool {
     FT_ASSERT( idevice );
     FT_ASSERT( ibuffer );
 
     FT_FROM_HANDLE( buffer, ibuffer, MetalBuffer );
-    [buffer->buffer release];
+    buffer->buffer = nil;
     operator delete( buffer, std::nothrow );
-}
+}}
 
 void*
 mtl_map_memory( const Device* idevice, Buffer* ibuffer )
-{
+{ @autoreleasepool {
     FT_FROM_HANDLE( buffer, ibuffer, MetalBuffer );
     buffer->interface.mapped_memory = buffer->buffer.contents;
     return buffer->interface.mapped_memory;
-}
+}}
 
 void
 mtl_unmap_memory( const Device* idevice, Buffer* ibuffer )
-{
+{ @autoreleasepool {
     ibuffer->mapped_memory = nullptr;
-}
+}}
 
 void
 mtl_create_sampler( const Device*      idevice,
                     const SamplerDesc* desc,
                     Sampler**          p )
-{
+{ @autoreleasepool {
     FT_ASSERT( idevice );
     FT_ASSERT( desc );
     FT_ASSERT( p );
@@ -940,22 +943,22 @@ mtl_create_sampler( const Device*      idevice,
 
     sampler->sampler =
         [device->device newSamplerStateWithDescriptor:sampler_descriptor];
-}
+}}
 
 void
 mtl_destroy_sampler( const Device* idevice, Sampler* isampler )
-{
+{ @autoreleasepool {
     FT_ASSERT( idevice );
     FT_ASSERT( isampler );
 
     FT_FROM_HANDLE( sampler, isampler, MetalSampler );
 
     operator delete( sampler, std::nothrow );
-}
+}}
 
 void
 mtl_create_image( const Device* idevice, const ImageDesc* desc, Image** p )
-{
+{ @autoreleasepool {
     FT_ASSERT( idevice );
     FT_ASSERT( desc );
     FT_ASSERT( p );
@@ -990,20 +993,20 @@ mtl_create_image( const Device* idevice, const ImageDesc* desc, Image** p )
     image->texture =
         [device->device newTextureWithDescriptor:texture_descriptor];
 
-    [texture_descriptor release];
-}
+    texture_descriptor = nil;
+}}
 
 void
 mtl_destroy_image( const Device* idevice, Image* iimage )
-{
+{ @autoreleasepool {
     FT_ASSERT( idevice );
     FT_ASSERT( iimage );
 
     FT_FROM_HANDLE( image, iimage, MetalImage );
 
-    [image->texture release];
+    image->texture = nil;
     operator delete( image, std::nothrow );
-}
+}}
 
 static inline void
 count_binding_types( MetalShader*                      shader,
@@ -1085,7 +1088,8 @@ mtl_create_descriptor_set( const Device*            idevice,
     set->sampler_binding_count = sampler_bindings.size();
     set->buffer_binding_count  = buffer_bindings.size();
     set->image_binding_count   = image_bindings.size();
-
+    
+    set->sampler_bindings = nil;
     if ( set->sampler_binding_count > 0 )
     {
         set->sampler_bindings = new ( std::nothrow )
@@ -1094,7 +1098,8 @@ mtl_create_descriptor_set( const Device*            idevice,
                    sampler_bindings.end(),
                    set->sampler_bindings );
     }
-
+    
+    set->image_bindings = nil;
     if ( set->image_binding_count > 0 )
     {
         set->image_bindings =
@@ -1103,7 +1108,8 @@ mtl_create_descriptor_set( const Device*            idevice,
                    image_bindings.end(),
                    set->image_bindings );
     }
-
+    
+    set->buffer_bindings = nil;
     if ( set->buffer_binding_count > 0 )
     {
         set->buffer_bindings = new ( std::nothrow )
@@ -1145,7 +1151,7 @@ mtl_update_descriptor_set( const Device*          idevice,
                            DescriptorSet*         iset,
                            u32                    count,
                            const DescriptorWrite* writes )
-{
+{ @autoreleasepool {
     FT_FROM_HANDLE( set, iset, MetalDescriptorSet );
 
     for ( u32 i = 0; i < count; ++i )
@@ -1206,11 +1212,11 @@ mtl_update_descriptor_set( const Device*          idevice,
         }
         }
     }
-}
+}}
 
 void
 mtl_create_ui_context( CommandBuffer* cmd, const UiDesc* desc, UiContext** p )
-{
+{ @autoreleasepool {
     FT_ASSERT( p );
 
     FT_FROM_HANDLE( device, desc->device, MetalDevice );
@@ -1235,11 +1241,11 @@ mtl_create_ui_context( CommandBuffer* cmd, const UiDesc* desc, UiContext** p )
     ImGui_ImplSDL2_InitForMetal(
         static_cast<SDL_Window*>( desc->window->handle ) );
     ImGui_ImplMetal_Init( device->device );
-}
+}}
 
 void
 mtl_destroy_ui_context( const Device* idevice, UiContext* icontext )
-{
+{ @autoreleasepool {
     FT_ASSERT( icontext );
 
     FT_FROM_HANDLE( context, icontext, MetalUiContext );
@@ -1248,20 +1254,20 @@ mtl_destroy_ui_context( const Device* idevice, UiContext* icontext )
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
     operator delete( context, std::nothrow );
-}
+}}
 
 void
 mtl_ui_begin_frame( UiContext*, CommandBuffer* icmd )
-{
+{ @autoreleasepool {
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
     ImGui_ImplMetal_NewFrame( cmd->pass_descriptor );
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
-}
+}}
 
 void
 mtl_ui_end_frame( UiContext*, CommandBuffer* icmd )
-{
+{ @autoreleasepool {
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
     ImGui::Render();
     FT_ASSERT( cmd->encoder != nil );
@@ -1275,19 +1281,19 @@ mtl_ui_end_frame( UiContext*, CommandBuffer* icmd )
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindowsDefault();
     }
-}
+}}
 
 void*
 mtl_get_imgui_texture_id( const Image* iimage )
-{
+{ @autoreleasepool {
     FT_FROM_HANDLE( image, iimage, MetalImage );
-    return image->texture;
-}
+    return (__bridge void*)image->texture;
+}}
 
 void
 mtl_cmd_begin_render_pass( const CommandBuffer*       icmd,
                            const RenderPassBeginDesc* desc )
-{
+{ @autoreleasepool {
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
     FT_FROM_HANDLE( render_pass, desc->render_pass, MetalRenderPass );
 
@@ -1316,16 +1322,16 @@ mtl_cmd_begin_render_pass( const CommandBuffer*       icmd,
     cmd->encoder =
         [cmd->cmd renderCommandEncoderWithDescriptor:render_pass->render_pass];
     cmd->pass_descriptor = render_pass->render_pass;
-}
+}}
 
 void
 mtl_cmd_end_render_pass( const CommandBuffer* icmd )
-{
+{ @autoreleasepool {
     FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
 
     [cmd->encoder endEncoding];
-    [cmd->encoder release];
-}
+    cmd->encoder = nil;
+}}
 
 void
 mtl_cmd_barrier( const CommandBuffer* icmd,
@@ -1446,7 +1452,7 @@ void
 mtl_cmd_bind_index_buffer_u16( const CommandBuffer* icmd,
                                const Buffer*        ibuffer,
                                const u64            offset )
-{
+{ @autoreleasepool {
     FT_ASSERT( icmd );
     FT_ASSERT( ibuffer );
 
@@ -1455,13 +1461,13 @@ mtl_cmd_bind_index_buffer_u16( const CommandBuffer* icmd,
 
     cmd->index_type   = MTLIndexTypeUInt16;
     cmd->index_buffer = buffer->buffer;
-}
+}}
 
 void
 mtl_cmd_bind_index_buffer_u32( const CommandBuffer* icmd,
                                const Buffer*        ibuffer,
                                u64                  offset )
-{
+{ @autoreleasepool {
     FT_ASSERT( icmd );
     FT_ASSERT( ibuffer );
 
@@ -1470,7 +1476,7 @@ mtl_cmd_bind_index_buffer_u32( const CommandBuffer* icmd,
 
     cmd->index_type   = MTLIndexTypeUInt32;
     cmd->index_buffer = buffer->buffer;
-}
+}}
 
 void
 mtl_cmd_copy_buffer( const CommandBuffer* icmd,
@@ -1479,7 +1485,7 @@ mtl_cmd_copy_buffer( const CommandBuffer* icmd,
                      Buffer*              idst,
                      u64                  dst_offset,
                      u64                  size )
-{
+{ 
     FT_FROM_HANDLE( src, isrc, MetalBuffer );
     FT_FROM_HANDLE( dst, idst, MetalBuffer );
 
