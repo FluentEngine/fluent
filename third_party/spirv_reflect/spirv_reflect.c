@@ -304,8 +304,8 @@ static SpvReflectResult IntersectSortedUint32(
 )
 {
   *res_size = 0;
-  const uint32_t* arr0_end = p_arr0 + arr0_size;
-  const uint32_t* arr1_end = p_arr1 + arr1_size;
+    const uint32_t* arr0_end = p_arr0 ? p_arr0 + arr0_size : NULL;
+    const uint32_t* arr1_end = p_arr1 ? p_arr1 + arr1_size : NULL;
 
   const uint32_t* idx0 = p_arr0;
   const uint32_t* idx1 = p_arr1;

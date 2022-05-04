@@ -215,7 +215,7 @@ mtl_destroy_renderer_backend( RendererBackend* ibackend )
 {
     FT_ASSERT( ibackend );
     FT_FROM_HANDLE( backend, ibackend, MetalRendererBackend );
-    operator delete( backend, std::nothrow );
+    std::free( backend );
 }
 
 void
@@ -227,9 +227,7 @@ mtl_create_device( const RendererBackend* ibackend,
     {
         FT_ASSERT( p );
 
-        auto device              = new ( std::nothrow ) MetalDevice {};
-        device->interface.handle = device;
-        *p                       = &device->interface;
+        FT_INIT_INTERNAL( device, *p, MetalDevice );
 
         auto* window   = static_cast<SDL_Window*>( get_app_window()->handle );
         device->device = MTLCreateSystemDefaultDevice();
@@ -248,7 +246,7 @@ mtl_destroy_device( Device* idevice )
 
         SDL_Metal_DestroyView( device->view );
         device->device = nil;
-        operator delete( device, std::nothrow );
+        std::free( device );
     }
 }
 
@@ -261,9 +259,7 @@ mtl_create_queue( const Device* idevice, const QueueDesc* desc, Queue** p )
 
         FT_FROM_HANDLE( device, idevice, MetalDevice );
 
-        auto queue              = new ( std::nothrow ) MetalQueue {};
-        queue->interface.handle = queue;
-        *p                      = &queue->interface;
+        FT_INIT_INTERNAL( queue, *p, MetalQueue );
 
         queue->queue = [device->device newCommandQueue];
     }
@@ -279,7 +275,7 @@ mtl_destroy_queue( Queue* iqueue )
         FT_FROM_HANDLE( queue, iqueue, MetalQueue );
 
         queue->queue = nil;
-        operator delete( queue, std::nothrow );
+        std::free( queue );
     }
 }
 
@@ -342,9 +338,7 @@ mtl_create_semaphore( const Device* idevice, Semaphore** p )
 {
     FT_ASSERT( p );
 
-    auto semaphore              = new ( std::nothrow ) MetalSemaphore {};
-    semaphore->interface.handle = semaphore;
-    *p                          = &semaphore->interface;
+    FT_INIT_INTERNAL( semaphore, *p, MetalSemaphore );
 }
 
 void
@@ -352,7 +346,7 @@ mtl_destroy_semaphore( const Device* idevice, Semaphore* isemaphore )
 {
     FT_ASSERT( isemaphore );
     FT_FROM_HANDLE( semaphore, isemaphore, MetalSemaphore );
-    operator delete( semaphore, std::nothrow );
+    std::free( semaphore );
 }
 
 void
@@ -361,9 +355,7 @@ mtl_create_fence( const Device* idevice, Fence** p )
     FT_ASSERT( idevice );
     FT_ASSERT( p );
 
-    auto fence              = new ( std::nothrow ) MetalFence {};
-    fence->interface.handle = fence;
-    *p                      = &fence->interface;
+    FT_INIT_INTERNAL( fence, *p, MetalFence );
 }
 
 void
@@ -372,7 +364,7 @@ mtl_destroy_fence( const Device* idevice, Fence* ifence )
     FT_ASSERT( idevice );
     FT_ASSERT( ifence );
     FT_FROM_HANDLE( fence, ifence, MetalFence );
-    operator delete( fence, std::nothrow );
+    std::free( fence );
 }
 
 void
@@ -417,8 +409,8 @@ mtl_create_swapchain( const Device*        idevice,
         swapchain->interface.image_count =
             swapchain->swapchain.maximumDrawableCount;
 
-        swapchain->interface.images =
-            new ( std::nothrow ) Image*[ swapchain->interface.image_count ];
+        swapchain->interface.images = static_cast<Image**>(
+            std::calloc( swapchain->interface.image_count, sizeof( Image* ) ) );
 
         for ( u32 i = 0; i < swapchain->interface.image_count; i++ )
         {
@@ -464,10 +456,11 @@ mtl_destroy_swapchain( const Device* idevice, Swapchain* iswapchain )
     for ( u32 i = 0; i < swapchain->interface.image_count; i++ )
     {
         FT_FROM_HANDLE( image, swapchain->interface.images[ i ], MetalImage );
-        operator delete( image, std::nothrow );
+        std::free( image );
     }
-    operator delete[]( swapchain->interface.images, std::nothrow );
-    operator delete( swapchain, std::nothrow );
+
+    std::free( swapchain->interface.images );
+    std::free( swapchain );
 }
 
 void
@@ -492,7 +485,7 @@ mtl_destroy_command_pool( const Device* idevice, CommandPool* icommand_pool )
 
     FT_FROM_HANDLE( cmd_pool, icommand_pool, MetalCommandPool );
 
-    operator delete( cmd_pool, std::nothrow );
+    std::free( cmd_pool );
 }
 
 void
@@ -509,10 +502,8 @@ mtl_create_command_buffers( const Device*      idevice,
 
     for ( u32 i = 0; i < count; i++ )
     {
-        auto cmd              = new ( std::nothrow ) MetalCommandBuffer {};
-        cmd->interface.handle = cmd;
-        cmd->interface.queue  = cmd_pool->interface.queue;
-        p[ i ]                = &cmd->interface;
+        FT_INIT_INTERNAL( cmd, p[ i ], MetalCommandBuffer );
+        cmd->interface.queue = cmd_pool->interface.queue;
     }
 }
 
@@ -536,7 +527,7 @@ mtl_destroy_command_buffers( const Device*      idevice,
     for ( u32 i = 0; i < count; i++ )
     {
         FT_FROM_HANDLE( cmd, icommand_buffers[ i ], MetalCommandBuffer );
-        operator delete( cmd, std::nothrow );
+        std::free( cmd );
     }
 }
 
@@ -694,7 +685,7 @@ mtl_destroy_render_pass( const Device* idevice, RenderPass* irender_pass )
         FT_FROM_HANDLE( render_pass, irender_pass, MetalRenderPass );
 
         render_pass->render_pass = nil;
-        operator delete( render_pass, std::nothrow );
+        std::free( render_pass );
     }
 }
 
@@ -764,7 +755,7 @@ mtl_destroy_shader( const Device* idevice, Shader* ishader )
                 shader->shaders[ i ] = nil;
             }
         }
-        operator delete( shader, std::nothrow );
+        std::free( shader );
     }
 }
 
@@ -784,7 +775,7 @@ mtl_destroy_descriptor_set_layout( const Device*        idevice,
 {
     FT_FROM_HANDLE( layout, ilayout, MetalDescriptorSetLayout );
 
-    operator delete( layout, std::nothrow );
+    std::free( layout );
 }
 
 void
@@ -890,7 +881,7 @@ mtl_create_graphics_pipeline( const Device*       idevice,
         if ( desc->depth_state_desc.depth_test )
         {
             MTLDepthStencilDescriptor* depth_stencil_descriptor =
-                [MTLDepthStencilDescriptor new];
+                [[MTLDepthStencilDescriptor alloc] init];
             depth_stencil_descriptor.depthCompareFunction =
                 to_mtl_compare_function( desc->depth_state_desc.compare_op );
             depth_stencil_descriptor.depthWriteEnabled =
@@ -924,7 +915,7 @@ mtl_destroy_pipeline( const Device* idevice, Pipeline* ipipeline )
 
         pipeline->pipeline            = nil;
         pipeline->pipeline_descriptor = nil;
-        operator delete( pipeline, std::nothrow );
+        std::free( pipeline );
     }
 }
 
@@ -962,7 +953,7 @@ mtl_destroy_buffer( const Device* idevice, Buffer* ibuffer )
 
         FT_FROM_HANDLE( buffer, ibuffer, MetalBuffer );
         buffer->buffer = nil;
-        operator delete( buffer, std::nothrow );
+        std::free( buffer );
     }
 }
 
@@ -1036,7 +1027,7 @@ mtl_destroy_sampler( const Device* idevice, Sampler* isampler )
 
         FT_FROM_HANDLE( sampler, isampler, MetalSampler );
 
-        operator delete( sampler, std::nothrow );
+        std::free( sampler );
     }
 }
 
@@ -1096,7 +1087,7 @@ mtl_destroy_image( const Device* idevice, Image* iimage )
         FT_FROM_HANDLE( image, iimage, MetalImage );
 
         image->texture = nil;
-        operator delete( image, std::nothrow );
+        std::free( image );
     }
 }
 
@@ -1184,8 +1175,10 @@ mtl_create_descriptor_set( const Device*            idevice,
     set->sampler_bindings = nil;
     if ( set->sampler_binding_count > 0 )
     {
-        set->sampler_bindings =
-            new MetalSamplerBinding[ set->sampler_binding_count ];
+        set->sampler_bindings = static_cast<MetalSamplerBinding*>(
+            std::calloc( set->sampler_binding_count,
+                         sizeof( MetalSamplerBinding ) ) );
+
         std::copy( sampler_bindings.begin(),
                    sampler_bindings.end(),
                    set->sampler_bindings );
@@ -1194,7 +1187,10 @@ mtl_create_descriptor_set( const Device*            idevice,
     set->image_bindings = nil;
     if ( set->image_binding_count > 0 )
     {
-        set->image_bindings = new MetalImageBinding[ set->image_binding_count ];
+        set->image_bindings = static_cast<MetalImageBinding*>(
+            std::calloc( set->image_binding_count,
+                         sizeof( MetalImageBinding ) ) );
+
         std::copy( image_bindings.begin(),
                    image_bindings.end(),
                    set->image_bindings );
@@ -1203,8 +1199,10 @@ mtl_create_descriptor_set( const Device*            idevice,
     set->buffer_bindings = nil;
     if ( set->buffer_binding_count > 0 )
     {
-        set->buffer_bindings =
-            new MetalBufferBinding[ set->buffer_binding_count ];
+        set->buffer_bindings = static_cast<MetalBufferBinding*>(
+            std::calloc( set->buffer_binding_count,
+                         sizeof( MetalBufferBinding ) ) );
+
         std::copy( buffer_bindings.begin(),
                    buffer_bindings.end(),
                    set->buffer_bindings );
@@ -1221,20 +1219,20 @@ mtl_destroy_descriptor_set( const Device* idevice, DescriptorSet* iset )
 
     if ( set->sampler_bindings )
     {
-        delete[] set->sampler_bindings;
+        std::free( set->sampler_bindings );
     }
 
     if ( set->image_bindings )
     {
-        delete[] set->image_bindings;
+        std::free( set->image_bindings );
     }
 
     if ( set->buffer_bindings )
     {
-        delete[] set->buffer_bindings;
+        std::free( set->buffer_bindings );
     }
 
-    operator delete( set, std::nothrow );
+    std::free( set );
 }
 
 void
@@ -1319,9 +1317,7 @@ mtl_create_ui_context( CommandBuffer* cmd, const UiDesc* desc, UiContext** p )
 
         FT_FROM_HANDLE( device, desc->device, MetalDevice );
 
-        auto context              = new ( std::nothrow ) MetalUiContext {};
-        context->interface.handle = context;
-        *p                        = &context->interface;
+        FT_INIT_INTERNAL( context, *p, MetalUiContext );
 
         ImGui::CreateContext();
         auto& io = ImGui::GetIO();
@@ -1354,7 +1350,7 @@ mtl_destroy_ui_context( const Device* idevice, UiContext* icontext )
         ImGui_ImplMetal_Shutdown();
         ImGui_ImplSDL2_Shutdown();
         ImGui::DestroyContext();
-        operator delete( context, std::nothrow );
+        std::free( context );
     }
 }
 

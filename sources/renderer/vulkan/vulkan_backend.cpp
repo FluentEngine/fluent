@@ -700,7 +700,7 @@ vk_destroy_renderer_backend( RendererBackend* ibackend )
                                      backend->vulkan_allocator );
 #endif
     vkDestroyInstance( backend->instance, backend->vulkan_allocator );
-    operator delete( backend, std::nothrow );
+    std::free( backend );
 }
 
 void*
@@ -906,7 +906,7 @@ vk_destroy_device( Device* idevice )
     vmaDestroyAllocator( device->memory_allocator );
     vkDestroyDevice( device->logical_device, device->vulkan_allocator );
 
-    operator delete( device, std::nothrow );
+    free( device );
 }
 
 void
@@ -931,7 +931,7 @@ vk_destroy_queue( Queue* iqueue )
 {
     FT_ASSERT( iqueue );
     FT_FROM_HANDLE( queue, iqueue, VulkanQueue );
-    operator delete( queue, std::nothrow );
+    std::free( queue );
 }
 
 void
@@ -1064,7 +1064,7 @@ vk_destroy_semaphore( const Device* idevice, Semaphore* isemaphore )
     vkDestroySemaphore( device->logical_device,
                         semaphore->semaphore,
                         device->vulkan_allocator );
-    operator delete( semaphore, std::nothrow );
+    std::free( semaphore );
 }
 
 void
@@ -1098,7 +1098,7 @@ vk_destroy_fence( const Device* idevice, Fence* ifence )
     vkDestroyFence( device->logical_device,
                     fence->fence,
                     device->vulkan_allocator );
-    operator delete( fence, std::nothrow );
+    std::free( fence );
 }
 
 void
@@ -1223,6 +1223,7 @@ configure_swapchain( const VulkanDevice*  device,
             surface_format = surface_formats[ i ];
     }
 
+    swapchain->interface.queue  = desc->queue;
     swapchain->interface.format = from_vk_format( surface_format.format );
     swapchain->color_space      = surface_format.colorSpace;
 
@@ -1262,7 +1263,7 @@ create_configured_swapchain( const VulkanDevice* device,
             vkDestroyImageView( device->logical_device,
                                 image->image_view,
                                 device->vulkan_allocator );
-            operator delete( image, std::nothrow );
+            std::free( image );
         }
     }
 
@@ -1309,8 +1310,8 @@ create_configured_swapchain( const VulkanDevice* device,
 
     if ( !resize )
     {
-        swapchain->interface.images =
-            new ( std::nothrow ) Image*[ swapchain->interface.image_count ];
+        swapchain->interface.images = static_cast<Image**>(
+            std::calloc( swapchain->interface.image_count, sizeof( Image* ) ) );
     }
 
     VkImageViewCreateInfo image_view_create_info {};
@@ -1399,9 +1400,10 @@ vk_destroy_swapchain( const Device* idevice, Swapchain* iswapchain )
         vkDestroyImageView( device->logical_device,
                             image->image_view,
                             device->vulkan_allocator );
-        operator delete( image, std::nothrow );
+        std::free( image );
     }
-    operator delete[]( swapchain->interface.images, std::nothrow );
+
+    std::free( swapchain->interface.images );
 
     vkDestroySwapchainKHR( device->logical_device,
                            swapchain->swapchain,
@@ -1411,7 +1413,7 @@ vk_destroy_swapchain( const Device* idevice, Swapchain* iswapchain )
                          swapchain->surface,
                          device->vulkan_allocator );
 
-    operator delete( swapchain, std::nothrow );
+    std::free( swapchain );
 }
 
 void
@@ -1451,7 +1453,7 @@ vk_destroy_command_pool( const Device* idevice, CommandPool* icommand_pool )
     vkDestroyCommandPool( device->logical_device,
                           command_pool->command_pool,
                           device->vulkan_allocator );
-    operator delete( command_pool, std::nothrow );
+    std::free( command_pool );
 }
 
 void
@@ -1525,7 +1527,7 @@ vk_destroy_command_buffers( const Device*,
     for ( u32 i = 0; i < count; ++i )
     {
         FT_FROM_HANDLE( cmd, icommand_buffers[ i ], VulkanCommandBuffer );
-        operator delete( cmd, std::nothrow );
+        std::free( cmd );
     }
 }
 
@@ -1768,7 +1770,7 @@ vk_destroy_render_pass( const Device* idevice, RenderPass* irender_pass )
     vkDestroyRenderPass( device->logical_device,
                          render_pass->render_pass,
                          device->vulkan_allocator );
-    operator delete( render_pass, std::nothrow );
+    std::free( render_pass );
 }
 
 void
@@ -1847,7 +1849,7 @@ vk_destroy_shader( const Device* idevice, Shader* ishader )
     destroy_module( device, ShaderStage::eGeometry, shader );
     destroy_module( device, ShaderStage::eFragment, shader );
 
-    operator delete( shader, std::nothrow );
+    std::free( shader );
 }
 
 void
@@ -1961,7 +1963,7 @@ vk_destroy_descriptor_set_layout( const Device*        idevice,
         }
     }
 
-    operator delete( layout, std::nothrow );
+    std::free( layout );
 }
 
 void
@@ -2264,7 +2266,7 @@ vk_destroy_pipeline( const Device* idevice, Pipeline* ipipeline )
     vkDestroyPipeline( device->logical_device,
                        pipeline->pipeline,
                        device->vulkan_allocator );
-    operator delete( pipeline, std::nothrow );
+    std::free( pipeline );
 }
 
 void
@@ -2314,7 +2316,7 @@ vk_destroy_buffer( const Device* idevice, Buffer* ibuffer )
     vmaDestroyBuffer( device->memory_allocator,
                       buffer->buffer,
                       buffer->allocation );
-    operator delete( buffer, std::nothrow );
+    std::free( buffer );
 }
 
 void
@@ -2366,7 +2368,7 @@ vk_destroy_sampler( const Device* idevice, Sampler* isampler )
     vkDestroySampler( device->logical_device,
                       sampler->sampler,
                       device->vulkan_allocator );
-    operator delete( sampler, std::nothrow );
+    std::free( sampler );
 }
 
 void
@@ -2461,7 +2463,7 @@ vk_destroy_image( const Device* idevice, Image* iimage )
     vmaDestroyImage( device->memory_allocator,
                      image->image,
                      image->allocation );
-    operator delete( image, std::nothrow );
+    std::free( image );
 }
 
 void
@@ -2504,7 +2506,7 @@ vk_destroy_descriptor_set( const Device* idevice, DescriptorSet* iset )
                           device->descriptor_pool,
                           1,
                           &set->descriptor_set );
-    operator delete( set, std::nothrow );
+    std::free( set );
 }
 
 void
@@ -2709,7 +2711,7 @@ vk_destroy_ui_context( const Device* idevice, UiContext* icontext )
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
-    operator delete( context, std::nothrow );
+    std::free( context );
 }
 
 void

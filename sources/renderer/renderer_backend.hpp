@@ -9,7 +9,7 @@
 namespace fluent
 {
 #define FT_INIT_INTERNAL( name, ptr, type )                                    \
-    auto name              = new ( std::nothrow ) type {};                     \
+    type* name = static_cast<type*>( std::calloc( 1, sizeof( type ) ) );       \
     name->interface.handle = name;                                             \
     ptr                    = &name->interface;
 
