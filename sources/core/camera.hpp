@@ -16,7 +16,7 @@ enum class CameraDirection
     eRight
 };
 
-struct CameraDesc
+struct CameraInfo
 {
     fluent::Vector3 position;
     fluent::Vector3 direction;
@@ -32,23 +32,23 @@ struct CameraDesc
 class Camera
 {
 private:
-    f32 m_fov;
-    f32 m_aspect;
-    f32 m_near;
-    f32 m_far;
-    f32 m_yaw;
-    f32 m_pitch;
+    f32 fov;
+    f32 aspect;
+    f32 near;
+    f32 far;
+    f32 yaw;
+    f32 pitch;
 
-    Vector3 m_position;
-    Vector3 m_direction;
-    Vector3 m_up;
-    Vector3 m_world_up;
-    Vector3 m_right;
-    Matrix4 m_projection;
-    Matrix4 m_view;
+    Vector3 position;
+    Vector3 direction;
+    Vector3 up;
+    Vector3 world_up;
+    Vector3 right;
+    Matrix4 projection;
+    Matrix4 view;
 
-    f32 m_speed;
-    f32 m_mouse_sensitivity;
+    f32 speed;
+    f32 mouse_sensitivity;
 
     void
     recalculate_projection_matrix();
@@ -57,7 +57,7 @@ private:
 
 public:
     void
-    init_camera( const CameraDesc& desc );
+    init_camera( const CameraInfo& info );
 
     void
     on_move( CameraDirection direction, f32 delta_time );
@@ -70,32 +70,32 @@ public:
     const Matrix4&
     get_projection_matrix() const
     {
-        return m_projection;
+        return projection;
     }
 
     const Matrix4&
     get_view_matrix() const
     {
-        return m_view;
+        return view;
     }
 
     const Vector3&
     get_position() const
     {
-        return m_position;
+        return position;
     }
 
     const Vector3&
     get_direction() const
     {
-        return m_direction;
+        return direction;
     }
 };
 
 class CameraController
 {
 private:
-    Camera* m_camera = nullptr;
+    Camera* camera = nullptr;
 
 public:
     void

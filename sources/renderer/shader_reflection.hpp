@@ -9,7 +9,7 @@ namespace fluent
 
 struct Device;
 struct Shader;
-struct ShaderDesc;
+struct ShaderInfo;
 
 struct Binding
 {
@@ -26,12 +26,12 @@ struct ReflectionData
 };
 
 void
-dxil_reflect( const Device* device, const ShaderDesc* desc, Shader* shader );
+dxil_reflect( const Device* device, const ShaderInfo* info, Shader* shader );
 
 void
-spirv_reflect( const Device* device, const ShaderDesc* desc, Shader* shader );
+spirv_reflect( const Device* device, const ShaderInfo* info, Shader* shader );
 
 void
-mtl_reflect( const Device* device, const ShaderDesc* desc, Shader* shader );
+mtl_reflect( const Device* device, const ShaderInfo* info, Shader* shader );
 
 } // namespace fluent

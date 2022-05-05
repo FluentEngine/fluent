@@ -5,7 +5,7 @@
 namespace fluent
 {
 
-struct WindowDesc
+struct WindowInfo
 {
     const char* title      = nullptr;
     u32         x          = 0;
@@ -24,7 +24,7 @@ struct Window
 };
 
 Window
-create_window( const WindowDesc& desc );
+create_window( const WindowInfo& info );
 void
 destroy_window( Window& window );
 

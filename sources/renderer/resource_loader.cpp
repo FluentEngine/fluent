@@ -21,21 +21,21 @@ ResourceLoader::init( const Device* device, u64 staging_buffer_size )
 {
     m_device = device;
 
-    QueueDesc queue_desc {};
-    queue_desc.queue_type = QueueType::eGraphics;
-    create_queue( m_device, &queue_desc, &m_queue );
+    QueueInfo queue_info {};
+    queue_info.queue_type = QueueType::eGraphics;
+    create_queue( m_device, &queue_info, &m_queue );
 
-    CommandPoolDesc cmd_pool_desc {};
-    cmd_pool_desc.queue = m_queue;
-    create_command_pool( m_device, &cmd_pool_desc, &m_command_pool );
+    CommandPoolInfo cmd_pool_info {};
+    cmd_pool_info.queue = m_queue;
+    create_command_pool( m_device, &cmd_pool_info, &m_command_pool );
 
     create_command_buffers( m_device, m_command_pool, 1, &m_cmd );
 
-    BufferDesc staging_buffer_desc {};
-    staging_buffer_desc.memory_usage = MemoryUsage::eCpuToGpu;
-    staging_buffer_desc.size         = staging_buffer_size;
+    BufferInfo staging_buffer_info {};
+    staging_buffer_info.memory_usage = MemoryUsage::eCpuToGpu;
+    staging_buffer_info.size         = staging_buffer_size;
     m_staging_buffer.offset          = 0;
-    create_buffer( m_device, &staging_buffer_desc, &m_staging_buffer.buffer );
+    create_buffer( m_device, &staging_buffer_info, &m_staging_buffer.buffer );
     map_memory( m_device, m_staging_buffer.buffer );
 }
 

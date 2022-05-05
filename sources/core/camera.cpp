@@ -4,51 +4,51 @@
 namespace fluent
 {
 void
-Camera::init_camera( const CameraDesc& desc )
+Camera::init_camera( const CameraInfo& info )
 {
-    m_fov    = desc.fov;
-    m_aspect = desc.aspect;
-    m_near   = desc.near;
-    m_far    = desc.far;
-    m_yaw    = -90.0f;
-    m_pitch  = 0.0f;
+    fov    = info.fov;
+    aspect = info.aspect;
+    near   = info.near;
+    far    = info.far;
+    yaw    = -90.0f;
+    pitch  = 0.0f;
 
-    m_position  = desc.position;
-    m_direction = desc.direction;
-    m_world_up  = desc.up;
-    m_right     = glm::cross( desc.direction, m_world_up );
-    m_up        = normalize( glm::cross( m_right, m_direction ) );
+    position  = info.position;
+    direction = info.direction;
+    world_up  = info.up;
+    right     = glm::cross( info.direction, world_up );
+    up        = normalize( glm::cross( right, direction ) );
 
     recalculate_projection_matrix();
     recalculate_view_matrix();
 
-    m_speed             = desc.speed;
-    m_mouse_sensitivity = desc.sensitivity;
+    speed             = info.speed;
+    mouse_sensitivity = info.sensitivity;
 }
 
 void
 Camera::recalculate_projection_matrix()
 {
-    m_projection = create_perspective_matrix( m_fov, m_aspect, m_near, m_far );
+    projection = create_perspective_matrix( fov, aspect, near, far );
 }
 
 void
 Camera::recalculate_view_matrix()
 {
-    m_view = create_look_at_matrix( m_position, m_direction, m_up );
+    view = create_look_at_matrix( position, direction, up );
 }
 
 void
-Camera::on_move( CameraDirection direction, f32 delta_time )
+Camera::on_move( CameraDirection camera_direction, f32 delta_time )
 {
-    f32 velocity = m_speed * delta_time;
+    f32 velocity = speed * delta_time;
 
-    switch ( direction )
+    switch ( camera_direction )
     {
-    case CameraDirection::eForward: m_position += m_direction * velocity; break;
-    case CameraDirection::eBack: m_position -= m_direction * velocity; break;
-    case CameraDirection::eLeft: m_position -= m_right * velocity; break;
-    case CameraDirection::eRight: m_position += m_right * velocity; break;
+    case CameraDirection::eForward: position += direction * velocity; break;
+    case CameraDirection::eBack: position -= direction * velocity; break;
+    case CameraDirection::eLeft: position -= right * velocity; break;
+    case CameraDirection::eRight: position += right * velocity; break;
     }
 
     recalculate_view_matrix();
@@ -57,25 +57,25 @@ Camera::on_move( CameraDirection direction, f32 delta_time )
 void
 Camera::on_rotate( f32 x_offset, f32 y_offset )
 {
-    x_offset *= m_mouse_sensitivity;
-    y_offset *= m_mouse_sensitivity;
+    x_offset *= mouse_sensitivity;
+    y_offset *= mouse_sensitivity;
 
-    m_yaw += x_offset;
-    m_pitch += y_offset;
+    yaw += x_offset;
+    pitch += y_offset;
 
-    if ( m_pitch > 89.0f )
-        m_pitch = 89.0f;
-    if ( m_pitch < -89.0f )
-        m_pitch = -89.0f;
+    if ( pitch > 89.0f )
+        pitch = 89.0f;
+    if ( pitch < -89.0f )
+        pitch = -89.0f;
 
     Vector3 direction;
-    direction.x = cos( radians( m_yaw ) ) * cos( radians( m_pitch ) );
-    direction.y = sin( radians( m_pitch ) );
-    direction.z = sin( radians( m_yaw ) ) * cos( radians( m_pitch ) );
-    m_direction = normalize( direction );
+    direction.x = std::cos( radians( yaw ) ) * std::cos( radians( pitch ) );
+    direction.y = std::sin( radians( pitch ) );
+    direction.z = std::sin( radians( yaw ) ) * std::cos( radians( pitch ) );
+    direction   = normalize( direction );
 
-    m_right = normalize( glm::cross( m_direction, m_world_up ) );
-    m_up    = normalize( glm::cross( m_right, m_direction ) );
+    right = normalize( glm::cross( direction, world_up ) );
+    up    = normalize( glm::cross( right, direction ) );
 
     recalculate_view_matrix();
 }
@@ -83,14 +83,14 @@ Camera::on_rotate( f32 x_offset, f32 y_offset )
 void
 Camera::on_resize( u32 width, u32 height )
 {
-    m_aspect = ( f32 ) width / ( f32 ) height;
+    aspect = ( f32 ) width / ( f32 ) height;
     recalculate_projection_matrix();
 }
 
 void
 CameraController::init( Camera& camera )
 {
-    m_camera = &camera;
+    this->camera = &camera;
 }
 
 void
@@ -98,22 +98,22 @@ CameraController::update( f32 delta_time )
 {
     if ( is_key_pressed( Key::W ) )
     {
-        m_camera->on_move( CameraDirection::eForward, delta_time );
+        camera->on_move( CameraDirection::eForward, delta_time );
     }
     else if ( is_key_pressed( Key::S ) )
     {
-        m_camera->on_move( CameraDirection::eBack, delta_time );
+        camera->on_move( CameraDirection::eBack, delta_time );
     }
 
     if ( is_key_pressed( Key::A ) )
     {
-        m_camera->on_move( CameraDirection::eLeft, delta_time );
+        camera->on_move( CameraDirection::eLeft, delta_time );
     }
     else if ( is_key_pressed( Key::D ) )
     {
-        m_camera->on_move( CameraDirection::eRight, delta_time );
+        camera->on_move( CameraDirection::eRight, delta_time );
     }
 
-    m_camera->on_rotate( get_mouse_offset_x(), -get_mouse_offset_y() );
+    camera->on_rotate( get_mouse_offset_x(), -get_mouse_offset_y() );
 }
 } // namespace fluent

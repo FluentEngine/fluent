@@ -80,29 +80,29 @@ cmd_draw_indexed_indirect_fun     cmd_draw_indexed_indirect;
 read_shader_fun read_shader;
 
 void
-create_renderer_backend( const RendererBackendDesc* desc,
+create_renderer_backend( const RendererBackendInfo* info,
                          RendererBackend**          backend )
 {
-    switch ( desc->api )
+    switch ( info->api )
     {
     case RendererAPI::eVulkan:
     {
 #ifdef VULKAN_BACKEND
-        vk_create_renderer_backend( desc, backend );
+        vk_create_renderer_backend( info, backend );
         break;
 #endif
     }
     case RendererAPI::eD3D12:
     {
 #ifdef D3D12_BACKEND
-        d3d12_create_renderer_backend( desc, backend );
+        d3d12_create_renderer_backend( info, backend );
         break;
 #endif
     }
     case RendererAPI::eMetal:
     {
 #ifdef METAL_BACKEND
-        mtl_create_renderer_backend( desc, backend );
+        mtl_create_renderer_backend( info, backend );
         break;
 #endif
     }

@@ -39,7 +39,7 @@ app_init( const ApplicationConfig* config )
     FT_ASSERT( config->on_shutdown );
     FT_ASSERT( config->on_resize );
 
-    app_state.window = fluent::create_window( config->window_desc );
+    app_state.window = fluent::create_window( config->window_info );
 
     app_state.on_init        = config->on_init;
     app_state.on_update      = config->on_update;

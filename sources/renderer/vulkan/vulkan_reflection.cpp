@@ -82,50 +82,50 @@ spirv_reflect_stage( u32 byte_code_size, const void* byte_code )
 }
 
 void
-spirv_reflect( const Device* device, const ShaderDesc* desc, Shader* shader )
+spirv_reflect( const Device* device, const ShaderInfo* info, Shader* shader )
 {
-    if ( desc->vertex.bytecode )
+    if ( info->vertex.bytecode )
     {
         shader->reflect_data[ static_cast<u32>( ShaderStage::eVertex ) ] =
-            spirv_reflect_stage( desc->vertex.bytecode_size,
-                                 desc->vertex.bytecode );
+            spirv_reflect_stage( info->vertex.bytecode_size,
+                                 info->vertex.bytecode );
     }
 
-    if ( desc->fragment.bytecode )
+    if ( info->fragment.bytecode )
     {
         shader->reflect_data[ static_cast<u32>( ShaderStage::eFragment ) ] =
-            spirv_reflect_stage( desc->fragment.bytecode_size,
-                                 desc->fragment.bytecode );
+            spirv_reflect_stage( info->fragment.bytecode_size,
+                                 info->fragment.bytecode );
     }
 
-    if ( desc->compute.bytecode )
+    if ( info->compute.bytecode )
     {
         shader->reflect_data[ static_cast<u32>( ShaderStage::eCompute ) ] =
-            spirv_reflect_stage( desc->compute.bytecode_size,
-                                 desc->compute.bytecode );
+            spirv_reflect_stage( info->compute.bytecode_size,
+                                 info->compute.bytecode );
     }
 
-    if ( desc->tessellation_control.bytecode )
+    if ( info->tessellation_control.bytecode )
     {
         shader->reflect_data[ static_cast<u32>(
             ShaderStage::eTessellationControl ) ] =
-            spirv_reflect_stage( desc->tessellation_control.bytecode_size,
-                                 desc->tessellation_control.bytecode );
+            spirv_reflect_stage( info->tessellation_control.bytecode_size,
+                                 info->tessellation_control.bytecode );
     }
 
-    if ( desc->tessellation_evaluation.bytecode )
+    if ( info->tessellation_evaluation.bytecode )
     {
         shader->reflect_data[ static_cast<u32>(
             ShaderStage::eTessellationEvaluation ) ] =
-            spirv_reflect_stage( desc->tessellation_evaluation.bytecode_size,
-                                 desc->tessellation_evaluation.bytecode );
+            spirv_reflect_stage( info->tessellation_evaluation.bytecode_size,
+                                 info->tessellation_evaluation.bytecode );
     }
 
-    if ( desc->geometry.bytecode )
+    if ( info->geometry.bytecode )
     {
         shader->reflect_data[ static_cast<u32>( ShaderStage::eGeometry ) ] =
-            spirv_reflect_stage( desc->geometry.bytecode_size,
-                                 desc->geometry.bytecode );
+            spirv_reflect_stage( info->geometry.bytecode_size,
+                                 info->geometry.bytecode );
     }
 }
 

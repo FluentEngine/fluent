@@ -25,7 +25,7 @@ get_models_directory();
 std::vector<char>
 read_file_binary( const std::string& filename );
 
-ImageDesc
+ImageInfo
 read_image_data( const std::string& filename,
                  b32                flip,
                  u64*               size,

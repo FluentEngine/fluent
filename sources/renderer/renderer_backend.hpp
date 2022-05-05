@@ -39,7 +39,7 @@ static constexpr u32 MAX_SET_COUNT                = 10;
 
 using Handle = void*;
 
-struct RendererBackendDesc
+struct RendererBackendInfo
 {
     RendererAPI api;
 };
@@ -49,7 +49,7 @@ struct RendererBackend
     Handle handle;
 };
 
-struct DeviceDesc
+struct DeviceInfo
 {
     u32 frame_in_use_count;
 };
@@ -59,7 +59,7 @@ struct Device
     Handle handle;
 };
 
-struct CommandPoolDesc
+struct CommandPoolInfo
 {
     Queue* queue;
 };
@@ -76,7 +76,7 @@ struct CommandBuffer
     Handle handle;
 };
 
-struct QueueDesc
+struct QueueInfo
 {
     QueueType queue_type;
 };
@@ -98,7 +98,7 @@ struct Fence
     Handle handle;
 };
 
-struct SamplerDesc
+struct SamplerInfo
 {
     Filter             mag_filter     = Filter::eNearest;
     Filter             min_filter     = Filter::eNearest;
@@ -120,7 +120,7 @@ struct Sampler
     Handle handle;
 };
 
-struct ImageDesc
+struct ImageInfo
 {
     u32            width;
     u32            height;
@@ -145,7 +145,7 @@ struct Image
     Handle         handle;
 };
 
-struct BufferDesc
+struct BufferInfo
 {
     u64            size = 0;
     DescriptorType descriptor_type;
@@ -162,7 +162,7 @@ struct Buffer
     Handle         handle;
 };
 
-struct SwapchainDesc
+struct SwapchainInfo
 {
     Queue* queue;
     u32    width;
@@ -185,7 +185,7 @@ struct Swapchain
     Handle  handle;
 };
 
-struct QueueSubmitDesc
+struct QueueSubmitInfo
 {
     u32             wait_semaphore_count;
     Semaphore**     wait_semaphores;
@@ -196,7 +196,7 @@ struct QueueSubmitDesc
     Fence*          signal_fence;
 };
 
-struct QueuePresentDesc
+struct QueuePresentInfo
 {
     u32         wait_semaphore_count;
     Semaphore** wait_semaphores;
@@ -204,7 +204,7 @@ struct QueuePresentDesc
     u32         image_index;
 };
 
-struct RenderPassDesc
+struct RenderPassInfo
 {
     u32              width;
     u32              height;
@@ -234,7 +234,7 @@ struct ClearValue
     u32 stencil;
 };
 
-struct RenderPassBeginDesc
+struct RenderPassBeginInfo
 {
     const RenderPass* render_pass;
     ClearValue        clear_values[ MAX_ATTACHMENTS_COUNT + 1 ];
@@ -265,20 +265,20 @@ struct ImageBarrier
     const Queue*  dst_queue;
 };
 
-struct ShaderModuleDesc
+struct ShaderModuleInfo
 {
     u32         bytecode_size;
     const void* bytecode;
 };
 
-struct ShaderDesc
+struct ShaderInfo
 {
-    ShaderModuleDesc compute;
-    ShaderModuleDesc vertex;
-    ShaderModuleDesc tessellation_control;
-    ShaderModuleDesc tessellation_evaluation;
-    ShaderModuleDesc geometry;
-    ShaderModuleDesc fragment;
+    ShaderModuleInfo compute;
+    ShaderModuleInfo vertex;
+    ShaderModuleInfo tessellation_control;
+    ShaderModuleInfo tessellation_evaluation;
+    ShaderModuleInfo geometry;
+    ShaderModuleInfo fragment;
 };
 
 struct Shader
@@ -294,14 +294,14 @@ struct DescriptorSetLayout
     Handle  handle;
 };
 
-struct VertexBindingDesc
+struct VertexBindingInfo
 {
     u32             binding;
     u32             stride;
     VertexInputRate input_rate;
 };
 
-struct VertexAttributeDesc
+struct VertexAttributeInfo
 {
     u32    location;
     u32    binding;
@@ -311,32 +311,32 @@ struct VertexAttributeDesc
 
 struct VertexLayout
 {
-    u32                 binding_desc_count;
-    VertexBindingDesc   binding_descs[ MAX_VERTEX_BINDING_COUNT ];
-    u32                 attribute_desc_count;
-    VertexAttributeDesc attribute_descs[ MAX_VERTEX_ATTRIBUTE_COUNT ];
+    u32                 binding_info_count;
+    VertexBindingInfo   binding_infos[ MAX_VERTEX_BINDING_COUNT ];
+    u32                 attribute_info_count;
+    VertexAttributeInfo attribute_infos[ MAX_VERTEX_ATTRIBUTE_COUNT ];
 };
 
-struct RasterizerStateDesc
+struct RasterizerStateInfo
 {
     CullMode    cull_mode;
     FrontFace   front_face;
     PolygonMode polygon_mode = PolygonMode::eFill;
 };
 
-struct DepthStateDesc
+struct DepthStateInfo
 {
     b32       depth_test;
     b32       depth_write;
     CompareOp compare_op;
 };
 
-struct PipelineDesc
+struct PipelineInfo
 {
     VertexLayout         vertex_layout;
-    RasterizerStateDesc  rasterizer_desc;
+    RasterizerStateInfo  rasterizer_info;
     PrimitiveTopology    topology = PrimitiveTopology::eTriangleList;
-    DepthStateDesc       depth_state_desc;
+    DepthStateInfo       depth_state_info;
     Shader*              shader;
     DescriptorSetLayout* descriptor_set_layout;
     const RenderPass*    render_pass;
@@ -348,7 +348,7 @@ struct Pipeline
     Handle       handle;
 };
 
-struct DescriptorSetDesc
+struct DescriptorSetInfo
 {
     u32                  set = 0;
     DescriptorSetLayout* descriptor_set_layout;
@@ -387,7 +387,7 @@ struct DescriptorWrite
     BufferDescriptor*  buffer_descriptors;
 };
 
-struct UiDesc
+struct UiInfo
 {
     const Window*          window;
     const RendererBackend* backend;
@@ -435,7 +435,7 @@ format_has_stencil_aspect( Format format )
 }
 
 void
-create_renderer_backend( const RendererBackendDesc* desc,
+create_renderer_backend( const RendererBackendInfo* info,
                          RendererBackend**          backend );
 
 DECLARE_RENDERER_FUNCTION( void,
@@ -445,7 +445,7 @@ DECLARE_RENDERER_FUNCTION( void,
 DECLARE_RENDERER_FUNCTION( void,
                            create_device,
                            const RendererBackend* backend,
-                           const DeviceDesc*      desc,
+                           const DeviceInfo*      info,
                            Device**               device );
 
 DECLARE_RENDERER_FUNCTION( void, destroy_device, Device* device );
@@ -453,7 +453,7 @@ DECLARE_RENDERER_FUNCTION( void, destroy_device, Device* device );
 DECLARE_RENDERER_FUNCTION( void,
                            create_queue,
                            const Device*    device,
-                           const QueueDesc* desc,
+                           const QueueInfo* info,
                            Queue**          queue );
 
 DECLARE_RENDERER_FUNCTION( void, destroy_queue, Queue* queue );
@@ -463,7 +463,7 @@ DECLARE_RENDERER_FUNCTION( void, queue_wait_idle, const Queue* queue );
 DECLARE_RENDERER_FUNCTION( void,
                            queue_submit,
                            const Queue*           queue,
-                           const QueueSubmitDesc* desc );
+                           const QueueSubmitInfo* info );
 
 DECLARE_RENDERER_FUNCTION( void,
                            immediate_submit,
@@ -473,7 +473,7 @@ DECLARE_RENDERER_FUNCTION( void,
 DECLARE_RENDERER_FUNCTION( void,
                            queue_present,
                            const Queue*            queue,
-                           const QueuePresentDesc* desc );
+                           const QueuePresentInfo* info );
 
 DECLARE_RENDERER_FUNCTION( void,
                            create_semaphore,
@@ -510,7 +510,7 @@ DECLARE_RENDERER_FUNCTION( void,
 DECLARE_RENDERER_FUNCTION( void,
                            create_swapchain,
                            const Device*        device,
-                           const SwapchainDesc* desc,
+                           const SwapchainInfo* info,
                            Swapchain**          swapchain );
 
 DECLARE_RENDERER_FUNCTION( void,
@@ -528,7 +528,7 @@ DECLARE_RENDERER_FUNCTION( void,
 DECLARE_RENDERER_FUNCTION( void,
                            create_command_pool,
                            const Device*          device,
-                           const CommandPoolDesc* desc,
+                           const CommandPoolInfo* info,
                            CommandPool**          command_pool );
 
 DECLARE_RENDERER_FUNCTION( void,
@@ -574,14 +574,14 @@ DECLARE_RENDERER_FUNCTION( void,
 DECLARE_RENDERER_FUNCTION( void,
                            create_render_pass,
                            const Device*         device,
-                           const RenderPassDesc* desc,
+                           const RenderPassInfo* info,
                            RenderPass**          render_pass );
 
 DECLARE_RENDERER_FUNCTION( void,
                            resize_render_pass,
                            const Device*         device,
                            RenderPass*           render_pass,
-                           const RenderPassDesc* desc );
+                           const RenderPassInfo* info );
 
 DECLARE_RENDERER_FUNCTION( void,
                            destroy_render_pass,
@@ -591,7 +591,7 @@ DECLARE_RENDERER_FUNCTION( void,
 DECLARE_RENDERER_FUNCTION( void,
                            create_shader,
                            const Device* device,
-                           ShaderDesc*   desc,
+                           ShaderInfo*   info,
                            Shader**      shader );
 
 DECLARE_RENDERER_FUNCTION( void,
@@ -613,13 +613,13 @@ DECLARE_RENDERER_FUNCTION( void,
 DECLARE_RENDERER_FUNCTION( void,
                            create_compute_pipeline,
                            const Device*       device,
-                           const PipelineDesc* desc,
+                           const PipelineInfo* info,
                            Pipeline**          pipeline );
 
 DECLARE_RENDERER_FUNCTION( void,
                            create_graphics_pipeline,
                            const Device*       device,
-                           const PipelineDesc* desc,
+                           const PipelineInfo* info,
                            Pipeline**          pipeline );
 
 DECLARE_RENDERER_FUNCTION( void,
@@ -630,7 +630,7 @@ DECLARE_RENDERER_FUNCTION( void,
 DECLARE_RENDERER_FUNCTION( void,
                            cmd_begin_render_pass,
                            const CommandBuffer*       cmd,
-                           const RenderPassBeginDesc* desc );
+                           const RenderPassBeginInfo* info );
 
 DECLARE_RENDERER_FUNCTION( void,
                            cmd_end_render_pass,
@@ -760,7 +760,7 @@ DECLARE_RENDERER_FUNCTION( void,
 DECLARE_RENDERER_FUNCTION( void,
                            create_buffer,
                            const Device*     device,
-                           const BufferDesc* desc,
+                           const BufferInfo* info,
                            Buffer**          buffer );
 
 DECLARE_RENDERER_FUNCTION( void,
@@ -789,7 +789,7 @@ DECLARE_RENDERER_FUNCTION( void,
 DECLARE_RENDERER_FUNCTION( void,
                            create_sampler,
                            const Device*      device,
-                           const SamplerDesc* desc,
+                           const SamplerInfo* info,
                            Sampler**          sampler );
 
 DECLARE_RENDERER_FUNCTION( void,
@@ -800,7 +800,7 @@ DECLARE_RENDERER_FUNCTION( void,
 DECLARE_RENDERER_FUNCTION( void,
                            create_image,
                            const Device*    device,
-                           const ImageDesc* desc,
+                           const ImageInfo* info,
                            Image**          image );
 
 DECLARE_RENDERER_FUNCTION( void,
@@ -811,7 +811,7 @@ DECLARE_RENDERER_FUNCTION( void,
 DECLARE_RENDERER_FUNCTION( void,
                            create_descriptor_set,
                            const Device*            device,
-                           const DescriptorSetDesc* desc,
+                           const DescriptorSetInfo* info,
                            DescriptorSet**          descriptor_set );
 
 DECLARE_RENDERER_FUNCTION( void,
@@ -829,7 +829,7 @@ DECLARE_RENDERER_FUNCTION( void,
 DECLARE_RENDERER_FUNCTION( void,
                            create_ui_context,
                            CommandBuffer* cmd,
-                           const UiDesc*  desc,
+                           const UiInfo*  info,
                            UiContext**    ui_context );
 
 DECLARE_RENDERER_FUNCTION( void,

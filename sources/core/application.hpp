@@ -17,7 +17,7 @@ struct ApplicationConfig
 {
     u32              argc;
     char**           argv;
-    WindowDesc       window_desc;
+    WindowInfo       window_info;
     LogLevel         log_level;
     InitCallback     on_init;
     UpdateCallback   on_update;

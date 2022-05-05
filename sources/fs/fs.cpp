@@ -88,12 +88,12 @@ read_file_binary( const std::string& filename )
     return buffer;
 }
 
-ImageDesc
+ImageInfo
 read_dds_image( const std::string& filename, b32 flip, u64* size, void** data )
 {
     using namespace tinyddsloader;
 
-    ImageDesc image_desc {};
+    ImageInfo image_info {};
 
     DDSFile dds;
     auto    ret = dds.Load( filename.c_str() );
@@ -107,28 +107,28 @@ read_dds_image( const std::string& filename, b32 flip, u64* size, void** data )
     // TODO: mip levels
     auto image_data = dds.GetImageData();
 
-    image_desc.width  = image_data->m_width;
-    image_desc.height = image_data->m_height;
-    image_desc.depth  = image_data->m_depth;
+    image_info.width  = image_data->m_width;
+    image_info.height = image_data->m_height;
+    image_info.depth  = image_data->m_depth;
 
     // TODO: formats
-    image_desc.format = ( Format ) TinyImageFormat_FromDXGI_FORMAT(
+    image_info.format = ( Format ) TinyImageFormat_FromDXGI_FORMAT(
         ( TinyImageFormat_DXGI_FORMAT ) dds.GetFormat() );
-    image_desc.mip_levels  = dds.GetMipCount();
-    image_desc.layer_count = dds.GetArraySize();
+    image_info.mip_levels  = dds.GetMipCount();
+    image_info.layer_count = dds.GetArraySize();
     *size                  = image_data->m_memSlicePitch;
 
     u8* loaded_data = static_cast<u8*>(
         malloc( image_data->m_memSlicePitch * sizeof( u8 ) ) );
     std::memcpy( loaded_data, image_data->m_mem, image_data->m_memSlicePitch );
     *data = loaded_data;
-    return image_desc;
+    return image_info;
 }
 
-ImageDesc
+ImageInfo
 read_image_stb( const std::string& filename, b32 flip, u64* size, void** data )
 {
-    ImageDesc image_desc {};
+    ImageInfo image_info {};
 
     stbi_set_flip_vertically_on_load( flip );
     int tex_width, tex_height, tex_channels;
@@ -140,34 +140,34 @@ read_image_stb( const std::string& filename, b32 flip, u64* size, void** data )
 
     stbi_set_flip_vertically_on_load( !flip );
 
-    image_desc.width       = tex_width;
-    image_desc.height      = tex_height;
-    image_desc.depth       = 1;
-    image_desc.format      = Format::eR8G8B8A8Unorm;
-    image_desc.mip_levels  = 1;
-    image_desc.layer_count = 1;
+    image_info.width       = tex_width;
+    image_info.height      = tex_height;
+    image_info.depth       = 1;
+    image_info.format      = Format::eR8G8B8A8Unorm;
+    image_info.mip_levels  = 1;
+    image_info.layer_count = 1;
     *size                  = tex_width * tex_height * 4;
 
-    return image_desc;
+    return image_info;
 }
 
-ImageDesc
+ImageInfo
 read_image_data( const std::string& filename, b32 flip, u64* size, void** data )
 {
     std::string file_ext = filename.substr( filename.find_last_of( '.' ) );
 
-    ImageDesc image_desc {};
+    ImageInfo image_info {};
 
     if ( file_ext == ".dds" )
     {
-        image_desc = read_dds_image( filename, flip, size, data );
+        image_info = read_dds_image( filename, flip, size, data );
     }
     else
     {
-        image_desc = read_image_stb( filename, flip, size, data );
+        image_info = read_image_stb( filename, flip, size, data );
     }
 
-    return image_desc;
+    return image_info;
 }
 
 void

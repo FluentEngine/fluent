@@ -18,7 +18,7 @@ to_descriptor_type( MTLArgumentType type )
 }
 
 void
-mtl_reflect( const Device* idevice, const ShaderDesc* desc, Shader* ishader )
+mtl_reflect( const Device* idevice, const ShaderInfo* info, Shader* ishader )
 {
     @autoreleasepool
     {

@@ -6,31 +6,31 @@ namespace fluent
 {
 
 Window
-create_window( const WindowDesc& desc )
+create_window( const WindowInfo& info )
 {
     int init_result = SDL_Init( SDL_INIT_VIDEO );
     FT_ASSERT( init_result == 0 && "SDL Init failed" );
 
-    FT_ASSERT( desc.width > 0 && desc.height > 0 &&
+    FT_ASSERT( info.width > 0 && info.height > 0 &&
                "Width, height should be greater than zero" );
 
     u32 window_flags = 0;
-    u32 x            = desc.x;
-    u32 y            = desc.y;
+    u32 x            = info.x;
+    u32 y            = info.y;
 
     window_flags |= SDL_WINDOW_ALLOW_HIGHDPI;
 
-    if ( desc.resizable )
+    if ( info.resizable )
     {
         window_flags |= SDL_WINDOW_RESIZABLE;
     }
 
-    if ( desc.fullscreen )
+    if ( info.fullscreen )
     {
         window_flags |= SDL_WINDOW_FULLSCREEN;
     }
 
-    if ( desc.centered )
+    if ( info.centered )
     {
         x = SDL_WINDOWPOS_CENTERED;
         y = SDL_WINDOWPOS_CENTERED;
@@ -44,11 +44,11 @@ create_window( const WindowDesc& desc )
     window_flags |= SDL_WINDOW_METAL;
 #endif
 
-    SDL_Window* window = SDL_CreateWindow( desc.title,
+    SDL_Window* window = SDL_CreateWindow( info.title,
                                            x,
                                            y,
-                                           desc.width,
-                                           desc.height,
+                                           info.width,
+                                           info.height,
                                            window_flags );
 
     FT_ASSERT( window && "Failed to create window" );

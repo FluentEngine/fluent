@@ -212,7 +212,7 @@ struct MetalUiContext
 };
 
 void
-mtl_create_renderer_backend( const RendererBackendDesc*, RendererBackend** p );
+mtl_create_renderer_backend( const RendererBackendInfo*, RendererBackend** p );
 
 } // namespace fluent
 
