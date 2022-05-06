@@ -583,20 +583,25 @@ get_instance_extensions( u32& instance_create_flags )
                                             &extension_count,
                                             extension_properties.data() );
 
-    for ( u32 i = 0; i < extension_count; ++i )
-    {
-        if ( !std::strcmp( "VK_KHR_portability_enumeration",
-                           extension_properties[ i ].extensionName ) )
-        {
-            instance_extensions.emplace_back(
-                "VK_KHR_portability_enumeration" );
-            instance_create_flags |= 0x00000001;
-        }
-    }
+	for ( u32 i = 0; i < extension_count; ++i )
+	{
+		if ( std::strcmp( VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
+		                  extension_properties[ i ].extensionName ) == 0 )
+		{
+			instance_extensions.emplace_back(
+			    VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME );
+			instance_create_flags |= VK_KHR_portability_enumeration;
+		}
 
 #ifdef FLUENT_DEBUG
-    instance_extensions.emplace_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+		if ( std::strcmp( VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+		                  extension_properties[ i ].extensionName ) == 0 )
+		{
+			instance_extensions.emplace_back(
+			    VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+		}
 #endif
+	}
 
     return instance_extensions;
 }
@@ -3360,7 +3365,7 @@ vk_create_renderer_backend( const RendererBackendInfo*, RendererBackend** p )
     // TODO: provide posibility to set allocator from user code
     backend->vulkan_allocator = nullptr;
     // TODO: same
-    backend->api_version = VK_API_VERSION_1_2;
+	backend->api_version = VK_API_VERSION_1_2;
 
     volkInitialize();
 
