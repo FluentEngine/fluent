@@ -297,21 +297,19 @@ d3d12_destroy_renderer_backend( RendererBackend* ibackend )
 #ifdef FLUENT_DEBUG
     backend->debug_controller->Release();
 #endif
-    operator delete( backend, std::nothrow );
+    std::free( backend );
 }
 
 void
 d3d12_create_device( const RendererBackend* ibackend,
-                     const DeviceDesc*      desc,
+                     const DeviceInfo*      info,
                      Device**               p )
 {
     FT_ASSERT( p );
 
     FT_FROM_HANDLE( backend, ibackend, D3D12RendererBackend );
 
-    auto device              = new ( std::nothrow ) D3D12Device {};
-    device->interface.handle = device;
-    *p                       = &device->interface;
+    FT_INIT_INTERNAL( device, *p, D3D12Device );
 
     device->factory = backend->factory;
 
@@ -390,22 +388,21 @@ d3d12_destroy_device( Device* idevice )
     device->allocator->Release();
     device->device->Release();
     device->adapter->Release();
-    operator delete( device, std::nothrow );
+
+    std::free( device );
 }
 
 void
-d3d12_create_queue( const Device* idevice, const QueueDesc* desc, Queue** p )
+d3d12_create_queue( const Device* idevice, const QueueInfo* info, Queue** p )
 {
     FT_ASSERT( p );
 
     FT_FROM_HANDLE( device, idevice, D3D12Device );
 
-    auto queue              = new ( std::nothrow ) D3D12Queue {};
-    queue->interface.handle = queue;
-    *p                      = &queue->interface;
+    FT_INIT_INTERNAL( queue, *p, D3D12Queue );
 
     D3D12_COMMAND_QUEUE_DESC queue_desc = {};
-    queue_desc.Type  = to_d3d12_command_list_type( desc->queue_type );
+    queue_desc.Type  = to_d3d12_command_list_type( info->queue_type );
     queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
     D3D12_ASSERT(
         device->device->CreateCommandQueue( &queue_desc,
@@ -425,25 +422,23 @@ d3d12_destroy_queue( Queue* iqueue )
 
     queue->fence->Release();
     queue->queue->Release();
-    operator delete( queue, std::nothrow );
+    std::free( queue );
 }
 
 void
 d3d12_create_command_pool( const Device*          idevice,
-                           const CommandPoolDesc* desc,
+                           const CommandPoolInfo* info,
                            CommandPool**          p )
 {
     FT_ASSERT( idevice );
-    FT_ASSERT( desc->queue );
+    FT_ASSERT( info->queue );
     FT_ASSERT( p );
 
     FT_FROM_HANDLE( device, idevice, D3D12Device );
 
-    auto command_pool              = new ( std::nothrow ) D3D12CommandPool {};
-    command_pool->interface.handle = command_pool;
-    *p                             = &command_pool->interface;
+    FT_INIT_INTERNAL( command_pool, *p, D3D12CommandPool );
 
-    command_pool->interface.queue = desc->queue;
+    command_pool->interface.queue = info->queue;
 
     D3D12_ASSERT( device->device->CreateCommandAllocator(
         to_d3d12_command_list_type( command_pool->interface.queue->type ),
@@ -458,7 +453,7 @@ d3d12_destroy_command_pool( const Device* idevice, CommandPool* icommand_pool )
     FT_FROM_HANDLE( command_pool, icommand_pool, D3D12CommandPool );
 
     command_pool->command_allocator->Release();
-    operator delete( command_pool, std::nothrow );
+    std::free( command_pool );
 }
 
 void
@@ -520,7 +515,7 @@ d3d12_destroy_command_buffers( const Device*      idevice,
     {
         FT_FROM_HANDLE( cmd, icommand_buffers[ i ], D3D12CommandBuffer );
         cmd->command_list->Release();
-        operator delete( cmd, std::nothrow );
+        std::free( cmd );
     }
 }
 
@@ -531,9 +526,7 @@ d3d12_create_semaphore( const Device* idevice, Semaphore** p )
 
     FT_FROM_HANDLE( device, idevice, D3D12Device );
 
-    auto semaphore              = new ( std::nothrow ) D3D12Semaphore {};
-    semaphore->interface.handle = semaphore;
-    *p                          = &semaphore->interface;
+    FT_INIT_INTERNAL( semaphore, *p, D3D12Semaphore );
 
     device->device->CreateFence( 0,
                                  D3D12_FENCE_FLAG_NONE,
@@ -548,7 +541,7 @@ d3d12_destroy_semaphore( const Device* idevice, Semaphore* isemaphore )
     FT_FROM_HANDLE( semaphore, isemaphore, D3D12Semaphore );
 
     semaphore->fence->Release();
-    operator delete( semaphore, std::nothrow );
+    std::free( semaphore );
 }
 
 void
@@ -558,9 +551,7 @@ d3d12_create_fence( const Device* idevice, Fence** p )
 
     FT_FROM_HANDLE( device, idevice, D3D12Device );
 
-    auto fence              = new ( std::nothrow ) D3D12Fence {};
-    fence->interface.handle = fence;
-    *p                      = &fence->interface;
+    FT_INIT_INTERNAL( fence, *p, D3D12Fence );
 
     device->device->CreateFence( 0,
                                  D3D12_FENCE_FLAG_NONE,
@@ -577,7 +568,7 @@ d3d12_destroy_fence( const Device* idevice, Fence* ifence )
 
     CloseHandle( fence->event_handle );
     fence->fence->Release();
-    operator delete( fence, std::nothrow );
+    std::free( fence );
 }
 
 void
@@ -599,26 +590,26 @@ d3d12_queue_wait_idle( const Queue* iqueue )
 }
 
 void
-d3d12_queue_submit( const Queue* iqueue, const QueueSubmitDesc* desc )
+d3d12_queue_submit( const Queue* iqueue, const QueueSubmitInfo* info )
 {
     FT_FROM_HANDLE( queue, iqueue, D3D12Queue );
 
-    std::vector<ID3D12CommandList*> command_lists( desc->command_buffer_count );
+    std::vector<ID3D12CommandList*> command_lists( info->command_buffer_count );
 
-    for ( u32 i = 0; i < desc->command_buffer_count; i++ )
+    for ( u32 i = 0; i < info->command_buffer_count; i++ )
     {
-        FT_FROM_HANDLE( cmd, desc->command_buffers[ i ], D3D12CommandBuffer );
+        FT_FROM_HANDLE( cmd, info->command_buffers[ i ], D3D12CommandBuffer );
         command_lists[ i ] = cmd->command_list;
     }
 
-    queue->queue->ExecuteCommandLists( desc->command_buffer_count,
+    queue->queue->ExecuteCommandLists( info->command_buffer_count,
                                        command_lists.data() );
 }
 
 void
 d3d12_immediate_submit( const Queue* iqueue, CommandBuffer* icmd )
 {
-    QueueSubmitDesc queue_submit_desc {};
+    QueueSubmitInfo queue_submit_desc {};
     queue_submit_desc.command_buffer_count = 1;
     queue_submit_desc.command_buffers      = &icmd;
     queue_submit( iqueue, &queue_submit_desc );
@@ -626,16 +617,16 @@ d3d12_immediate_submit( const Queue* iqueue, CommandBuffer* icmd )
 }
 
 void
-d3d12_queue_present( const Queue* iqueue, const QueuePresentDesc* desc )
+d3d12_queue_present( const Queue* iqueue, const QueuePresentInfo* info )
 {
     FT_FROM_HANDLE( queue, iqueue, D3D12Queue );
-    FT_FROM_HANDLE( swapchain, desc->swapchain, D3D12Swapchain );
+    FT_FROM_HANDLE( swapchain, info->swapchain, D3D12Swapchain );
 
-    u32 sync_interval = desc->swapchain->vsync ? 1 : 0;
+    u32 sync_interval = info->swapchain->vsync ? 1 : 0;
     swapchain->swapchain->Present( sync_interval, 0 );
-    for ( u32 i = 0; i < desc->wait_semaphore_count; i++ )
+    for ( u32 i = 0; i < info->wait_semaphore_count; i++ )
     {
-        FT_FROM_HANDLE( semaphore, desc->wait_semaphores[ i ], D3D12Semaphore );
+        FT_FROM_HANDLE( semaphore, info->wait_semaphores[ i ], D3D12Semaphore );
 
         queue->queue->Signal( semaphore->fence, semaphore->fence_value );
         semaphore->fence_value++;
@@ -664,25 +655,25 @@ d3d12_reset_fences( const Device* idevice, u32 count, Fence** ifences )
 
 void
 d3d12_create_swapchain( const Device*        idevice,
-                        const SwapchainDesc* desc,
+                        const SwapchainInfo* info,
                         Swapchain**          p )
 {
     FT_ASSERT( p );
 
     FT_FROM_HANDLE( device, idevice, D3D12Device );
-    FT_FROM_HANDLE( queue, desc->queue, D3D12Queue );
+    FT_FROM_HANDLE( queue, info->queue, D3D12Queue );
 
     auto swapchain              = new ( std::nothrow ) D3D12Swapchain {};
     swapchain->interface.handle = swapchain;
     *p                          = &swapchain->interface;
 
-    swapchain->interface.width           = desc->width;
-    swapchain->interface.height          = desc->height;
-    swapchain->interface.format          = desc->format;
-    swapchain->interface.queue           = desc->queue;
-    swapchain->interface.min_image_count = desc->min_image_count;
-    swapchain->interface.image_count     = desc->min_image_count;
-    swapchain->interface.vsync           = desc->vsync;
+    swapchain->interface.width           = info->width;
+    swapchain->interface.height          = info->height;
+    swapchain->interface.format          = info->format;
+    swapchain->interface.queue           = info->queue;
+    swapchain->interface.min_image_count = info->min_image_count;
+    swapchain->interface.image_count     = info->min_image_count;
+    swapchain->interface.vsync           = info->vsync;
     swapchain->image_index               = 0;
 
     DXGI_SWAP_CHAIN_DESC swapchain_desc {};
@@ -715,17 +706,15 @@ d3d12_create_swapchain( const Device*        idevice,
         to_dxgi_image_format( swapchain->interface.format ),
         DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH ) );
 
-    swapchain->interface.images =
-        new ( std::nothrow ) Image*[ swapchain->interface.image_count ];
+    swapchain->interface.images = static_cast<Image**>(
+        std::calloc( swapchain->interface.image_count, sizeof( Image* ) ) );
 
     D3D12_CPU_DESCRIPTOR_HANDLE rtv_heap_handle(
         device->rtv_heap->GetCPUDescriptorHandleForHeapStart() );
 
     for ( u32 i = 0; i < swapchain->interface.image_count; i++ )
     {
-        auto image                       = new ( std::nothrow ) D3D12Image {};
-        image->interface.handle          = image;
-        swapchain->interface.images[ i ] = &image->interface;
+        FT_INIT_INTERNAL( image, swapchain->interface.images[ i ], D3D12Image );
 
         D3D12_ASSERT(
             swapchain->swapchain->GetBuffer( i,
@@ -768,11 +757,11 @@ d3d12_destroy_swapchain( const Device* idevice, Swapchain* iswapchain )
     {
         FT_FROM_HANDLE( image, swapchain->interface.images[ i ], D3D12Image );
         image->image->Release();
-        operator delete( image, std::nothrow );
+        std::free( image );
     }
-    operator delete[]( swapchain->interface.images, std::nothrow );
+    std::free( swapchain->interface.images );
     swapchain->swapchain->Release();
-    operator delete( swapchain, std::nothrow );
+    std::free( swapchain );
 }
 
 void
@@ -805,41 +794,40 @@ d3d12_acquire_next_image( const Device*    idevice,
 
 void
 d3d12_create_render_pass( const Device*         idevice,
-                          const RenderPassDesc* desc,
+                          const RenderPassInfo* info,
                           RenderPass**          p )
 {
     FT_ASSERT( p );
-    auto render_pass              = new ( std::nothrow ) D3D12RenderPass {};
-    render_pass->interface.handle = render_pass;
-    *p                            = &render_pass->interface;
+
+    FT_INIT_INTERNAL( render_pass, *p, D3D12RenderPass );
 
     render_pass->interface.color_attachment_count =
-        desc->color_attachment_count;
+        info->color_attachment_count;
 
-    for ( u32 i = 0; i < desc->color_attachment_count; i++ )
+    for ( u32 i = 0; i < info->color_attachment_count; i++ )
     {
-        FT_FROM_HANDLE( image, desc->color_attachments[ i ], D3D12Image );
+        FT_FROM_HANDLE( image, info->color_attachments[ i ], D3D12Image );
 
         render_pass->color_attachments[ i ] = image->image_view;
         render_pass->color_formats[ i ] =
-            to_dxgi_format( desc->color_attachments[ i ]->format );
+            to_dxgi_format( info->color_attachments[ i ]->format );
     }
 
-    if ( desc->depth_stencil )
+    if ( info->depth_stencil )
     {
-        FT_FROM_HANDLE( image, desc->depth_stencil, D3D12Image );
+        FT_FROM_HANDLE( image, info->depth_stencil, D3D12Image );
 
         render_pass->interface.has_depth_stencil = true;
         render_pass->depth_stencil               = image->image_view;
         render_pass->depth_format =
-            to_dxgi_format( desc->depth_stencil->format );
+            to_dxgi_format( info->depth_stencil->format );
     }
 }
 
 void
-d3d12_update_render_pass( const Device*         idevice,
+d3d12_resize_render_pass( const Device*         idevice,
                           RenderPass*           irender_pass,
-                          const RenderPassDesc* desc )
+                          const RenderPassInfo* info )
 {
 }
 
@@ -850,29 +838,45 @@ d3d12_destroy_render_pass( const Device* idevice, RenderPass* irender_pass )
 
     FT_FROM_HANDLE( render_pass, irender_pass, D3D12RenderPass );
 
-    operator delete( render_pass, std::nothrow );
+    std::free( render_pass );
 }
 
 void
-d3d12_create_shader( const Device* idevice, ShaderDesc* desc, Shader** p )
+d3d12_create_shader( const Device* idevice, ShaderInfo* info, Shader** p )
 {
     FT_ASSERT( p );
 
-    auto shader              = new ( std::nothrow ) D3D12Shader {};
-    shader->interface.handle = shader;
-    *p                       = &shader->interface;
+    FT_INIT_INTERNAL( shader, *p, D3D12Shader );
 
-    shader->interface.stage = desc->stage;
+    auto create_module = []( D3D12Shader*            shader,
+                             ShaderStage             stage,
+                             const ShaderModuleInfo& info )
+    {
+        if ( info.bytecode )
+        {
+            char* dst = static_cast<char*>( std::malloc( info.bytecode_size ) );
+            const char* src = static_cast<const char*>( info.bytecode );
 
-    char* dst = new char[ desc->bytecode_size ];
-    char* src = ( char* ) desc->bytecode;
-    std::memcpy( dst, src, desc->bytecode_size );
-    shader->bytecode.BytecodeLength  = desc->bytecode_size;
-    shader->bytecode.pShaderBytecode = dst;
+            std::memcpy( dst, src, info.bytecode_size );
+            shader->bytecodes[ static_cast<u32>( stage ) ].BytecodeLength =
+                info.bytecode_size;
+            shader->bytecodes[ static_cast<u32>( stage ) ].pShaderBytecode =
+                dst;
+        }
+    };
 
-    shader->interface.reflect_data =
-        dxil_reflect( shader->bytecode.BytecodeLength,
-                      shader->bytecode.pShaderBytecode );
+    create_module( shader, ShaderStage::eCompute, info->compute );
+    create_module( shader, ShaderStage::eVertex, info->vertex );
+    create_module( shader,
+                   ShaderStage::eTessellationControl,
+                   info->tessellation_control );
+    create_module( shader,
+                   ShaderStage::eTessellationEvaluation,
+                   info->tessellation_evaluation );
+    create_module( shader, ShaderStage::eGeometry, info->geometry );
+    create_module( shader, ShaderStage::eFragment, info->fragment );
+
+    dxil_reflect( idevice, info, *p );
 }
 
 void
@@ -882,43 +886,62 @@ d3d12_destroy_shader( const Device* idevice, Shader* ishader )
 
     FT_FROM_HANDLE( shader, ishader, D3D12Shader );
 
-    operator delete( ( u8* ) shader->bytecode.pShaderBytecode, std::nothrow );
-    operator delete( shader, std::nothrow );
+    auto destroy_module = []( ShaderStage stage, D3D12Shader* shader )
+    {
+        if ( shader->bytecodes[ static_cast<u32>( stage ) ].pShaderBytecode )
+        {
+            // FIXME its not nice solution. this is const void*
+            std::free( ( void* ) shader->bytecodes[ static_cast<u32>( stage ) ]
+                           .pShaderBytecode );
+        }
+    };
+
+    destroy_module( ShaderStage::eCompute, shader );
+    destroy_module( ShaderStage::eVertex, shader );
+    destroy_module( ShaderStage::eTessellationControl, shader );
+    destroy_module( ShaderStage::eTessellationEvaluation, shader );
+    destroy_module( ShaderStage::eGeometry, shader );
+    destroy_module( ShaderStage::eFragment, shader );
+
+    std::free( shader );
 }
 
 void
 d3d12_create_descriptor_set_layout( const Device*         idevice,
-                                    u32                   shader_count,
-                                    Shader**              ishaders,
+                                    Shader*               ishader,
                                     DescriptorSetLayout** p )
 {
     FT_ASSERT( p );
     FT_ASSERT( shader_count );
 
     FT_FROM_HANDLE( device, idevice, D3D12Device );
+    FT_FROM_HANDLE( shader, ishader, D3D12Shader );
 
-    auto descriptor_set_layout =
-        new ( std::nothrow ) D3D12DescriptorSetLayout {};
-    descriptor_set_layout->interface.handle = descriptor_set_layout;
-    *p                                      = &descriptor_set_layout->interface;
+    FT_INIT_INTERNAL( descriptor_set_layout, *p, D3D12DescriptorSetLayout );
 
-    descriptor_set_layout->interface.shader_count = shader_count;
-    descriptor_set_layout->interface.shaders      = ishaders;
+    descriptor_set_layout->interface.shader = ishader;
 
     std::vector<D3D12_ROOT_PARAMETER1>   tables;
     std::vector<D3D12_DESCRIPTOR_RANGE1> cbv_ranges;
     std::vector<D3D12_DESCRIPTOR_RANGE1> srv_uav_ranges;
     std::vector<D3D12_DESCRIPTOR_RANGE1> sampler_ranges;
 
-    for ( u32 s = 0; s < shader_count; ++s )
+    for ( u32 s = 0; s < static_cast<u32>( ShaderStage::eCount ); ++s )
     {
         u32 cbv_range_count     = cbv_ranges.size();
         u32 srv_uav_range_count = srv_uav_ranges.size();
         u32 sampler_range_count = sampler_ranges.size();
 
-        for ( u32 b = 0; b < ishaders[ s ]->reflect_data.binding_count; ++b )
+        if ( shader->bytecodes[ s ].pShaderBytecode == nullptr )
         {
-            const auto& binding = ishaders[ s ]->reflect_data.bindings[ b ];
+            continue;
+        }
+
+        for ( u32 b = 0; b < shader->interface.reflect_data[ s ].binding_count;
+              ++b )
+        {
+            const auto& binding =
+                shader->interface.reflect_data[ s ].bindings[ b ];
             D3D12_DESCRIPTOR_RANGE1 range = {};
             range.BaseShaderRegister      = binding.binding;
             range.RangeType =
@@ -949,7 +972,7 @@ d3d12_create_descriptor_set_layout( const Device*         idevice,
             table                        = {};
             table.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
             table.ShaderVisibility =
-                to_d3d12_shader_visibility( ishaders[ s ]->stage );
+                to_d3d12_shader_visibility( static_cast<ShaderStage>( s ) );
             table.DescriptorTable.NumDescriptorRanges =
                 cbv_ranges.size() - cbv_range_count;
             table.DescriptorTable.pDescriptorRanges =
@@ -962,7 +985,7 @@ d3d12_create_descriptor_set_layout( const Device*         idevice,
             table                        = {};
             table.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
             table.ShaderVisibility =
-                to_d3d12_shader_visibility( ishaders[ s ]->stage );
+                to_d3d12_shader_visibility( static_cast<ShaderStage>( s ) );
             table.DescriptorTable.NumDescriptorRanges =
                 srv_uav_ranges.size() - srv_uav_range_count;
             table.DescriptorTable.pDescriptorRanges =
@@ -975,7 +998,7 @@ d3d12_create_descriptor_set_layout( const Device*         idevice,
             table                        = {};
             table.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
             table.ShaderVisibility =
-                to_d3d12_shader_visibility( ishaders[ s ]->stage );
+                to_d3d12_shader_visibility( static_cast<ShaderStage>( s ) );
             table.DescriptorTable.NumDescriptorRanges =
                 sampler_ranges.size() - sampler_range_count;
             table.DescriptorTable.pDescriptorRanges =
@@ -1019,70 +1042,57 @@ d3d12_destroy_descriptor_set_layout( const Device*        idevice,
     FT_FROM_HANDLE( layout, ilayout, D3D12DescriptorSetLayout );
 
     layout->root_signature->Release();
-    operator delete( layout, std::nothrow );
+    std::free( layout );
 }
 
 void
 d3d12_create_compute_pipeline( const Device*       idevice,
-                               const PipelineDesc* desc,
+                               const PipelineInfo* info,
                                Pipeline**          p )
 {
 }
 
 void
 d3d12_create_graphics_pipeline( const Device*       idevice,
-                                const PipelineDesc* desc,
+                                const PipelineInfo* info,
                                 Pipeline**          p )
 {
     FT_ASSERT( p );
-    FT_ASSERT( desc->descriptor_set_layout );
-    FT_ASSERT( desc->render_pass );
+    FT_ASSERT( info->descriptor_set_layout );
+    FT_ASSERT( info->render_pass );
+    FT_ASSERT( info->shader );
 
-    auto pipeline              = new ( std::nothrow ) D3D12Pipeline {};
-    pipeline->interface.handle = pipeline;
-    *p                         = &pipeline->interface;
+    FT_INIT_INTERNAL( pipeline, *p, D3D12Pipeline );
 
     FT_FROM_HANDLE( device, idevice, D3D12Device );
     FT_FROM_HANDLE( dsl,
-                    desc->descriptor_set_layout,
+                    info->descriptor_set_layout,
                     D3D12DescriptorSetLayout );
-    FT_FROM_HANDLE( render_pass, desc->render_pass, D3D12RenderPass );
+    FT_FROM_HANDLE( render_pass, info->render_pass, D3D12RenderPass );
+    FT_FROM_HANDLE( shader, info->shader, D3D12Shader );
 
     pipeline->interface.type = PipelineType::eGraphics;
     pipeline->root_signature = dsl->root_signature;
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline_desc {};
     pipeline_desc.pRootSignature = dsl->root_signature;
+    pipeline_desc.VS =
+        shader->bytecodes[ static_cast<u32>( ShaderStage::eVertex ) ];
+    pipeline_desc.PS =
+        shader->bytecodes[ static_cast<u32>( ShaderStage::eFragment ) ];
+    pipeline_desc.GS =
+        shader->bytecodes[ static_cast<u32>( ShaderStage::eGeometry ) ];
+    // TODO: other stages
 
-    for ( u32 i = 0; i < desc->shader_count; i++ )
-    {
-        FT_FROM_HANDLE( shader, desc->shaders[ i ], D3D12Shader );
-
-        switch ( desc->shaders[ i ]->stage )
-        {
-        case ShaderStage::eVertex:
-        {
-            pipeline_desc.VS = shader->bytecode;
-            break;
-        }
-        case ShaderStage::eFragment:
-        {
-            pipeline_desc.PS = shader->bytecode;
-            break;
-        }
-        default: break;
-        }
-    }
-
-    const VertexLayout& vertex_layout = desc->vertex_layout;
+    const VertexLayout& vertex_layout = info->vertex_layout;
 
     D3D12_INPUT_LAYOUT_DESC  input_layout {};
     D3D12_INPUT_ELEMENT_DESC input_elements[ MAX_VERTEX_ATTRIBUTE_COUNT ];
     u32                      input_element_count = 0;
 
-    for ( u32 i = 0; i < vertex_layout.attribute_desc_count; i++ )
+    for ( u32 i = 0; i < vertex_layout.attribute_info_count; i++ )
     {
-        const auto& attribute     = vertex_layout.attribute_descs[ i ];
+        const auto& attribute     = vertex_layout.attribute_infos[ i ];
         auto&       input_element = input_elements[ input_element_count ];
 
         input_element.Format            = to_dxgi_format( attribute.format );
@@ -1091,7 +1101,7 @@ d3d12_create_graphics_pipeline( const Device*       idevice,
         input_element.SemanticIndex     = 0;
         input_element.SemanticName      = "TODO";
 
-        if ( vertex_layout.binding_descs[ attribute.binding ].input_rate ==
+        if ( vertex_layout.binding_infos[ attribute.binding ].input_rate ==
              VertexInputRate::eInstance )
         {
             input_element.InputSlotClass =
@@ -1112,11 +1122,11 @@ d3d12_create_graphics_pipeline( const Device*       idevice,
 
     D3D12_RASTERIZER_DESC rasterizer_desc {};
     rasterizer_desc.FillMode =
-        to_d3d12_fill_mode( desc->rasterizer_desc.polygon_mode );
+        to_d3d12_fill_mode( info->rasterizer_info.polygon_mode );
     rasterizer_desc.CullMode =
-        to_d3d12_cull_mode( desc->rasterizer_desc.cull_mode );
+        to_d3d12_cull_mode( info->rasterizer_info.cull_mode );
     rasterizer_desc.FrontCounterClockwise =
-        to_d3d12_front_face( desc->rasterizer_desc.front_face );
+        to_d3d12_front_face( info->rasterizer_info.front_face );
     rasterizer_desc.DepthBias         = D3D12_DEFAULT_DEPTH_BIAS;
     rasterizer_desc.DepthBiasClamp    = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
     rasterizer_desc.MultisampleEnable = false;
@@ -1141,13 +1151,13 @@ d3d12_create_graphics_pipeline( const Device*       idevice,
                                          D3D12_COLOR_WRITE_ENABLE_ALL };
     }
 
-    pipeline_desc.NumRenderTargets = desc->render_pass->color_attachment_count;
+    pipeline_desc.NumRenderTargets = info->render_pass->color_attachment_count;
     for ( u32 i = 0; i < pipeline_desc.NumRenderTargets; i++ )
     {
         pipeline_desc.RTVFormats[ i ] = render_pass->color_formats[ i ];
     }
 
-    if ( desc->render_pass->has_depth_stencil )
+    if ( info->render_pass->has_depth_stencil )
     {
         pipeline_desc.DSVFormat = render_pass->depth_format;
     }
@@ -1155,11 +1165,11 @@ d3d12_create_graphics_pipeline( const Device*       idevice,
     pipeline_desc.InputLayout     = input_layout;
     pipeline_desc.RasterizerState = rasterizer_desc;
     pipeline_desc.PrimitiveTopologyType =
-        to_d3d12_primitive_topology_type( desc->topology );
-    pipeline->topology       = to_d3d12_primitive_topology( desc->topology );
+        to_d3d12_primitive_topology_type( info->topology );
+    pipeline->topology       = to_d3d12_primitive_topology( info->topology );
     pipeline_desc.BlendState = blend_desc;
     pipeline_desc.DepthStencilState.DepthEnable =
-        desc->depth_state_desc.depth_test;
+        info->depth_state_info.depth_test;
     pipeline_desc.DepthStencilState.StencilEnable = false;
     pipeline_desc.SampleMask       = std::numeric_limits<u32>::max();
     pipeline_desc.SampleDesc.Count = 1;
@@ -1177,29 +1187,29 @@ d3d12_destroy_pipeline( const Device* idevice, Pipeline* ipipeline )
     FT_FROM_HANDLE( pipeline, ipipeline, D3D12Pipeline );
 
     pipeline->pipeline->Release();
-    operator delete( pipeline, std::nothrow );
+    std::free( pipeline );
 }
 
 void
 d3d12_cmd_begin_render_pass( const CommandBuffer*       icmd,
-                             const RenderPassBeginDesc* desc )
+                             const RenderPassBeginInfo* info )
 {
     FT_FROM_HANDLE( cmd, icmd, D3D12CommandBuffer );
-    FT_FROM_HANDLE( render_pass, desc->render_pass, D3D12RenderPass );
+    FT_FROM_HANDLE( render_pass, info->render_pass, D3D12RenderPass );
 
-    for ( u32 i = 0; i < desc->render_pass->color_attachment_count; i++ )
+    for ( u32 i = 0; i < info->render_pass->color_attachment_count; i++ )
     {
         cmd->command_list->ClearRenderTargetView(
             render_pass->color_attachments[ 0 ],
-            desc->clear_values[ i ].color,
+            info->clear_values[ i ].color,
             0,
             nullptr );
     }
 
     cmd->command_list->OMSetRenderTargets(
-        desc->render_pass->color_attachment_count,
+        info->render_pass->color_attachment_count,
         render_pass->color_attachments,
-        desc->render_pass->has_depth_stencil,
+        info->render_pass->has_depth_stencil,
         &render_pass->depth_stencil );
 }
 
@@ -1465,19 +1475,17 @@ d3d12_cmd_bind_descriptor_set( const CommandBuffer* cmd,
 }
 
 void
-d3d12_create_buffer( const Device* idevice, const BufferDesc* desc, Buffer** p )
+d3d12_create_buffer( const Device* idevice, const BufferInfo* info, Buffer** p )
 {
     FT_ASSERT( p );
 
     FT_FROM_HANDLE( device, idevice, D3D12Device );
 
-    auto buffer              = new ( std::nothrow ) D3D12Buffer {};
-    buffer->interface.handle = buffer;
-    *p                       = &buffer->interface;
+    FT_INIT_INTERNAL( buffer, *p, D3D12Buffer );
 
-    buffer->interface.size            = desc->size;
-    buffer->interface.descriptor_type = desc->descriptor_type;
-    buffer->interface.memory_usage    = desc->memory_usage;
+    buffer->interface.size            = info->size;
+    buffer->interface.descriptor_type = info->descriptor_type;
+    buffer->interface.memory_usage    = info->memory_usage;
 
     D3D12_RESOURCE_DESC buffer_desc {};
     buffer_desc.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -1492,7 +1500,7 @@ d3d12_create_buffer( const Device* idevice, const BufferDesc* desc, Buffer** p )
     buffer_desc.Flags            = D3D12_RESOURCE_FLAG_NONE;
 
     D3D12MA::ALLOCATION_DESC alloc_desc = {};
-    alloc_desc.HeapType = to_d3d12_heap_type( desc->memory_usage );
+    alloc_desc.HeapType = to_d3d12_heap_type( info->memory_usage );
 
     D3D12_ASSERT(
         device->allocator->CreateResource( &alloc_desc,
@@ -1511,7 +1519,7 @@ d3d12_destroy_buffer( const Device* idevice, Buffer* ibuffer )
     FT_FROM_HANDLE( buffer, ibuffer, D3D12Buffer );
     buffer->allocation->Release();
     buffer->buffer->Release();
-    operator delete( buffer, std::nothrow );
+    std::free( buffer );
 }
 
 void*
@@ -1541,29 +1549,29 @@ d3d12_unmap_memory( const Device* idevice, Buffer* ibuffer )
 
 void
 d3d12_create_sampler( const Device*      idevice,
-                      const SamplerDesc* desc,
+                      const SamplerInfo* info,
                       Sampler**          p )
 {
     FT_ASSERT( p );
 
     FT_FROM_HANDLE( device, idevice, D3D12Device );
 
-    auto sampler = new ( std::nothrow ) D3D12Sampler {};
+    FT_INIT_INTERNAL( sampler, *p, D3D12Sampler );
 
     D3D12_SAMPLER_DESC sampler_desc {};
-    sampler_desc.Filter         = to_d3d12_filter( desc->min_filter,
-                                           desc->mag_filter,
-                                           desc->mipmap_mode,
-                                           desc->anisotropy_enable,
-                                           desc->compare_enable );
-    sampler_desc.AddressU       = to_d3d12_address_mode( desc->address_mode_u );
-    sampler_desc.AddressV       = to_d3d12_address_mode( desc->address_mode_v );
-    sampler_desc.AddressW       = to_d3d12_address_mode( desc->address_mode_w );
-    sampler_desc.MipLODBias     = desc->mip_lod_bias;
-    sampler_desc.MaxAnisotropy  = desc->max_anisotropy;
-    sampler_desc.ComparisonFunc = to_d3d12_comparison_func( desc->compare_op );
-    sampler_desc.MinLOD         = desc->min_lod;
-    sampler_desc.MaxLOD         = desc->max_lod;
+    sampler_desc.Filter         = to_d3d12_filter( info->min_filter,
+                                           info->mag_filter,
+                                           info->mipmap_mode,
+                                           info->anisotropy_enable,
+                                           info->compare_enable );
+    sampler_desc.AddressU       = to_d3d12_address_mode( info->address_mode_u );
+    sampler_desc.AddressV       = to_d3d12_address_mode( info->address_mode_v );
+    sampler_desc.AddressW       = to_d3d12_address_mode( info->address_mode_w );
+    sampler_desc.MipLODBias     = info->mip_lod_bias;
+    sampler_desc.MaxAnisotropy  = info->max_anisotropy;
+    sampler_desc.ComparisonFunc = to_d3d12_comparison_func( info->compare_op );
+    sampler_desc.MinLOD         = info->min_lod;
+    sampler_desc.MaxLOD         = info->max_lod;
 
     D3D12_CPU_DESCRIPTOR_HANDLE sampler_heap_handle(
         device->sampler_heap->GetCPUDescriptorHandleForHeapStart() );
@@ -1579,26 +1587,24 @@ d3d12_destroy_sampler( const Device* device, Sampler* isampler )
 
     FT_FROM_HANDLE( sampler, isampler, D3D12Sampler );
 
-    operator delete( sampler, std::nothrow );
+    std::free( sampler );
 }
 
 void
-d3d12_create_image( const Device* idevice, const ImageDesc* desc, Image** p )
+d3d12_create_image( const Device* idevice, const ImageInfo* info, Image** p )
 {
     FT_ASSERT( p );
 
     FT_FROM_HANDLE( device, idevice, D3D12Device );
 
-    auto image              = new ( std::nothrow ) D3D12Image {};
-    image->interface.handle = image;
-    *p                      = &image->interface;
+    FT_INIT_INTERNAL( image, *p, D3D12Image );
 
-    image->interface.width           = desc->width;
-    image->interface.height          = desc->height;
-    image->interface.depth           = desc->depth;
-    image->interface.mip_level_count = desc->mip_levels;
-    image->interface.format          = desc->format;
-    image->interface.sample_count    = desc->sample_count;
+    image->interface.width           = info->width;
+    image->interface.height          = info->height;
+    image->interface.depth           = info->depth;
+    image->interface.mip_level_count = info->mip_levels;
+    image->interface.format          = info->format;
+    image->interface.sample_count    = info->sample_count;
 
     D3D12_RESOURCE_DESC image_desc = {};
     // TODO:
@@ -1615,8 +1621,8 @@ d3d12_create_image( const Device* idevice, const ImageDesc* desc, Image** p )
     image_desc.SampleDesc.Quality = 0;
     image_desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 
-    if ( format_has_depth_aspect( desc->format ) ||
-         format_has_stencil_aspect( desc->format ) )
+    if ( format_has_depth_aspect( info->format ) ||
+         format_has_stencil_aspect( info->format ) )
     {
         image_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
     }
@@ -1649,7 +1655,7 @@ d3d12_create_image( const Device* idevice, const ImageDesc* desc, Image** p )
         image->image_view = dsv_heap_handle;
         dsv_heap_handle.ptr += ( 1 * device->dsv_descriptor_size );
     }
-    else if ( desc->descriptor_type == DescriptorType::eColorAttachment )
+    else if ( info->descriptor_type == DescriptorType::eColorAttachment )
     {
         D3D12_CPU_DESCRIPTOR_HANDLE rtv_heap_handle(
             device->rtv_heap->GetCPUDescriptorHandleForHeapStart() );
@@ -1695,12 +1701,12 @@ d3d12_destroy_image( const Device* device, Image* iimage )
         image->allocation->Release();
     }
     image->image->Release();
-    operator delete( image, std::nothrow );
+    std::free( image );
 }
 
 void
 d3d12_create_descriptor_set( const Device*            idevice,
-                             const DescriptorSetDesc* desc,
+                             const DescriptorSetInfo* info,
                              DescriptorSet**          p )
 {
 }
@@ -1720,27 +1726,25 @@ d3d12_update_descriptor_set( const Device*          idevice,
 
 void
 d3d12_create_ui_context( CommandBuffer* icmd,
-                         const UiDesc*  desc,
+                         const UiInfo*  info,
                          UiContext**    p )
 {
     FT_ASSERT( p );
 
-    FT_FROM_HANDLE( device, desc->device, D3D12Device );
-    FT_FROM_HANDLE( render_pass, desc->render_pass, D3D12RenderPass );
+    FT_FROM_HANDLE( device, info->device, D3D12Device );
+    FT_FROM_HANDLE( render_pass, info->render_pass, D3D12RenderPass );
 
-    auto context              = new ( std::nothrow ) D3D12UiContext {};
-    context->interface.handle = context;
-    *p                        = &context->interface;
+    FT_INIT_INTERNAL( context, *p, D3D12UiContext );
 
     ImGui::CreateContext();
     auto& io = ImGui::GetIO();
     ( void ) io;
-    if ( desc->docking )
+    if ( info->docking )
     {
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     }
 
-    if ( desc->viewports )
+    if ( info->viewports )
     {
         io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     }
@@ -1754,10 +1758,10 @@ d3d12_create_ui_context( CommandBuffer* icmd,
         &heap_desc,
         IID_PPV_ARGS( &context->cbv_srv_heap ) ) );
 
-    ImGui_ImplSDL2_InitForD3D( ( SDL_Window* ) desc->window->handle );
+    ImGui_ImplSDL2_InitForD3D( ( SDL_Window* ) info->window->handle );
     ImGui_ImplDX12_Init(
         device->device,
-        desc->in_fly_frame_count,
+        info->in_fly_frame_count,
         render_pass->color_formats[ 0 ],
         context->cbv_srv_heap,
         context->cbv_srv_heap->GetCPUDescriptorHandleForHeapStart(),
@@ -1775,11 +1779,11 @@ d3d12_destroy_ui_context( const Device* idevice, UiContext* icontext )
     ImGui_ImplSDL2_Shutdown();
     context->cbv_srv_heap->Release();
     ImGui::DestroyContext();
-    operator delete( context, std::nothrow );
+    std::free( context );
 }
 
 void
-d3d12_ui_begin_frame()
+d3d12_ui_begin_frame( UiContext*, CommandBuffer* icmd )
 {
     ImGui_ImplDX12_NewFrame();
     ImGui_ImplSDL2_NewFrame();
@@ -1812,7 +1816,7 @@ d3d12_read_shader( const std::string& shader_name )
 }
 
 void
-d3d12_create_renderer_backend( const RendererBackendDesc* desc,
+d3d12_create_renderer_backend( const RendererBackendInfo* info,
                                RendererBackend**          p )
 {
     FT_ASSERT( p );
@@ -1844,7 +1848,7 @@ d3d12_create_renderer_backend( const RendererBackendDesc* desc,
     end_command_buffer            = d3d12_end_command_buffer;
     acquire_next_image            = d3d12_acquire_next_image;
     create_render_pass            = d3d12_create_render_pass;
-    update_render_pass            = d3d12_update_render_pass;
+    resize_render_pass            = d3d12_resize_render_pass;
     destroy_render_pass           = d3d12_destroy_render_pass;
     create_shader                 = d3d12_create_shader;
     destroy_shader                = d3d12_destroy_shader;
@@ -1890,9 +1894,7 @@ d3d12_create_renderer_backend( const RendererBackendDesc* desc,
 
     read_shader = d3d12_read_shader;
 
-    auto backend              = new ( std::nothrow ) D3D12RendererBackend {};
-    backend->interface.handle = backend;
-    *p                        = &backend->interface;
+    FT_INIT_INTERNAL( backend, *p, D3D12RendererBackend );
 
 #ifdef FLUENT_DEBUG
     D3D12_ASSERT(

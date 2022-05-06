@@ -40,6 +40,10 @@ if host_machine.system() == 'linux' or host_machine.system() == 'darwin'
 	endif
 endif
 
+if cc.get_id() == 'msvc'
+    ft_cpp_args += [ '-DNOMINMAX' ]
+endif
+
 if renderer_backend_vulkan
     subdir('third_party/volk')
     subdir('third_party/vk_mem_alloc')

@@ -4,6 +4,7 @@
 #include "math/math.hpp"
 #include "renderer/renderer_enums.hpp"
 #include "renderer/shader_reflection.hpp"
+
 #undef MemoryBarrier
 
 namespace fluent

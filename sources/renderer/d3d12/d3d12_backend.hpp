@@ -111,7 +111,7 @@ struct D3D12RenderPass
 
 struct D3D12Shader
 {
-    D3D12_SHADER_BYTECODE bytecode;
+    D3D12_SHADER_BYTECODE bytecodes[ static_cast<u32>( ShaderStage::eCount ) ];
     Shader                interface;
 };
 
@@ -141,7 +141,7 @@ struct D3D12UiContext
 };
 
 void
-d3d12_create_renderer_backend( const RendererBackendDesc* desc,
-                               RendererBackend**          p_backend );
+d3d12_create_renderer_backend( const RendererBackendInfo* info,
+                               RendererBackend**          backend );
 } // namespace fluent
 #endif
