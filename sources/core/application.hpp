@@ -15,14 +15,14 @@ using ResizeCallback   = void ( * )( u32 width, u32 height );
 
 struct ApplicationConfig
 {
-    u32              argc;
-    char**           argv;
-    WindowInfo       window_info;
-    LogLevel         log_level;
-    InitCallback     on_init;
-    UpdateCallback   on_update;
-    ShutdownCallback on_shutdown;
-    ResizeCallback   on_resize;
+	u32              argc;
+	char**           argv;
+	WindowInfo       window_info;
+	LogLevel         log_level;
+	InitCallback     on_init;
+	UpdateCallback   on_update;
+	ShutdownCallback on_shutdown;
+	ResizeCallback   on_resize;
 };
 
 void

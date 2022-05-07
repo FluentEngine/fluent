@@ -13,16 +13,16 @@ struct ShaderInfo;
 
 struct Binding
 {
-    u32            set;
-    u32            binding;
-    u32            descriptor_count;
-    DescriptorType descriptor_type;
+	u32            set;
+	u32            binding;
+	u32            descriptor_count;
+	DescriptorType descriptor_type;
 };
 
 struct ReflectionData
 {
-    u32                  binding_count;
-    std::vector<Binding> bindings;
+	u32                  binding_count;
+	std::vector<Binding> bindings;
 };
 
 void

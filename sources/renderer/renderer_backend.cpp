@@ -83,30 +83,30 @@ void
 create_renderer_backend( const RendererBackendInfo* info,
                          RendererBackend**          backend )
 {
-    switch ( info->api )
-    {
-    case RendererAPI::eVulkan:
-    {
+	switch ( info->api )
+	{
+	case RendererAPI::eVulkan:
+	{
 #ifdef VULKAN_BACKEND
-        vk_create_renderer_backend( info, backend );
-        break;
+		vk_create_renderer_backend( info, backend );
+		break;
 #endif
-    }
-    case RendererAPI::eD3D12:
-    {
+	}
+	case RendererAPI::eD3D12:
+	{
 #ifdef D3D12_BACKEND
-        d3d12_create_renderer_backend( info, backend );
-        break;
+		d3d12_create_renderer_backend( info, backend );
+		break;
 #endif
-    }
-    case RendererAPI::eMetal:
-    {
+	}
+	case RendererAPI::eMetal:
+	{
 #ifdef METAL_BACKEND
-        mtl_create_renderer_backend( info, backend );
-        break;
+		mtl_create_renderer_backend( info, backend );
+		break;
 #endif
-    }
-    default: FT_ASSERT( false && "no supported api available" );
-    }
+	}
+	default: FT_ASSERT( false && "no supported api available" );
+	}
 }
 } // namespace fluent

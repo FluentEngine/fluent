@@ -7,20 +7,20 @@ namespace fluent
 
 struct WindowInfo
 {
-    const char* title      = nullptr;
-    u32         x          = 0;
-    u32         y          = 0;
-    u32         width      = 0;
-    u32         height     = 0;
-    b32         resizable  = false;
-    b32         centered   = false;
-    b32         fullscreen = false;
-    b32         grab_mouse = false;
+	const char* title      = nullptr;
+	u32         x          = 0;
+	u32         y          = 0;
+	u32         width      = 0;
+	u32         height     = 0;
+	b32         resizable  = false;
+	b32         centered   = false;
+	b32         fullscreen = false;
+	b32         grab_mouse = false;
 };
 
 struct Window
 {
-    void* handle;
+	void* handle;
 };
 
 Window

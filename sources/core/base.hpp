@@ -23,24 +23,24 @@ using f64 = double;
 using b32 = bool;
 
 #define MAKE_ENUM_FLAG( TYPE, ENUM_TYPE )                                      \
-    static inline ENUM_TYPE operator|( ENUM_TYPE a, ENUM_TYPE b )              \
+	static inline ENUM_TYPE operator|( ENUM_TYPE a, ENUM_TYPE b )              \
     {                                                                          \
-        return static_cast<ENUM_TYPE>( static_cast<TYPE>( a ) |                \
-                                       static_cast<TYPE>( b ) );               \
-    }                                                                          \
-    static inline ENUM_TYPE operator&( ENUM_TYPE a, ENUM_TYPE b )              \
+	    return static_cast<ENUM_TYPE>( static_cast<TYPE>( a ) |                \
+	                                   static_cast<TYPE>( b ) );               \
+	}                                                                          \
+	static inline ENUM_TYPE operator&( ENUM_TYPE a, ENUM_TYPE b )              \
     {                                                                          \
-        return static_cast<ENUM_TYPE>( static_cast<TYPE>( a ) &                \
-                                       static_cast<TYPE>( b ) );               \
-    }                                                                          \
-    static inline ENUM_TYPE operator|=( ENUM_TYPE& a, ENUM_TYPE b )            \
+	    return static_cast<ENUM_TYPE>( static_cast<TYPE>( a ) &                \
+	                                   static_cast<TYPE>( b ) );               \
+	}                                                                          \
+	static inline ENUM_TYPE operator|=( ENUM_TYPE& a, ENUM_TYPE b )            \
     {                                                                          \
-        return a = ( a | b );                                                  \
-    }                                                                          \
-    static inline ENUM_TYPE operator&=( ENUM_TYPE& a, ENUM_TYPE b )            \
+	    return a = ( a | b );                                                  \
+	}                                                                          \
+	static inline ENUM_TYPE operator&=( ENUM_TYPE& a, ENUM_TYPE b )            \
     {                                                                          \
-        return a = ( a & b );                                                  \
-    }
+	    return a = ( a & b );                                                  \
+	}
 
 #include "core/log.hpp"
 #include "core/assert.hpp"

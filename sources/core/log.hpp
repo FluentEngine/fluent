@@ -18,12 +18,12 @@ namespace fluent
 {
 enum class LogLevel
 {
-    eOff,
-    eTrace,
-    eDebug,
-    eInfo,
-    eWarn,
-    eError
+	eOff,
+	eTrace,
+	eDebug,
+	eInfo,
+	eWarn,
+	eError
 };
 
 spdlog::level::level_enum
