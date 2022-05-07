@@ -284,15 +284,14 @@ struct ShaderInfo
 
 struct Shader
 {
-	ReflectionData reflect_data[ static_cast<u32>( ShaderStage::eCount ) ];
+	ReflectionData reflect_data;
 	Handle         handle;
 };
 
 struct DescriptorSetLayout
 {
-	Shader* shader;
-	u32     descriptor_set_layout_count = 0; // TODO: move to private ?
-	Handle  handle;
+	ReflectionData reflection_data;
+	Handle         handle;
 };
 
 struct VertexBindingInfo
@@ -357,7 +356,8 @@ struct DescriptorSetInfo
 
 struct DescriptorSet
 {
-	Handle handle;
+	DescriptorSetLayout* layout;
+	Handle               handle;
 };
 
 struct BufferDescriptor
@@ -381,8 +381,7 @@ struct SamplerDescriptor
 struct DescriptorWrite
 {
 	u32                descriptor_count;
-	u32                binding;
-	DescriptorType     descriptor_type;
+	const char*        descriptor_name;
 	SamplerDescriptor* sampler_descriptors;
 	ImageDescriptor*   image_descriptors;
 	BufferDescriptor*  buffer_descriptors;

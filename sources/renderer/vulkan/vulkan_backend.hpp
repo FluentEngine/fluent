@@ -104,6 +104,7 @@ struct VulkanShader
 
 struct VulkanDescriptorSetLayout
 {
+	u32                   descriptor_set_layout_count = 0;
 	VkDescriptorSetLayout descriptor_set_layouts[ MAX_SET_COUNT ];
 	DescriptorSetLayout   interface;
 };

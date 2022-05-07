@@ -1830,6 +1830,9 @@ vk_create_shader( const Device* idevice, ShaderInfo* info, Shader** p )
 
 	FT_INIT_INTERNAL( shader, *p, VulkanShader );
 
+	new ( &shader->interface.reflect_data.binding_map ) BindingMap();
+	new ( &shader->interface.reflect_data.bindings ) Bindings();
+
 	auto create_module = []( const VulkanDevice*     device,
 	                         VulkanShader*           shader,
 	                         ShaderStage             stage,
@@ -1897,6 +1900,8 @@ vk_destroy_shader( const Device* idevice, Shader* ishader )
 	destroy_module( device, ShaderStage::eGeometry, shader );
 	destroy_module( device, ShaderStage::eFragment, shader );
 
+	shader->interface.reflect_data.bindings.~vector();
+	shader->interface.reflect_data.binding_map.~unordered_map();
 	std::free( shader );
 }
 
@@ -1911,7 +1916,12 @@ vk_create_descriptor_set_layout( const Device*         idevice,
 
 	FT_INIT_INTERNAL( descriptor_set_layout, *p, VulkanDescriptorSetLayout );
 
-	descriptor_set_layout->interface.shader = ishader;
+	new ( &descriptor_set_layout->interface.reflection_data.binding_map )
+	    BindingMap();
+	new ( &descriptor_set_layout->interface.reflection_data.bindings )
+	    Bindings();
+
+	descriptor_set_layout->interface.reflection_data = ishader->reflect_data;
 
 	// count bindings in all shaders
 	u32                      binding_counts[ MAX_SET_COUNT ] = { 0 };
@@ -1923,38 +1933,37 @@ vk_create_descriptor_set_layout( const Device*         idevice,
 
 	u32 set_count = 0;
 
-	for ( u32 i = 0; i < static_cast<u32>( ShaderStage::eCount ); ++i )
+	ReflectionData* reflection =
+	    &descriptor_set_layout->interface.reflection_data;
+
+	for ( u32 b = 0; b < reflection->binding_count; ++b )
 	{
-		for ( u32 j = 0; j < ishader->reflect_data[ i ].binding_count; ++j )
+		auto& binding       = reflection->bindings[ b ];
+		u32   set           = binding.set;
+		u32&  binding_count = binding_counts[ set ];
+
+		bindings[ set ][ binding_count ].binding = binding.binding;
+		bindings[ set ][ binding_count ].descriptorCount =
+		    binding.descriptor_count;
+		bindings[ set ][ binding_count ].descriptorType =
+		    to_vk_descriptor_type( binding.descriptor_type );
+		bindings[ set ][ binding_count ].pImmutableSamplers =
+		    nullptr; // ??? TODO
+		bindings[ set ][ binding_count ].stageFlags =
+		    to_vk_shader_stage( binding.stage );
+
+		if ( binding.descriptor_count > 1 )
 		{
-			auto& binding       = ishader->reflect_data[ i ].bindings[ j ];
-			u32   set           = binding.set;
-			u32&  binding_count = binding_counts[ set ];
+			binding_flags[ set ][ binding_count ] = VkDescriptorBindingFlags {};
+			binding_flags[ set ][ binding_count ] |=
+			    VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
+		}
 
-			bindings[ set ][ binding_count ].binding = binding.binding;
-			bindings[ set ][ binding_count ].descriptorCount =
-			    binding.descriptor_count;
-			bindings[ set ][ binding_count ].descriptorType =
-			    to_vk_descriptor_type( binding.descriptor_type );
-			bindings[ set ][ binding_count ].pImmutableSamplers =
-			    nullptr; // ??? TODO
-			bindings[ set ][ binding_count ].stageFlags =
-			    to_vk_shader_stage( static_cast<ShaderStage>( i ) );
+		binding_count++;
 
-			if ( binding.descriptor_count > 1 )
-			{
-				binding_flags[ set ][ binding_count ] =
-				    VkDescriptorBindingFlags {};
-				binding_flags[ set ][ binding_count ] |=
-				    VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
-			}
-
-			binding_count++;
-
-			if ( set + 1 > set_count )
-			{
-				set_count = set + 1;
-			}
+		if ( set + 1 > set_count )
+		{
+			set_count = set + 1;
 		}
 	}
 
@@ -1987,7 +1996,7 @@ vk_create_descriptor_set_layout( const Device*         idevice,
 			    device->vulkan_allocator,
 			    &descriptor_set_layout->descriptor_set_layouts[ set ] ) );
 
-			descriptor_set_layout->interface.descriptor_set_layout_count++;
+			descriptor_set_layout->descriptor_set_layout_count++;
 		}
 	}
 }
@@ -2001,7 +2010,7 @@ vk_destroy_descriptor_set_layout( const Device*        idevice,
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( layout, ilayout, VulkanDescriptorSetLayout );
 
-	for ( u32 i = 0; i < layout->interface.descriptor_set_layout_count; ++i )
+	for ( u32 i = 0; i < layout->descriptor_set_layout_count; ++i )
 	{
 		if ( layout->descriptor_set_layouts[ i ] )
 		{
@@ -2011,6 +2020,8 @@ vk_destroy_descriptor_set_layout( const Device*        idevice,
 		}
 	}
 
+	layout->interface.reflection_data.bindings.~vector();
+	layout->interface.reflection_data.binding_map.~unordered_map();
 	std::free( layout );
 }
 
@@ -2024,6 +2035,9 @@ vk_create_compute_pipeline( const Device*       idevice,
 
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( shader, info->shader, VulkanShader );
+	FT_FROM_HANDLE( dsl,
+	                info->descriptor_set_layout,
+	                VulkanDescriptorSetLayout );
 
 	FT_INIT_INTERNAL( pipeline, *p, VulkanPipeline );
 
@@ -2050,7 +2064,7 @@ vk_create_compute_pipeline( const Device*       idevice,
 	pipeline_layout_create_info.sType =
 	    VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipeline_layout_create_info.setLayoutCount =
-	    info->descriptor_set_layout->descriptor_set_layout_count;
+	    dsl->descriptor_set_layout_count;
 	pipeline_layout_create_info.pSetLayouts =
 	    static_cast<VulkanDescriptorSetLayout*>(
 	        info->descriptor_set_layout->handle )
@@ -2088,6 +2102,9 @@ vk_create_graphics_pipeline( const Device*       idevice,
 
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( shader, info->shader, VulkanShader );
+	FT_FROM_HANDLE( dsl,
+	                info->descriptor_set_layout,
+	                VulkanDescriptorSetLayout );
 
 	FT_INIT_INTERNAL( pipeline, *p, VulkanPipeline );
 
@@ -2260,7 +2277,7 @@ vk_create_graphics_pipeline( const Device*       idevice,
 	pipeline_layout_create_info.sType =
 	    VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipeline_layout_create_info.setLayoutCount =
-	    info->descriptor_set_layout->descriptor_set_layout_count;
+	    dsl->descriptor_set_layout_count;
 	pipeline_layout_create_info.pSetLayouts =
 	    static_cast<VulkanDescriptorSetLayout*>(
 	        info->descriptor_set_layout->handle )
@@ -2526,6 +2543,8 @@ vk_create_descriptor_set( const Device*            idevice,
 
 	FT_INIT_INTERNAL( descriptor_set, *p, VulkanDescriptorSet );
 
+	descriptor_set->interface.layout = info->descriptor_set_layout;
+
 	VkDescriptorSetAllocateInfo descriptor_set_allocate_info {};
 	descriptor_set_allocate_info.sType =
 	    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -2579,15 +2598,24 @@ vk_update_descriptor_set( const Device*          idevice,
 	{
 		const auto& descriptor_write = writes[ i ];
 
+		auto& reflection = set->interface.layout->reflection_data;
+		FT_ASSERT(
+		    reflection.binding_map.find( descriptor_write.descriptor_name ) !=
+		    reflection.binding_map.cend() );
+
+		const auto& binding =
+		    reflection.bindings
+		        [ reflection.binding_map[ descriptor_write.descriptor_name ] ];
+
 		auto& write_descriptor_set = descriptor_writes[ write++ ];
 		write_descriptor_set       = {};
 		write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_descriptor_set.dstBinding = descriptor_write.binding;
+		write_descriptor_set.dstBinding = binding.binding;
 		write_descriptor_set.descriptorCount =
 		    descriptor_write.descriptor_count;
 		write_descriptor_set.dstSet = set->descriptor_set;
 		write_descriptor_set.descriptorType =
-		    to_vk_descriptor_type( descriptor_write.descriptor_type );
+		    to_vk_descriptor_type( binding.descriptor_type );
 
 		if ( descriptor_write.buffer_descriptors )
 		{

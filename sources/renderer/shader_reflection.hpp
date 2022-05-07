@@ -1,5 +1,6 @@
 #pragma once
 
+#include <unordered_map>
 #include <vector>
 #include "core/base.hpp"
 #include "renderer/renderer_enums.hpp"
@@ -17,12 +18,17 @@ struct Binding
 	u32            binding;
 	u32            descriptor_count;
 	DescriptorType descriptor_type;
+	ShaderStage    stage;
 };
+
+using Bindings   = std::vector<Binding>;
+using BindingMap = std::unordered_map<std::string, u32>;
 
 struct ReflectionData
 {
-	u32                  binding_count;
-	std::vector<Binding> bindings;
+	u32        binding_count;
+	Bindings   bindings;
+	BindingMap binding_map;
 };
 
 void

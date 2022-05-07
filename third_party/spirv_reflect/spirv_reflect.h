@@ -1,5 +1,5 @@
 /*
- Copyright 2017-2018 Google Inc.
+ Copyright 2017-2022 Google Inc.
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -76,6 +76,25 @@ typedef enum SpvReflectResult {
   SPV_REFLECT_RESULT_ERROR_SPIRV_INVALID_EXECUTION_MODE,
 } SpvReflectResult;
 
+/*! @enum SpvReflectModuleFlagBits
+
+SPV_REFLECT_MODULE_FLAG_NO_COPY - Disables copying of SPIR-V code
+  when a SPIRV-Reflect shader module is created. It is the
+  responsibility of the calling program to ensure that the pointer
+  remains valid and the memory it's pointing to is not freed while
+  SPIRV-Reflect operations are taking place. Freeing the backing
+  memory will cause undefined behavior or most likely a crash.
+  This is flag is intended for cases where the memory overhead of
+  storing the copied SPIR-V is undesirable.
+
+*/
+typedef enum SpvReflectModuleFlagBits {
+  SPV_REFLECT_MODULE_FLAG_NONE    = 0x00000000,
+  SPV_REFLECT_MODULE_FLAG_NO_COPY = 0x00000001,
+} SpvReflectModuleFlagBits;
+
+typedef uint32_t SpvReflectModuleFlags;
+
 /*! @enum SpvReflectTypeFlagBits
 
 */
@@ -101,6 +120,13 @@ typedef uint32_t SpvReflectTypeFlags;
 
 /*! @enum SpvReflectDecorationBits
 
+NOTE: HLSL row_major and column_major decorations are reversed
+	  in SPIR-V. Meaning that matrices declrations with row_major
+	  will get reflected as column_major and vice versa. The
+	  row and column decorations get appied during the compilation.
+	  SPIRV-Reflect reads the data as is and does not make any
+	  attempt to correct it to match what's in the source.
+
 */
 typedef enum SpvReflectDecorationFlagBits {
   SPV_REFLECT_DECORATION_NONE                   = 0x00000000,
@@ -113,6 +139,7 @@ typedef enum SpvReflectDecorationFlagBits {
   SPV_REFLECT_DECORATION_FLAT                   = 0x00000040,
   SPV_REFLECT_DECORATION_NON_WRITABLE           = 0x00000080,
   SPV_REFLECT_DECORATION_RELAXED_PRECISION      = 0x00000100,
+  SPV_REFLECT_DECORATION_NON_READABLE           = 0x00000200,
 } SpvReflectDecorationFlagBits;
 
 typedef uint32_t SpvReflectDecorationFlags;
@@ -199,12 +226,12 @@ typedef enum SpvReflectShaderStageFlagBits {
   SPV_REFLECT_SHADER_STAGE_COMPUTE_BIT                 = 0x00000020, // = VK_SHADER_STAGE_COMPUTE_BIT
   SPV_REFLECT_SHADER_STAGE_TASK_BIT_NV                 = 0x00000040, // = VK_SHADER_STAGE_TASK_BIT_NV
   SPV_REFLECT_SHADER_STAGE_MESH_BIT_NV                 = 0x00000080, // = VK_SHADER_STAGE_MESH_BIT_NV
-  SPV_REFLECT_SHADER_STAGE_RAYGEN_BIT_KHR              = 0x00000100, // VK_SHADER_STAGE_RAYGEN_BIT_KHR
-  SPV_REFLECT_SHADER_STAGE_ANY_HIT_BIT_KHR             = 0x00000200, // VK_SHADER_STAGE_ANY_HIT_BIT_KHR
-  SPV_REFLECT_SHADER_STAGE_CLOSEST_HIT_BIT_KHR         = 0x00000400, // VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR
-  SPV_REFLECT_SHADER_STAGE_MISS_BIT_KHR                = 0x00000800, // VK_SHADER_STAGE_MISS_BIT_KHR
-  SPV_REFLECT_SHADER_STAGE_INTERSECTION_BIT_KHR        = 0x00001000, // VK_SHADER_STAGE_INTERSECTION_BIT_KHR
-  SPV_REFLECT_SHADER_STAGE_CALLABLE_BIT_KHR            = 0x00002000, // VK_SHADER_STAGE_CALLABLE_BIT_KHR
+  SPV_REFLECT_SHADER_STAGE_RAYGEN_BIT_KHR              = 0x00000100, // = VK_SHADER_STAGE_RAYGEN_BIT_KHR
+  SPV_REFLECT_SHADER_STAGE_ANY_HIT_BIT_KHR             = 0x00000200, // = VK_SHADER_STAGE_ANY_HIT_BIT_KHR
+  SPV_REFLECT_SHADER_STAGE_CLOSEST_HIT_BIT_KHR         = 0x00000400, // = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR
+  SPV_REFLECT_SHADER_STAGE_MISS_BIT_KHR                = 0x00000800, // = VK_SHADER_STAGE_MISS_BIT_KHR
+  SPV_REFLECT_SHADER_STAGE_INTERSECTION_BIT_KHR        = 0x00001000, // = VK_SHADER_STAGE_INTERSECTION_BIT_KHR
+  SPV_REFLECT_SHADER_STAGE_CALLABLE_BIT_KHR            = 0x00002000, // = VK_SHADER_STAGE_CALLABLE_BIT_KHR
 
 } SpvReflectShaderStageFlagBits;
 
@@ -236,18 +263,18 @@ enum {
 
 typedef struct SpvReflectNumericTraits {
   struct Scalar {
-    uint32_t                        width;
-    uint32_t                        signedness;
+	uint32_t                        width;
+	uint32_t                        signedness;
   } scalar;
 
   struct Vector {
-    uint32_t                        component_count;
+	uint32_t                        component_count;
   } vector;
 
   struct Matrix {
-    uint32_t                        column_count;
-    uint32_t                        row_count;
-    uint32_t                        stride; // Measured in bytes
+	uint32_t                        column_count;
+	uint32_t                        row_count;
+	uint32_t                        stride; // Measured in bytes
   } matrix;
 } SpvReflectNumericTraits;
 
@@ -262,7 +289,11 @@ typedef struct SpvReflectImageTraits {
 
 typedef struct SpvReflectArrayTraits {
   uint32_t                          dims_count;
+  // Each entry is: 0xFFFFFFFF for a specialization constant dimension,
+  // 0 for a runtime array dimension, and the array length otherwise.
   uint32_t                          dims[SPV_REFLECT_MAX_ARRAY_DIMS];
+  // Stores Ids for dimensions that are specialization constants
+  uint32_t                          spec_constant_op_ids[SPV_REFLECT_MAX_ARRAY_DIMS];
   uint32_t                          stride; // Measured in bytes
 } SpvReflectArrayTraits;
 
@@ -284,9 +315,9 @@ typedef struct SpvReflectTypeDescription {
   SpvReflectDecorationFlags         decoration_flags;
 
   struct Traits {
-    SpvReflectNumericTraits         numeric;
-    SpvReflectImageTraits           image;
-    SpvReflectArrayTraits           array;
+	SpvReflectNumericTraits         numeric;
+	SpvReflectImageTraits           image;
+	SpvReflectArrayTraits           array;
   } traits;
 
   uint32_t                          member_count;
@@ -320,7 +351,7 @@ typedef struct SpvReflectInterfaceVariable {
   SpvReflectTypeDescription*          type_description;
 
   struct {
-    uint32_t                          location;
+	uint32_t                          location;
   } word_offset;
 } SpvReflectInterfaceVariable;
 
@@ -367,9 +398,11 @@ typedef struct SpvReflectDescriptorBinding {
   SpvReflectTypeDescription*          type_description;
 
   struct {
-    uint32_t                          binding;
-    uint32_t                          set;
+	uint32_t                          binding;
+	uint32_t                          set;
   } word_offset;
+
+  SpvReflectDecorationFlags           decoration_flags;
 } SpvReflectDescriptorBinding;
 
 /*! @struct SpvReflectDescriptorSet
@@ -391,10 +424,10 @@ typedef struct SpvReflectEntryPoint {
   SpvExecutionModel                 spirv_execution_model;
   SpvReflectShaderStageFlagBits     shader_stage;
 
-  uint32_t                          input_variable_count;  
-  SpvReflectInterfaceVariable**     input_variables;       
-  uint32_t                          output_variable_count; 
-  SpvReflectInterfaceVariable**     output_variables;      
+  uint32_t                          input_variable_count;
+  SpvReflectInterfaceVariable**     input_variables;
+  uint32_t                          output_variable_count;
+  SpvReflectInterfaceVariable**     output_variables;
   uint32_t                          interface_variable_count;
   SpvReflectInterfaceVariable*      interface_variables;
 
@@ -406,11 +439,16 @@ typedef struct SpvReflectEntryPoint {
   uint32_t                          used_push_constant_count;
   uint32_t*                         used_push_constants;
 
+  uint32_t                          execution_mode_count;
+  SpvExecutionMode*                 execution_modes;
+
   struct LocalSize {
-    uint32_t                        x;
-    uint32_t                        y;
-    uint32_t                        z;
+	uint32_t                        x;
+	uint32_t                        y;
+	uint32_t                        z;
   } local_size;
+  uint32_t                          invocations; // valid for geometry
+  uint32_t                          output_vertices; // valid for geometry, tesselation
 } SpvReflectEntryPoint;
 
 /*! @struct SpvReflectShaderModule
@@ -442,12 +480,13 @@ typedef struct SpvReflectShaderModule {
   SpvReflectBlockVariable*          push_constant_blocks;                             // Uses value(s) from first entry point
 
   struct Internal {
-    size_t                          spirv_size;
-    uint32_t*                       spirv_code;
-    uint32_t                        spirv_word_count;
+	SpvReflectModuleFlags           module_flags;
+	size_t                          spirv_size;
+	uint32_t*                       spirv_code;
+	uint32_t                        spirv_word_count;
 
-    size_t                          type_description_count;
-    SpvReflectTypeDescription*      type_descriptions;
+	size_t                          type_description_count;
+	SpvReflectTypeDescription*      type_descriptions;
   } * _internal;
 
 } SpvReflectShaderModule;
@@ -465,6 +504,22 @@ extern "C" {
 
 */
 SpvReflectResult spvReflectCreateShaderModule(
+  size_t                   size,
+  const void*              p_code,
+  SpvReflectShaderModule*  p_module
+);
+
+/*! @fn spvReflectCreateShaderModule2
+
+ @param  flags     Flags for module creations.
+ @param  size      Size in bytes of SPIR-V code.
+ @param  p_code    Pointer to SPIR-V code.
+ @param  p_module  Pointer to an instance of SpvReflectShaderModule.
+ @return           SPV_REFLECT_RESULT_SUCCESS on success.
+
+*/
+SpvReflectResult spvReflectCreateShaderModule2(
+  SpvReflectModuleFlags    flags,
   size_t                   size,
   const void*              p_code,
   SpvReflectShaderModule*  p_module
@@ -508,7 +563,7 @@ const uint32_t* spvReflectGetCode(const SpvReflectShaderModule* p_module);
  @param  p_module     Pointer to an instance of SpvReflectShaderModule.
  @param  entry_point  Name of the requested entry point.
  @return              Returns a const pointer to the requested entry point,
-                      or NULL if it's not found.
+					  or NULL if it's not found.
 */
 const SpvReflectEntryPoint* spvReflectGetEntryPoint(
   const SpvReflectShaderModule* p_module,
@@ -519,18 +574,18 @@ const SpvReflectEntryPoint* spvReflectGetEntryPoint(
 
  @param  p_module     Pointer to an instance of SpvReflectShaderModule.
  @param  p_count      If pp_bindings is NULL, the module's descriptor binding
-                      count (across all descriptor sets) will be stored here.
-                      If pp_bindings is not NULL, *p_count must contain the
-                      module's descriptor binding count.
+					  count (across all descriptor sets) will be stored here.
+					  If pp_bindings is not NULL, *p_count must contain the
+					  module's descriptor binding count.
  @param  pp_bindings  If NULL, the module's total descriptor binding count
-                      will be written to *p_count.
-                      If non-NULL, pp_bindings must point to an array with
-                      *p_count entries, where pointers to the module's
-                      descriptor bindings will be written. The caller must not
-                      free the binding pointers written to this array.
+					  will be written to *p_count.
+					  If non-NULL, pp_bindings must point to an array with
+					  *p_count entries, where pointers to the module's
+					  descriptor bindings will be written. The caller must not
+					  free the binding pointers written to this array.
  @return              If successful, returns SPV_REFLECT_RESULT_SUCCESS.
-                      Otherwise, the error code indicates the cause of the
-                      failure.
+					  Otherwise, the error code indicates the cause of the
+					  failure.
 
 */
 SpvReflectResult spvReflectEnumerateDescriptorBindings(
@@ -541,22 +596,22 @@ SpvReflectResult spvReflectEnumerateDescriptorBindings(
 
 /*! @fn spvReflectEnumerateEntryPointDescriptorBindings
  @brief  Creates a listing of all descriptor bindings that are used in the
-         static call tree of the given entry point.
+		 static call tree of the given entry point.
  @param  p_module     Pointer to an instance of SpvReflectShaderModule.
  @param  entry_point  The name of the entry point to get the descriptor bindings for.
  @param  p_count      If pp_bindings is NULL, the entry point's descriptor binding
-                      count (across all descriptor sets) will be stored here.
-                      If pp_bindings is not NULL, *p_count must contain the
-                      entry points's descriptor binding count.
+					  count (across all descriptor sets) will be stored here.
+					  If pp_bindings is not NULL, *p_count must contain the
+					  entry points's descriptor binding count.
  @param  pp_bindings  If NULL, the entry point's total descriptor binding count
-                      will be written to *p_count.
-                      If non-NULL, pp_bindings must point to an array with
-                      *p_count entries, where pointers to the entry point's
-                      descriptor bindings will be written. The caller must not
-                      free the binding pointers written to this array.
+					  will be written to *p_count.
+					  If non-NULL, pp_bindings must point to an array with
+					  *p_count entries, where pointers to the entry point's
+					  descriptor bindings will be written. The caller must not
+					  free the binding pointers written to this array.
  @return              If successful, returns SPV_REFLECT_RESULT_SUCCESS.
-                      Otherwise, the error code indicates the cause of the
-                      failure.
+					  Otherwise, the error code indicates the cause of the
+					  failure.
 
 */
 SpvReflectResult spvReflectEnumerateEntryPointDescriptorBindings(
@@ -570,18 +625,18 @@ SpvReflectResult spvReflectEnumerateEntryPointDescriptorBindings(
 
  @param  p_module  Pointer to an instance of SpvReflectShaderModule.
  @param  p_count   If pp_sets is NULL, the module's descriptor set
-                   count will be stored here.
-                   If pp_sets is not NULL, *p_count must contain the
-                   module's descriptor set count.
+				   count will be stored here.
+				   If pp_sets is not NULL, *p_count must contain the
+				   module's descriptor set count.
  @param  pp_sets   If NULL, the module's total descriptor set count
-                   will be written to *p_count.
-                   If non-NULL, pp_sets must point to an array with
-                   *p_count entries, where pointers to the module's
-                   descriptor sets will be written. The caller must not
-                   free the descriptor set pointers written to this array.
+				   will be written to *p_count.
+				   If non-NULL, pp_sets must point to an array with
+				   *p_count entries, where pointers to the module's
+				   descriptor sets will be written. The caller must not
+				   free the descriptor set pointers written to this array.
  @return           If successful, returns SPV_REFLECT_RESULT_SUCCESS.
-                   Otherwise, the error code indicates the cause of the
-                   failure.
+				   Otherwise, the error code indicates the cause of the
+				   failure.
 
 */
 SpvReflectResult spvReflectEnumerateDescriptorSets(
@@ -592,22 +647,22 @@ SpvReflectResult spvReflectEnumerateDescriptorSets(
 
 /*! @fn spvReflectEnumerateEntryPointDescriptorSets
  @brief  Creates a listing of all descriptor sets and their bindings that are
-         used in the static call tree of a given entry point.
+		 used in the static call tree of a given entry point.
  @param  p_module    Pointer to an instance of SpvReflectShaderModule.
  @param  entry_point The name of the entry point to get the descriptor bindings for.
  @param  p_count     If pp_sets is NULL, the module's descriptor set
-                     count will be stored here.
-                     If pp_sets is not NULL, *p_count must contain the
-                     module's descriptor set count.
+					 count will be stored here.
+					 If pp_sets is not NULL, *p_count must contain the
+					 module's descriptor set count.
  @param  pp_sets     If NULL, the module's total descriptor set count
-                     will be written to *p_count.
-                     If non-NULL, pp_sets must point to an array with
-                     *p_count entries, where pointers to the module's
-                     descriptor sets will be written. The caller must not
-                     free the descriptor set pointers written to this array.
+					 will be written to *p_count.
+					 If non-NULL, pp_sets must point to an array with
+					 *p_count entries, where pointers to the module's
+					 descriptor sets will be written. The caller must not
+					 free the descriptor set pointers written to this array.
  @return             If successful, returns SPV_REFLECT_RESULT_SUCCESS.
-                     Otherwise, the error code indicates the cause of the
-                     failure.
+					 Otherwise, the error code indicates the cause of the
+					 failure.
 
 */
 SpvReflectResult spvReflectEnumerateEntryPointDescriptorSets(
@@ -620,21 +675,21 @@ SpvReflectResult spvReflectEnumerateEntryPointDescriptorSets(
 
 /*! @fn spvReflectEnumerateInterfaceVariables
  @brief  If the module contains multiple entry points, this will only get
-         the interface variables for the first one.
+		 the interface variables for the first one.
  @param  p_module      Pointer to an instance of SpvReflectShaderModule.
  @param  p_count       If pp_variables is NULL, the module's interface variable
-                       count will be stored here.
-                       If pp_variables is not NULL, *p_count must contain
-                       the module's interface variable count.
+					   count will be stored here.
+					   If pp_variables is not NULL, *p_count must contain
+					   the module's interface variable count.
  @param  pp_variables  If NULL, the module's interface variable count will be
-                       written to *p_count.
-                       If non-NULL, pp_variables must point to an array with
-                       *p_count entries, where pointers to the module's
-                       interface variables will be written. The caller must not
-                       free the interface variables written to this array.
+					   written to *p_count.
+					   If non-NULL, pp_variables must point to an array with
+					   *p_count entries, where pointers to the module's
+					   interface variables will be written. The caller must not
+					   free the interface variables written to this array.
  @return               If successful, returns SPV_REFLECT_RESULT_SUCCESS.
-                       Otherwise, the error code indicates the cause of the
-                       failure.
+					   Otherwise, the error code indicates the cause of the
+					   failure.
 
 */
 SpvReflectResult spvReflectEnumerateInterfaceVariables(
@@ -648,18 +703,18 @@ SpvReflectResult spvReflectEnumerateInterfaceVariables(
  @param  entry_point The name of the entry point to get the interface variables for.
  @param  p_module      Pointer to an instance of SpvReflectShaderModule.
  @param  p_count       If pp_variables is NULL, the entry point's interface variable
-                       count will be stored here.
-                       If pp_variables is not NULL, *p_count must contain
-                       the entry point's interface variable count.
+					   count will be stored here.
+					   If pp_variables is not NULL, *p_count must contain
+					   the entry point's interface variable count.
  @param  pp_variables  If NULL, the entry point's interface variable count will be
-                       written to *p_count.
-                       If non-NULL, pp_variables must point to an array with
-                       *p_count entries, where pointers to the entry point's
-                       interface variables will be written. The caller must not
-                       free the interface variables written to this array.
+					   written to *p_count.
+					   If non-NULL, pp_variables must point to an array with
+					   *p_count entries, where pointers to the entry point's
+					   interface variables will be written. The caller must not
+					   free the interface variables written to this array.
  @return               If successful, returns SPV_REFLECT_RESULT_SUCCESS.
-                       Otherwise, the error code indicates the cause of the
-                       failure.
+					   Otherwise, the error code indicates the cause of the
+					   failure.
 
 */
 SpvReflectResult spvReflectEnumerateEntryPointInterfaceVariables(
@@ -672,21 +727,21 @@ SpvReflectResult spvReflectEnumerateEntryPointInterfaceVariables(
 
 /*! @fn spvReflectEnumerateInputVariables
  @brief  If the module contains multiple entry points, this will only get
-         the input variables for the first one.
+		 the input variables for the first one.
  @param  p_module      Pointer to an instance of SpvReflectShaderModule.
  @param  p_count       If pp_variables is NULL, the module's input variable
-                       count will be stored here.
-                       If pp_variables is not NULL, *p_count must contain
-                       the module's input variable count.
+					   count will be stored here.
+					   If pp_variables is not NULL, *p_count must contain
+					   the module's input variable count.
  @param  pp_variables  If NULL, the module's input variable count will be
-                       written to *p_count.
-                       If non-NULL, pp_variables must point to an array with
-                       *p_count entries, where pointers to the module's
-                       input variables will be written. The caller must not
-                       free the interface variables written to this array.
+					   written to *p_count.
+					   If non-NULL, pp_variables must point to an array with
+					   *p_count entries, where pointers to the module's
+					   input variables will be written. The caller must not
+					   free the interface variables written to this array.
  @return               If successful, returns SPV_REFLECT_RESULT_SUCCESS.
-                       Otherwise, the error code indicates the cause of the
-                       failure.
+					   Otherwise, the error code indicates the cause of the
+					   failure.
 
 */
 SpvReflectResult spvReflectEnumerateInputVariables(
@@ -700,18 +755,18 @@ SpvReflectResult spvReflectEnumerateInputVariables(
  @param  entry_point The name of the entry point to get the input variables for.
  @param  p_module      Pointer to an instance of SpvReflectShaderModule.
  @param  p_count       If pp_variables is NULL, the entry point's input variable
-                       count will be stored here.
-                       If pp_variables is not NULL, *p_count must contain
-                       the entry point's input variable count.
+					   count will be stored here.
+					   If pp_variables is not NULL, *p_count must contain
+					   the entry point's input variable count.
  @param  pp_variables  If NULL, the entry point's input variable count will be
-                       written to *p_count.
-                       If non-NULL, pp_variables must point to an array with
-                       *p_count entries, where pointers to the entry point's
-                       input variables will be written. The caller must not
-                       free the interface variables written to this array.
+					   written to *p_count.
+					   If non-NULL, pp_variables must point to an array with
+					   *p_count entries, where pointers to the entry point's
+					   input variables will be written. The caller must not
+					   free the interface variables written to this array.
  @return               If successful, returns SPV_REFLECT_RESULT_SUCCESS.
-                       Otherwise, the error code indicates the cause of the
-                       failure.
+					   Otherwise, the error code indicates the cause of the
+					   failure.
 
 */
 SpvReflectResult spvReflectEnumerateEntryPointInputVariables(
@@ -724,21 +779,21 @@ SpvReflectResult spvReflectEnumerateEntryPointInputVariables(
 
 /*! @fn spvReflectEnumerateOutputVariables
  @brief  Note: If the module contains multiple entry points, this will only get
-         the output variables for the first one.
+		 the output variables for the first one.
  @param  p_module      Pointer to an instance of SpvReflectShaderModule.
  @param  p_count       If pp_variables is NULL, the module's output variable
-                       count will be stored here.
-                       If pp_variables is not NULL, *p_count must contain
-                       the module's output variable count.
+					   count will be stored here.
+					   If pp_variables is not NULL, *p_count must contain
+					   the module's output variable count.
  @param  pp_variables  If NULL, the module's output variable count will be
-                       written to *p_count.
-                       If non-NULL, pp_variables must point to an array with
-                       *p_count entries, where pointers to the module's
-                       output variables will be written. The caller must not
-                       free the interface variables written to this array.
+					   written to *p_count.
+					   If non-NULL, pp_variables must point to an array with
+					   *p_count entries, where pointers to the module's
+					   output variables will be written. The caller must not
+					   free the interface variables written to this array.
  @return               If successful, returns SPV_REFLECT_RESULT_SUCCESS.
-                       Otherwise, the error code indicates the cause of the
-                       failure.
+					   Otherwise, the error code indicates the cause of the
+					   failure.
 
 */
 SpvReflectResult spvReflectEnumerateOutputVariables(
@@ -752,18 +807,18 @@ SpvReflectResult spvReflectEnumerateOutputVariables(
  @param  p_module      Pointer to an instance of SpvReflectShaderModule.
  @param  entry_point   The name of the entry point to get the output variables for.
  @param  p_count       If pp_variables is NULL, the entry point's output variable
-                       count will be stored here.
-                       If pp_variables is not NULL, *p_count must contain
-                       the entry point's output variable count.
+					   count will be stored here.
+					   If pp_variables is not NULL, *p_count must contain
+					   the entry point's output variable count.
  @param  pp_variables  If NULL, the entry point's output variable count will be
-                       written to *p_count.
-                       If non-NULL, pp_variables must point to an array with
-                       *p_count entries, where pointers to the entry point's
-                       output variables will be written. The caller must not
-                       free the interface variables written to this array.
+					   written to *p_count.
+					   If non-NULL, pp_variables must point to an array with
+					   *p_count entries, where pointers to the entry point's
+					   output variables will be written. The caller must not
+					   free the interface variables written to this array.
  @return               If successful, returns SPV_REFLECT_RESULT_SUCCESS.
-                       Otherwise, the error code indicates the cause of the
-                       failure.
+					   Otherwise, the error code indicates the cause of the
+					   failure.
 
 */
 SpvReflectResult spvReflectEnumerateEntryPointOutputVariables(
@@ -776,22 +831,22 @@ SpvReflectResult spvReflectEnumerateEntryPointOutputVariables(
 
 /*! @fn spvReflectEnumeratePushConstantBlocks
  @brief  Note: If the module contains multiple entry points, this will only get
-         the push constant blocks for the first one.
+		 the push constant blocks for the first one.
  @param  p_module   Pointer to an instance of SpvReflectShaderModule.
  @param  p_count    If pp_blocks is NULL, the module's push constant
-                    block count will be stored here.
-                    If pp_blocks is not NULL, *p_count must
-                    contain the module's push constant block count.
+					block count will be stored here.
+					If pp_blocks is not NULL, *p_count must
+					contain the module's push constant block count.
  @param  pp_blocks  If NULL, the module's push constant block count
-                    will be written to *p_count.
-                    If non-NULL, pp_blocks must point to an
-                    array with *p_count entries, where pointers to
-                    the module's push constant blocks will be written.
-                    The caller must not free the block variables written
-                    to this array.
+					will be written to *p_count.
+					If non-NULL, pp_blocks must point to an
+					array with *p_count entries, where pointers to
+					the module's push constant blocks will be written.
+					The caller must not free the block variables written
+					to this array.
  @return            If successful, returns SPV_REFLECT_RESULT_SUCCESS.
-                    Otherwise, the error code indicates the cause of the
-                    failure.
+					Otherwise, the error code indicates the cause of the
+					failure.
 
 */
 SpvReflectResult spvReflectEnumeratePushConstantBlocks(
@@ -808,22 +863,22 @@ SpvReflectResult spvReflectEnumeratePushConstants(
 
 /*! @fn spvReflectEnumerateEntryPointPushConstantBlocks
  @brief  Enumerate the push constant blocks used in the static call tree of a
-         given entry point.
+		 given entry point.
  @param  p_module   Pointer to an instance of SpvReflectShaderModule.
  @param  p_count    If pp_blocks is NULL, the entry point's push constant
-                    block count will be stored here.
-                    If pp_blocks is not NULL, *p_count must
-                    contain the entry point's push constant block count.
+					block count will be stored here.
+					If pp_blocks is not NULL, *p_count must
+					contain the entry point's push constant block count.
  @param  pp_blocks  If NULL, the entry point's push constant block count
-                    will be written to *p_count.
-                    If non-NULL, pp_blocks must point to an
-                    array with *p_count entries, where pointers to
-                    the entry point's push constant blocks will be written.
-                    The caller must not free the block variables written
-                    to this array.
+					will be written to *p_count.
+					If non-NULL, pp_blocks must point to an
+					array with *p_count entries, where pointers to
+					the entry point's push constant blocks will be written.
+					The caller must not free the block variables written
+					to this array.
  @return            If successful, returns SPV_REFLECT_RESULT_SUCCESS.
-                    Otherwise, the error code indicates the cause of the
-                    failure.
+					Otherwise, the error code indicates the cause of the
+					failure.
 
 */
 SpvReflectResult spvReflectEnumerateEntryPointPushConstantBlocks(
@@ -838,22 +893,22 @@ SpvReflectResult spvReflectEnumerateEntryPointPushConstantBlocks(
 
  @param  p_module        Pointer to an instance of SpvReflectShaderModule.
  @param  binding_number  The "binding" value of the requested descriptor
-                         binding.
+						 binding.
  @param  set_number      The "set" value of the requested descriptor binding.
  @param  p_result        If successful, SPV_REFLECT_RESULT_SUCCESS will be
-                         written to *p_result. Otherwise, a error code
-                         indicating the cause of the failure will be stored
-                         here.
+						 written to *p_result. Otherwise, a error code
+						 indicating the cause of the failure will be stored
+						 here.
  @return                 If the module contains a descriptor binding that
-                         matches the provided [binding_number, set_number]
-                         values, a pointer to that binding is returned. The
-                         caller must not free this pointer.
-                         If no match can be found, or if an unrelated error
-                         occurs, the return value will be NULL. Detailed
-                         error results are written to *pResult.
+						 matches the provided [binding_number, set_number]
+						 values, a pointer to that binding is returned. The
+						 caller must not free this pointer.
+						 If no match can be found, or if an unrelated error
+						 occurs, the return value will be NULL. Detailed
+						 error results are written to *pResult.
 @note                    If the module contains multiple desriptor bindings
-                         with the same set and binding numbers, there are
-                         no guarantees about which binding will be returned.
+						 with the same set and binding numbers, there are
+						 no guarantees about which binding will be returned.
 
 */
 const SpvReflectDescriptorBinding* spvReflectGetDescriptorBinding(
@@ -865,27 +920,27 @@ const SpvReflectDescriptorBinding* spvReflectGetDescriptorBinding(
 
 /*! @fn spvReflectGetEntryPointDescriptorBinding
  @brief  Get the descriptor binding with the given binding number and set
-         number that is used in the static call tree of a certain entry
-         point.
+		 number that is used in the static call tree of a certain entry
+		 point.
  @param  p_module        Pointer to an instance of SpvReflectShaderModule.
  @param  entry_point     The entry point to get the binding from.
  @param  binding_number  The "binding" value of the requested descriptor
-                         binding.
+						 binding.
  @param  set_number      The "set" value of the requested descriptor binding.
  @param  p_result        If successful, SPV_REFLECT_RESULT_SUCCESS will be
-                         written to *p_result. Otherwise, a error code
-                         indicating the cause of the failure will be stored
-                         here.
+						 written to *p_result. Otherwise, a error code
+						 indicating the cause of the failure will be stored
+						 here.
  @return                 If the entry point contains a descriptor binding that
-                         matches the provided [binding_number, set_number]
-                         values, a pointer to that binding is returned. The
-                         caller must not free this pointer.
-                         If no match can be found, or if an unrelated error
-                         occurs, the return value will be NULL. Detailed
-                         error results are written to *pResult.
+						 matches the provided [binding_number, set_number]
+						 values, a pointer to that binding is returned. The
+						 caller must not free this pointer.
+						 If no match can be found, or if an unrelated error
+						 occurs, the return value will be NULL. Detailed
+						 error results are written to *pResult.
 @note                    If the entry point contains multiple desriptor bindings
-                         with the same set and binding numbers, there are
-                         no guarantees about which binding will be returned.
+						 with the same set and binding numbers, there are
+						 no guarantees about which binding will be returned.
 
 */
 const SpvReflectDescriptorBinding* spvReflectGetEntryPointDescriptorBinding(
@@ -902,15 +957,15 @@ const SpvReflectDescriptorBinding* spvReflectGetEntryPointDescriptorBinding(
  @param  p_module    Pointer to an instance of SpvReflectShaderModule.
  @param  set_number  The "set" value of the requested descriptor set.
  @param  p_result    If successful, SPV_REFLECT_RESULT_SUCCESS will be
-                     written to *p_result. Otherwise, a error code
-                     indicating the cause of the failure will be stored
-                     here.
+					 written to *p_result. Otherwise, a error code
+					 indicating the cause of the failure will be stored
+					 here.
  @return             If the module contains a descriptor set with the
-                     provided set_number, a pointer to that set is
-                     returned. The caller must not free this pointer.
-                     If no match can be found, or if an unrelated error
-                     occurs, the return value will be NULL. Detailed
-                     error results are written to *pResult.
+					 provided set_number, a pointer to that set is
+					 returned. The caller must not free this pointer.
+					 If no match can be found, or if an unrelated error
+					 occurs, the return value will be NULL. Detailed
+					 error results are written to *pResult.
 
 */
 const SpvReflectDescriptorSet* spvReflectGetDescriptorSet(
@@ -925,15 +980,15 @@ const SpvReflectDescriptorSet* spvReflectGetDescriptorSet(
  @param  entry_point The entry point to get the descriptor set from.
  @param  set_number  The "set" value of the requested descriptor set.
  @param  p_result    If successful, SPV_REFLECT_RESULT_SUCCESS will be
-                     written to *p_result. Otherwise, a error code
-                     indicating the cause of the failure will be stored
-                     here.
+					 written to *p_result. Otherwise, a error code
+					 indicating the cause of the failure will be stored
+					 here.
  @return             If the entry point contains a descriptor set with the
-                     provided set_number, a pointer to that set is
-                     returned. The caller must not free this pointer.
-                     If no match can be found, or if an unrelated error
-                     occurs, the return value will be NULL. Detailed
-                     error results are written to *pResult.
+					 provided set_number, a pointer to that set is
+					 returned. The caller must not free this pointer.
+					 If no match can be found, or if an unrelated error
+					 occurs, the return value will be NULL. Detailed
+					 error results are written to *pResult.
 
 */
 const SpvReflectDescriptorSet* spvReflectGetEntryPointDescriptorSet(
@@ -948,19 +1003,19 @@ const SpvReflectDescriptorSet* spvReflectGetEntryPointDescriptorSet(
 
  @param  p_module  Pointer to an instance of SpvReflectShaderModule.
  @param  location  The "location" value of the requested input variable.
-                   A location of 0xFFFFFFFF will always return NULL
-                   with *p_result == ELEMENT_NOT_FOUND.
+				   A location of 0xFFFFFFFF will always return NULL
+				   with *p_result == ELEMENT_NOT_FOUND.
  @param  p_result  If successful, SPV_REFLECT_RESULT_SUCCESS will be
-                   written to *p_result. Otherwise, a error code
-                   indicating the cause of the failure will be stored
-                   here.
+				   written to *p_result. Otherwise, a error code
+				   indicating the cause of the failure will be stored
+				   here.
  @return           If the module contains an input interface variable
-                   with the provided location value, a pointer to that
-                   variable is returned. The caller must not free this
-                   pointer.
-                   If no match can be found, or if an unrelated error
-                   occurs, the return value will be NULL. Detailed
-                   error results are written to *pResult.
+				   with the provided location value, a pointer to that
+				   variable is returned. The caller must not free this
+				   pointer.
+				   If no match can be found, or if an unrelated error
+				   occurs, the return value will be NULL. Detailed
+				   error results are written to *pResult.
 @note
 
 */
@@ -981,19 +1036,19 @@ const SpvReflectInterfaceVariable* spvReflectGetInputVariable(
  @param  p_module    Pointer to an instance of SpvReflectShaderModule.
  @param  entry_point The entry point to get the input variable from.
  @param  location    The "location" value of the requested input variable.
-                     A location of 0xFFFFFFFF will always return NULL
-                     with *p_result == ELEMENT_NOT_FOUND.
+					 A location of 0xFFFFFFFF will always return NULL
+					 with *p_result == ELEMENT_NOT_FOUND.
  @param  p_result    If successful, SPV_REFLECT_RESULT_SUCCESS will be
-                     written to *p_result. Otherwise, a error code
-                     indicating the cause of the failure will be stored
-                     here.
+					 written to *p_result. Otherwise, a error code
+					 indicating the cause of the failure will be stored
+					 here.
  @return             If the entry point contains an input interface variable
-                     with the provided location value, a pointer to that
-                     variable is returned. The caller must not free this
-                     pointer.
-                     If no match can be found, or if an unrelated error
-                     occurs, the return value will be NULL. Detailed
-                     error results are written to *pResult.
+					 with the provided location value, a pointer to that
+					 variable is returned. The caller must not free this
+					 pointer.
+					 If no match can be found, or if an unrelated error
+					 occurs, the return value will be NULL. Detailed
+					 error results are written to *pResult.
 @note
 
 */
@@ -1008,20 +1063,20 @@ const SpvReflectInterfaceVariable* spvReflectGetEntryPointInputVariableByLocatio
 
  @param  p_module  Pointer to an instance of SpvReflectShaderModule.
  @param  semantic  The "semantic" value of the requested input variable.
-                   A semantic of NULL will return NULL.
-                   A semantic of "" will always return NULL with
-                   *p_result == ELEMENT_NOT_FOUND.
+				   A semantic of NULL will return NULL.
+				   A semantic of "" will always return NULL with
+				   *p_result == ELEMENT_NOT_FOUND.
  @param  p_result  If successful, SPV_REFLECT_RESULT_SUCCESS will be
-                   written to *p_result. Otherwise, a error code
-                   indicating the cause of the failure will be stored
-                   here.
+				   written to *p_result. Otherwise, a error code
+				   indicating the cause of the failure will be stored
+				   here.
  @return           If the module contains an input interface variable
-                   with the provided semantic, a pointer to that
-                   variable is returned. The caller must not free this
-                   pointer.
-                   If no match can be found, or if an unrelated error
-                   occurs, the return value will be NULL. Detailed
-                   error results are written to *pResult.
+				   with the provided semantic, a pointer to that
+				   variable is returned. The caller must not free this
+				   pointer.
+				   If no match can be found, or if an unrelated error
+				   occurs, the return value will be NULL. Detailed
+				   error results are written to *pResult.
 @note
 
 */
@@ -1036,20 +1091,20 @@ const SpvReflectInterfaceVariable* spvReflectGetInputVariableBySemantic(
  @param  p_module  Pointer to an instance of SpvReflectShaderModule.
  @param  entry_point The entry point to get the input variable from.
  @param  semantic  The "semantic" value of the requested input variable.
-                   A semantic of NULL will return NULL.
-                   A semantic of "" will always return NULL with
-                   *p_result == ELEMENT_NOT_FOUND.
+				   A semantic of NULL will return NULL.
+				   A semantic of "" will always return NULL with
+				   *p_result == ELEMENT_NOT_FOUND.
  @param  p_result  If successful, SPV_REFLECT_RESULT_SUCCESS will be
-                   written to *p_result. Otherwise, a error code
-                   indicating the cause of the failure will be stored
-                   here.
+				   written to *p_result. Otherwise, a error code
+				   indicating the cause of the failure will be stored
+				   here.
  @return           If the entry point contains an input interface variable
-                   with the provided semantic, a pointer to that
-                   variable is returned. The caller must not free this
-                   pointer.
-                   If no match can be found, or if an unrelated error
-                   occurs, the return value will be NULL. Detailed
-                   error results are written to *pResult.
+				   with the provided semantic, a pointer to that
+				   variable is returned. The caller must not free this
+				   pointer.
+				   If no match can be found, or if an unrelated error
+				   occurs, the return value will be NULL. Detailed
+				   error results are written to *pResult.
 @note
 
 */
@@ -1064,19 +1119,19 @@ const SpvReflectInterfaceVariable* spvReflectGetEntryPointInputVariableBySemanti
 
  @param  p_module  Pointer to an instance of SpvReflectShaderModule.
  @param  location  The "location" value of the requested output variable.
-                   A location of 0xFFFFFFFF will always return NULL
-                   with *p_result == ELEMENT_NOT_FOUND.
+				   A location of 0xFFFFFFFF will always return NULL
+				   with *p_result == ELEMENT_NOT_FOUND.
  @param  p_result  If successful, SPV_REFLECT_RESULT_SUCCESS will be
-                   written to *p_result. Otherwise, a error code
-                   indicating the cause of the failure will be stored
-                   here.
+				   written to *p_result. Otherwise, a error code
+				   indicating the cause of the failure will be stored
+				   here.
  @return           If the module contains an output interface variable
-                   with the provided location value, a pointer to that
-                   variable is returned. The caller must not free this
-                   pointer.
-                   If no match can be found, or if an unrelated error
-                   occurs, the return value will be NULL. Detailed
-                   error results are written to *pResult.
+				   with the provided location value, a pointer to that
+				   variable is returned. The caller must not free this
+				   pointer.
+				   If no match can be found, or if an unrelated error
+				   occurs, the return value will be NULL. Detailed
+				   error results are written to *pResult.
 @note
 
 */
@@ -1097,19 +1152,19 @@ const SpvReflectInterfaceVariable* spvReflectGetOutputVariable(
  @param  p_module     Pointer to an instance of SpvReflectShaderModule.
  @param  entry_point  The entry point to get the output variable from.
  @param  location     The "location" value of the requested output variable.
-                      A location of 0xFFFFFFFF will always return NULL
-                      with *p_result == ELEMENT_NOT_FOUND.
+					  A location of 0xFFFFFFFF will always return NULL
+					  with *p_result == ELEMENT_NOT_FOUND.
  @param  p_result     If successful, SPV_REFLECT_RESULT_SUCCESS will be
-                      written to *p_result. Otherwise, a error code
-                      indicating the cause of the failure will be stored
-                      here.
+					  written to *p_result. Otherwise, a error code
+					  indicating the cause of the failure will be stored
+					  here.
  @return              If the entry point contains an output interface variable
-                      with the provided location value, a pointer to that
-                      variable is returned. The caller must not free this
-                      pointer.
-                      If no match can be found, or if an unrelated error
-                      occurs, the return value will be NULL. Detailed
-                      error results are written to *pResult.
+					  with the provided location value, a pointer to that
+					  variable is returned. The caller must not free this
+					  pointer.
+					  If no match can be found, or if an unrelated error
+					  occurs, the return value will be NULL. Detailed
+					  error results are written to *pResult.
 @note
 
 */
@@ -1124,20 +1179,20 @@ const SpvReflectInterfaceVariable* spvReflectGetEntryPointOutputVariableByLocati
 
  @param  p_module  Pointer to an instance of SpvReflectShaderModule.
  @param  semantic  The "semantic" value of the requested output variable.
-                   A semantic of NULL will return NULL.
-                   A semantic of "" will always return NULL with
-                   *p_result == ELEMENT_NOT_FOUND.
+				   A semantic of NULL will return NULL.
+				   A semantic of "" will always return NULL with
+				   *p_result == ELEMENT_NOT_FOUND.
  @param  p_result  If successful, SPV_REFLECT_RESULT_SUCCESS will be
-                   written to *p_result. Otherwise, a error code
-                   indicating the cause of the failure will be stored
-                   here.
+				   written to *p_result. Otherwise, a error code
+				   indicating the cause of the failure will be stored
+				   here.
  @return           If the module contains an output interface variable
-                   with the provided semantic, a pointer to that
-                   variable is returned. The caller must not free this
-                   pointer.
-                   If no match can be found, or if an unrelated error
-                   occurs, the return value will be NULL. Detailed
-                   error results are written to *pResult.
+				   with the provided semantic, a pointer to that
+				   variable is returned. The caller must not free this
+				   pointer.
+				   If no match can be found, or if an unrelated error
+				   occurs, the return value will be NULL. Detailed
+				   error results are written to *pResult.
 @note
 
 */
@@ -1152,20 +1207,20 @@ const SpvReflectInterfaceVariable* spvReflectGetOutputVariableBySemantic(
  @param  p_module  Pointer to an instance of SpvReflectShaderModule.
  @param  entry_point  The entry point to get the output variable from.
  @param  semantic  The "semantic" value of the requested output variable.
-                   A semantic of NULL will return NULL.
-                   A semantic of "" will always return NULL with
-                   *p_result == ELEMENT_NOT_FOUND.
+				   A semantic of NULL will return NULL.
+				   A semantic of "" will always return NULL with
+				   *p_result == ELEMENT_NOT_FOUND.
  @param  p_result  If successful, SPV_REFLECT_RESULT_SUCCESS will be
-                   written to *p_result. Otherwise, a error code
-                   indicating the cause of the failure will be stored
-                   here.
+				   written to *p_result. Otherwise, a error code
+				   indicating the cause of the failure will be stored
+				   here.
  @return           If the entry point contains an output interface variable
-                   with the provided semantic, a pointer to that
-                   variable is returned. The caller must not free this
-                   pointer.
-                   If no match can be found, or if an unrelated error
-                   occurs, the return value will be NULL. Detailed
-                   error results are written to *pResult.
+				   with the provided semantic, a pointer to that
+				   variable is returned. The caller must not free this
+				   pointer.
+				   If no match can be found, or if an unrelated error
+				   occurs, the return value will be NULL. Detailed
+				   error results are written to *pResult.
 @note
 
 */
@@ -1180,17 +1235,17 @@ const SpvReflectInterfaceVariable* spvReflectGetEntryPointOutputVariableBySemant
 
  @param  p_module  Pointer to an instance of SpvReflectShaderModule.
  @param  index     The index of the desired block within the module's
-                   array of push constant blocks.
+				   array of push constant blocks.
  @param  p_result  If successful, SPV_REFLECT_RESULT_SUCCESS will be
-                   written to *p_result. Otherwise, a error code
-                   indicating the cause of the failure will be stored
-                   here.
+				   written to *p_result. Otherwise, a error code
+				   indicating the cause of the failure will be stored
+				   here.
  @return           If the provided index is within range, a pointer to
-                   the corresponding push constant block is returned.
-                   The caller must not free this pointer.
-                   If no match can be found, or if an unrelated error
-                   occurs, the return value will be NULL. Detailed
-                   error results are written to *pResult.
+				   the corresponding push constant block is returned.
+				   The caller must not free this pointer.
+				   If no match can be found, or if an unrelated error
+				   occurs, the return value will be NULL. Detailed
+				   error results are written to *pResult.
 
 */
 const SpvReflectBlockVariable* spvReflectGetPushConstantBlock(
@@ -1207,21 +1262,21 @@ const SpvReflectBlockVariable* spvReflectGetPushConstant(
 
 /*! @fn spvReflectGetEntryPointPushConstantBlock
  @brief  Get the push constant block corresponding to the given entry point.
-         As by the Vulkan specification there can be no more than one push
-         constant block used by a given entry point, so if there is one it will
-         be returned, otherwise NULL will be returned.
+		 As by the Vulkan specification there can be no more than one push
+		 constant block used by a given entry point, so if there is one it will
+		 be returned, otherwise NULL will be returned.
  @param  p_module     Pointer to an instance of SpvReflectShaderModule.
  @param  entry_point  The entry point to get the push constant block from.
  @param  p_result     If successful, SPV_REFLECT_RESULT_SUCCESS will be
-                      written to *p_result. Otherwise, a error code
-                      indicating the cause of the failure will be stored
-                      here.
+					  written to *p_result. Otherwise, a error code
+					  indicating the cause of the failure will be stored
+					  here.
  @return              If the provided index is within range, a pointer to
-                      the corresponding push constant block is returned.
-                      The caller must not free this pointer.
-                      If no match can be found, or if an unrelated error
-                      occurs, the return value will be NULL. Detailed
-                      error results are written to *pResult.
+					  the corresponding push constant block is returned.
+					  The caller must not free this pointer.
+					  If no match can be found, or if an unrelated error
+					  occurs, the return value will be NULL. Detailed
+					  error results are written to *pResult.
 
 */
 const SpvReflectBlockVariable* spvReflectGetEntryPointPushConstantBlock(
@@ -1233,26 +1288,26 @@ const SpvReflectBlockVariable* spvReflectGetEntryPointPushConstantBlock(
 
 /*! @fn spvReflectChangeDescriptorBindingNumbers
  @brief  Assign new set and/or binding numbers to a descriptor binding.
-         In addition to updating the reflection data, this function modifies
-         the underlying SPIR-V bytecode. The updated code can be retrieved
-         with spvReflectGetCode().  If the binding is used in multiple
-         entry points within the module, it will be changed in all of them.
+		 In addition to updating the reflection data, this function modifies
+		 the underlying SPIR-V bytecode. The updated code can be retrieved
+		 with spvReflectGetCode().  If the binding is used in multiple
+		 entry points within the module, it will be changed in all of them.
  @param  p_module            Pointer to an instance of SpvReflectShaderModule.
  @param  p_binding           Pointer to the descriptor binding to modify.
  @param  new_binding_number  The new binding number to assign to the
-                             provided descriptor binding.
-                             To leave the binding number unchanged, pass
-                             SPV_REFLECT_BINDING_NUMBER_DONT_CHANGE.
+							 provided descriptor binding.
+							 To leave the binding number unchanged, pass
+							 SPV_REFLECT_BINDING_NUMBER_DONT_CHANGE.
  @param  new_set_number      The new set number to assign to the
-                             provided descriptor binding. Successfully changing
-                             a descriptor binding's set number invalidates all
-                             existing SpvReflectDescriptorBinding and
-                             SpvReflectDescriptorSet pointers from this module.
-                             To leave the set number unchanged, pass
-                             SPV_REFLECT_SET_NUMBER_DONT_CHANGE.
+							 provided descriptor binding. Successfully changing
+							 a descriptor binding's set number invalidates all
+							 existing SpvReflectDescriptorBinding and
+							 SpvReflectDescriptorSet pointers from this module.
+							 To leave the set number unchanged, pass
+							 SPV_REFLECT_SET_NUMBER_DONT_CHANGE.
  @return                     If successful, returns SPV_REFLECT_RESULT_SUCCESS.
-                             Otherwise, the error code indicates the cause of
-                             the failure.
+							 Otherwise, the error code indicates the cause of
+							 the failure.
 */
 SpvReflectResult spvReflectChangeDescriptorBindingNumbers(
   SpvReflectShaderModule*            p_module,
@@ -1270,25 +1325,25 @@ SpvReflectResult spvReflectChangeDescriptorBindingNumber(
 
 /*! @fn spvReflectChangeDescriptorSetNumber
  @brief  Assign a new set number to an entire descriptor set (including
-         all descriptor bindings in that set).
-         In addition to updating the reflection data, this function modifies
-         the underlying SPIR-V bytecode. The updated code can be retrieved
-         with spvReflectGetCode().  If the descriptor set is used in
-         multiple entry points within the module, it will be modified in all
-         of them.
+		 all descriptor bindings in that set).
+		 In addition to updating the reflection data, this function modifies
+		 the underlying SPIR-V bytecode. The updated code can be retrieved
+		 with spvReflectGetCode().  If the descriptor set is used in
+		 multiple entry points within the module, it will be modified in all
+		 of them.
  @param  p_module        Pointer to an instance of SpvReflectShaderModule.
  @param  p_set           Pointer to the descriptor binding to modify.
  @param  new_set_number  The new set number to assign to the
-                         provided descriptor set, and all its descriptor
-                         bindings. Successfully changing a descriptor
-                         binding's set number invalidates all existing
-                         SpvReflectDescriptorBinding and
-                         SpvReflectDescriptorSet pointers from this module.
-                         To leave the set number unchanged, pass
-                         SPV_REFLECT_SET_NUMBER_DONT_CHANGE.
+						 provided descriptor set, and all its descriptor
+						 bindings. Successfully changing a descriptor
+						 binding's set number invalidates all existing
+						 SpvReflectDescriptorBinding and
+						 SpvReflectDescriptorSet pointers from this module.
+						 To leave the set number unchanged, pass
+						 SPV_REFLECT_SET_NUMBER_DONT_CHANGE.
  @return                 If successful, returns SPV_REFLECT_RESULT_SUCCESS.
-                         Otherwise, the error code indicates the cause of
-                         the failure.
+						 Otherwise, the error code indicates the cause of
+						 the failure.
 */
 SpvReflectResult spvReflectChangeDescriptorSetNumber(
   SpvReflectShaderModule*        p_module,
@@ -1298,19 +1353,19 @@ SpvReflectResult spvReflectChangeDescriptorSetNumber(
 
 /*! @fn spvReflectChangeInputVariableLocation
  @brief  Assign a new location to an input interface variable.
-         In addition to updating the reflection data, this function modifies
-         the underlying SPIR-V bytecode. The updated code can be retrieved
-         with spvReflectGetCode().
-         It is the caller's responsibility to avoid assigning the same
-         location to multiple input variables.  If the input variable is used
-         by multiple entry points in the module, it will be changed in all of
-         them.
+		 In addition to updating the reflection data, this function modifies
+		 the underlying SPIR-V bytecode. The updated code can be retrieved
+		 with spvReflectGetCode().
+		 It is the caller's responsibility to avoid assigning the same
+		 location to multiple input variables.  If the input variable is used
+		 by multiple entry points in the module, it will be changed in all of
+		 them.
  @param  p_module          Pointer to an instance of SpvReflectShaderModule.
  @param  p_input_variable  Pointer to the input variable to update.
  @param  new_location      The new location to assign to p_input_variable.
  @return                   If successful, returns SPV_REFLECT_RESULT_SUCCESS.
-                           Otherwise, the error code indicates the cause of
-                           the failure.
+						   Otherwise, the error code indicates the cause of
+						   the failure.
 
 */
 SpvReflectResult spvReflectChangeInputVariableLocation(
@@ -1322,19 +1377,19 @@ SpvReflectResult spvReflectChangeInputVariableLocation(
 
 /*! @fn spvReflectChangeOutputVariableLocation
  @brief  Assign a new location to an output interface variable.
-         In addition to updating the reflection data, this function modifies
-         the underlying SPIR-V bytecode. The updated code can be retrieved
-         with spvReflectGetCode().
-         It is the caller's responsibility to avoid assigning the same
-         location to multiple output variables.  If the output variable is used
-         by multiple entry points in the module, it will be changed in all of
-         them.
+		 In addition to updating the reflection data, this function modifies
+		 the underlying SPIR-V bytecode. The updated code can be retrieved
+		 with spvReflectGetCode().
+		 It is the caller's responsibility to avoid assigning the same
+		 location to multiple output variables.  If the output variable is used
+		 by multiple entry points in the module, it will be changed in all of
+		 them.
  @param  p_module          Pointer to an instance of SpvReflectShaderModule.
  @param  p_output_variable Pointer to the output variable to update.
  @param  new_location      The new location to assign to p_output_variable.
  @return                   If successful, returns SPV_REFLECT_RESULT_SUCCESS.
-                           Otherwise, the error code indicates the cause of
-                           the failure.
+						   Otherwise, the error code indicates the cause of
+						   the failure.
 
 */
 SpvReflectResult spvReflectChangeOutputVariableLocation(
@@ -1348,7 +1403,7 @@ SpvReflectResult spvReflectChangeOutputVariableLocation(
 
  @param  source_lang  The source language code.
  @return Returns string of source language specified in \a source_lang.
-         The caller must not free the memory associated with this string.
+		 The caller must not free the memory associated with this string.
 */
 const char* spvReflectSourceLanguage(SpvSourceLanguage source_lang);
 
@@ -1356,7 +1411,7 @@ const char* spvReflectSourceLanguage(SpvSourceLanguage source_lang);
 
  @param  p_var Pointer to block variable.
  @return Returns string of block variable's type description type name
-         or NULL if p_var is NULL.
+		 or NULL if p_var is NULL.
 */
 const char* spvReflectBlockVariableTypeName(
   const SpvReflectBlockVariable* p_var
@@ -1379,9 +1434,9 @@ namespace spv_reflect {
 class ShaderModule {
 public:
   ShaderModule();
-  ShaderModule(size_t size, const void* p_code);
-  ShaderModule(const std::vector<uint8_t>& code);
-  ShaderModule(const std::vector<uint32_t>& code);
+  ShaderModule(size_t size, const void* p_code, SpvReflectModuleFlags flags = SPV_REFLECT_MODULE_FLAG_NONE);
+  ShaderModule(const std::vector<uint8_t>& code, SpvReflectModuleFlags flags = SPV_REFLECT_MODULE_FLAG_NONE);
+  ShaderModule(const std::vector<uint32_t>& code, SpvReflectModuleFlags flags = SPV_REFLECT_MODULE_FLAG_NONE);
   ~ShaderModule();
 
   ShaderModule(ShaderModule&& other);
@@ -1405,7 +1460,7 @@ public:
   SpvReflectShaderStageFlagBits GetShaderStage() const;
   SPV_REFLECT_DEPRECATED("Renamed to GetShaderStage")
   SpvReflectShaderStageFlagBits GetVulkanShaderStage() const {
-    return GetShaderStage();
+	return GetShaderStage();
   }
 
   SpvReflectResult  EnumerateDescriptorBindings(uint32_t* p_count, SpvReflectDescriptorBinding** pp_bindings) const;
@@ -1422,7 +1477,7 @@ public:
   SpvReflectResult  EnumerateEntryPointPushConstantBlocks(const char* entry_point, uint32_t* p_count, SpvReflectBlockVariable** pp_blocks) const;
   SPV_REFLECT_DEPRECATED("Renamed to EnumeratePushConstantBlocks")
   SpvReflectResult  EnumeratePushConstants(uint32_t* p_count, SpvReflectBlockVariable** pp_blocks) const {
-    return EnumeratePushConstantBlocks(p_count, pp_blocks);
+	return EnumeratePushConstantBlocks(p_count, pp_blocks);
   }
 
   const SpvReflectDescriptorBinding*  GetDescriptorBinding(uint32_t binding_number, uint32_t set_number, SpvReflectResult* p_result = nullptr) const;
@@ -1432,7 +1487,7 @@ public:
   const SpvReflectInterfaceVariable*  GetInputVariableByLocation(uint32_t location,  SpvReflectResult* p_result = nullptr) const;
   SPV_REFLECT_DEPRECATED("Renamed to GetInputVariableByLocation")
   const SpvReflectInterfaceVariable*  GetInputVariable(uint32_t location,  SpvReflectResult* p_result = nullptr) const {
-    return GetInputVariableByLocation(location, p_result);
+	return GetInputVariableByLocation(location, p_result);
   }
   const SpvReflectInterfaceVariable*  GetEntryPointInputVariableByLocation(const char* entry_point, uint32_t location,  SpvReflectResult* p_result = nullptr) const;
   const SpvReflectInterfaceVariable*  GetInputVariableBySemantic(const char* semantic,  SpvReflectResult* p_result = nullptr) const;
@@ -1440,7 +1495,7 @@ public:
   const SpvReflectInterfaceVariable*  GetOutputVariableByLocation(uint32_t location, SpvReflectResult*  p_result = nullptr) const;
   SPV_REFLECT_DEPRECATED("Renamed to GetOutputVariableByLocation")
   const SpvReflectInterfaceVariable*  GetOutputVariable(uint32_t location, SpvReflectResult*  p_result = nullptr) const {
-    return GetOutputVariableByLocation(location, p_result);
+	return GetOutputVariableByLocation(location, p_result);
   }
   const SpvReflectInterfaceVariable*  GetEntryPointOutputVariableByLocation(const char* entry_point, uint32_t location, SpvReflectResult*  p_result = nullptr) const;
   const SpvReflectInterfaceVariable*  GetOutputVariableBySemantic(const char* semantic, SpvReflectResult*  p_result = nullptr) const;
@@ -1448,7 +1503,7 @@ public:
   const SpvReflectBlockVariable*      GetPushConstantBlock(uint32_t index, SpvReflectResult*  p_result = nullptr) const;
   SPV_REFLECT_DEPRECATED("Renamed to GetPushConstantBlock")
   const SpvReflectBlockVariable*      GetPushConstant(uint32_t index, SpvReflectResult*  p_result = nullptr) const {
-    return GetPushConstantBlock(index, p_result);
+	return GetPushConstantBlock(index, p_result);
   }
   const SpvReflectBlockVariable*      GetEntryPointPushConstantBlock(const char* entry_point, SpvReflectResult*  p_result = nullptr) const;
 
@@ -1458,7 +1513,7 @@ public:
   SPV_REFLECT_DEPRECATED("Renamed to ChangeDescriptorBindingNumbers")
   SpvReflectResult ChangeDescriptorBindingNumber(const SpvReflectDescriptorBinding* p_binding, uint32_t new_binding_number = SPV_REFLECT_BINDING_NUMBER_DONT_CHANGE,
       uint32_t new_set_number = SPV_REFLECT_SET_NUMBER_DONT_CHANGE) {
-    return ChangeDescriptorBindingNumbers(p_binding, new_binding_number, new_set_number);
+	return ChangeDescriptorBindingNumbers(p_binding, new_binding_number, new_set_number);
   }
   SpvReflectResult ChangeDescriptorSetNumber(const SpvReflectDescriptorSet* p_set, uint32_t new_set_number = SPV_REFLECT_SET_NUMBER_DONT_CHANGE);
   SpvReflectResult ChangeInputVariableLocation(const SpvReflectInterfaceVariable* p_input_variable, uint32_t new_location);
@@ -1491,8 +1546,9 @@ inline ShaderModule::ShaderModule() {}
   @param  p_code
 
 */
-inline ShaderModule::ShaderModule(size_t size, const void* p_code) {
-  m_result = spvReflectCreateShaderModule(
+inline ShaderModule::ShaderModule(size_t size, const void* p_code, SpvReflectModuleFlags flags) {
+  m_result = spvReflectCreateShaderModule2(
+    flags,
     size,
     p_code,
     &m_module);
@@ -1501,10 +1557,11 @@ inline ShaderModule::ShaderModule(size_t size, const void* p_code) {
 /*! @fn ShaderModule
 
   @param  code
-  
+
 */
-inline ShaderModule::ShaderModule(const std::vector<uint8_t>& code) {
-  m_result = spvReflectCreateShaderModule(
+inline ShaderModule::ShaderModule(const std::vector<uint8_t>& code, SpvReflectModuleFlags flags) {
+  m_result = spvReflectCreateShaderModule2(
+    flags,
     code.size(),
     code.data(),
     &m_module);
@@ -1513,10 +1570,11 @@ inline ShaderModule::ShaderModule(const std::vector<uint8_t>& code) {
 /*! @fn ShaderModule
 
   @param  code
-  
+
 */
-inline ShaderModule::ShaderModule(const std::vector<uint32_t>& code) {
-  m_result = spvReflectCreateShaderModule(
+inline ShaderModule::ShaderModule(const std::vector<uint32_t>& code, SpvReflectModuleFlags flags) {
+  m_result = spvReflectCreateShaderModule2(
+    flags,
     code.size() * sizeof(uint32_t),
     code.data(),
     &m_module);
@@ -1532,16 +1590,16 @@ inline ShaderModule::~ShaderModule() {
 
 inline ShaderModule::ShaderModule(ShaderModule&& other)
 {
-    *this = std::move(other);
+	*this = std::move(other);
 }
 
 inline ShaderModule& ShaderModule::operator=(ShaderModule&& other)
 {
-    m_result = std::move(other.m_result);
-    m_module = std::move(other.m_module);
+	m_result = std::move(other.m_result);
+	m_module = std::move(other.m_module);
 
-    other.m_module = {};
-    return *this;
+	other.m_module = {};
+	return *this;
 }
 
 /*! @fn GetResult

@@ -36,11 +36,12 @@ to_descriptor_type( SpvReflectDescriptorType descriptor_type )
 	}
 }
 
-ReflectionData
-spirv_reflect_stage( u32 byte_code_size, const void* byte_code )
+void
+spirv_reflect_stage( ReflectionData& reflection,
+                     ShaderStage     stage,
+                     u32             byte_code_size,
+                     const void*     byte_code )
 {
-	ReflectionData result {};
-
 	SpvReflectResult       spv_result;
 	SpvReflectShaderModule reflected_shader;
 	spv_result = spvReflectCreateShaderModule( byte_code_size,
@@ -62,23 +63,30 @@ spirv_reflect_stage( u32 byte_code_size, const void* byte_code )
 	                                           descriptor_bindings.data() );
 	FT_ASSERT( spv_result == SPV_REFLECT_RESULT_SUCCESS );
 
-	result.binding_count = descriptor_binding_count;
-	result.bindings.resize( result.binding_count );
+	u32 i = reflection.bindings.size();
+	reflection.binding_count += descriptor_binding_count;
+	reflection.bindings.resize( reflection.bindings.size() +
+	                            descriptor_binding_count );
 
-	u32 i = 0;
 	for ( const auto& descriptor_binding : descriptor_bindings )
 	{
-		result.bindings[ i ].binding          = descriptor_binding->binding;
-		result.bindings[ i ].descriptor_count = descriptor_binding->count;
-		result.bindings[ i ].descriptor_type =
+		reflection.bindings[ i ].binding          = descriptor_binding->binding;
+		reflection.bindings[ i ].descriptor_count = descriptor_binding->count;
+		reflection.bindings[ i ].descriptor_type =
 		    to_descriptor_type( descriptor_binding->descriptor_type );
-		result.bindings[ i ].set = descriptor_binding->set;
+		reflection.bindings[ i ].set   = descriptor_binding->set;
+		reflection.bindings[ i ].stage = stage;
+
+		const char* name = descriptor_binding->type_description->type_name
+		                       ? descriptor_binding->type_description->type_name
+		                       : descriptor_binding->name;
+
+		reflection.binding_map[ name ] = i;
+
 		i++;
 	}
 
 	spvReflectDestroyShaderModule( &reflected_shader );
-
-	return result;
 }
 
 void
@@ -86,46 +94,50 @@ spirv_reflect( const Device* device, const ShaderInfo* info, Shader* shader )
 {
 	if ( info->vertex.bytecode )
 	{
-		shader->reflect_data[ static_cast<u32>( ShaderStage::eVertex ) ] =
-		    spirv_reflect_stage( info->vertex.bytecode_size,
-		                         info->vertex.bytecode );
+		spirv_reflect_stage( shader->reflect_data,
+		                     ShaderStage::eVertex,
+		                     info->vertex.bytecode_size,
+		                     info->vertex.bytecode );
 	}
 
 	if ( info->fragment.bytecode )
 	{
-		shader->reflect_data[ static_cast<u32>( ShaderStage::eFragment ) ] =
-		    spirv_reflect_stage( info->fragment.bytecode_size,
-		                         info->fragment.bytecode );
+		spirv_reflect_stage( shader->reflect_data,
+		                     ShaderStage::eFragment,
+		                     info->fragment.bytecode_size,
+		                     info->fragment.bytecode );
 	}
 
 	if ( info->compute.bytecode )
 	{
-		shader->reflect_data[ static_cast<u32>( ShaderStage::eCompute ) ] =
-		    spirv_reflect_stage( info->compute.bytecode_size,
-		                         info->compute.bytecode );
+		spirv_reflect_stage( shader->reflect_data,
+		                     ShaderStage::eCompute,
+		                     info->compute.bytecode_size,
+		                     info->compute.bytecode );
 	}
 
 	if ( info->tessellation_control.bytecode )
 	{
-		shader->reflect_data[ static_cast<u32>(
-		    ShaderStage::eTessellationControl ) ] =
-		    spirv_reflect_stage( info->tessellation_control.bytecode_size,
-		                         info->tessellation_control.bytecode );
+		spirv_reflect_stage( shader->reflect_data,
+		                     ShaderStage::eTessellationControl,
+		                     info->tessellation_control.bytecode_size,
+		                     info->tessellation_control.bytecode );
 	}
 
 	if ( info->tessellation_evaluation.bytecode )
 	{
-		shader->reflect_data[ static_cast<u32>(
-		    ShaderStage::eTessellationEvaluation ) ] =
-		    spirv_reflect_stage( info->tessellation_evaluation.bytecode_size,
-		                         info->tessellation_evaluation.bytecode );
+		spirv_reflect_stage( shader->reflect_data,
+		                     ShaderStage::eTessellationEvaluation,
+		                     info->tessellation_evaluation.bytecode_size,
+		                     info->tessellation_evaluation.bytecode );
 	}
 
 	if ( info->geometry.bytecode )
 	{
-		shader->reflect_data[ static_cast<u32>( ShaderStage::eGeometry ) ] =
-		    spirv_reflect_stage( info->geometry.bytecode_size,
-		                         info->geometry.bytecode );
+		spirv_reflect_stage( shader->reflect_data,
+		                     ShaderStage::eGeometry,
+		                     info->geometry.bytecode_size,
+		                     info->geometry.bytecode );
 	}
 }
 
