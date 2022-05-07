@@ -1,4 +1,4 @@
-inc = include_directories('.', '../volk/', '../vulkan-headers/')
+inc = include_directories('.', '../volk', is_system : true)
 args = []
 
 if meson.get_compiler('cpp').get_id() != 'msvc'
@@ -6,4 +6,7 @@ if meson.get_compiler('cpp').get_id() != 'msvc'
 endif
 
 target_lib = static_library('vma_allocator', 'vk_mem_alloc.cpp', include_directories : inc, cpp_args: args)
-vma_allocator_dep = declare_dependency(include_directories: inc, link_with: target_lib)
+vma_allocator_dep = declare_dependency(
+    include_directories : inc,
+	link_with : target_lib,
+	dependencies : volk_dep)
