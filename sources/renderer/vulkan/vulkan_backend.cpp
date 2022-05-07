@@ -2879,8 +2879,6 @@ vk_cmd_barrier( const CommandBuffer* icmd,
 	for ( u32 i = 0; i < buffer_barriers_count; ++i )
 	{
 		FT_ASSERT( buffer_barriers[ i ].buffer );
-		FT_ASSERT( buffer_barriers[ i ].src_queue );
-		FT_ASSERT( buffer_barriers[ i ].dst_queue );
 
 		FT_FROM_HANDLE( buffer, buffer_barriers[ i ].buffer, VulkanBuffer );
 
@@ -2895,9 +2893,13 @@ vk_cmd_barrier( const CommandBuffer* icmd,
 		barrier.srcAccessMask = src_access_mask;
 		barrier.dstAccessMask = dst_access_mask;
 		barrier.srcQueueFamilyIndex =
-		    buffer_barriers[ i ].src_queue->family_index;
+		    buffer_barriers[ i ].src_queue
+		        ? buffer_barriers[ i ].src_queue->family_index
+		        : VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex =
-		    buffer_barriers[ i ].dst_queue->family_index;
+		    buffer_barriers[ i ].dst_queue
+		        ? buffer_barriers[ i ].dst_queue->family_index
+		        : VK_QUEUE_FAMILY_IGNORED;
 		barrier.buffer = buffer->buffer;
 		barrier.offset = buffer_barriers[ i ].offset;
 		barrier.size   = buffer_barriers[ i ].size;
@@ -2909,8 +2911,6 @@ vk_cmd_barrier( const CommandBuffer* icmd,
 	for ( u32 i = 0; i < image_barriers_count; ++i )
 	{
 		FT_ASSERT( image_barriers[ i ].image );
-		FT_ASSERT( image_barriers[ i ].src_queue );
-		FT_ASSERT( image_barriers[ i ].dst_queue );
 
 		FT_FROM_HANDLE( image, image_barriers[ i ].image, VulkanImage );
 
@@ -2930,9 +2930,13 @@ vk_cmd_barrier( const CommandBuffer* icmd,
 		barrier.newLayout =
 		    determine_image_layout( image_barriers[ i ].new_state );
 		barrier.srcQueueFamilyIndex =
-		    image_barriers[ i ].src_queue->family_index;
+		    image_barriers[ i ].src_queue
+		        ? image_barriers[ i ].src_queue->family_index
+		        : VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex =
-		    image_barriers[ i ].dst_queue->family_index;
+		    image_barriers[ i ].dst_queue
+		        ? image_barriers[ i ].dst_queue->family_index
+		        : VK_QUEUE_FAMILY_IGNORED;
 		barrier.image            = image->image;
 		barrier.subresourceRange = get_image_subresource_range( image );
 
