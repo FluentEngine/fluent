@@ -855,13 +855,56 @@ vk_create_device( const RendererBackend* ibackend,
 
     volkLoadDevice( device->logical_device );
 
+	VmaVulkanFunctions vulkanFunctions    = {};
+	vulkanFunctions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+	vulkanFunctions.vkGetDeviceProcAddr   = vkGetDeviceProcAddr;
+	vulkanFunctions.vkAllocateMemory      = vkAllocateMemory;
+	vulkanFunctions.vkBindBufferMemory    = vkBindBufferMemory;
+	vulkanFunctions.vkBindImageMemory     = vkBindImageMemory;
+	vulkanFunctions.vkCreateBuffer        = vkCreateBuffer;
+	vulkanFunctions.vkCreateImage         = vkCreateImage;
+	vulkanFunctions.vkDestroyBuffer       = vkDestroyBuffer;
+	vulkanFunctions.vkDestroyImage        = vkDestroyImage;
+	vulkanFunctions.vkFreeMemory          = vkFreeMemory;
+	vulkanFunctions.vkGetBufferMemoryRequirements =
+	    vkGetBufferMemoryRequirements;
+	vulkanFunctions.vkGetBufferMemoryRequirements2KHR =
+	    vkGetBufferMemoryRequirements2KHR;
+	vulkanFunctions.vkGetImageMemoryRequirements = vkGetImageMemoryRequirements;
+	vulkanFunctions.vkGetImageMemoryRequirements2KHR =
+	    vkGetImageMemoryRequirements2KHR;
+	vulkanFunctions.vkGetPhysicalDeviceMemoryProperties =
+	    vkGetPhysicalDeviceMemoryProperties;
+	vulkanFunctions.vkGetPhysicalDeviceProperties =
+	    vkGetPhysicalDeviceProperties;
+	vulkanFunctions.vkMapMemory               = vkMapMemory;
+	vulkanFunctions.vkUnmapMemory             = vkUnmapMemory;
+	vulkanFunctions.vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges;
+	vulkanFunctions.vkInvalidateMappedMemoryRanges =
+	    vkInvalidateMappedMemoryRanges;
+	vulkanFunctions.vkCmdCopyBuffer = vkCmdCopyBuffer;
+#if VMA_BIND_MEMORY2 || VMA_VULKAN_VERSION >= 1001000
+	vulkanFunctions.vkBindBufferMemory2KHR = vkBindBufferMemory2KHR;
+	vulkanFunctions.vkBindImageMemory2KHR  = vkBindImageMemory2KHR;
+#endif
+#if VMA_MEMORY_BUDGET || VMA_VULKAN_VERSION >= 1001000
+	vulkanFunctions.vkGetPhysicalDeviceMemoryProperties2KHR =
+	    vkGetPhysicalDeviceMemoryProperties2KHR;
+#endif
+#if VMA_VULKAN_VERSION >= 1003000
+	vulkanFunctions.vkGetDeviceBufferMemoryRequirements =
+	    vkGetDeviceBufferMemoryRequirementsKHR;
+	vulkanFunctions.vkGetDeviceImageMemoryRequirements =
+	    vkGetDeviceImageMemoryRequirements;
+#endif
+
     VmaAllocatorCreateInfo vma_allocator_create_info {};
     vma_allocator_create_info.instance             = device->instance;
     vma_allocator_create_info.physicalDevice       = device->physical_device;
     vma_allocator_create_info.device               = device->logical_device;
     vma_allocator_create_info.flags                = 0;
     vma_allocator_create_info.pAllocationCallbacks = device->vulkan_allocator;
-    vma_allocator_create_info.frameInUseCount      = info->frame_in_use_count;
+	vma_allocator_create_info.pVulkanFunctions     = &vulkanFunctions;
     vma_allocator_create_info.vulkanApiVersion     = backend->api_version;
 
     VK_ASSERT( vmaCreateAllocator( &vma_allocator_create_info,
