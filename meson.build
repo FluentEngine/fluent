@@ -7,16 +7,28 @@ include_dirs = []
 libs = []
 deps = []
 
+vulkan_include_directory = ''
+
+c = meson.get_compiler('c')
 cc = meson.get_compiler('cpp')
 
 fluent_debug_build = get_option('buildtype') == 'debug'
 
-dep = dependency('vulkan', required: get_option('fluent_vulkan_backend'))
-renderer_backend_vulkan = dep.found()
-dep = cc.find_library('d3d12', required: get_option('fluent_d3d12_backend'))
-renderer_backend_d3d12 = dep.found()
-dep = dependency('appleframeworks', modules : 'metal', required: get_option('fluent_metal_backend'))
-renderer_backend_metal = dep.found()
+vulkan_dep = dependency('vulkan', required: true)
+renderer_backend_vulkan = vulkan_dep.found()
+d3d12_dep = cc.find_library('d3d12', required: get_option('fluent_d3d12_backend'))
+renderer_backend_d3d12 = d3d12_dep.found()
+mtl_dep = dependency('appleframeworks', modules : 'metal', required: get_option('fluent_metal_backend'))
+renderer_backend_metal = mtl_dep.found()
+
+if not c.check_header(get_option('vulkan_include_directory')/'vulkan/vulkan.h', dependencies: vulkan_dep, required: false)
+    error('Set proper vulkan_include_directory option')
+endif
+
+if renderer_backend_vulkan
+    vulkan_include_directory = get_option('vulkan_include_directory')
+    include_dirs += include_directories(vulkan_include_directory, is_system : true)
+endif
 
 if renderer_backend_vulkan
     ft_cpp_args += [ '-DVULKAN_BACKEND' ]
@@ -76,7 +88,7 @@ endif
 sdl2 = subproject('sdl2')
 spdlog = subproject('spdlog')
 glm = subproject('glm')
-imgui = subproject('imgui')
+imgui = subproject('imgui', default_options : 'vulkan_include_directory=' + vulkan_include_directory)
 subdir('third_party/tiny_image_format')
 subdir('third_party/tinyddsloader')
 subdir('third_party/stb_image')
