@@ -14,12 +14,12 @@
 #ifdef FLUENT_DEBUG
 #define D3D12_ASSERT( x )                                                      \
 	do {                                                                       \
-	    HRESULT err = x;                                                       \
-	    if ( err != S_OK )                                                     \
-        {                                                                      \
-	        FT_ERROR( "Detected D3D12 error: {}", err );                       \
-	        abort();                                                           \
-	    }                                                                      \
+		HRESULT err = x;                                                       \
+		if ( err != S_OK )                                                     \
+		{                                                                      \
+			FT_ERROR( "Detected D3D12 error: {}", err );                       \
+			abort();                                                           \
+		}                                                                      \
 	} while ( 0 )
 #else
 #define D3D12_ASSERT( x ) x
@@ -1141,15 +1141,15 @@ d3d12_create_graphics_pipeline( const Device*       idevice,
 	for ( u32 i = 0; i < D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT; i++ )
 	{
 		blend_desc.RenderTarget[ i ] = { false,
-		                                 false,
-		                                 D3D12_BLEND_ONE,
-		                                 D3D12_BLEND_ZERO,
-		                                 D3D12_BLEND_OP_ADD,
-		                                 D3D12_BLEND_ONE,
-		                                 D3D12_BLEND_ZERO,
-		                                 D3D12_BLEND_OP_ADD,
-		                                 D3D12_LOGIC_OP_NOOP,
-		                                 D3D12_COLOR_WRITE_ENABLE_ALL };
+			                             false,
+			                             D3D12_BLEND_ONE,
+			                             D3D12_BLEND_ZERO,
+			                             D3D12_BLEND_OP_ADD,
+			                             D3D12_BLEND_ONE,
+			                             D3D12_BLEND_ZERO,
+			                             D3D12_BLEND_OP_ADD,
+			                             D3D12_LOGIC_OP_NOOP,
+			                             D3D12_COLOR_WRITE_ENABLE_ALL };
 	}
 
 	pipeline_desc.NumRenderTargets = info->render_pass->color_attachment_count;
@@ -1561,10 +1561,10 @@ d3d12_create_sampler( const Device*      idevice,
 
 	D3D12_SAMPLER_DESC sampler_desc {};
 	sampler_desc.Filter         = to_d3d12_filter( info->min_filter,
-	                                       info->mag_filter,
-	                                       info->mipmap_mode,
-	                                       info->anisotropy_enable,
-	                                       info->compare_enable );
+                                           info->mag_filter,
+                                           info->mipmap_mode,
+                                           info->anisotropy_enable,
+                                           info->compare_enable );
 	sampler_desc.AddressU       = to_d3d12_address_mode( info->address_mode_u );
 	sampler_desc.AddressV       = to_d3d12_address_mode( info->address_mode_v );
 	sampler_desc.AddressW       = to_d3d12_address_mode( info->address_mode_w );

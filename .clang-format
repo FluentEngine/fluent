@@ -26,6 +26,7 @@ BreakConstructorInitializers: BeforeComma
 BreakInheritanceList: BeforeComma
 ColumnLimit: '80'
 ConstructorInitializerAllOnOneLineOrOnePerLine: 'false'
+ContinuationIndentWidth: 4
 Cpp11BracedListStyle: 'false'
 DerivePointerAlignment: 'true'
 FixNamespaceComments: 'true'
@@ -52,5 +53,6 @@ SpacesInContainerLiterals: 'true'
 SpacesInParentheses: 'true'
 SpacesInSquareBrackets: 'true'
 TabWidth: '4'
+UseTab: ForIndentation
 
 ...

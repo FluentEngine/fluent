@@ -15,12 +15,12 @@
 #ifdef FLUENT_DEBUG
 #define VK_ASSERT( x )                                                         \
 	do {                                                                       \
-	    VkResult err = x;                                                      \
-	    if ( err )                                                             \
-        {                                                                      \
-	        FT_ERROR( "Detected Vulkan error: {}", err );                      \
-	        abort();                                                           \
-	    }                                                                      \
+		VkResult err = x;                                                      \
+		if ( err )                                                             \
+		{                                                                      \
+			FT_ERROR( "Detected Vulkan error: {}", err );                      \
+			abort();                                                           \
+		}                                                                      \
 	} while ( 0 )
 #else
 #define VK_ASSERT( x ) x
@@ -562,9 +562,9 @@ get_instance_extensions( u32& instance_create_flags )
 
 	u32 extension_count = 0;
 	b32 result          = SDL_Vulkan_GetInstanceExtensions(
-	    ( SDL_Window* ) get_app_window()->handle,
-	    &extension_count,
-	    nullptr );
+        ( SDL_Window* ) get_app_window()->handle,
+        &extension_count,
+        nullptr );
 	FT_ASSERT( result );
 	std::vector<const char*> instance_extensions( extension_count );
 	SDL_Vulkan_GetInstanceExtensions( ( SDL_Window* ) get_app_window()->handle,
@@ -908,17 +908,17 @@ vk_create_device( const RendererBackend* ibackend,
 
 	static constexpr u32 pool_size_count               = 11;
 	VkDescriptorPoolSize pool_sizes[ pool_size_count ] = {
-	    { VK_DESCRIPTOR_TYPE_SAMPLER, 1024 },
-	    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1024 },
-	    { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1024 },
-	    { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1024 },
-	    { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1024 },
-	    { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1024 },
-	    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1024 },
-	    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1024 },
-	    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1024 },
-	    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1024 },
-	    { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1024 },
+		{ VK_DESCRIPTOR_TYPE_SAMPLER, 1024 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1024 },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1024 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1024 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1024 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1024 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1024 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1024 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1024 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1024 },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1024 },
 	};
 
 	VkDescriptorPoolCreateInfo descriptor_pool_create_info {};
@@ -2253,8 +2253,8 @@ vk_create_graphics_pipeline( const Device*       idevice,
 
 	const uint32_t dynamic_state_count                   = 2;
 	VkDynamicState dynamic_states[ dynamic_state_count ] = {
-	    VK_DYNAMIC_STATE_SCISSOR,
-	    VK_DYNAMIC_STATE_VIEWPORT
+		VK_DYNAMIC_STATE_SCISSOR,
+		VK_DYNAMIC_STATE_VIEWPORT
 	};
 
 	VkPipelineDynamicStateCreateInfo dynamic_state_create_info {};
@@ -2705,17 +2705,17 @@ vk_create_ui_context( CommandBuffer* cmd, const UiInfo* info, UiContext** p )
 	FT_INIT_INTERNAL( context, *p, VulkanUiContext );
 
 	VkDescriptorPoolSize pool_sizes[] = {
-	    { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-	    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-	    { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-	    { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-	    { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-	    { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-	    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-	    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-	    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-	    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-	    { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+		{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
 	};
 
 	VkDescriptorPoolCreateInfo pool_info = {};
@@ -3263,13 +3263,13 @@ vk_cmd_blit_image( const CommandBuffer* icmd,
 	image_blit_info.srcOffsets[ 0 ] = VkOffset3D { 0, 0, 0 };
 	image_blit_info.srcOffsets[ 1 ] =
 	    VkOffset3D { static_cast<i32>( src->interface.width ),
-	                 static_cast<i32>( src->interface.height ),
-	                 1 };
+		             static_cast<i32>( src->interface.height ),
+		             1 };
 	image_blit_info.dstOffsets[ 0 ] = VkOffset3D { 0, 0, 0 };
 	image_blit_info.dstOffsets[ 1 ] =
 	    VkOffset3D { ( i32 ) dst->interface.width,
-	                 ( i32 ) dst->interface.height,
-	                 1 };
+		             ( i32 ) dst->interface.height,
+		             1 };
 	image_blit_info.srcSubresource = src_layers;
 	image_blit_info.dstSubresource = dst_layers;
 
