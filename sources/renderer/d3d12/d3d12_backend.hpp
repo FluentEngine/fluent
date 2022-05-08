@@ -111,7 +111,7 @@ struct D3D12RenderPass
 
 struct D3D12Shader
 {
-	D3D12_SHADER_BYTECODE bytecodes[ static_cast<u32>( ShaderStage::eCount ) ];
+	D3D12_SHADER_BYTECODE bytecodes[ static_cast<u32>( ShaderStage::COUNT ) ];
 	Shader                interface;
 };
 

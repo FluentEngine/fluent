@@ -45,10 +45,10 @@ Camera::on_move( CameraDirection camera_direction, f32 delta_time )
 
 	switch ( camera_direction )
 	{
-	case CameraDirection::eForward: position += direction * velocity; break;
-	case CameraDirection::eBack: position -= direction * velocity; break;
-	case CameraDirection::eLeft: position -= right * velocity; break;
-	case CameraDirection::eRight: position += right * velocity; break;
+	case CameraDirection::FORWARD: position += direction * velocity; break;
+	case CameraDirection::BACK: position -= direction * velocity; break;
+	case CameraDirection::LEFT: position -= right * velocity; break;
+	case CameraDirection::RIGHT: position += right * velocity; break;
 	}
 
 	recalculate_view_matrix();
@@ -98,20 +98,20 @@ CameraController::update( f32 delta_time )
 {
 	if ( is_key_pressed( Key::W ) )
 	{
-		camera->on_move( CameraDirection::eForward, delta_time );
+		camera->on_move( CameraDirection::FORWARD, delta_time );
 	}
 	else if ( is_key_pressed( Key::S ) )
 	{
-		camera->on_move( CameraDirection::eBack, delta_time );
+		camera->on_move( CameraDirection::BACK, delta_time );
 	}
 
 	if ( is_key_pressed( Key::A ) )
 	{
-		camera->on_move( CameraDirection::eLeft, delta_time );
+		camera->on_move( CameraDirection::LEFT, delta_time );
 	}
 	else if ( is_key_pressed( Key::D ) )
 	{
-		camera->on_move( CameraDirection::eRight, delta_time );
+		camera->on_move( CameraDirection::RIGHT, delta_time );
 	}
 
 	camera->on_rotate( get_mouse_offset_x(), -get_mouse_offset_y() );

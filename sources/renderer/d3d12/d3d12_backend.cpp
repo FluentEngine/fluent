@@ -32,8 +32,8 @@ to_dxgi_image_format( Format format )
 {
 	switch ( format )
 	{
-	case Format::eR8G8B8A8Srgb: format = Format::eR8G8B8A8Unorm;
-	case Format::eB8G8R8A8Srgb: format = Format::eB8G8R8A8Unorm;
+	case Format::R8G8B8A8_SRGB: format = Format::eR8G8B8A8_UNORM;
+	case Format::B8G8R8A8_SRGB: format = Format::eB8G8R8A8_UNORM;
 	default:
 	{
 		return static_cast<DXGI_FORMAT>( TinyImageFormat_ToDXGI_FORMAT(
@@ -55,9 +55,9 @@ to_d3d12_command_list_type( QueueType type )
 {
 	switch ( type )
 	{
-	case QueueType::eGraphics: return D3D12_COMMAND_LIST_TYPE_DIRECT;
-	case QueueType::eCompute: return D3D12_COMMAND_LIST_TYPE_COMPUTE;
-	case QueueType::eTransfer: return D3D12_COMMAND_LIST_TYPE_COPY;
+	case QueueType::GRAPHICS: return D3D12_COMMAND_LIST_TYPE_DIRECT;
+	case QueueType::COMPUTE: return D3D12_COMMAND_LIST_TYPE_COMPUTE;
+	case QueueType::TRANSFER: return D3D12_COMMAND_LIST_TYPE_COPY;
 	default: FT_ASSERT( false ); return D3D12_COMMAND_LIST_TYPE( -1 );
 	}
 }
@@ -67,19 +67,19 @@ to_d3d12_resource_state( ResourceState state )
 {
 	switch ( state )
 	{
-	case ResourceState::eUndefined: return D3D12_RESOURCE_STATE_COMMON;
-	case ResourceState::eGeneral: return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-	case ResourceState::eColorAttachment:
+	case ResourceState::UNDEFINED: return D3D12_RESOURCE_STATE_COMMON;
+	case ResourceState::GENERAL: return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+	case ResourceState::COLOR_ATTACHMENT:
 		return D3D12_RESOURCE_STATE_RENDER_TARGET;
-	case ResourceState::eDepthStencilWrite:
+	case ResourceState::DEPTH_STENCIL_WRITE:
 		return D3D12_RESOURCE_STATE_DEPTH_WRITE;
-	case ResourceState::eDepthStencilReadOnly:
+	case ResourceState::DEPTH_STENCIL_READ_ONLY:
 		return D3D12_RESOURCE_STATE_DEPTH_READ;
-	case ResourceState::eShaderReadOnly:
+	case ResourceState::SHADER_READ_ONLY:
 		return D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-	case ResourceState::eTransferSrc: return D3D12_RESOURCE_STATE_COPY_SOURCE;
-	case ResourceState::eTransferDst: return D3D12_RESOURCE_STATE_COPY_DEST;
-	case ResourceState::ePresent: return D3D12_RESOURCE_STATE_PRESENT;
+	case ResourceState::TRANSFER_SRC: return D3D12_RESOURCE_STATE_COPY_SOURCE;
+	case ResourceState::TRANSFER_DST: return D3D12_RESOURCE_STATE_COPY_DEST;
+	case ResourceState::PRESENT: return D3D12_RESOURCE_STATE_PRESENT;
 	default: FT_ASSERT( false ); return D3D12_RESOURCE_STATES( -1 );
 	}
 }
@@ -89,13 +89,13 @@ to_d3d12_sample_count( SampleCount sample_count )
 {
 	switch ( sample_count )
 	{
-	case SampleCount::e1: return 1;
-	case SampleCount::e2: return 2;
-	case SampleCount::e4: return 4;
-	case SampleCount::e8: return 8;
-	case SampleCount::e16: return 16;
-	case SampleCount::e32: return 32;
-	case SampleCount::e64: return 64;
+	case SampleCount::E1: return 1;
+	case SampleCount::E2: return 2;
+	case SampleCount::E4: return 4;
+	case SampleCount::E8: return 8;
+	case SampleCount::E16: return 16;
+	case SampleCount::E32: return 32;
+	case SampleCount::E64: return 64;
 	default: FT_ASSERT( false ); return -1;
 	}
 }
@@ -105,8 +105,8 @@ to_d3d12_fill_mode( PolygonMode mode )
 {
 	switch ( mode )
 	{
-	case PolygonMode::eFill: return D3D12_FILL_MODE_SOLID;
-	case PolygonMode::eLine: return D3D12_FILL_MODE_WIREFRAME;
+	case PolygonMode::FILL: return D3D12_FILL_MODE_SOLID;
+	case PolygonMode::LINE: return D3D12_FILL_MODE_WIREFRAME;
 	default: FT_ASSERT( false ); return D3D12_FILL_MODE( -1 );
 	}
 }
@@ -116,9 +116,9 @@ to_d3d12_cull_mode( CullMode mode )
 {
 	switch ( mode )
 	{
-	case CullMode::eNone: return D3D12_CULL_MODE_NONE;
-	case CullMode::eBack: return D3D12_CULL_MODE_BACK;
-	case CullMode::eFront: return D3D12_CULL_MODE_FRONT;
+	case CullMode::NONE: return D3D12_CULL_MODE_NONE;
+	case CullMode::BACK: return D3D12_CULL_MODE_BACK;
+	case CullMode::FRONT: return D3D12_CULL_MODE_FRONT;
 	default: FT_ASSERT( false ); return D3D12_CULL_MODE( -1 );
 	}
 }
@@ -126,7 +126,7 @@ to_d3d12_cull_mode( CullMode mode )
 static inline b32
 to_d3d12_front_face( FrontFace front_face )
 {
-	if ( front_face == FrontFace::eCounterClockwise )
+	if ( front_face == FrontFace::COUNTER_CLOCKWISE )
 	{
 		return true;
 	}
@@ -141,15 +141,15 @@ to_d3d12_primitive_topology_type( PrimitiveTopology topology )
 {
 	switch ( topology )
 	{
-	case PrimitiveTopology::ePointList:
+	case PrimitiveTopology::POINT_LIST:
 		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-	case PrimitiveTopology::eLineList:
+	case PrimitiveTopology::LINE_LIST:
 		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-	case PrimitiveTopology::eLineStrip:
+	case PrimitiveTopology::LINE_STRIP:
 		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-	case PrimitiveTopology::eTriangleList:
+	case PrimitiveTopology::TRIANGLE_LIST:
 		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	case PrimitiveTopology::eTriangleStrip:
+	case PrimitiveTopology::TRIANGLE_STRIP:
 		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	case PrimitiveTopology::eTriangleFan:
 		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -162,12 +162,12 @@ to_d3d12_primitive_topology( PrimitiveTopology topology )
 {
 	switch ( topology )
 	{
-	case PrimitiveTopology::ePointList: return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
-	case PrimitiveTopology::eLineList: return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-	case PrimitiveTopology::eLineStrip: return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
-	case PrimitiveTopology::eTriangleList:
+	case PrimitiveTopology::POINT_LIST: return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+	case PrimitiveTopology::LINE_LIST: return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+	case PrimitiveTopology::LINE_STRIP: return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+	case PrimitiveTopology::TRIANGLE_LIST:
 		return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	case PrimitiveTopology::eTriangleStrip:
+	case PrimitiveTopology::TRIANGLE_STRIP:
 		return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 	case PrimitiveTopology::eTriangleFan:
 		return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ;
@@ -180,11 +180,11 @@ to_d3d12_heap_type( MemoryUsage usage )
 {
 	switch ( usage )
 	{
-	case MemoryUsage::eGpuOnly: return D3D12_HEAP_TYPE_DEFAULT;
-	case MemoryUsage::eCpuOnly: return D3D12_HEAP_TYPE_UPLOAD;
-	case MemoryUsage::eCpuToGpu: return D3D12_HEAP_TYPE_UPLOAD;
-	case MemoryUsage::eGpuToCpu: return D3D12_HEAP_TYPE_READBACK;
-	case MemoryUsage::eCpuCopy: return D3D12_HEAP_TYPE_UPLOAD;
+	case MemoryUsage::GPU_ONLY: return D3D12_HEAP_TYPE_DEFAULT;
+	case MemoryUsage::CPU_ONLY: return D3D12_HEAP_TYPE_UPLOAD;
+	case MemoryUsage::CPU_TO_GPU: return D3D12_HEAP_TYPE_UPLOAD;
+	case MemoryUsage::GPU_TO_CPU: return D3D12_HEAP_TYPE_READBACK;
+	case MemoryUsage::CPU_COPY: return D3D12_HEAP_TYPE_UPLOAD;
 	default: FT_ASSERT( false ); return D3D12_HEAP_TYPE( -1 );
 	}
 }
@@ -194,8 +194,8 @@ to_d3d12_filter_type( Filter filter )
 {
 	switch ( filter )
 	{
-	case Filter::eNearest: return D3D12_FILTER_TYPE_POINT;
-	case Filter::eLinear: return D3D12_FILTER_TYPE_LINEAR;
+	case Filter::NEAREST: return D3D12_FILTER_TYPE_POINT;
+	case Filter::LINEAR: return D3D12_FILTER_TYPE_LINEAR;
 	default: FT_ASSERT( false ); return D3D12_FILTER_TYPE( -1 );
 	}
 }
@@ -227,12 +227,12 @@ to_d3d12_address_mode( SamplerAddressMode mode )
 {
 	switch ( mode )
 	{
-	case SamplerAddressMode::eRepeat: return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	case SamplerAddressMode::eMirroredRepeat:
+	case SamplerAddressMode::REPEAT: return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	case SamplerAddressMode::MIRRORED_REPEAT:
 		return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
-	case SamplerAddressMode::eClampToEdge:
+	case SamplerAddressMode::CLAMP_TO_EDGE:
 		return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	case SamplerAddressMode::eClampToBorder:
+	case SamplerAddressMode::CLAMP_TO_BORDER:
 		return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
 	default: FT_ASSERT( false ); return D3D12_TEXTURE_ADDRESS_MODE( -1 );
 	}
@@ -243,14 +243,15 @@ to_d3d12_comparison_func( CompareOp op )
 {
 	switch ( op )
 	{
-	case CompareOp::eNever: return D3D12_COMPARISON_FUNC_NEVER;
-	case CompareOp::eLess: return D3D12_COMPARISON_FUNC_LESS;
-	case CompareOp::eEqual: return D3D12_COMPARISON_FUNC_EQUAL;
-	case CompareOp::eLessOrEqual: return D3D12_COMPARISON_FUNC_LESS_EQUAL;
-	case CompareOp::eGreater: return D3D12_COMPARISON_FUNC_GREATER;
-	case CompareOp::eNotEqual: return D3D12_COMPARISON_FUNC_NOT_EQUAL;
-	case CompareOp::eGreaterOrEqual: return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
-	case CompareOp::eAlways: return D3D12_COMPARISON_FUNC_ALWAYS;
+	case CompareOp::NEVER: return D3D12_COMPARISON_FUNC_NEVER;
+	case CompareOp::LESS: return D3D12_COMPARISON_FUNC_LESS;
+	case CompareOp::EQUAL: return D3D12_COMPARISON_FUNC_EQUAL;
+	case CompareOp::LESS_OR_EQUAL: return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	case CompareOp::GREATER: return D3D12_COMPARISON_FUNC_GREATER;
+	case CompareOp::NOT_EQUAL: return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+	case CompareOp::GREATER_OR_EQUAL:
+		return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+	case CompareOp::ALWAYS: return D3D12_COMPARISON_FUNC_ALWAYS;
 	default: FT_ASSERT( false ); return D3D12_COMPARISON_FUNC( -1 );
 	}
 }
@@ -260,10 +261,10 @@ to_d3d12_descriptor_range_type( DescriptorType type )
 {
 	switch ( type )
 	{
-	case DescriptorType::eSampler: return D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-	case DescriptorType::eStorageBuffer:
-	case DescriptorType::eStorageImage:
-	case DescriptorType::eStorageTexelBuffer:
+	case DescriptorType::SAMPLER: return D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+	case DescriptorType::STORAGE_BUFFER:
+	case DescriptorType::STORAGE_IMAGE:
+	case DescriptorType::STORAGE_TEXEL_BUFFER:
 		return D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
 	default: return D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 	}
@@ -274,12 +275,12 @@ to_d3d12_shader_visibility( ShaderStage stage )
 {
 	switch ( stage )
 	{
-	case ShaderStage::eVertex: return D3D12_SHADER_VISIBILITY_VERTEX;
-	case ShaderStage::eTessellationControl: return D3D12_SHADER_VISIBILITY_HULL;
-	case ShaderStage::eTessellationEvaluation:
+	case ShaderStage::VERTEX: return D3D12_SHADER_VISIBILITY_VERTEX;
+	case ShaderStage::TESSELLATION_CONTROL: return D3D12_SHADER_VISIBILITY_HULL;
+	case ShaderStage::TESSELLATION_EVALUATION:
 		return D3D12_SHADER_VISIBILITY_DOMAIN;
-	case ShaderStage::eGeometry: return D3D12_SHADER_VISIBILITY_GEOMETRY;
-	case ShaderStage::eFragment: return D3D12_SHADER_VISIBILITY_PIXEL;
+	case ShaderStage::GEOMETRY: return D3D12_SHADER_VISIBILITY_GEOMETRY;
+	case ShaderStage::FRAGMENT: return D3D12_SHADER_VISIBILITY_PIXEL;
 	case ShaderStage::eAllGraphics:
 	case ShaderStage::eAll: return D3D12_SHADER_VISIBILITY_ALL;
 	default: FT_ASSERT( false ); return D3D12_SHADER_VISIBILITY( -1 );
@@ -865,16 +866,16 @@ d3d12_create_shader( const Device* idevice, ShaderInfo* info, Shader** p )
 		}
 	};
 
-	create_module( shader, ShaderStage::eCompute, info->compute );
-	create_module( shader, ShaderStage::eVertex, info->vertex );
+	create_module( shader, ShaderStage::COMPUTE, info->compute );
+	create_module( shader, ShaderStage::VERTEX, info->vertex );
 	create_module( shader,
-	               ShaderStage::eTessellationControl,
+	               ShaderStage::TESSELLATION_CONTROL,
 	               info->tessellation_control );
 	create_module( shader,
-	               ShaderStage::eTessellationEvaluation,
+	               ShaderStage::TESSELLATION_EVALUATION,
 	               info->tessellation_evaluation );
-	create_module( shader, ShaderStage::eGeometry, info->geometry );
-	create_module( shader, ShaderStage::eFragment, info->fragment );
+	create_module( shader, ShaderStage::GEOMETRY, info->geometry );
+	create_module( shader, ShaderStage::FRAGMENT, info->fragment );
 
 	dxil_reflect( idevice, info, *p );
 }
@@ -896,12 +897,12 @@ d3d12_destroy_shader( const Device* idevice, Shader* ishader )
 		}
 	};
 
-	destroy_module( ShaderStage::eCompute, shader );
-	destroy_module( ShaderStage::eVertex, shader );
-	destroy_module( ShaderStage::eTessellationControl, shader );
-	destroy_module( ShaderStage::eTessellationEvaluation, shader );
-	destroy_module( ShaderStage::eGeometry, shader );
-	destroy_module( ShaderStage::eFragment, shader );
+	destroy_module( ShaderStage::COMPUTE, shader );
+	destroy_module( ShaderStage::VERTEX, shader );
+	destroy_module( ShaderStage::TESSELLATION_CONTROL, shader );
+	destroy_module( ShaderStage::TESSELLATION_EVALUATION, shader );
+	destroy_module( ShaderStage::GEOMETRY, shader );
+	destroy_module( ShaderStage::FRAGMENT, shader );
 
 	std::free( shader );
 }
@@ -926,7 +927,7 @@ d3d12_create_descriptor_set_layout( const Device*         idevice,
 	std::vector<D3D12_DESCRIPTOR_RANGE1> srv_uav_ranges;
 	std::vector<D3D12_DESCRIPTOR_RANGE1> sampler_ranges;
 
-	for ( u32 s = 0; s < static_cast<u32>( ShaderStage::eCount ); ++s )
+	for ( u32 s = 0; s < static_cast<u32>( ShaderStage::COUNT ); ++s )
 	{
 		u32 cbv_range_count     = cbv_ranges.size();
 		u32 srv_uav_range_count = srv_uav_ranges.size();
@@ -1071,17 +1072,17 @@ d3d12_create_graphics_pipeline( const Device*       idevice,
 	FT_FROM_HANDLE( render_pass, info->render_pass, D3D12RenderPass );
 	FT_FROM_HANDLE( shader, info->shader, D3D12Shader );
 
-	pipeline->interface.type = PipelineType::eGraphics;
+	pipeline->interface.type = PipelineType::GRAPHICS;
 	pipeline->root_signature = dsl->root_signature;
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline_desc {};
 	pipeline_desc.pRootSignature = dsl->root_signature;
 	pipeline_desc.VS =
-	    shader->bytecodes[ static_cast<u32>( ShaderStage::eVertex ) ];
+	    shader->bytecodes[ static_cast<u32>( ShaderStage::VERTEX ) ];
 	pipeline_desc.PS =
-	    shader->bytecodes[ static_cast<u32>( ShaderStage::eFragment ) ];
+	    shader->bytecodes[ static_cast<u32>( ShaderStage::FRAGMENT ) ];
 	pipeline_desc.GS =
-	    shader->bytecodes[ static_cast<u32>( ShaderStage::eGeometry ) ];
+	    shader->bytecodes[ static_cast<u32>( ShaderStage::GEOMETRY ) ];
 	// TODO: other stages
 
 	const VertexLayout& vertex_layout = info->vertex_layout;
@@ -1102,7 +1103,7 @@ d3d12_create_graphics_pipeline( const Device*       idevice,
 		input_element.SemanticName      = "TODO";
 
 		if ( vertex_layout.binding_infos[ attribute.binding ].input_rate ==
-		     VertexInputRate::eInstance )
+		     VertexInputRate::INSTANCE )
 		{
 			input_element.InputSlotClass =
 			    D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
@@ -1655,7 +1656,7 @@ d3d12_create_image( const Device* idevice, const ImageInfo* info, Image** p )
 		image->image_view = dsv_heap_handle;
 		dsv_heap_handle.ptr += ( 1 * device->dsv_descriptor_size );
 	}
-	else if ( info->descriptor_type == DescriptorType::eColorAttachment )
+	else if ( info->descriptor_type == DescriptorType::COLOR_ATTACHMENT )
 	{
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv_heap_handle(
 		    device->rtv_heap->GetCPUDescriptorHandleForHeapStart() );

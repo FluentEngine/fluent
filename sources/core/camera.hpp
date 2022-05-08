@@ -10,10 +10,10 @@ namespace fluent
 {
 enum class CameraDirection
 {
-	eForward,
-	eBack,
-	eLeft,
-	eRight
+	FORWARD,
+	BACK,
+	LEFT,
+	RIGHT
 };
 
 struct CameraInfo

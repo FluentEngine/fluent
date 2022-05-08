@@ -143,7 +143,7 @@ read_image_stb( const std::string& filename, b32 flip, u64* size, void** data )
 	image_info.width       = tex_width;
 	image_info.height      = tex_height;
 	image_info.depth       = 1;
-	image_info.format      = Format::eR8G8B8A8Unorm;
+	image_info.format      = Format::R8G8B8A8_UNORM;
 	image_info.mip_levels  = 1;
 	image_info.layer_count = 1;
 	*size                  = tex_width * tex_height * 4;

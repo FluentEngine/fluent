@@ -10,28 +10,28 @@ to_descriptor_type( SpvReflectDescriptorType descriptor_type )
 {
 	switch ( descriptor_type )
 	{
-	case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: return DescriptorType::eSampler;
+	case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: return DescriptorType::SAMPLER;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
 		FT_ASSERT( false && "Use separate types instead, texture + sampler" );
 		return DescriptorType( -1 );
 	case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-		return DescriptorType::eSampledImage;
+		return DescriptorType::SAMPLED_IMAGE;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-		return DescriptorType::eStorageImage;
+		return DescriptorType::STORAGE_IMAGE;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-		return DescriptorType::eUniformTexelBuffer;
+		return DescriptorType::UNIFORM_TEXEL_BUFFER;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-		return DescriptorType::eStorageTexelBuffer;
+		return DescriptorType::STORAGE_TEXEL_BUFFER;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-		return DescriptorType::eUniformBuffer;
+		return DescriptorType::UNIFORM_BUFFER;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-		return DescriptorType::eStorageBuffer;
+		return DescriptorType::STORAGE_BUFFER;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-		return DescriptorType::eUniformBufferDynamic;
+		return DescriptorType::UNIFORM_BUFFER_DYNAMIC;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-		return DescriptorType::eStorageBufferDynamic;
+		return DescriptorType::STORAGE_BUFFER_DYNAMIC;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-		return DescriptorType::eInputAttachment;
+		return DescriptorType::INPUT_ATTACHMENT;
 	default: FT_ASSERT( false ); return DescriptorType( -1 );
 	}
 }
@@ -95,7 +95,7 @@ spirv_reflect( const Device* device, const ShaderInfo* info, Shader* shader )
 	if ( info->vertex.bytecode )
 	{
 		spirv_reflect_stage( shader->reflect_data,
-		                     ShaderStage::eVertex,
+		                     ShaderStage::VERTEX,
 		                     info->vertex.bytecode_size,
 		                     info->vertex.bytecode );
 	}
@@ -103,7 +103,7 @@ spirv_reflect( const Device* device, const ShaderInfo* info, Shader* shader )
 	if ( info->fragment.bytecode )
 	{
 		spirv_reflect_stage( shader->reflect_data,
-		                     ShaderStage::eFragment,
+		                     ShaderStage::FRAGMENT,
 		                     info->fragment.bytecode_size,
 		                     info->fragment.bytecode );
 	}
@@ -111,7 +111,7 @@ spirv_reflect( const Device* device, const ShaderInfo* info, Shader* shader )
 	if ( info->compute.bytecode )
 	{
 		spirv_reflect_stage( shader->reflect_data,
-		                     ShaderStage::eCompute,
+		                     ShaderStage::COMPUTE,
 		                     info->compute.bytecode_size,
 		                     info->compute.bytecode );
 	}
@@ -119,7 +119,7 @@ spirv_reflect( const Device* device, const ShaderInfo* info, Shader* shader )
 	if ( info->tessellation_control.bytecode )
 	{
 		spirv_reflect_stage( shader->reflect_data,
-		                     ShaderStage::eTessellationControl,
+		                     ShaderStage::TESSELLATION_CONTROL,
 		                     info->tessellation_control.bytecode_size,
 		                     info->tessellation_control.bytecode );
 	}
@@ -127,7 +127,7 @@ spirv_reflect( const Device* device, const ShaderInfo* info, Shader* shader )
 	if ( info->tessellation_evaluation.bytecode )
 	{
 		spirv_reflect_stage( shader->reflect_data,
-		                     ShaderStage::eTessellationEvaluation,
+		                     ShaderStage::TESSELLATION_EVALUATION,
 		                     info->tessellation_evaluation.bytecode_size,
 		                     info->tessellation_evaluation.bytecode );
 	}
@@ -135,7 +135,7 @@ spirv_reflect( const Device* device, const ShaderInfo* info, Shader* shader )
 	if ( info->geometry.bytecode )
 	{
 		spirv_reflect_stage( shader->reflect_data,
-		                     ShaderStage::eGeometry,
+		                     ShaderStage::GEOMETRY,
 		                     info->geometry.bytecode_size,
 		                     info->geometry.bytecode );
 	}

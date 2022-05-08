@@ -47,12 +47,12 @@ to_vk_sample_count( SampleCount sample_count )
 {
 	switch ( sample_count )
 	{
-	case SampleCount::e1: return VK_SAMPLE_COUNT_1_BIT;
-	case SampleCount::e2: return VK_SAMPLE_COUNT_2_BIT;
-	case SampleCount::e4: return VK_SAMPLE_COUNT_4_BIT;
-	case SampleCount::e8: return VK_SAMPLE_COUNT_8_BIT;
-	case SampleCount::e16: return VK_SAMPLE_COUNT_16_BIT;
-	case SampleCount::e32: return VK_SAMPLE_COUNT_32_BIT;
+	case SampleCount::E1: return VK_SAMPLE_COUNT_1_BIT;
+	case SampleCount::E2: return VK_SAMPLE_COUNT_2_BIT;
+	case SampleCount::E4: return VK_SAMPLE_COUNT_4_BIT;
+	case SampleCount::E8: return VK_SAMPLE_COUNT_8_BIT;
+	case SampleCount::E16: return VK_SAMPLE_COUNT_16_BIT;
+	case SampleCount::E32: return VK_SAMPLE_COUNT_32_BIT;
 	default: FT_ASSERT( false ); return VkSampleCountFlagBits( -1 );
 	}
 }
@@ -62,9 +62,9 @@ to_vk_load_op( AttachmentLoadOp load_op )
 {
 	switch ( load_op )
 	{
-	case AttachmentLoadOp::eClear: return VK_ATTACHMENT_LOAD_OP_CLEAR;
-	case AttachmentLoadOp::eDontCare: return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	case AttachmentLoadOp::eLoad: return VK_ATTACHMENT_LOAD_OP_LOAD;
+	case AttachmentLoadOp::CLEAR: return VK_ATTACHMENT_LOAD_OP_CLEAR;
+	case AttachmentLoadOp::DONT_CARE: return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	case AttachmentLoadOp::LOAD: return VK_ATTACHMENT_LOAD_OP_LOAD;
 	default: FT_ASSERT( false ); return VkAttachmentLoadOp( -1 );
 	}
 }
@@ -74,9 +74,9 @@ to_vk_queue_type( QueueType type )
 {
 	switch ( type )
 	{
-	case QueueType::eGraphics: return VK_QUEUE_GRAPHICS_BIT;
-	case QueueType::eCompute: return VK_QUEUE_COMPUTE_BIT;
-	case QueueType::eTransfer: return VK_QUEUE_TRANSFER_BIT;
+	case QueueType::GRAPHICS: return VK_QUEUE_GRAPHICS_BIT;
+	case QueueType::COMPUTE: return VK_QUEUE_COMPUTE_BIT;
+	case QueueType::TRANSFER: return VK_QUEUE_TRANSFER_BIT;
 	default: FT_ASSERT( false ); return VkQueueFlagBits( -1 );
 	}
 }
@@ -86,8 +86,8 @@ to_vk_vertex_input_rate( VertexInputRate input_rate )
 {
 	switch ( input_rate )
 	{
-	case VertexInputRate::eVertex: return VK_VERTEX_INPUT_RATE_VERTEX;
-	case VertexInputRate::eInstance: return VK_VERTEX_INPUT_RATE_INSTANCE;
+	case VertexInputRate::VERTEX: return VK_VERTEX_INPUT_RATE_VERTEX;
+	case VertexInputRate::INSTANCE: return VK_VERTEX_INPUT_RATE_INSTANCE;
 	default: FT_ASSERT( false ); return VkVertexInputRate( -1 );
 	}
 }
@@ -97,9 +97,9 @@ to_vk_cull_mode( CullMode cull_mode )
 {
 	switch ( cull_mode )
 	{
-	case CullMode::eBack: return VK_CULL_MODE_BACK_BIT;
-	case CullMode::eFront: return VK_CULL_MODE_FRONT_BIT;
-	case CullMode::eNone: return VK_CULL_MODE_NONE;
+	case CullMode::BACK: return VK_CULL_MODE_BACK_BIT;
+	case CullMode::FRONT: return VK_CULL_MODE_FRONT_BIT;
+	case CullMode::NONE: return VK_CULL_MODE_NONE;
 	default: FT_ASSERT( false ); return VkCullModeFlagBits( -1 );
 	}
 }
@@ -109,8 +109,8 @@ to_vk_front_face( FrontFace front_face )
 {
 	switch ( front_face )
 	{
-	case FrontFace::eClockwise: return VK_FRONT_FACE_CLOCKWISE;
-	case FrontFace::eCounterClockwise: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	case FrontFace::CLOCKWISE: return VK_FRONT_FACE_CLOCKWISE;
+	case FrontFace::COUNTER_CLOCKWISE: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	default: FT_ASSERT( false ); return VkFrontFace( -1 );
 	}
 }
@@ -120,14 +120,14 @@ to_vk_compare_op( CompareOp op )
 {
 	switch ( op )
 	{
-	case CompareOp::eNever: return VK_COMPARE_OP_NEVER;
-	case CompareOp::eLess: return VK_COMPARE_OP_LESS;
-	case CompareOp::eEqual: return VK_COMPARE_OP_EQUAL;
-	case CompareOp::eLessOrEqual: return VK_COMPARE_OP_LESS_OR_EQUAL;
-	case CompareOp::eGreater: return VK_COMPARE_OP_GREATER;
-	case CompareOp::eNotEqual: return VK_COMPARE_OP_NOT_EQUAL;
-	case CompareOp::eGreaterOrEqual: return VK_COMPARE_OP_GREATER_OR_EQUAL;
-	case CompareOp::eAlways: return VK_COMPARE_OP_ALWAYS;
+	case CompareOp::NEVER: return VK_COMPARE_OP_NEVER;
+	case CompareOp::LESS: return VK_COMPARE_OP_LESS;
+	case CompareOp::EQUAL: return VK_COMPARE_OP_EQUAL;
+	case CompareOp::LESS_OR_EQUAL: return VK_COMPARE_OP_LESS_OR_EQUAL;
+	case CompareOp::GREATER: return VK_COMPARE_OP_GREATER;
+	case CompareOp::NOT_EQUAL: return VK_COMPARE_OP_NOT_EQUAL;
+	case CompareOp::GREATER_OR_EQUAL: return VK_COMPARE_OP_GREATER_OR_EQUAL;
+	case CompareOp::ALWAYS: return VK_COMPARE_OP_ALWAYS;
 	default: FT_ASSERT( false ); return VkCompareOp( -1 );
 	}
 }
@@ -137,16 +137,14 @@ to_vk_shader_stage( ShaderStage shader_stage )
 {
 	switch ( shader_stage )
 	{
-	case ShaderStage::eVertex: return VK_SHADER_STAGE_VERTEX_BIT;
-	case ShaderStage::eTessellationControl:
+	case ShaderStage::VERTEX: return VK_SHADER_STAGE_VERTEX_BIT;
+	case ShaderStage::TESSELLATION_CONTROL:
 		return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-	case ShaderStage::eTessellationEvaluation:
+	case ShaderStage::TESSELLATION_EVALUATION:
 		return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-	case ShaderStage::eGeometry: return VK_SHADER_STAGE_GEOMETRY_BIT;
-	case ShaderStage::eFragment: return VK_SHADER_STAGE_FRAGMENT_BIT;
-	case ShaderStage::eCompute: return VK_SHADER_STAGE_COMPUTE_BIT;
-	case ShaderStage::eAllGraphics: return VK_SHADER_STAGE_ALL_GRAPHICS;
-	case ShaderStage::eAll: return VK_SHADER_STAGE_ALL;
+	case ShaderStage::GEOMETRY: return VK_SHADER_STAGE_GEOMETRY_BIT;
+	case ShaderStage::FRAGMENT: return VK_SHADER_STAGE_FRAGMENT_BIT;
+	case ShaderStage::COMPUTE: return VK_SHADER_STAGE_COMPUTE_BIT;
 	default: FT_ASSERT( false ); return VkShaderStageFlagBits( -1 );
 	}
 }
@@ -156,8 +154,8 @@ to_vk_pipeline_bind_point( PipelineType type )
 {
 	switch ( type )
 	{
-	case PipelineType::eCompute: return VK_PIPELINE_BIND_POINT_COMPUTE;
-	case PipelineType::eGraphics: return VK_PIPELINE_BIND_POINT_GRAPHICS;
+	case PipelineType::COMPUTE: return VK_PIPELINE_BIND_POINT_COMPUTE;
+	case PipelineType::GRAPHICS: return VK_PIPELINE_BIND_POINT_GRAPHICS;
 	default: FT_ASSERT( false ); return VkPipelineBindPoint( -1 );
 	}
 }
@@ -167,22 +165,22 @@ to_vk_descriptor_type( DescriptorType descriptor_type )
 {
 	switch ( descriptor_type )
 	{
-	case DescriptorType::eSampler: return VK_DESCRIPTOR_TYPE_SAMPLER;
-	case DescriptorType::eSampledImage: return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-	case DescriptorType::eStorageImage: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	case DescriptorType::eUniformTexelBuffer:
+	case DescriptorType::SAMPLER: return VK_DESCRIPTOR_TYPE_SAMPLER;
+	case DescriptorType::SAMPLED_IMAGE: return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	case DescriptorType::STORAGE_IMAGE: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	case DescriptorType::UNIFORM_TEXEL_BUFFER:
 		return VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-	case DescriptorType::eStorageTexelBuffer:
+	case DescriptorType::STORAGE_TEXEL_BUFFER:
 		return VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-	case DescriptorType::eUniformBuffer:
+	case DescriptorType::UNIFORM_BUFFER:
 		return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	case DescriptorType::eStorageBuffer:
+	case DescriptorType::STORAGE_BUFFER:
 		return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	case DescriptorType::eUniformBufferDynamic:
+	case DescriptorType::UNIFORM_BUFFER_DYNAMIC:
 		return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-	case DescriptorType::eStorageBufferDynamic:
+	case DescriptorType::STORAGE_BUFFER_DYNAMIC:
 		return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-	case DescriptorType::eInputAttachment:
+	case DescriptorType::INPUT_ATTACHMENT:
 		return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
 	default: FT_ASSERT( false ); return VkDescriptorType( -1 );
 	}
@@ -193,8 +191,8 @@ to_vk_filter( Filter filter )
 {
 	switch ( filter )
 	{
-	case Filter::eLinear: return VK_FILTER_LINEAR;
-	case Filter::eNearest: return VK_FILTER_NEAREST;
+	case Filter::LINEAR: return VK_FILTER_LINEAR;
+	case Filter::NEAREST: return VK_FILTER_NEAREST;
 	default: FT_ASSERT( false ); return VkFilter( -1 );
 	}
 }
@@ -204,9 +202,9 @@ to_vk_sampler_mipmap_mode( SamplerMipmapMode mode )
 {
 	switch ( mode )
 	{
-	case SamplerMipmapMode::eNearest:
+	case SamplerMipmapMode::NEAREST:
 		return VkSamplerMipmapMode::VK_SAMPLER_MIPMAP_MODE_NEAREST;
-	case SamplerMipmapMode::eLinear:
+	case SamplerMipmapMode::LINEAR:
 		return VkSamplerMipmapMode::VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	default: FT_ASSERT( false ); return VkSamplerMipmapMode( -1 );
 	}
@@ -217,13 +215,13 @@ to_vk_sampler_address_mode( SamplerAddressMode mode )
 {
 	switch ( mode )
 	{
-	case SamplerAddressMode::eRepeat:
+	case SamplerAddressMode::REPEAT:
 		return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	case SamplerAddressMode::eMirroredRepeat:
+	case SamplerAddressMode::MIRRORED_REPEAT:
 		return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
-	case SamplerAddressMode::eClampToEdge:
+	case SamplerAddressMode::CLAMP_TO_EDGE:
 		return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	case SamplerAddressMode::eClampToBorder:
+	case SamplerAddressMode::CLAMP_TO_BORDER:
 		return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
 	default: FT_ASSERT( false ); return VkSamplerAddressMode( -1 );
 	}
@@ -234,8 +232,8 @@ to_vk_polygon_mode( PolygonMode mode )
 {
 	switch ( mode )
 	{
-	case PolygonMode::eFill: return VK_POLYGON_MODE_FILL;
-	case PolygonMode::eLine: return VK_POLYGON_MODE_LINE;
+	case PolygonMode::FILL: return VK_POLYGON_MODE_FILL;
+	case PolygonMode::LINE: return VK_POLYGON_MODE_LINE;
 	default: FT_ASSERT( false ); return VkPolygonMode( -1 );
 	}
 };
@@ -245,14 +243,12 @@ to_vk_primitive_topology( PrimitiveTopology topology )
 {
 	switch ( topology )
 	{
-	case PrimitiveTopology::eLineList: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-	case PrimitiveTopology::eLineStrip: return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
-	case PrimitiveTopology::ePointList: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-	case PrimitiveTopology::eTriangleFan:
-		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
-	case PrimitiveTopology::eTriangleStrip:
+	case PrimitiveTopology::LINE_LIST: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+	case PrimitiveTopology::LINE_STRIP: return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+	case PrimitiveTopology::POINT_LIST: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+	case PrimitiveTopology::TRIANGLE_STRIP:
 		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-	case PrimitiveTopology::eTriangleList:
+	case PrimitiveTopology::TRIANGLE_LIST:
 		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	default: FT_ASSERT( false ); return VkPrimitiveTopology( -1 );
 	}
@@ -263,30 +259,30 @@ determine_access_flags( ResourceState resource_state )
 {
 	VkAccessFlags access_flags = 0;
 
-	if ( b32( resource_state & ResourceState::eGeneral ) )
+	if ( b32( resource_state & ResourceState::GENERAL ) )
 		access_flags |=
 		    ( VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT );
 
-	if ( b32( resource_state & ResourceState::eColorAttachment ) )
+	if ( b32( resource_state & ResourceState::COLOR_ATTACHMENT ) )
 		access_flags |= ( VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
 		                  VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT );
 
-	if ( b32( resource_state & ResourceState::eDepthStencilWrite ) )
+	if ( b32( resource_state & ResourceState::DEPTH_STENCIL_WRITE ) )
 		access_flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-	if ( b32( resource_state & ResourceState::eDepthStencilReadOnly ) )
+	if ( b32( resource_state & ResourceState::DEPTH_STENCIL_READ_ONLY ) )
 		access_flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 
-	if ( b32( resource_state & ResourceState::eShaderReadOnly ) )
+	if ( b32( resource_state & ResourceState::SHADER_READ_ONLY ) )
 		access_flags |= VK_ACCESS_SHADER_READ_BIT;
 
-	if ( b32( resource_state & ResourceState::eTransferSrc ) )
+	if ( b32( resource_state & ResourceState::TRANSFER_SRC ) )
 		access_flags |= VK_ACCESS_TRANSFER_READ_BIT;
 
-	if ( b32( resource_state & ResourceState::eTransferDst ) )
+	if ( b32( resource_state & ResourceState::TRANSFER_DST ) )
 		access_flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
 
-	if ( b32( resource_state & ResourceState::ePresent ) )
+	if ( b32( resource_state & ResourceState::PRESENT ) )
 		access_flags |= VK_ACCESS_MEMORY_READ_BIT;
 
 	return access_flags;
@@ -301,7 +297,7 @@ determine_pipeline_stage_flags( VkAccessFlags access_flags,
 
 	switch ( queue_type )
 	{
-	case QueueType::eGraphics:
+	case QueueType::GRAPHICS:
 	{
 		if ( access_flags & ( VK_ACCESS_INDEX_READ_BIT |
 		                      VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT ) )
@@ -336,7 +332,7 @@ determine_pipeline_stage_flags( VkAccessFlags access_flags,
 		}
 		break;
 	}
-	case QueueType::eCompute:
+	case QueueType::COMPUTE:
 	{
 	}
 	default:
@@ -377,28 +373,28 @@ determine_pipeline_stage_flags( VkAccessFlags access_flags,
 static inline VkImageLayout
 determine_image_layout( ResourceState resource_state )
 {
-	if ( b32( resource_state & ResourceState::eGeneral ) )
+	if ( b32( resource_state & ResourceState::GENERAL ) )
 		return VK_IMAGE_LAYOUT_GENERAL;
 
-	if ( b32( resource_state & ResourceState::eColorAttachment ) )
+	if ( b32( resource_state & ResourceState::COLOR_ATTACHMENT ) )
 		return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-	if ( b32( resource_state & ResourceState::eDepthStencilWrite ) )
+	if ( b32( resource_state & ResourceState::DEPTH_STENCIL_WRITE ) )
 		return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-	if ( b32( resource_state & ResourceState::eDepthStencilReadOnly ) )
+	if ( b32( resource_state & ResourceState::DEPTH_STENCIL_READ_ONLY ) )
 		return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
-	if ( b32( resource_state & ResourceState::eShaderReadOnly ) )
+	if ( b32( resource_state & ResourceState::SHADER_READ_ONLY ) )
 		return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-	if ( b32( resource_state & ResourceState::ePresent ) )
+	if ( b32( resource_state & ResourceState::PRESENT ) )
 		return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-	if ( b32( resource_state & ResourceState::eTransferSrc ) )
+	if ( b32( resource_state & ResourceState::TRANSFER_SRC ) )
 		return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
-	if ( b32( resource_state & ResourceState::eTransferDst ) )
+	if ( b32( resource_state & ResourceState::TRANSFER_DST ) )
 		return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
 	return VK_IMAGE_LAYOUT_UNDEFINED;
@@ -409,11 +405,11 @@ determine_vma_memory_usage( MemoryUsage usage )
 {
 	switch ( usage )
 	{
-	case MemoryUsage::eCpuOnly: return VMA_MEMORY_USAGE_CPU_ONLY;
-	case MemoryUsage::eGpuOnly: return VMA_MEMORY_USAGE_GPU_ONLY;
-	case MemoryUsage::eCpuCopy: return VMA_MEMORY_USAGE_CPU_COPY;
-	case MemoryUsage::eCpuToGpu: return VMA_MEMORY_USAGE_CPU_TO_GPU;
-	case MemoryUsage::eGpuToCpu: return VMA_MEMORY_USAGE_GPU_TO_CPU;
+	case MemoryUsage::CPU_ONLY: return VMA_MEMORY_USAGE_CPU_ONLY;
+	case MemoryUsage::GPU_ONLY: return VMA_MEMORY_USAGE_GPU_ONLY;
+	case MemoryUsage::CPU_COPY: return VMA_MEMORY_USAGE_CPU_COPY;
+	case MemoryUsage::CPU_TO_GPU: return VMA_MEMORY_USAGE_CPU_TO_GPU;
+	case MemoryUsage::GPU_TO_CPU: return VMA_MEMORY_USAGE_GPU_TO_CPU;
 	default: break;
 	}
 	FT_ASSERT( false );
@@ -427,37 +423,37 @@ determine_vk_buffer_usage( DescriptorType descriptor_type,
 	// TODO: determine buffer usage flags
 	VkBufferUsageFlags buffer_usage = VkBufferUsageFlags( 0 );
 
-	if ( memory_usage == MemoryUsage::eCpuToGpu ||
-	     memory_usage == MemoryUsage::eCpuOnly )
+	if ( memory_usage == MemoryUsage::CPU_TO_GPU ||
+	     memory_usage == MemoryUsage::CPU_ONLY )
 	{
 		buffer_usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 	}
 
-	if ( b32( descriptor_type & DescriptorType::eVertexBuffer ) )
+	if ( b32( descriptor_type & DescriptorType::VERTEX_BUFFER ) )
 	{
 		buffer_usage |= ( VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
 		                  VK_BUFFER_USAGE_TRANSFER_DST_BIT );
 	}
 
-	if ( b32( descriptor_type & DescriptorType::eIndexBuffer ) )
+	if ( b32( descriptor_type & DescriptorType::INDEX_BUFFER ) )
 	{
 		buffer_usage |= ( VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
 		                  VK_BUFFER_USAGE_TRANSFER_DST_BIT );
 	}
 
-	if ( b32( descriptor_type & DescriptorType::eUniformBuffer ) )
+	if ( b32( descriptor_type & DescriptorType::UNIFORM_BUFFER ) )
 	{
 		buffer_usage |= ( VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
 		                  VK_BUFFER_USAGE_TRANSFER_DST_BIT );
 	}
 
-	if ( b32( descriptor_type & DescriptorType::eIndirectBuffer ) )
+	if ( b32( descriptor_type & DescriptorType::INDIRECT_BUFFER ) )
 	{
 		buffer_usage |= ( VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT |
 		                  VK_BUFFER_USAGE_TRANSFER_DST_BIT );
 	}
 
-	if ( b32( descriptor_type & DescriptorType::eStorageBuffer ) )
+	if ( b32( descriptor_type & DescriptorType::STORAGE_BUFFER ) )
 	{
 		buffer_usage |= ( VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
 		                  VK_BUFFER_USAGE_TRANSFER_DST_BIT );
@@ -471,35 +467,35 @@ determine_vk_image_usage( DescriptorType descriptor_type )
 {
 	VkImageUsageFlags image_usage = VkImageUsageFlags( 0 );
 
-	if ( b32( descriptor_type & DescriptorType::eSampledImage ) )
+	if ( b32( descriptor_type & DescriptorType::SAMPLED_IMAGE ) )
 	{
 		image_usage |= VK_IMAGE_USAGE_SAMPLED_BIT |
 		               VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
 		               VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	}
 
-	if ( b32( descriptor_type & DescriptorType::eStorageImage ) )
+	if ( b32( descriptor_type & DescriptorType::STORAGE_IMAGE ) )
 	{
 		image_usage |=
 		    VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	}
 
-	if ( b32( descriptor_type & DescriptorType::eInputAttachment ) )
+	if ( b32( descriptor_type & DescriptorType::INPUT_ATTACHMENT ) )
 	{
 		image_usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
 	}
 
-	if ( b32( descriptor_type & DescriptorType::eColorAttachment ) )
+	if ( b32( descriptor_type & DescriptorType::COLOR_ATTACHMENT ) )
 	{
 		image_usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	}
 
-	if ( b32( descriptor_type & DescriptorType::eDepthStencilAttachment ) )
+	if ( b32( descriptor_type & DescriptorType::DEPTH_STENCIL_ATTACHMENT ) )
 	{
 		image_usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	}
 
-	if ( b32( descriptor_type & DescriptorType::eTransientAttachment ) )
+	if ( b32( descriptor_type & DescriptorType::TRANSIENT_ATTACHMENT ) )
 	{
 		image_usage |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
 	}
@@ -516,20 +512,20 @@ vulkan_debug_callback(
 {
 	if ( messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT )
 	{
-		FT_TRACE( "[ vulkan validation layer ] %s", pCallbackData->pMessage );
+		FT_TRACE( "%s", pCallbackData->pMessage );
 	}
 	else if ( messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT )
 	{
-		FT_INFO( "[ vulkan validation layer ] %s", pCallbackData->pMessage );
+		FT_INFO( "%s", pCallbackData->pMessage );
 	}
 	else if ( messageSeverity ==
 	          VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT )
 	{
-		FT_WARN( "[ vulkan validation layer ] %s", pCallbackData->pMessage );
+		FT_WARN( "%s", pCallbackData->pMessage );
 	}
 	else if ( messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT )
 	{
-		FT_ERROR( "[ vulkan validation layer ] %s", pCallbackData->pMessage );
+		FT_ERROR( "%s", pCallbackData->pMessage );
 	}
 
 	return VK_FALSE;
@@ -764,7 +760,7 @@ vk_create_device( const RendererBackend* ibackend,
 
 	u32 queue_create_info_count = 0;
 	VkDeviceQueueCreateInfo
-	    queue_create_infos[ static_cast<int>( QueueType::eLast ) ];
+	    queue_create_infos[ static_cast<int>( QueueType::COUNT ) ];
 	f32 queue_priority = 1.0f;
 
 	// TODO: Select queues
@@ -781,7 +777,7 @@ vk_create_device( const RendererBackend* ibackend,
 		queue_create_infos[ queue_create_info_count ].queueFamilyIndex = i;
 		queue_create_info_count++;
 
-		if ( queue_create_info_count == static_cast<i32>( QueueType::eLast ) )
+		if ( queue_create_info_count == static_cast<i32>( QueueType::COUNT ) )
 			break;
 	}
 
@@ -1391,10 +1387,10 @@ create_configured_swapchain( const VulkanDevice* device,
 		image->interface.width           = swapchain->interface.width;
 		image->interface.height          = swapchain->interface.height;
 		image->interface.format          = swapchain->interface.format;
-		image->interface.sample_count    = SampleCount::e1;
+		image->interface.sample_count    = SampleCount::E1;
 		image->interface.mip_level_count = 1;
 		image->interface.layer_count     = 1;
-		image->interface.descriptor_type = DescriptorType::eSampledImage;
+		image->interface.descriptor_type = DescriptorType::SAMPLED_IMAGE;
 
 		VK_ASSERT( vkCreateImageView( device->logical_device,
 		                              &image_view_create_info,
@@ -1857,18 +1853,18 @@ vk_create_shader( const Device* idevice, ShaderInfo* info, Shader** p )
 		}
 	};
 
-	create_module( device, shader, ShaderStage::eCompute, info->compute );
-	create_module( device, shader, ShaderStage::eVertex, info->vertex );
+	create_module( device, shader, ShaderStage::COMPUTE, info->compute );
+	create_module( device, shader, ShaderStage::VERTEX, info->vertex );
 	create_module( device,
 	               shader,
-	               ShaderStage::eTessellationControl,
+	               ShaderStage::TESSELLATION_CONTROL,
 	               info->tessellation_control );
 	create_module( device,
 	               shader,
-	               ShaderStage::eTessellationEvaluation,
+	               ShaderStage::TESSELLATION_EVALUATION,
 	               info->tessellation_evaluation );
-	create_module( device, shader, ShaderStage::eGeometry, info->geometry );
-	create_module( device, shader, ShaderStage::eFragment, info->fragment );
+	create_module( device, shader, ShaderStage::GEOMETRY, info->geometry );
+	create_module( device, shader, ShaderStage::FRAGMENT, info->fragment );
 
 	spirv_reflect( idevice, info, &shader->interface );
 }
@@ -1893,12 +1889,12 @@ vk_destroy_shader( const Device* idevice, Shader* ishader )
 		}
 	};
 
-	destroy_module( device, ShaderStage::eCompute, shader );
-	destroy_module( device, ShaderStage::eVertex, shader );
-	destroy_module( device, ShaderStage::eTessellationControl, shader );
-	destroy_module( device, ShaderStage::eTessellationEvaluation, shader );
-	destroy_module( device, ShaderStage::eGeometry, shader );
-	destroy_module( device, ShaderStage::eFragment, shader );
+	destroy_module( device, ShaderStage::COMPUTE, shader );
+	destroy_module( device, ShaderStage::VERTEX, shader );
+	destroy_module( device, ShaderStage::TESSELLATION_CONTROL, shader );
+	destroy_module( device, ShaderStage::TESSELLATION_EVALUATION, shader );
+	destroy_module( device, ShaderStage::GEOMETRY, shader );
+	destroy_module( device, ShaderStage::FRAGMENT, shader );
 
 	shader->interface.reflect_data.bindings.~vector();
 	shader->interface.reflect_data.binding_map.~unordered_map();
@@ -2041,7 +2037,7 @@ vk_create_compute_pipeline( const Device*       idevice,
 
 	FT_INIT_INTERNAL( pipeline, *p, VulkanPipeline );
 
-	pipeline->interface.type = PipelineType::eCompute;
+	pipeline->interface.type = PipelineType::COMPUTE;
 
 	VkPipelineShaderStageCreateInfo shader_stage_create_info;
 	shader_stage_create_info.sType =
@@ -2050,7 +2046,7 @@ vk_create_compute_pipeline( const Device*       idevice,
 	shader_stage_create_info.flags = 0;
 	shader_stage_create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
 	shader_stage_create_info.module =
-	    shader->shaders[ static_cast<u32>( ShaderStage::eCompute ) ];
+	    shader->shaders[ static_cast<u32>( ShaderStage::COMPUTE ) ];
 	shader_stage_create_info.pName               = "main";
 	shader_stage_create_info.pSpecializationInfo = nullptr;
 
@@ -2108,13 +2104,13 @@ vk_create_graphics_pipeline( const Device*       idevice,
 
 	FT_INIT_INTERNAL( pipeline, *p, VulkanPipeline );
 
-	pipeline->interface.type = PipelineType::eGraphics;
+	pipeline->interface.type = PipelineType::GRAPHICS;
 
 	u32 shader_stage_count = 0;
 	VkPipelineShaderStageCreateInfo
-	    shader_stage_create_infos[ static_cast<u32>( ShaderStage::eCount ) ];
+	    shader_stage_create_infos[ static_cast<u32>( ShaderStage::COUNT ) ];
 
-	for ( u32 i = 0; i < static_cast<u32>( ShaderStage::eCount ); ++i )
+	for ( u32 i = 0; i < static_cast<u32>( ShaderStage::COUNT ); ++i )
 	{
 		if ( shader->shaders[ i ] == VK_NULL_HANDLE )
 		{
@@ -3167,7 +3163,7 @@ vk_cmd_copy_buffer_to_image( const CommandBuffer* icmd,
 	    cmd->command_buffer,
 	    src->buffer,
 	    dst->image,
-	    determine_image_layout( ResourceState::eTransferDst ),
+	    determine_image_layout( ResourceState::TRANSFER_DST ),
 	    1,
 	    &buffer_to_image_copy_info );
 }
@@ -3226,20 +3222,20 @@ vk_cmd_blit_image( const CommandBuffer* icmd,
 	barriers[ 0 ].dst_queue    = cmd->interface.queue;
 	barriers[ 0 ].image        = &src->interface;
 	barriers[ 0 ].old_state    = src_state;
-	barriers[ 0 ].new_state    = ResourceState::eTransferSrc;
+	barriers[ 0 ].new_state    = ResourceState::TRANSFER_SRC;
 
 	barriers[ 1 ].src_queue = cmd->interface.queue;
 	barriers[ 1 ].dst_queue = cmd->interface.queue;
 	barriers[ 1 ].image     = &dst->interface;
 	barriers[ 1 ].old_state = dst_state;
-	barriers[ 1 ].new_state = ResourceState::eTransferDst;
+	barriers[ 1 ].new_state = ResourceState::TRANSFER_DST;
 
-	if ( src_state != ResourceState::eTransferSrc )
+	if ( src_state != ResourceState::TRANSFER_SRC )
 	{
 		barrier_count++;
 	}
 
-	if ( dst_state != ResourceState::eTransferDst )
+	if ( dst_state != ResourceState::TRANSFER_DST )
 	{
 		if ( barrier_count == 0 )
 		{

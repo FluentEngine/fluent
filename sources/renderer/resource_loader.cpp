@@ -12,8 +12,8 @@ b32                           ResourceLoader::m_is_recording = false;
 static b32
 need_staging( Buffer* buffer )
 {
-	return !( buffer->memory_usage == MemoryUsage::eCpuOnly ||
-	          buffer->memory_usage == MemoryUsage::eCpuToGpu );
+	return !( buffer->memory_usage == MemoryUsage::CPU_ONLY ||
+	          buffer->memory_usage == MemoryUsage::CPU_TO_GPU );
 }
 
 void
@@ -22,7 +22,7 @@ ResourceLoader::init( const Device* device, u64 staging_buffer_size )
 	m_device = device;
 
 	QueueInfo queue_info {};
-	queue_info.queue_type = QueueType::eGraphics;
+	queue_info.queue_type = QueueType::GRAPHICS;
 	create_queue( m_device, &queue_info, &m_queue );
 
 	CommandPoolInfo cmd_pool_info {};
@@ -32,7 +32,7 @@ ResourceLoader::init( const Device* device, u64 staging_buffer_size )
 	create_command_buffers( m_device, m_command_pool, 1, &m_cmd );
 
 	BufferInfo staging_buffer_info {};
-	staging_buffer_info.memory_usage = MemoryUsage::eCpuToGpu;
+	staging_buffer_info.memory_usage = MemoryUsage::CPU_TO_GPU;
 	staging_buffer_info.size         = staging_buffer_size;
 	m_staging_buffer.offset          = 0;
 	create_buffer( m_device, &staging_buffer_info, &m_staging_buffer.buffer );
@@ -143,15 +143,15 @@ ResourceLoader::upload_image( Image* image, u64 size, const void* data )
 	barrier.image     = image;
 	barrier.src_queue = m_queue;
 	barrier.dst_queue = m_queue;
-	barrier.old_state = ResourceState::eUndefined;
-	barrier.new_state = ResourceState::eTransferDst;
+	barrier.old_state = ResourceState::UNDEFINED;
+	barrier.new_state = ResourceState::TRANSFER_DST;
 	cmd_barrier( m_cmd, 0, nullptr, 0, nullptr, 1, &barrier );
 	cmd_copy_buffer_to_image( m_cmd,
 	                          m_staging_buffer.buffer,
 	                          m_staging_buffer.offset,
 	                          image );
-	barrier.old_state = ResourceState::eTransferDst;
-	barrier.new_state = ResourceState::eShaderReadOnly;
+	barrier.old_state = ResourceState::TRANSFER_DST;
+	barrier.new_state = ResourceState::SHADER_READ_ONLY;
 	cmd_barrier( m_cmd, 0, nullptr, 0, nullptr, 1, &barrier );
 
 	m_staging_buffer.offset += size;

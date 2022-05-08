@@ -12,12 +12,12 @@ to_descriptor_type( D3D_SHADER_INPUT_TYPE shader_input_type )
 {
 	switch ( shader_input_type )
 	{
-	case D3D_SIT_SAMPLER: return DescriptorType::eSampler;
-	case D3D_SIT_TEXTURE: return DescriptorType::eSampledImage;
-	case D3D_SIT_UAV_RWTYPED: return DescriptorType::eStorageImage;
-	case D3D_SIT_TBUFFER: return DescriptorType::eUniformTexelBuffer;
-	case D3D_SIT_CBUFFER: return DescriptorType::eUniformBuffer;
-	case D3D_SIT_UAV_RWBYTEADDRESS: return DescriptorType::eStorageBuffer;
+	case D3D_SIT_SAMPLER: return DescriptorType::SAMPLER;
+	case D3D_SIT_TEXTURE: return DescriptorType::SAMPLED_IMAGE;
+	case D3D_SIT_UAV_RWTYPED: return DescriptorType::STORAGE_IMAGE;
+	case D3D_SIT_TBUFFER: return DescriptorType::UNIFORM_TEXEL_BUFFER;
+	case D3D_SIT_CBUFFER: return DescriptorType::UNIFORM_BUFFER;
+	case D3D_SIT_UAV_RWBYTEADDRESS: return DescriptorType::STORAGE_BUFFER;
 	default: FT_ASSERT( false ); return DescriptorType( -1 );
 	}
 }
@@ -85,21 +85,21 @@ dxil_reflect( const Device* device, const ShaderInfo* info, Shader* shader )
 {
 	if ( info->vertex.bytecode )
 	{
-		shader->reflect_data[ static_cast<u32>( ShaderStage::eVertex ) ] =
+		shader->reflect_data[ static_cast<u32>( ShaderStage::VERTEX ) ] =
 		    dxil_reflect_stage( info->vertex.bytecode_size,
 		                        info->vertex.bytecode );
 	}
 
 	if ( info->fragment.bytecode )
 	{
-		shader->reflect_data[ static_cast<u32>( ShaderStage::eFragment ) ] =
+		shader->reflect_data[ static_cast<u32>( ShaderStage::FRAGMENT ) ] =
 		    dxil_reflect_stage( info->fragment.bytecode_size,
 		                        info->fragment.bytecode );
 	}
 
 	if ( info->compute.bytecode )
 	{
-		shader->reflect_data[ static_cast<u32>( ShaderStage::eCompute ) ] =
+		shader->reflect_data[ static_cast<u32>( ShaderStage::COMPUTE ) ] =
 		    dxil_reflect_stage( info->compute.bytecode_size,
 		                        info->compute.bytecode );
 	}
@@ -107,7 +107,7 @@ dxil_reflect( const Device* device, const ShaderInfo* info, Shader* shader )
 	if ( info->tessellation_control.bytecode )
 	{
 		shader->reflect_data[ static_cast<u32>(
-		    ShaderStage::eTessellationControl ) ] =
+		    ShaderStage::TESSELLATION_CONTROL ) ] =
 		    dxil_reflect_stage( info->tessellation_control.bytecode_size,
 		                        info->tessellation_control.bytecode );
 	}
@@ -115,14 +115,14 @@ dxil_reflect( const Device* device, const ShaderInfo* info, Shader* shader )
 	if ( info->tessellation_evaluation.bytecode )
 	{
 		shader->reflect_data[ static_cast<u32>(
-		    ShaderStage::eTessellationEvaluation ) ] =
+		    ShaderStage::TESSELLATION_EVALUATION ) ] =
 		    dxil_reflect_stage( info->tessellation_evaluation.bytecode_size,
 		                        info->tessellation_evaluation.bytecode );
 	}
 
 	if ( info->geometry.bytecode )
 	{
-		shader->reflect_data[ static_cast<u32>( ShaderStage::eGeometry ) ] =
+		shader->reflect_data[ static_cast<u32>( ShaderStage::GEOMETRY ) ] =
 		    dxil_reflect_stage( info->geometry.bytecode_size,
 		                        info->geometry.bytecode );
 	}

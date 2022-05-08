@@ -98,7 +98,7 @@ struct VulkanRenderPass
 
 struct VulkanShader
 {
-	VkShaderModule shaders[ static_cast<u32>( ShaderStage::eCount ) ];
+	VkShaderModule shaders[ static_cast<u32>( ShaderStage::COUNT ) ];
 	Shader         interface;
 };
 

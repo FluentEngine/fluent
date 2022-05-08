@@ -10,9 +10,9 @@ to_descriptor_type( MTLArgumentType type )
 {
     switch ( type )
     {
-    case MTLArgumentTypeBuffer: return DescriptorType::eUniformBuffer;
-    case MTLArgumentTypeSampler: return DescriptorType::eSampler;
-    case MTLArgumentTypeTexture: return DescriptorType::eSampledImage;
+    case MTLArgumentTypeBuffer: return DescriptorType::UNIFORM_BUFFER;
+    case MTLArgumentTypeSampler: return DescriptorType::SAMPLER;
+    case MTLArgumentTypeTexture: return DescriptorType::SAMPLED_IMAGE;
     default: FT_ASSERT( false ); return DescriptorType( -1 );
     }
 }
@@ -42,9 +42,9 @@ mtl_reflect( const Device* idevice, const ShaderInfo* info, Shader* ishader )
             [MTLRenderPipelineDescriptor new];
         descriptor.vertexDescriptor = vertex_descriptor;
         descriptor.vertexFunction =
-            shader->shaders[ static_cast<u32>( ShaderStage::eVertex ) ];
+            shader->shaders[ static_cast<u32>( ShaderStage::VERTEX ) ];
         descriptor.fragmentFunction =
-            shader->shaders[ static_cast<u32>( ShaderStage::eFragment ) ];
+            shader->shaders[ static_cast<u32>( ShaderStage::FRAGMENT ) ];
         descriptor.colorAttachments[ 0 ].pixelFormat = MTLPixelFormatRGBA8Unorm;
 
         id pipeline_state = [device->device
@@ -67,7 +67,7 @@ mtl_reflect( const Device* idevice, const ShaderInfo* info, Shader* ishader )
                 binding.descriptor_type  = to_descriptor_type( arg.type );
                 binding.binding          = static_cast<u32>( arg.index );
                 binding.set              = 0;
-                binding.stage            = ShaderStage::eVertex;
+                binding.stage            = ShaderStage::VERTEX;
 
                 binding_map[ [arg.name UTF8String] ] = binding_count;
                 binding_count++;
@@ -81,7 +81,7 @@ mtl_reflect( const Device* idevice, const ShaderInfo* info, Shader* ishader )
             binding.descriptor_type  = to_descriptor_type( arg.type );
             binding.binding          = static_cast<u32>( arg.index );
             binding.set              = 0;
-            binding.stage            = ShaderStage::eFragment;
+            binding.stage            = ShaderStage::FRAGMENT;
 
             binding_map[ [arg.name UTF8String] ] = binding_count;
             binding_count++;

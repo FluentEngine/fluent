@@ -101,17 +101,17 @@ struct Fence
 
 struct SamplerInfo
 {
-	Filter             mag_filter     = Filter::eNearest;
-	Filter             min_filter     = Filter::eNearest;
-	SamplerMipmapMode  mipmap_mode    = SamplerMipmapMode::eNearest;
-	SamplerAddressMode address_mode_u = SamplerAddressMode::eRepeat;
-	SamplerAddressMode address_mode_v = SamplerAddressMode::eRepeat;
-	SamplerAddressMode address_mode_w = SamplerAddressMode::eRepeat;
+	Filter             mag_filter;
+	Filter             min_filter;
+	SamplerMipmapMode  mipmap_mode;
+	SamplerAddressMode address_mode_u;
+	SamplerAddressMode address_mode_v;
+	SamplerAddressMode address_mode_w;
 	f32                mip_lod_bias;
 	bool               anisotropy_enable;
 	f32                max_anisotropy;
 	b32                compare_enable;
-	CompareOp          compare_op = CompareOp::eNever;
+	CompareOp          compare_op;
 	f32                min_lod;
 	f32                max_lod;
 };
@@ -150,7 +150,7 @@ struct BufferInfo
 {
 	u64            size = 0;
 	DescriptorType descriptor_type;
-	MemoryUsage    memory_usage = MemoryUsage::eGpuOnly;
+	MemoryUsage    memory_usage;
 };
 
 struct Buffer
@@ -159,7 +159,7 @@ struct Buffer
 	ResourceState  resource_state;
 	DescriptorType descriptor_type;
 	MemoryUsage    memory_usage;
-	void*          mapped_memory = nullptr;
+	void*          mapped_memory;
 	Handle         handle;
 };
 
@@ -321,7 +321,7 @@ struct RasterizerStateInfo
 {
 	CullMode    cull_mode;
 	FrontFace   front_face;
-	PolygonMode polygon_mode = PolygonMode::eFill;
+	PolygonMode polygon_mode;
 };
 
 struct DepthStateInfo
@@ -335,7 +335,7 @@ struct PipelineInfo
 {
 	VertexLayout         vertex_layout;
 	RasterizerStateInfo  rasterizer_info;
-	PrimitiveTopology    topology = PrimitiveTopology::eTriangleList;
+	PrimitiveTopology    topology;
 	DepthStateInfo       depth_state_info;
 	Shader*              shader;
 	DescriptorSetLayout* descriptor_set_layout;
@@ -411,12 +411,12 @@ format_has_depth_aspect( Format format )
 {
 	switch ( format )
 	{
-	case Format::eD16Unorm:
-	case Format::eD16UnormS8Uint:
-	case Format::eD24UnormS8Uint:
-	case Format::eD32Sfloat:
-	case Format::eX8D24Unorm:
-	case Format::eD32SfloatS8Uint: return true;
+	case Format::D16_UNORM:
+	case Format::D16_UNORMS8_UINT:
+	case Format::D24_UNORMS8_UINT:
+	case Format::D32_SFLOAT:
+	case Format::X8D24_UNORM:
+	case Format::D32_SFLOATS8_UINT: return true;
 	default: return false;
 	}
 }
@@ -426,10 +426,10 @@ format_has_stencil_aspect( Format format )
 {
 	switch ( format )
 	{
-	case Format::eD16UnormS8Uint:
-	case Format::eD24UnormS8Uint:
-	case Format::eD32SfloatS8Uint:
-	case Format::eS8Uint: return true;
+	case Format::D16_UNORMS8_UINT:
+	case Format::D24_UNORMS8_UINT:
+	case Format::D32_SFLOATS8_UINT:
+	case Format::S8_UINT: return true;
 	default: return false;
 	}
 }

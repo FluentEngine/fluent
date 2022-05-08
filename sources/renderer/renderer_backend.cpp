@@ -85,21 +85,21 @@ create_renderer_backend( const RendererBackendInfo* info,
 {
 	switch ( info->api )
 	{
-	case RendererAPI::eVulkan:
+	case RendererAPI::VULKAN:
 	{
 #ifdef VULKAN_BACKEND
 		vk_create_renderer_backend( info, backend );
 		break;
 #endif
 	}
-	case RendererAPI::eD3D12:
+	case RendererAPI::D3D12:
 	{
 #ifdef D3D12_BACKEND
 		d3d12_create_renderer_backend( info, backend );
 		break;
 #endif
 	}
-	case RendererAPI::eMetal:
+	case RendererAPI::METAL:
 	{
 #ifdef METAL_BACKEND
 		mtl_create_renderer_backend( info, backend );
