@@ -516,20 +516,20 @@ vulkan_debug_callback(
 {
 	if ( messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT )
 	{
-		FT_TRACE( "[ vulkan validation layer ] {}", pCallbackData->pMessage );
+		FT_TRACE( "[ vulkan validation layer ] %s", pCallbackData->pMessage );
 	}
 	else if ( messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT )
 	{
-		FT_INFO( "[ vulkan validation layer ] {}", pCallbackData->pMessage );
+		FT_INFO( "[ vulkan validation layer ] %s", pCallbackData->pMessage );
 	}
 	else if ( messageSeverity ==
 	          VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT )
 	{
-		FT_WARN( "[ vulkan validation layer ] {}", pCallbackData->pMessage );
+		FT_WARN( "[ vulkan validation layer ] %s", pCallbackData->pMessage );
 	}
 	else if ( messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT )
 	{
-		FT_ERROR( "[ vulkan validation layer ] {}", pCallbackData->pMessage );
+		FT_ERROR( "[ vulkan validation layer ] %s", pCallbackData->pMessage );
 	}
 
 	return VK_FALSE;
@@ -1226,7 +1226,7 @@ configure_swapchain( const VulkanDevice*  device,
 		}
 	}
 
-	FT_INFO( "Swapchain present mode: {}",
+	FT_INFO( "Swapchain present mode: %s",
 	         string_VkPresentModeKHR( swapchain->present_mode ) );
 
 	// determine present image count
@@ -1275,9 +1275,9 @@ configure_swapchain( const VulkanDevice*  device,
 	swapchain->interface.format = from_vk_format( surface_format.format );
 	swapchain->color_space      = surface_format.colorSpace;
 
-	FT_INFO( "Swapchain surface format: {}",
+	FT_INFO( "Swapchain surface format: %s",
 	         string_VkFormat( surface_format.format ) );
-	FT_INFO( "Swapchain color space: {}",
+	FT_INFO( "Swapchain color space: %s",
 	         string_VkColorSpaceKHR( surface_format.colorSpace ) );
 
 	/// fins swapchain pretransform

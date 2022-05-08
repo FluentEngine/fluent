@@ -1,6 +1,0 @@
-[wrap-git]
-url = git@github.com:FluentEngine/spdlog.git
-revision = master
-
-[provide]
-spdlog = spdlog_dep

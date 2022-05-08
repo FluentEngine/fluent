@@ -30,6 +30,20 @@ struct ApplicationState
 
 static ApplicationState app_state;
 
+static inline logger_LogLevel
+to_logger_log_level( LogLevel level )
+{
+	switch ( level )
+	{
+	case LogLevel::eTrace: return LogLevel_TRACE;
+	case LogLevel::eDebug: return LogLevel_DEBUG;
+	case LogLevel::eInfo: return LogLevel_INFO;
+	case LogLevel::eWarn: return LogLevel_WARN;
+	case LogLevel::eError: return LogLevel_ERROR;
+	default: return logger_LogLevel( 0 );
+	}
+}
+
 void
 app_init( const ApplicationConfig* config )
 {
@@ -46,8 +60,11 @@ app_init( const ApplicationConfig* config )
 	app_state.on_shutdown    = config->on_shutdown;
 	app_state.on_resize      = config->on_resize;
 	app_state.imgui_callback = []( const SDL_Event* ) -> bool { return false; };
-	spdlog::set_level( to_spdlog_level( config->log_level ) );
 
+	int result = logger_initConsoleLogger( nullptr );
+	FT_ASSERT( result );
+	logger_autoFlush( 1000 );
+	logger_setLevel( to_logger_log_level( config->log_level ) );
 	init_input_system( &app_state.window );
 
 	fs::init( config->argv );
@@ -154,6 +171,7 @@ void
 app_shutdown()
 {
 	FT_ASSERT( app_state.is_inited );
+	logger_flush();
 	fluent::destroy_window( app_state.window );
 }
 

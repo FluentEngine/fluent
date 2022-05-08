@@ -86,19 +86,19 @@ if renderer_backend_d3d12
 endif
 
 sdl2 = subproject('sdl2')
-spdlog = subproject('spdlog')
 glm = subproject('glm')
 imgui = subproject('imgui')
+subdir('third_party/c-logger')
 subdir('third_party/tiny_image_format')
 subdir('third_party/tinyddsloader')
 subdir('third_party/stb_image')
 
-deps += [ 
+deps += [
+    c_logger_dep,
     tinyimageformat_dep,
     tinyddsloader_dep,
     stb_image_dep,
     sdl2.get_variable('sdl2_dep'),
-    spdlog.get_variable('spdlog_dep'),
     glm.get_variable('glm_dep'),
     imgui.get_variable('imgui_dep')
 ]
@@ -106,7 +106,6 @@ deps += [
 src_dir = 'sources'
 core = files([
     src_dir/'core/log.hpp', 
-    src_dir/'core/log.cpp', 
     src_dir/'core/window.hpp', 
     src_dir/'core/window.cpp', 
     src_dir/'core/input.hpp', 

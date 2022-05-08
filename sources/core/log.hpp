@@ -1,32 +1,31 @@
 #pragma once
 
-#include <spdlog/spdlog.h>
+#include <logger.h>
 
 #ifdef FLUENT_DEBUG
-#define FT_TRACE( ... ) spdlog::trace( __VA_ARGS__ )
-#define FT_INFO( ... )  spdlog::info( __VA_ARGS__ )
-#define FT_WARN( ... )  spdlog::warn( __VA_ARGS__ )
-#define FT_ERROR( ... ) spdlog::error( __VA_ARGS__ )
+#define FT_TRACE( fmt, ... )                                                   \
+	logger_log( LogLevel_TRACE, __FILENAME__, __LINE__, fmt, ##__VA_ARGS__ )
+#define FT_INFO( fmt, ... )                                                    \
+	logger_log( LogLevel_INFO, __FILENAME__, __LINE__, fmt, ##__VA_ARGS__ )
+#define FT_WARN( fmt, ... )                                                    \
+	logger_log( LogLevel_WARN, __FILENAME__, __LINE__, fmt, ##__VA_ARGS__ )
+#define FT_ERROR( fmt, ... )                                                   \
+	logger_log( LogLevel_ERROR, __FILENAME__, __LINE__, fmt, ##__VA_ARGS__ )
 #else
-#define FT_TRACE( ... )
-#define FT_INFO( ... )
-#define FT_WARN( ... )
-#define FT_ERROR( ... )
+#define FT_TRACE( fmt, ... )
+#define FT_INFO( fmt, ... )
+#define FT_WARN( fmt, ... )
+#define FT_ERROR( fmt, ... )
 #endif
 
 namespace fluent
 {
 enum class LogLevel
 {
-	eOff,
 	eTrace,
 	eDebug,
 	eInfo,
 	eWarn,
 	eError
 };
-
-spdlog::level::level_enum
-to_spdlog_level( LogLevel log_level );
-
 } // namespace fluent
