@@ -88,7 +88,7 @@ endif
 sdl2 = subproject('sdl2')
 spdlog = subproject('spdlog')
 glm = subproject('glm')
-imgui = subproject('imgui', default_options : 'vulkan_include_directory=' + vulkan_include_directory)
+imgui = subproject('imgui')
 subdir('third_party/tiny_image_format')
 subdir('third_party/tinyddsloader')
 subdir('third_party/stb_image')

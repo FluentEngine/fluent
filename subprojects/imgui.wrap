@@ -1,6 +1,6 @@
 [wrap-git]
 url = git@github.com:FluentEngine/imgui.git
-revision = docking
+revision = master
 
 [provide]
 imgui = imgui_dep

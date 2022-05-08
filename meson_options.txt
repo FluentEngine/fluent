@@ -1,5 +1,5 @@
 # fluent-engine
-option('vulkan_include_directory', type: 'string', value : '/usr/include')
+option('vulkan_include_directory', type: 'string', value : '/usr/include', yield : true)
 option('fluent_vulkan_backend', type: 'feature', value : 'auto')
 option('fluent_d3d12_backend', type: 'feature', value : 'auto')
 option('fluent_metal_backend', type: 'feature', value : 'auto')
