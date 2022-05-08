@@ -35,11 +35,11 @@ to_logger_log_level( LogLevel level )
 {
 	switch ( level )
 	{
-	case LogLevel::eTrace: return LogLevel_TRACE;
-	case LogLevel::eDebug: return LogLevel_DEBUG;
-	case LogLevel::eInfo: return LogLevel_INFO;
-	case LogLevel::eWarn: return LogLevel_WARN;
-	case LogLevel::eError: return LogLevel_ERROR;
+	case LogLevel::TRACE: return LogLevel_TRACE;
+	case LogLevel::DEBUG: return LogLevel_DEBUG;
+	case LogLevel::INFO: return LogLevel_INFO;
+	case LogLevel::WARN: return LogLevel_WARN;
+	case LogLevel::ERROR: return LogLevel_ERROR;
 	default: return logger_LogLevel( 0 );
 	}
 }

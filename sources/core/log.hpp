@@ -18,10 +18,10 @@ namespace fluent
 {
 enum class LogLevel
 {
-	eTrace,
-	eDebug,
-	eInfo,
-	eWarn,
-	eError
+	TRACE,
+	DEBUG,
+	INFO,
+	WARN,
+	ERROR
 };
 } // namespace fluent
