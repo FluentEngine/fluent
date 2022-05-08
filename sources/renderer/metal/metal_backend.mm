@@ -83,48 +83,48 @@ to_mtl_vertex_format( Format format )
 {
 	switch ( format )
 	{
-	case Format::eR8G8Unorm: return MTLVertexFormatUChar2Normalized;
-	case Format::eR8G8B8Unorm: return MTLVertexFormatUChar3Normalized;
-	case Format::eR8G8B8A8Unorm: return MTLVertexFormatUChar4Normalized;
+	case Format::R8G8_UNORM: return MTLVertexFormatUChar2Normalized;
+	case Format::R8G8B8_UNORM: return MTLVertexFormatUChar3Normalized;
+	case Format::R8G8B8A8_UNORM: return MTLVertexFormatUChar4Normalized;
 
-	case Format::eR8G8Snorm: return MTLVertexFormatChar2Normalized;
-	case Format::eR8G8B8Snorm: return MTLVertexFormatChar3Normalized;
-	case Format::eR8G8B8A8Snorm: return MTLVertexFormatChar4Normalized;
+	case Format::R8G8_SNORM: return MTLVertexFormatChar2Normalized;
+	case Format::R8G8B8_SNORM: return MTLVertexFormatChar3Normalized;
+	case Format::R8G8B8A8_SNORM: return MTLVertexFormatChar4Normalized;
 
-	case Format::eR16G16Unorm: return MTLVertexFormatUShort2Normalized;
-	case Format::eR16G16B16Unorm: return MTLVertexFormatUShort3Normalized;
-	case Format::eR16G16B16A16Unorm: return MTLVertexFormatUShort4Normalized;
+	case Format::R16G16_UNORM: return MTLVertexFormatUShort2Normalized;
+	case Format::R16G16B16_UNORM: return MTLVertexFormatUShort3Normalized;
+	case Format::R16G16B16A16_UNORM: return MTLVertexFormatUShort4Normalized;
 
-	case Format::eR16G16Snorm: return MTLVertexFormatShort2Normalized;
-	case Format::eR16G16B16Snorm: return MTLVertexFormatShort3Normalized;
-	case Format::eR16G16B16A16Snorm: return MTLVertexFormatShort4Normalized;
+	case Format::R16G16_SNORM: return MTLVertexFormatShort2Normalized;
+	case Format::R16G16B16_SNORM: return MTLVertexFormatShort3Normalized;
+	case Format::R16G16B16A16_SNORM: return MTLVertexFormatShort4Normalized;
 
-	case Format::eR16G16Sint: return MTLVertexFormatShort2;
-	case Format::eR16G16B16Sint: return MTLVertexFormatShort3;
-	case Format::eR16G16B16A16Sint: return MTLVertexFormatShort4;
+	case Format::R16G16_SINT: return MTLVertexFormatShort2;
+	case Format::R16G16B16_SINT: return MTLVertexFormatShort3;
+	case Format::R16G16B16A16_SINT: return MTLVertexFormatShort4;
 
-	case Format::eR16G16Uint: return MTLVertexFormatUShort2;
-	case Format::eR16G16B16Uint: return MTLVertexFormatUShort3;
-	case Format::eR16G16B16A16Uint: return MTLVertexFormatUShort4;
+	case Format::R16G16_UINT: return MTLVertexFormatUShort2;
+	case Format::R16G16B16_UINT: return MTLVertexFormatUShort3;
+	case Format::R16G16B16A16_UINT: return MTLVertexFormatUShort4;
 
-	case Format::eR16G16Sfloat: return MTLVertexFormatHalf2;
-	case Format::eR16G16B16Sfloat: return MTLVertexFormatHalf3;
-	case Format::eR16G16B16A16Sfloat: return MTLVertexFormatHalf4;
+	case Format::R16G16_SFLOAT: return MTLVertexFormatHalf2;
+	case Format::R16G16B16_SFLOAT: return MTLVertexFormatHalf3;
+	case Format::R16G16B16A16_SFLOAT: return MTLVertexFormatHalf4;
 
-	case Format::eR32Sfloat: return MTLVertexFormatFloat;
-	case Format::eR32G32Sfloat: return MTLVertexFormatFloat2;
-	case Format::eR32G32B32Sfloat: return MTLVertexFormatFloat3;
-	case Format::eR32G32B32A32Sfloat: return MTLVertexFormatFloat4;
+	case Format::R32_SFLOAT: return MTLVertexFormatFloat;
+	case Format::R32G32_SFLOAT: return MTLVertexFormatFloat2;
+	case Format::R32G32B32_SFLOAT: return MTLVertexFormatFloat3;
+	case Format::R32G32B32A32_SFLOAT: return MTLVertexFormatFloat4;
 
-	case Format::eR32Sint: return MTLVertexFormatInt;
-	case Format::eR32G32Sint: return MTLVertexFormatInt2;
-	case Format::eR32G32B32Sint: return MTLVertexFormatInt3;
-	case Format::eR32G32B32A32Sint: return MTLVertexFormatInt4;
+	case Format::R32_SINT: return MTLVertexFormatInt;
+	case Format::R32G32_SINT: return MTLVertexFormatInt2;
+	case Format::R32G32B32_SINT: return MTLVertexFormatInt3;
+	case Format::R32G32B32A32_SINT: return MTLVertexFormatInt4;
 
-	case Format::eR32Uint: return MTLVertexFormatUInt;
-	case Format::eR32G32Uint: return MTLVertexFormatUInt2;
-	case Format::eR32G32B32Uint: return MTLVertexFormatUInt3;
-	case Format::eR32G32B32A32Uint: return MTLVertexFormatUInt4;
+	case Format::R32_UINT: return MTLVertexFormatUInt;
+	case Format::R32G32_UINT: return MTLVertexFormatUInt2;
+	case Format::R32G32B32_UINT: return MTLVertexFormatUInt3;
+	case Format::R32G32B32A32_UINT: return MTLVertexFormatUInt4;
 	default: FT_ASSERT( false ); return MTLVertexFormatInvalid;
 	}
 }
@@ -202,10 +202,10 @@ to_mtl_primitive_type( PrimitiveTopology topology )
 	{
 	case PrimitiveTopology::POINT_LIST: return MTLPrimitiveTypePoint;
 	case PrimitiveTopology::LINE_LIST: return MTLPrimitiveTypeLine;
-	case PrimitiveTopology::LINE_STRIP: return MTLPrimitiveTypLINE_STRIP;
+	case PrimitiveTopology::LINE_STRIP: return MTLPrimitiveTypeLineStrip;
 	case PrimitiveTopology::TRIANGLE_LIST: return MTLPrimitiveTypeTriangle;
 	case PrimitiveTopology::TRIANGLE_STRIP:
-		return MTLPrimitiveTypTRIANGLE_STRIP;
+		return MTLPrimitiveTypeTriangleStrip;
 	default: FT_ASSERT( false ); return MTLPrimitiveType( -1 );
 	}
 }
@@ -1443,7 +1443,7 @@ mtl_cmd_begin_render_pass( const CommandBuffer*       icmd,
 		}
 
 		cmd->encoder         = [cmd->cmd
-		    renderCommandEncoderWithDescriptor:render_pass->render_pass];
+            renderCommandEncoderWithDescriptor:render_pass->render_pass];
 		cmd->pass_descriptor = render_pass->render_pass;
 	}
 }
@@ -1479,9 +1479,9 @@ mtl_cmd_set_scissor( const CommandBuffer* icmd,
 	FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
 
 	[cmd->encoder setScissorRect:( MTLScissorRect ) { static_cast<u32>( x ),
-		                                              static_cast<u32>( y ),
-		                                              width,
-		                                              height }];
+	                                                  static_cast<u32>( y ),
+	                                                  width,
+	                                                  height }];
 }
 
 void
@@ -1496,11 +1496,11 @@ mtl_cmd_set_viewport( const CommandBuffer* icmd,
 	FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
 
 	[cmd->encoder setViewport:( MTLViewport ) { x,
-		                                        y,
-		                                        width,
-		                                        height,
-		                                        min_depth,
-		                                        max_depth }];
+	                                            y,
+	                                            width,
+	                                            height,
+	                                            min_depth,
+	                                            max_depth }];
 }
 
 void
@@ -1554,8 +1554,8 @@ mtl_cmd_draw_indexed( const CommandBuffer* icmd,
 	                          indexType:cmd->index_type
 	                        indexBuffer:cmd->index_buffer
 	                  indexBufferOffset:first_index
-	                       instancCOUNT:1
-	                          basVERTEX:vertex_offset
+	                      instanceCount:1
+	                         baseVertex:vertex_offset
 	                       baseInstance:first_instance];
 }
 
@@ -1640,8 +1640,8 @@ mtl_cmd_copy_buffer_to_image( const CommandBuffer* icmd,
 	u8* src_ptr = static_cast<u8*>( src->buffer.contents );
 
 	MTLRegion region = {
-	    { 0, 0, 0 },
-	    { dst->interface.width, dst->interface.height, dst->interface.depth }
+		{ 0, 0, 0 },
+		{ dst->interface.width, dst->interface.height, dst->interface.depth }
 	};
 
 	NSUInteger bytesPerRow = 4 * dst->interface.width;
