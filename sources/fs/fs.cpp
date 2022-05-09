@@ -97,7 +97,7 @@ read_dds_image( const std::string& filename, b32 flip, u64* size, void** data )
 
 	DDSFile dds;
 	auto    ret = dds.Load( filename.c_str() );
-	FT_ASSERT( ret == Result::Success );
+	FT_ASSERT( ret == Result::Success && "failed to read image" );
 
 	if ( flip )
 	{
@@ -137,6 +137,8 @@ read_image_stb( const std::string& filename, b32 flip, u64* size, void** data )
 	                   &tex_height,
 	                   &tex_channels,
 	                   STBI_rgb_alpha );
+
+	FT_ASSERT( *data && "failed to read image" );
 
 	stbi_set_flip_vertically_on_load( !flip );
 
