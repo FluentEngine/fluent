@@ -212,12 +212,12 @@ void logger_flush()
 static const char* getLevelChar(logger_LogLevel level)
 {
     switch (level) {
-	    case LogLevel_TRACE: return "[ TRACE ]";
-	    case LogLevel_DEBUG: return "[ DEBUG ]";
-	    case LogLevel_INFO:  return "[ INFO  ]";
-	    case LogLevel_WARN:  return "[ WARN  ]";
-	    case LogLevel_ERROR: return "[ ERROR ]";
-	    case LogLevel_FATAL: return "[ FATAL ]";
+	    case LogLevel_TRACE: return "[TRACE]";
+	    case LogLevel_DEBUG: return "[DEBUG]";
+	    case LogLevel_INFO:  return "[INFO]";
+	    case LogLevel_WARN:  return "[WARN]";
+	    case LogLevel_ERROR: return "[ERROR]";
+	    case LogLevel_FATAL: return "[FATAL]";
 	    default: return " ";
     }
 }
