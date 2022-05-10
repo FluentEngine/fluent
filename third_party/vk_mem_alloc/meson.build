@@ -1,6 +1,14 @@
 inc = include_directories('.', '../volk', vulkan_include_directory, is_system : true)
 args = []
 
+if meson.get_compiler('cpp').get_id() == 'clang'
+	args += '-Wno-everything'
+endif
+
+if meson.get_compiler('cpp').get_id() == 'gcc'
+	args += '-w'
+endif
+
 if meson.get_compiler('cpp').get_id() != 'msvc'
     args += '-Wno-nullability-completeness'
 endif
