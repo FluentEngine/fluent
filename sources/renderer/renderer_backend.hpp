@@ -393,17 +393,17 @@ struct UiInfo
 	const RendererBackend* backend;
 	const Device*          device;
 	const Queue*           queue;
-	const RenderPass*      render_pass;
+	const ImageInfo*       color_attachment_info;
+	AttachmentLoadOp       color_load_op;
+	ResourceState          color_state;
+	const ImageInfo*       depth_attachment_info;
+	AttachmentLoadOp       depth_load_op;
+	ResourceState          depth_state;
 	u32                    min_image_count;
 	u32                    image_count;
 	u32                    in_fly_frame_count;
 	b32                    docking   = false;
 	b32                    viewports = false;
-};
-
-struct UiContext
-{
-	Handle handle;
 };
 
 inline b32
@@ -826,27 +826,12 @@ DECLARE_RENDERER_FUNCTION( void,
                            u32                    count,
                            const DescriptorWrite* writes );
 
-DECLARE_RENDERER_FUNCTION( void,
-                           create_ui_context,
-                           CommandBuffer* cmd,
-                           const UiInfo*  info,
-                           UiContext**    ui_context );
-
-DECLARE_RENDERER_FUNCTION( void,
-                           destroy_ui_context,
-                           const Device* device,
-                           UiContext*    context );
-
-DECLARE_RENDERER_FUNCTION( void,
-                           ui_begin_frame,
-                           UiContext*,
-                           CommandBuffer* icmd );
-
-DECLARE_RENDERER_FUNCTION( void,
-                           ui_end_frame,
-                           UiContext*     context,
-                           CommandBuffer* cmd );
-
+DECLARE_RENDERER_FUNCTION( void, init_ui, const UiInfo* info );
+DECLARE_RENDERER_FUNCTION( void, ui_upload_resources, CommandBuffer* cmd );
+DECLARE_RENDERER_FUNCTION( void, ui_destroy_upload_objects );
+DECLARE_RENDERER_FUNCTION( void, shutdown_ui, const Device* device );
+DECLARE_RENDERER_FUNCTION( void, ui_begin_frame, CommandBuffer* icmd );
+DECLARE_RENDERER_FUNCTION( void, ui_end_frame, CommandBuffer* cmd );
 DECLARE_RENDERER_FUNCTION( void*, get_imgui_texture_id, const Image* image );
 
 DECLARE_RENDERER_FUNCTION( std::vector<char>,

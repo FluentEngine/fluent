@@ -510,22 +510,24 @@ vulkan_debug_callback(
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* )
 {
+	static constexpr char const* prefix = "[Vulkan]:";
+
 	if ( messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT )
 	{
-		FT_TRACE( "%s", pCallbackData->pMessage );
+		FT_TRACE( "%9s %s", prefix, pCallbackData->pMessage );
 	}
 	else if ( messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT )
 	{
-		FT_INFO( "%s", pCallbackData->pMessage );
+		FT_INFO( "%10s %s", prefix, pCallbackData->pMessage );
 	}
 	else if ( messageSeverity ==
 	          VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT )
 	{
-		FT_WARN( "%s", pCallbackData->pMessage );
+		FT_WARN( "%10s %s", prefix, pCallbackData->pMessage );
 	}
 	else if ( messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT )
 	{
-		FT_ERROR( "%s", pCallbackData->pMessage );
+		FT_ERROR( "%9s %s", prefix, pCallbackData->pMessage );
 	}
 
 	return VK_FALSE;
@@ -2693,16 +2695,18 @@ vk_update_descriptor_set( const Device*          idevice,
 }
 
 void
-vk_create_ui_context( CommandBuffer* cmd, const UiInfo* info, UiContext** p )
+vk_init_ui( const UiInfo* info )
 {
-	FT_ASSERT( p );
+	FT_ASSERT( info );
+	FT_ASSERT( info->window );
+	FT_ASSERT( info->backend );
+	FT_ASSERT( info->device );
+	FT_ASSERT( info->queue );
+	FT_ASSERT( info->color_attachment_info );
 
 	FT_FROM_HANDLE( backend, info->backend, VulkanRendererBackend );
 	FT_FROM_HANDLE( device, info->device, VulkanDevice );
 	FT_FROM_HANDLE( queue, info->queue, VulkanQueue );
-	FT_FROM_HANDLE( render_pass, info->render_pass, VulkanRenderPass );
-
-	FT_INIT_INTERNAL( context, *p, VulkanUiContext );
 
 	VkDescriptorPoolSize pool_sizes[] = {
 		{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
@@ -2728,7 +2732,7 @@ vk_create_ui_context( CommandBuffer* cmd, const UiInfo* info, UiContext** p )
 	VK_ASSERT( vkCreateDescriptorPool( device->logical_device,
 	                                   &pool_info,
 	                                   nullptr,
-	                                   &context->desriptor_pool ) );
+	                                   &vk_ui.desriptor_pool ) );
 
 	ImGui::CreateContext();
 	auto& io = ImGui::GetIO();
@@ -2758,36 +2762,124 @@ vk_create_ui_context( CommandBuffer* cmd, const UiInfo* info, UiContext** p )
 	init_info.MSAASamples     = VK_SAMPLE_COUNT_1_BIT;
 
 	ImGui_ImplSDL2_InitForVulkan( ( SDL_Window* ) info->window->handle );
-	ImGui_ImplVulkan_Init( &init_info, render_pass->render_pass );
 
-	begin_command_buffer( cmd );
+	VkRenderPass render_pass;
+
+	u32                     attachment_count             = 1;
+	VkAttachmentDescription attachment_descriptions[ 2 ] = {};
+	VkAttachmentReference   color_reference              = {};
+	VkAttachmentReference   depth_reference              = {};
+
+	attachment_descriptions[ 0 ].flags = 0;
+	attachment_descriptions[ 0 ].format =
+	    to_vk_format( info->color_attachment_info->format );
+	attachment_descriptions[ 0 ].samples =
+	    to_vk_sample_count( info->color_attachment_info->sample_count );
+	attachment_descriptions[ 0 ].loadOp  = to_vk_load_op( info->color_load_op );
+	attachment_descriptions[ 0 ].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	attachment_descriptions[ 0 ].stencilLoadOp =
+	    VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	attachment_descriptions[ 0 ].stencilStoreOp =
+	    VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	attachment_descriptions[ 0 ].initialLayout =
+	    determine_image_layout( info->color_state );
+	attachment_descriptions[ 0 ].finalLayout =
+	    determine_image_layout( info->color_state );
+
+	color_reference.attachment = 0;
+	color_reference.layout     = determine_image_layout( info->color_state );
+
+	if ( info->depth_attachment_info != nullptr )
+	{
+		attachment_descriptions[ 1 ].flags = 0;
+		attachment_descriptions[ 1 ].format =
+		    to_vk_format( info->depth_attachment_info->format );
+		attachment_descriptions[ 1 ].samples =
+		    to_vk_sample_count( info->depth_attachment_info->sample_count );
+		attachment_descriptions[ 1 ].loadOp =
+		    to_vk_load_op( info->depth_load_op );
+		attachment_descriptions[ 1 ].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachment_descriptions[ 1 ].stencilLoadOp =
+		    VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachment_descriptions[ 1 ].stencilStoreOp =
+		    VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachment_descriptions[ 1 ].initialLayout =
+		    determine_image_layout( info->depth_state );
+		attachment_descriptions[ 1 ].finalLayout =
+		    determine_image_layout( info->depth_state );
+
+		depth_reference.attachment = 1;
+		depth_reference.layout     = attachment_descriptions[ 1 ].finalLayout;
+
+		attachment_count++;
+	}
+
+	VkSubpassDescription subpass_description {};
+	subpass_description.flags                = 0;
+	subpass_description.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass_description.inputAttachmentCount = 0;
+	subpass_description.pInputAttachments    = nullptr;
+	subpass_description.colorAttachmentCount = 1;
+	subpass_description.pColorAttachments    = &color_reference;
+	subpass_description.pDepthStencilAttachment =
+	    info->depth_attachment_info ? &depth_reference : nullptr;
+	subpass_description.pResolveAttachments     = nullptr;
+	subpass_description.preserveAttachmentCount = 0;
+	subpass_description.pPreserveAttachments    = nullptr;
+
+	VkRenderPassCreateInfo render_pass_create_info {};
+	render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	render_pass_create_info.pNext = nullptr;
+	render_pass_create_info.flags = 0;
+	render_pass_create_info.attachmentCount = attachment_count;
+	render_pass_create_info.pAttachments    = attachment_descriptions;
+	render_pass_create_info.subpassCount    = 1;
+	render_pass_create_info.pSubpasses      = &subpass_description;
+	render_pass_create_info.dependencyCount = 0;
+	render_pass_create_info.pDependencies   = nullptr;
+
+	VK_ASSERT( vkCreateRenderPass( device->logical_device,
+	                               &render_pass_create_info,
+	                               device->vulkan_allocator,
+	                               &render_pass ) );
+
+	ImGui_ImplVulkan_Init( &init_info, render_pass );
+
+	vkDestroyRenderPass( device->logical_device,
+	                     render_pass,
+	                     device->vulkan_allocator );
+} // namespace fluent
+
+void
+vk_ui_upload_resources( CommandBuffer* cmd )
+{
 	ImGui_ImplVulkan_CreateFontsTexture(
 	    static_cast<VulkanCommandBuffer*>( cmd->handle )->command_buffer );
-	end_command_buffer( cmd );
-	immediate_submit( info->queue, cmd );
+}
 
+void
+vk_ui_destroy_upload_objects()
+{
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
 void
-vk_destroy_ui_context( const Device* idevice, UiContext* icontext )
+vk_shutdown_ui( const Device* idevice )
 {
-	FT_ASSERT( icontext );
+	FT_ASSERT( idevice );
 
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( context, icontext, VulkanUiContext );
 
 	vkDestroyDescriptorPool( device->logical_device,
-	                         context->desriptor_pool,
+	                         vk_ui.desriptor_pool,
 	                         nullptr );
 	ImGui_ImplVulkan_Shutdown();
 	ImGui_ImplSDL2_Shutdown();
 	ImGui::DestroyContext();
-	std::free( context );
 }
 
 void
-vk_ui_begin_frame( UiContext*, CommandBuffer* icmd )
+vk_ui_begin_frame( CommandBuffer* icmd )
 {
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplSDL2_NewFrame();
@@ -2795,7 +2887,7 @@ vk_ui_begin_frame( UiContext*, CommandBuffer* icmd )
 }
 
 void
-vk_ui_end_frame( UiContext*, CommandBuffer* icmd )
+vk_ui_end_frame( CommandBuffer* icmd )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 
@@ -3404,8 +3496,10 @@ vk_create_renderer_backend( const RendererBackendInfo*, RendererBackend** p )
 	create_descriptor_set         = vk_create_descriptor_set;
 	destroy_descriptor_set        = vk_destroy_descriptor_set;
 	update_descriptor_set         = vk_update_descriptor_set;
-	create_ui_context             = vk_create_ui_context;
-	destroy_ui_context            = vk_destroy_ui_context;
+	init_ui                       = vk_init_ui;
+	ui_upload_resources           = vk_ui_upload_resources;
+	ui_destroy_upload_objects     = vk_ui_destroy_upload_objects;
+	shutdown_ui                   = vk_shutdown_ui;
 	ui_begin_frame                = vk_ui_begin_frame;
 	ui_end_frame                  = vk_ui_end_frame;
 	get_imgui_texture_id          = vk_get_imgui_texture_id;

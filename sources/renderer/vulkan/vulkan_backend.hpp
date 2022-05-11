@@ -125,8 +125,9 @@ struct VulkanDescriptorSet
 struct VulkanUiContext
 {
 	VkDescriptorPool desriptor_pool;
-	UiContext        interface;
 };
+
+static VulkanUiContext vk_ui;
 
 void
 vk_create_renderer_backend( const RendererBackendInfo* info,
