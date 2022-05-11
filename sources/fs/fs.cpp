@@ -175,6 +175,6 @@ read_image_data( const std::string& filename, b32 flip, u64* size, void** data )
 void
 release_image_data( void* data )
 {
-	free( data );
+	std::free( data );
 }
 } // namespace fluent::fs

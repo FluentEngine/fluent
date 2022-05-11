@@ -13,16 +13,17 @@ class ResourceLoader
 	};
 
 private:
-	static const Device*  m_device;
-	static Queue*         m_queue;
-	static CommandPool*   m_command_pool;
-	static CommandBuffer* m_cmd;
-	static b32            m_is_recording;
-	static StagingBuffer  m_staging_buffer;
+	static const Device*  device;
+	static Queue*         queue;
+	static CommandPool*   command_pool;
+	static CommandBuffer* cmd;
+	static b32            is_recording;
+	static StagingBuffer  staging_buffer;
 
 public:
 	static void
-	init( const Device* m_device, u64 staging_buffer_size );
+	init( const Device* device, u64 staging_buffer_size );
+
 	static void
 	shutdown();
 
