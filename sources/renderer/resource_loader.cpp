@@ -128,6 +128,9 @@ ResourceLoader::end_upload_buffer( Buffer* buffer )
 void
 ResourceLoader::upload_image( Image* image, u64 size, const void* data )
 {
+	FT_ASSERT( m_staging_buffer.offset + size <=
+	           m_staging_buffer.buffer->size );
+
 	std::memcpy( ( u8* ) m_staging_buffer.buffer->mapped_memory +
 	                 m_staging_buffer.offset,
 	             data,
