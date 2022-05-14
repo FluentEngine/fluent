@@ -585,111 +585,6 @@ mtl_acquire_next_image( const Device*    idevice,
 }
 
 void
-mtl_create_render_pass( const Device*         idevice,
-                        const RenderPassInfo* info,
-                        RenderPass**          p )
-{
-	@autoreleasepool
-	{
-		FT_ASSERT( p );
-
-		FT_INIT_INTERNAL( render_pass, *p, MetalRenderPass );
-
-		MTLRenderPassDescriptor* pass =
-		    [MTLRenderPassDescriptor renderPassDescriptor];
-
-		render_pass->render_pass = pass;
-
-		render_pass->interface.color_attachment_count =
-		    info->color_attachment_count;
-		render_pass->interface.width  = info->width;
-		render_pass->interface.height = info->height;
-		render_pass->interface.sample_count =
-		    info->color_attachments[ 0 ]->sample_count;
-
-		pass.renderTargetWidth  = info->width;
-		pass.renderTargetHeight = info->height;
-		pass.defaultRasterSampleCount =
-		    to_mtl_sample_count( info->color_attachments[ 0 ]->sample_count );
-
-		for ( u32 i = 0; i < info->color_attachment_count; ++i )
-		{
-			FT_FROM_HANDLE( image, info->color_attachments[ i ], MetalImage );
-
-			if ( image->texture == nil )
-			{
-				render_pass->swapchain_render_pass = true;
-			}
-
-			pass.colorAttachments[ i ].texture = image->texture;
-			pass.colorAttachments[ i ].loadAction =
-			    to_mtl_load_action( info->color_attachment_load_ops[ i ] );
-			pass.colorAttachments[ i ].storeAction = MTLStoreActionStore;
-
-			render_pass->color_attachments[ i ] = image;
-		}
-
-		if ( info->depth_stencil )
-		{
-			FT_FROM_HANDLE( image, info->depth_stencil, MetalImage );
-			pass.depthAttachment.texture = image->texture;
-			pass.depthAttachment.loadAction =
-			    to_mtl_load_action( info->depth_stencil_load_op );
-			pass.depthAttachment.storeAction = MTLStoreActionStore;
-
-			render_pass->interface.has_depth_stencil = true;
-			render_pass->depth_attachment            = image;
-		}
-	}
-}
-
-void
-mtl_resize_render_pass( const Device*         idevice,
-                        RenderPass*           irender_pass,
-                        const RenderPassInfo* info )
-{
-	@autoreleasepool
-	{
-		FT_ASSERT( idevice );
-		FT_ASSERT( irender_pass );
-		FT_ASSERT( info );
-
-		FT_FROM_HANDLE( render_pass, irender_pass, MetalRenderPass );
-		render_pass->render_pass.renderTargetWidth  = info->width;
-		render_pass->render_pass.renderTargetHeight = info->height;
-		render_pass->interface.width                = info->width;
-		render_pass->interface.height               = info->height;
-
-		for ( u32 i = 0; i < info->color_attachment_count; ++i )
-		{
-			FT_FROM_HANDLE( image, info->color_attachments[ i ], MetalImage );
-			render_pass->render_pass.colorAttachments[ i ].texture =
-			    image->texture;
-		}
-
-		if ( render_pass->interface.has_depth_stencil )
-		{
-			FT_FROM_HANDLE( image, info->depth_stencil, MetalImage );
-			render_pass->render_pass.depthAttachment.texture = image->texture;
-		}
-	}
-}
-
-void
-mtl_destroy_render_pass( const Device* idevice, RenderPass* irender_pass )
-{
-	@autoreleasepool
-	{
-		FT_ASSERT( irender_pass );
-
-		FT_FROM_HANDLE( render_pass, irender_pass, MetalRenderPass );
-
-		render_pass->render_pass = nil;
-		std::free( render_pass );
-	}
-}
-
-void
 mtl_create_shader( const Device* idevice, ShaderInfo* info, Shader** p )
 {
 	@autoreleasepool
@@ -873,20 +768,16 @@ mtl_create_graphics_pipeline( const Device*       idevice,
 
 		pipeline->pipeline_descriptor.vertexDescriptor = vertex_layout;
 
-		FT_FROM_HANDLE( render_pass, info->render_pass, MetalRenderPass );
-		for ( u32 i = 0; i < render_pass->interface.color_attachment_count;
-		      ++i )
+		for ( u32 i = 0; i < info->color_attachment_count; ++i )
 		{
 			pipeline->pipeline_descriptor.colorAttachments[ i ].pixelFormat =
-			    to_mtl_format(
-			        render_pass->color_attachments[ i ]->interface.format );
+			    to_mtl_format( info->color_attachment_formats[ i ] );
 		}
 
-		if ( render_pass->interface.has_depth_stencil )
+		if ( info->depth_stencil_format != Format::UNDEFINED )
 		{
 			pipeline->pipeline_descriptor.depthAttachmentPixelFormat =
-			    to_mtl_format(
-			        render_pass->depth_attachment->interface.format );
+			    to_mtl_format( info->depth_stencil_format );
 		}
 
 		if ( info->depth_state_info.depth_test )
@@ -1072,7 +963,7 @@ mtl_create_image( const Device* idevice, const ImageInfo* info, Image** p )
 		texture_descriptor.depth            = info->depth;
 		texture_descriptor.arrayLength      = info->layer_count;
 		texture_descriptor.mipmapLevelCount = info->mip_levels;
-		texture_descriptor.SampleCount =
+		texture_descriptor.sampleCount =
 		    to_mtl_sample_count( info->sample_count );
 		texture_descriptor.storageMode = MTLStorageModeManaged; // TODO:
 		texture_descriptor.textureType = MTLTextureType2D;      // TODO:
@@ -1321,15 +1212,11 @@ mtl_update_descriptor_set( const Device*          idevice,
 }
 
 void
-mtl_create_ui_context( CommandBuffer* cmd, const UiInfo* info, UiContext** p )
+mtl_init_ui( const UiInfo* info )
 {
 	@autoreleasepool
 	{
-		FT_ASSERT( p );
-
 		FT_FROM_HANDLE( device, info->device, MetalDevice );
-
-		FT_INIT_INTERNAL( context, *p, MetalUiContext );
 
 		ImGui::CreateContext();
 		auto& io = ImGui::GetIO();
@@ -1351,23 +1238,28 @@ mtl_create_ui_context( CommandBuffer* cmd, const UiInfo* info, UiContext** p )
 }
 
 void
-mtl_destroy_ui_context( const Device* idevice, UiContext* icontext )
+mtl_shutdown_ui( const Device* idevice )
 {
 	@autoreleasepool
 	{
-		FT_ASSERT( icontext );
-
-		FT_FROM_HANDLE( context, icontext, MetalUiContext );
-
 		ImGui_ImplMetal_Shutdown();
 		ImGui_ImplSDL2_Shutdown();
 		ImGui::DestroyContext();
-		std::free( context );
 	}
 }
 
 void
-mtl_ui_begin_frame( UiContext*, CommandBuffer* icmd )
+mtl_ui_upload_resources( CommandBuffer* cmd )
+{
+}
+
+void
+mtl_ui_destroy_upload_objects()
+{
+}
+
+void
+mtl_ui_begin_frame( CommandBuffer* icmd )
 {
 	@autoreleasepool
 	{
@@ -1379,7 +1271,7 @@ mtl_ui_begin_frame( UiContext*, CommandBuffer* icmd )
 }
 
 void
-mtl_ui_end_frame( UiContext*, CommandBuffer* icmd )
+mtl_ui_end_frame( CommandBuffer* icmd )
 {
 	@autoreleasepool
 	{
@@ -1416,35 +1308,56 @@ mtl_cmd_begin_render_pass( const CommandBuffer*       icmd,
 	@autoreleasepool
 	{
 		FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
-		FT_FROM_HANDLE( render_pass, info->render_pass, MetalRenderPass );
 
-		if ( render_pass->swapchain_render_pass )
-		{
-			render_pass->render_pass.colorAttachments[ 0 ].texture =
-			    render_pass->color_attachments[ 0 ]->texture;
-		}
+		// TODO: fix
+		MTLRenderPassDescriptor* pass_descriptor =
+		    [MTLRenderPassDescriptor renderPassDescriptor];
 
-		for ( u32 i = 0; i < render_pass->interface.color_attachment_count;
-		      ++i )
+		for ( u32 i = 0; i < info->color_attachment_count; ++i )
 		{
-			render_pass->render_pass.colorAttachments[ i ].clearColor =
+			FT_FROM_HANDLE( image, info->color_attachments[ i ], MetalImage );
+			pass_descriptor.colorAttachments[ i ].loadAction =
+			    to_mtl_load_action( info->color_attachment_load_ops[ i ] );
+			pass_descriptor.colorAttachments[ i ].storeAction =
+			    MTLStoreActionStore;
+
+			pass_descriptor.colorAttachments[ i ].texture = image->texture;
+
+			pass_descriptor.colorAttachments[ i ].clearColor =
 			    MTLClearColorMake( info->clear_values[ i ].color[ 0 ],
 			                       info->clear_values[ i ].color[ 1 ],
 			                       info->clear_values[ i ].color[ 2 ],
 			                       info->clear_values[ i ].color[ 3 ] );
+			// TODO:
+			pass_descriptor.renderTargetWidth  = image->interface.width;
+			pass_descriptor.renderTargetHeight = image->interface.height;
+			pass_descriptor.defaultRasterSampleCount =
+			    to_mtl_sample_count( image->interface.sample_count );
 		}
 
-		if ( render_pass->interface.has_depth_stencil )
+		if ( info->depth_stencil != nullptr )
 		{
-			render_pass->render_pass.depthAttachment.clearDepth =
-			    info->clear_values[ render_pass
-			                            ->interface.color_attachment_count ]
-			        .depth;
+			FT_FROM_HANDLE( image, info->depth_stencil, MetalImage );
+			pass_descriptor.depthAttachment.texture = image->texture;
+			pass_descriptor.depthAttachment.loadAction =
+			    to_mtl_load_action( info->depth_stencil_load_op );
+			pass_descriptor.depthAttachment.storeAction = MTLStoreActionStore;
+			pass_descriptor.depthAttachment.texture     = image->texture;
+
+			pass_descriptor.depthAttachment.clearDepth =
+			    info->clear_values[ info->color_attachment_count ]
+			        .depth_stencil.depth;
+
+			// TODO:
+			pass_descriptor.renderTargetWidth  = image->interface.width;
+			pass_descriptor.renderTargetHeight = image->interface.height;
+			pass_descriptor.defaultRasterSampleCount =
+			    to_mtl_sample_count( image->interface.sample_count );
 		}
 
-		cmd->encoder         = [cmd->cmd
-            renderCommandEncoderWithDescriptor:render_pass->render_pass];
-		cmd->pass_descriptor = render_pass->render_pass;
+		cmd->encoder =
+		    [cmd->cmd renderCommandEncoderWithDescriptor:pass_descriptor];
+		cmd->pass_descriptor = pass_descriptor;
 	}
 }
 
@@ -1815,9 +1728,6 @@ mtl_create_renderer_backend( const RendererBackendInfo*, RendererBackend** p )
 	begin_command_buffer          = mtl_begin_command_buffer;
 	end_command_buffer            = mtl_end_command_buffer;
 	acquire_next_image            = mtl_acquire_next_image;
-	create_render_pass            = mtl_create_render_pass;
-	resize_render_pass            = mtl_resize_render_pass;
-	destroy_render_pass           = mtl_destroy_render_pass;
 	create_shader                 = mtl_create_shader;
 	destroy_shader                = mtl_destroy_shader;
 	create_descriptor_set_layout  = mtl_create_descriptor_set_layout;
@@ -1836,8 +1746,10 @@ mtl_create_renderer_backend( const RendererBackendInfo*, RendererBackend** p )
 	create_descriptor_set         = mtl_create_descriptor_set;
 	destroy_descriptor_set        = mtl_destroy_descriptor_set;
 	update_descriptor_set         = mtl_update_descriptor_set;
-	create_ui_context             = mtl_create_ui_context;
-	destroy_ui_context            = mtl_destroy_ui_context;
+	init_ui                       = mtl_init_ui;
+	shutdown_ui                   = mtl_shutdown_ui;
+	ui_upload_resources           = mtl_ui_upload_resources;
+	ui_destroy_upload_objects     = mtl_ui_destroy_upload_objects;
 	ui_begin_frame                = mtl_ui_begin_frame;
 	ui_end_frame                  = mtl_ui_end_frame;
 	get_imgui_texture_id          = mtl_get_imgui_texture_id;

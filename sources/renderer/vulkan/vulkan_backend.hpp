@@ -19,6 +19,7 @@ struct VulkanRendererBackend
 
 struct VulkanDevice
 {
+	u32                    index;
 	VkAllocationCallbacks* vulkan_allocator;
 	VkInstance             instance;
 	VkPhysicalDevice       physical_device;
@@ -89,13 +90,6 @@ struct VulkanSwapchain
 	Swapchain                     interface;
 };
 
-struct VulkanRenderPass
-{
-	VkRenderPass  render_pass;
-	VkFramebuffer framebuffer;
-	RenderPass    interface;
-};
-
 struct VulkanShader
 {
 	VkShaderModule shaders[ static_cast<u32>( ShaderStage::COUNT ) ];
@@ -126,8 +120,6 @@ struct VulkanUiContext
 {
 	VkDescriptorPool desriptor_pool;
 };
-
-static VulkanUiContext vk_ui;
 
 void
 vk_create_renderer_backend( const RendererBackendInfo* info,

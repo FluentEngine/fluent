@@ -48,11 +48,11 @@ update_input_system()
 
 	i32 x, y;
 	SDL_GetRelativeMouseState( &x, &y );
-	input_system.mouse_offset[ 0 ] = x;
-	input_system.mouse_offset[ 1 ] = y;
+	input_system.mouse_offset[ 0 ] = static_cast<f32>(x);
+	input_system.mouse_offset[ 1 ] = static_cast<f32>(y);
 	SDL_GetGlobalMouseState( &x, &y );
-	input_system.mouse_position[ 0 ] = x;
-	input_system.mouse_position[ 1 ] = y;
+	input_system.mouse_position[ 0 ] = static_cast<f32>(x);
+	input_system.mouse_position[ 1 ] = static_cast<f32>(y);
 }
 
 f32

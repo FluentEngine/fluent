@@ -23,7 +23,6 @@ namespace fluent
 
 // Forward declares
 struct Window;
-struct RenderPass;
 struct Buffer;
 struct StagingBuffer;
 struct Image;
@@ -31,6 +30,7 @@ struct Queue;
 struct CommandBuffer;
 struct CommandPool;
 
+static constexpr u32 MAX_DEVICE_COUNT             = 1;
 static constexpr u32 MAX_ATTACHMENTS_COUNT        = 10;
 static constexpr u32 MAX_PUSH_CONSTANT_RANGE      = 128;
 static constexpr u32 MAX_VERTEX_BINDING_COUNT     = 15;
@@ -205,8 +205,23 @@ struct QueuePresentInfo
 	u32         image_index;
 };
 
-struct RenderPassInfo
+using ColorClearValue = f32[ 4 ];
+
+struct DepthStencilClearValue
 {
+	f32 depth;
+	u32 stencil;
+};
+
+struct ClearValue
+{
+	ColorClearValue        color;
+	DepthStencilClearValue depth_stencil;
+};
+
+struct RenderPassBeginInfo
+{
+	const Device*    device;
 	u32              width;
 	u32              height;
 	u32              color_attachment_count;
@@ -216,29 +231,7 @@ struct RenderPassInfo
 	Image*           depth_stencil;
 	AttachmentLoadOp depth_stencil_load_op;
 	ResourceState    depth_stencil_state;
-};
-
-struct RenderPass
-{
-	u32         width;
-	u32         height;
-	SampleCount sample_count;
-	u32         color_attachment_count;
-	b32         has_depth_stencil;
-	Handle      handle;
-};
-
-struct ClearValue
-{
-	f32 color[ 4 ];
-	f32 depth;
-	u32 stencil;
-};
-
-struct RenderPassBeginInfo
-{
-	const RenderPass* render_pass;
-	ClearValue        clear_values[ MAX_ATTACHMENTS_COUNT + 1 ];
+	ClearValue       clear_values[ MAX_ATTACHMENTS_COUNT + 1 ];
 };
 
 // TODO:
@@ -339,7 +332,10 @@ struct PipelineInfo
 	DepthStateInfo       depth_state_info;
 	Shader*              shader;
 	DescriptorSetLayout* descriptor_set_layout;
-	const RenderPass*    render_pass;
+	SampleCount          sample_count;
+	u32                  color_attachment_count;
+	Format               color_attachment_formats[ MAX_ATTACHMENTS_COUNT ];
+	Format               depth_stencil_format;
 };
 
 struct Pipeline
@@ -393,12 +389,10 @@ struct UiInfo
 	const RendererBackend* backend;
 	const Device*          device;
 	const Queue*           queue;
-	const ImageInfo*       color_attachment_info;
-	AttachmentLoadOp       color_load_op;
-	ResourceState          color_state;
-	const ImageInfo*       depth_attachment_info;
-	AttachmentLoadOp       depth_load_op;
-	ResourceState          depth_state;
+	u32                    color_attachment_count;
+	SampleCount            sample_count;
+	Format                 color_attachment_formats[ MAX_ATTACHMENTS_COUNT ];
+	Format                 depth_stencil_format;
 	u32                    min_image_count;
 	u32                    image_count;
 	u32                    in_fly_frame_count;
@@ -432,6 +426,14 @@ format_has_stencil_aspect( Format format )
 	case Format::S8_UINT: return true;
 	default: return false;
 	}
+}
+
+template <class T>
+inline void
+hash_combine( std::size_t& s, const T& v )
+{
+	std::hash<T> h;
+	s ^= h( v ) + 0x9e3779b9 + ( s << 6 ) + ( s >> 2 );
 }
 
 void
@@ -570,23 +572,6 @@ DECLARE_RENDERER_FUNCTION( void,
                            const Semaphore* semaphore,
                            const Fence*     fence,
                            u32*             image_index );
-
-DECLARE_RENDERER_FUNCTION( void,
-                           create_render_pass,
-                           const Device*         device,
-                           const RenderPassInfo* info,
-                           RenderPass**          render_pass );
-
-DECLARE_RENDERER_FUNCTION( void,
-                           resize_render_pass,
-                           const Device*         device,
-                           RenderPass*           render_pass,
-                           const RenderPassInfo* info );
-
-DECLARE_RENDERER_FUNCTION( void,
-                           destroy_render_pass,
-                           const Device* device,
-                           RenderPass*   render_pass );
 
 DECLARE_RENDERER_FUNCTION( void,
                            create_shader,

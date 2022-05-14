@@ -14,6 +14,10 @@
 #define FT_ERROR( fmt, ... )
 #endif
 
+#ifdef _WIN32
+#undef ERROR
+#endif
+
 namespace fluent
 {
 enum class LogLevel

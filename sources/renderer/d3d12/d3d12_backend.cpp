@@ -27,20 +27,27 @@
 
 namespace fluent
 {
+
+static D3D12UiContext ui_context;
+
 static inline DXGI_FORMAT
 to_dxgi_image_format( Format format )
 {
 	switch ( format )
 	{
-	case Format::R8G8B8A8_SRGB: format = Format::eR8G8B8A8_UNORM;
-	case Format::B8G8R8A8_SRGB: format = Format::eB8G8R8A8_UNORM;
-	default:
+	case Format::B8G8R8A8_SRGB:
 	{
-		return static_cast<DXGI_FORMAT>( TinyImageFormat_ToDXGI_FORMAT(
-		    static_cast<TinyImageFormat>( format ) ) );
+		format = Format::B8G8R8A8_UNORM;
+		break;
+	}
+	case Format::R8G8B8A8_SRGB:
+	{
+		format = Format::R8G8B8A8_UNORM;
 		break;
 	}
 	}
+	return static_cast<DXGI_FORMAT>( TinyImageFormat_ToDXGI_FORMAT(
+	    static_cast<TinyImageFormat>( format ) ) );
 }
 
 static inline DXGI_FORMAT
@@ -151,8 +158,6 @@ to_d3d12_primitive_topology_type( PrimitiveTopology topology )
 		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	case PrimitiveTopology::TRIANGLE_STRIP:
 		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	case PrimitiveTopology::eTriangleFan:
-		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	default: FT_ASSERT( false ); return D3D12_PRIMITIVE_TOPOLOGY_TYPE( -1 );
 	}
 }
@@ -169,8 +174,6 @@ to_d3d12_primitive_topology( PrimitiveTopology topology )
 		return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	case PrimitiveTopology::TRIANGLE_STRIP:
 		return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-	case PrimitiveTopology::eTriangleFan:
-		return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ;
 	default: FT_ASSERT( false ); return D3D12_PRIMITIVE_TOPOLOGY( -1 );
 	}
 }
@@ -281,8 +284,6 @@ to_d3d12_shader_visibility( ShaderStage stage )
 		return D3D12_SHADER_VISIBILITY_DOMAIN;
 	case ShaderStage::GEOMETRY: return D3D12_SHADER_VISIBILITY_GEOMETRY;
 	case ShaderStage::FRAGMENT: return D3D12_SHADER_VISIBILITY_PIXEL;
-	case ShaderStage::eAllGraphics:
-	case ShaderStage::eAll: return D3D12_SHADER_VISIBILITY_ALL;
 	default: FT_ASSERT( false ); return D3D12_SHADER_VISIBILITY( -1 );
 	}
 }
@@ -793,54 +794,54 @@ d3d12_acquire_next_image( const Device*    idevice,
 	    ( swapchain->image_index + 1 ) % swapchain->interface.image_count;
 }
 
-void
-d3d12_create_render_pass( const Device*         idevice,
-                          const RenderPassInfo* info,
-                          RenderPass**          p )
-{
-	FT_ASSERT( p );
-
-	FT_INIT_INTERNAL( render_pass, *p, D3D12RenderPass );
-
-	render_pass->interface.color_attachment_count =
-	    info->color_attachment_count;
-
-	for ( u32 i = 0; i < info->color_attachment_count; i++ )
-	{
-		FT_FROM_HANDLE( image, info->color_attachments[ i ], D3D12Image );
-
-		render_pass->color_attachments[ i ] = image->image_view;
-		render_pass->color_formats[ i ] =
-		    to_dxgi_format( info->color_attachments[ i ]->format );
-	}
-
-	if ( info->depth_stencil )
-	{
-		FT_FROM_HANDLE( image, info->depth_stencil, D3D12Image );
-
-		render_pass->interface.has_depth_stencil = true;
-		render_pass->depth_stencil               = image->image_view;
-		render_pass->depth_format =
-		    to_dxgi_format( info->depth_stencil->format );
-	}
-}
-
-void
-d3d12_resize_render_pass( const Device*         idevice,
-                          RenderPass*           irender_pass,
-                          const RenderPassInfo* info )
-{
-}
-
-void
-d3d12_destroy_render_pass( const Device* idevice, RenderPass* irender_pass )
-{
-	FT_ASSERT( irender_pass );
-
-	FT_FROM_HANDLE( render_pass, irender_pass, D3D12RenderPass );
-
-	std::free( render_pass );
-}
+// void
+// d3d12_create_render_pass( const Device*         idevice,
+//                           const RenderPassInfo* info,
+//                           RenderPass**          p )
+//{
+//	FT_ASSERT( p );
+//
+//	FT_INIT_INTERNAL( render_pass, *p, D3D12RenderPass );
+//
+//	render_pass->interface.color_attachment_count =
+//	    info->color_attachment_count;
+//
+//	for ( u32 i = 0; i < info->color_attachment_count; i++ )
+//	{
+//		FT_FROM_HANDLE( image, info->color_attachments[ i ], D3D12Image );
+//
+//		render_pass->color_attachments[ i ] = image->image_view;
+//		render_pass->color_formats[ i ] =
+//		    to_dxgi_format( info->color_attachments[ i ]->format );
+//	}
+//
+//	if ( info->depth_stencil )
+//	{
+//		FT_FROM_HANDLE( image, info->depth_stencil, D3D12Image );
+//
+//		render_pass->interface.has_depth_stencil = true;
+//		render_pass->depth_stencil               = image->image_view;
+//		render_pass->depth_format =
+//		    to_dxgi_format( info->depth_stencil->format );
+//	}
+// }
+//
+// void
+// d3d12_resize_render_pass( const Device*         idevice,
+//                           RenderPass*           irender_pass,
+//                           const RenderPassInfo* info )
+//{
+// }
+//
+// void
+// d3d12_destroy_render_pass( const Device* idevice, RenderPass* irender_pass )
+//{
+//	FT_ASSERT( irender_pass );
+//
+//	FT_FROM_HANDLE( render_pass, irender_pass, D3D12RenderPass );
+//
+//	std::free( render_pass );
+// }
 
 void
 d3d12_create_shader( const Device* idevice, ShaderInfo* info, Shader** p )
@@ -848,6 +849,9 @@ d3d12_create_shader( const Device* idevice, ShaderInfo* info, Shader** p )
 	FT_ASSERT( p );
 
 	FT_INIT_INTERNAL( shader, *p, D3D12Shader );
+
+	new ( &shader->interface.reflect_data.binding_map ) BindingMap();
+	new ( &shader->interface.reflect_data.bindings ) Bindings();
 
 	auto create_module = []( D3D12Shader*            shader,
 	                         ShaderStage             stage,
@@ -886,7 +890,7 @@ d3d12_destroy_shader( const Device* idevice, Shader* ishader )
 	FT_ASSERT( ishader );
 
 	FT_FROM_HANDLE( shader, ishader, D3D12Shader );
-
+	
 	auto destroy_module = []( ShaderStage stage, D3D12Shader* shader )
 	{
 		if ( shader->bytecodes[ static_cast<u32>( stage ) ].pShaderBytecode )
@@ -903,6 +907,9 @@ d3d12_destroy_shader( const Device* idevice, Shader* ishader )
 	destroy_module( ShaderStage::TESSELLATION_EVALUATION, shader );
 	destroy_module( ShaderStage::GEOMETRY, shader );
 	destroy_module( ShaderStage::FRAGMENT, shader );
+	
+	shader->interface.reflect_data.bindings.~vector();
+	shader->interface.reflect_data.binding_map.~unordered_map();
 
 	std::free( shader );
 }
@@ -920,7 +927,13 @@ d3d12_create_descriptor_set_layout( const Device*         idevice,
 
 	FT_INIT_INTERNAL( descriptor_set_layout, *p, D3D12DescriptorSetLayout );
 
-	descriptor_set_layout->interface.shader = ishader;
+	new ( &descriptor_set_layout->interface.reflection_data.binding_map )
+	    BindingMap();
+	new ( &descriptor_set_layout->interface.reflection_data.bindings )
+	    Bindings();
+
+	descriptor_set_layout->interface.reflection_data =
+	    shader->interface.reflect_data;
 
 	std::vector<D3D12_ROOT_PARAMETER1>   tables;
 	std::vector<D3D12_DESCRIPTOR_RANGE1> cbv_ranges;
@@ -938,11 +951,13 @@ d3d12_create_descriptor_set_layout( const Device*         idevice,
 			continue;
 		}
 
-		for ( u32 b = 0; b < shader->interface.reflect_data[ s ].binding_count;
+		for ( u32 b = 0;
+		      b <
+		      descriptor_set_layout->interface.reflection_data.binding_count;
 		      ++b )
 		{
 			const auto& binding =
-			    shader->interface.reflect_data[ s ].bindings[ b ];
+			    descriptor_set_layout->interface.reflection_data.bindings[ b ];
 			D3D12_DESCRIPTOR_RANGE1 range = {};
 			range.BaseShaderRegister      = binding.binding;
 			range.RangeType =
@@ -1043,6 +1058,10 @@ d3d12_destroy_descriptor_set_layout( const Device*        idevice,
 	FT_FROM_HANDLE( layout, ilayout, D3D12DescriptorSetLayout );
 
 	layout->root_signature->Release();
+	
+	layout->interface.reflection_data.bindings.~vector();
+	layout->interface.reflection_data.binding_map.~unordered_map();
+
 	std::free( layout );
 }
 
@@ -1069,7 +1088,6 @@ d3d12_create_graphics_pipeline( const Device*       idevice,
 	FT_FROM_HANDLE( dsl,
 	                info->descriptor_set_layout,
 	                D3D12DescriptorSetLayout );
-	FT_FROM_HANDLE( render_pass, info->render_pass, D3D12RenderPass );
 	FT_FROM_HANDLE( shader, info->shader, D3D12Shader );
 
 	pipeline->interface.type = PipelineType::GRAPHICS;
@@ -1152,15 +1170,16 @@ d3d12_create_graphics_pipeline( const Device*       idevice,
 			                             D3D12_COLOR_WRITE_ENABLE_ALL };
 	}
 
-	pipeline_desc.NumRenderTargets = info->render_pass->color_attachment_count;
+	pipeline_desc.NumRenderTargets = info->color_attachment_count;
 	for ( u32 i = 0; i < pipeline_desc.NumRenderTargets; i++ )
 	{
-		pipeline_desc.RTVFormats[ i ] = render_pass->color_formats[ i ];
+		pipeline_desc.RTVFormats[ i ] =
+		    to_dxgi_format( info->color_attachment_formats[ i ] );
 	}
 
-	if ( info->render_pass->has_depth_stencil )
+	if ( info->depth_stencil_format != Format::UNDEFINED )
 	{
-		pipeline_desc.DSVFormat = render_pass->depth_format;
+		pipeline_desc.DSVFormat = to_dxgi_format( info->depth_stencil_format );
 	}
 
 	pipeline_desc.InputLayout     = input_layout;
@@ -1196,22 +1215,31 @@ d3d12_cmd_begin_render_pass( const CommandBuffer*       icmd,
                              const RenderPassBeginInfo* info )
 {
 	FT_FROM_HANDLE( cmd, icmd, D3D12CommandBuffer );
-	FT_FROM_HANDLE( render_pass, info->render_pass, D3D12RenderPass );
 
-	for ( u32 i = 0; i < info->render_pass->color_attachment_count; i++ )
+	D3D12_CPU_DESCRIPTOR_HANDLE color_attachments[ MAX_ATTACHMENTS_COUNT ];
+	D3D12_CPU_DESCRIPTOR_HANDLE depth_stencil;
+
+	for ( u32 i = 0; i < info->color_attachment_count; i++ )
 	{
-		cmd->command_list->ClearRenderTargetView(
-		    render_pass->color_attachments[ 0 ],
-		    info->clear_values[ i ].color,
-		    0,
-		    nullptr );
+		FT_FROM_HANDLE( image, info->color_attachments[ i ], D3D12Image );
+		color_attachments[ i ] = image->image_view;
+		cmd->command_list->ClearRenderTargetView( image->image_view,
+		                                          info->clear_values[ i ].color,
+		                                          0,
+		                                          nullptr );
 	}
 
-	cmd->command_list->OMSetRenderTargets(
-	    info->render_pass->color_attachment_count,
-	    render_pass->color_attachments,
-	    info->render_pass->has_depth_stencil,
-	    &render_pass->depth_stencil );
+	if ( info->depth_stencil )
+	{
+		FT_FROM_HANDLE( image, info->depth_stencil, D3D12Image );
+		depth_stencil = image->image_view;
+	}
+
+	cmd->command_list->OMSetRenderTargets( info->color_attachment_count,
+	                                       color_attachments,
+	                                       false, // TODO:
+	                                       info->depth_stencil ? &depth_stencil
+	                                                           : nullptr );
 }
 
 void
@@ -1560,16 +1588,17 @@ d3d12_create_sampler( const Device*      idevice,
 	FT_INIT_INTERNAL( sampler, *p, D3D12Sampler );
 
 	D3D12_SAMPLER_DESC sampler_desc {};
-	sampler_desc.Filter         = to_d3d12_filter( info->min_filter,
+	sampler_desc.Filter     = to_d3d12_filter( info->min_filter,
                                            info->mag_filter,
                                            info->mipmap_mode,
                                            info->anisotropy_enable,
                                            info->compare_enable );
-	sampler_desc.AddressU       = to_d3d12_address_mode( info->address_mode_u );
-	sampler_desc.AddressV       = to_d3d12_address_mode( info->address_mode_v );
-	sampler_desc.AddressW       = to_d3d12_address_mode( info->address_mode_w );
-	sampler_desc.MipLODBias     = info->mip_lod_bias;
-	sampler_desc.MaxAnisotropy  = info->max_anisotropy;
+	sampler_desc.AddressU   = to_d3d12_address_mode( info->address_mode_u );
+	sampler_desc.AddressV   = to_d3d12_address_mode( info->address_mode_v );
+	sampler_desc.AddressW   = to_d3d12_address_mode( info->address_mode_w );
+	sampler_desc.MipLODBias = info->mip_lod_bias;
+	sampler_desc.MaxAnisotropy =
+	    static_cast<u32>( info->max_anisotropy ); // ??? TODO
 	sampler_desc.ComparisonFunc = to_d3d12_comparison_func( info->compare_op );
 	sampler_desc.MinLOD         = info->min_lod;
 	sampler_desc.MaxLOD         = info->max_lod;
@@ -1726,16 +1755,11 @@ d3d12_update_descriptor_set( const Device*          idevice,
 }
 
 void
-d3d12_create_ui_context( CommandBuffer* icmd,
-                         const UiInfo*  info,
-                         UiContext**    p )
+d3d12_init_ui( const UiInfo* info )
 {
 	FT_ASSERT( p );
 
 	FT_FROM_HANDLE( device, info->device, D3D12Device );
-	FT_FROM_HANDLE( render_pass, info->render_pass, D3D12RenderPass );
-
-	FT_INIT_INTERNAL( context, *p, D3D12UiContext );
 
 	ImGui::CreateContext();
 	auto& io = ImGui::GetIO();
@@ -1757,34 +1781,39 @@ d3d12_create_ui_context( CommandBuffer* icmd,
 
 	D3D12_ASSERT( device->device->CreateDescriptorHeap(
 	    &heap_desc,
-	    IID_PPV_ARGS( &context->cbv_srv_heap ) ) );
+	    IID_PPV_ARGS( &ui_context.cbv_srv_heap ) ) );
 
 	ImGui_ImplSDL2_InitForD3D( ( SDL_Window* ) info->window->handle );
 	ImGui_ImplDX12_Init(
 	    device->device,
 	    info->in_fly_frame_count,
-	    render_pass->color_formats[ 0 ],
-	    context->cbv_srv_heap,
-	    context->cbv_srv_heap->GetCPUDescriptorHandleForHeapStart(),
-	    context->cbv_srv_heap->GetGPUDescriptorHandleForHeapStart() );
+	    to_dxgi_format( info->color_attachment_formats[ 0 ] ),
+	    ui_context.cbv_srv_heap,
+	    ui_context.cbv_srv_heap->GetCPUDescriptorHandleForHeapStart(),
+	    ui_context.cbv_srv_heap->GetGPUDescriptorHandleForHeapStart() );
 }
 
 void
-d3d12_destroy_ui_context( const Device* idevice, UiContext* icontext )
+d3d12_ui_upload_resources( CommandBuffer* cmd )
 {
-	FT_ASSERT( icontext );
+}
 
-	FT_FROM_HANDLE( context, icontext, D3D12UiContext );
+void
+d3d12_ui_destroy_upload_objects()
+{
+}
 
+void
+d3d12_shutdown_ui( const Device* idevice )
+{
 	ImGui_ImplDX12_Shutdown();
 	ImGui_ImplSDL2_Shutdown();
-	context->cbv_srv_heap->Release();
+	ui_context.cbv_srv_heap->Release();
 	ImGui::DestroyContext();
-	std::free( context );
 }
 
 void
-d3d12_ui_begin_frame( UiContext*, CommandBuffer* icmd )
+d3d12_ui_begin_frame( CommandBuffer* icmd )
 {
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplSDL2_NewFrame();
@@ -1792,13 +1821,12 @@ d3d12_ui_begin_frame( UiContext*, CommandBuffer* icmd )
 }
 
 void
-d3d12_ui_end_frame( UiContext* icontext, CommandBuffer* icmd )
+d3d12_ui_end_frame( CommandBuffer* icmd )
 {
 	FT_FROM_HANDLE( cmd, icmd, D3D12CommandBuffer );
-	FT_FROM_HANDLE( context, icontext, D3D12UiContext );
 
 	ImGui::Render();
-	cmd->command_list->SetDescriptorHeaps( 1, &context->cbv_srv_heap );
+	cmd->command_list->SetDescriptorHeaps( 1, &ui_context.cbv_srv_heap );
 	ImGui_ImplDX12_RenderDrawData( ImGui::GetDrawData(), cmd->command_list );
 
 	ImGuiIO& io = ImGui::GetIO();
@@ -1848,9 +1876,6 @@ d3d12_create_renderer_backend( const RendererBackendInfo* info,
 	begin_command_buffer          = d3d12_begin_command_buffer;
 	end_command_buffer            = d3d12_end_command_buffer;
 	acquire_next_image            = d3d12_acquire_next_image;
-	create_render_pass            = d3d12_create_render_pass;
-	resize_render_pass            = d3d12_resize_render_pass;
-	destroy_render_pass           = d3d12_destroy_render_pass;
 	create_shader                 = d3d12_create_shader;
 	destroy_shader                = d3d12_destroy_shader;
 	create_descriptor_set_layout  = d3d12_create_descriptor_set_layout;
@@ -1869,8 +1894,10 @@ d3d12_create_renderer_backend( const RendererBackendInfo* info,
 	create_descriptor_set         = d3d12_create_descriptor_set;
 	destroy_descriptor_set        = d3d12_destroy_descriptor_set;
 	update_descriptor_set         = d3d12_update_descriptor_set;
-	create_ui_context             = d3d12_create_ui_context;
-	destroy_ui_context            = d3d12_destroy_ui_context;
+	init_ui                       = d3d12_init_ui;
+	ui_upload_resources           = d3d12_ui_upload_resources;
+	ui_destroy_upload_objects     = d3d12_ui_destroy_upload_objects;
+	shutdown_ui                   = d3d12_shutdown_ui;
 	ui_begin_frame                = d3d12_ui_begin_frame;
 	ui_end_frame                  = d3d12_ui_end_frame;
 	cmd_begin_render_pass         = d3d12_cmd_begin_render_pass;

@@ -100,15 +100,6 @@ struct D3D12Swapchain
 	Swapchain       interface;
 };
 
-struct D3D12RenderPass
-{
-	D3D12_CPU_DESCRIPTOR_HANDLE color_attachments[ MAX_ATTACHMENTS_COUNT ];
-	DXGI_FORMAT                 color_formats[ MAX_ATTACHMENTS_COUNT ];
-	D3D12_CPU_DESCRIPTOR_HANDLE depth_stencil;
-	DXGI_FORMAT                 depth_format;
-	RenderPass                  interface;
-};
-
 struct D3D12Shader
 {
 	D3D12_SHADER_BYTECODE bytecodes[ static_cast<u32>( ShaderStage::COUNT ) ];
@@ -137,7 +128,6 @@ struct D3D12DescriptorSet
 struct D3D12UiContext
 {
 	ID3D12DescriptorHeap* cbv_srv_heap;
-	UiContext             interface;
 };
 
 void

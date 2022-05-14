@@ -128,7 +128,6 @@ struct MetalRenderPass
 	b32         swapchain_render_pass;
 	MetalImage* color_attachments[ MAX_ATTACHMENTS_COUNT ];
 	MetalImage* depth_attachment;
-	RenderPass  interface;
 };
 
 struct MetalShader
@@ -204,11 +203,6 @@ struct MetalDescriptorSet
 	u32                  buffer_binding_count;
 	MetalBufferBinding*  buffer_bindings;
 	DescriptorSet        interface;
-};
-
-struct MetalUiContext
-{
-	UiContext interface;
 };
 
 void
