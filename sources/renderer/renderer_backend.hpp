@@ -396,8 +396,6 @@ struct UiInfo
 	u32                    min_image_count;
 	u32                    image_count;
 	u32                    in_fly_frame_count;
-	b32                    docking   = false;
-	b32                    viewports = false;
 };
 
 inline b32

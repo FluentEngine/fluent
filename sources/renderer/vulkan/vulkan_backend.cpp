@@ -2842,17 +2842,6 @@ vk_init_ui( const UiInfo* info )
 	                                   &ui_context.desriptor_pool ) );
 
 	ImGui::CreateContext();
-	auto& io = ImGui::GetIO();
-	( void ) io;
-	if ( info->docking )
-	{
-		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	}
-
-	if ( info->viewports )
-	{
-		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-	}
 
 	ImGui_ImplVulkan_InitInfo init_info {};
 	init_info.Instance        = backend->instance;
@@ -2945,17 +2934,9 @@ void
 vk_ui_end_frame( CommandBuffer* icmd )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
-
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(),
 	                                 cmd->command_buffer );
-
-	ImGuiIO& io = ImGui::GetIO();
-	if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
-	{
-		ImGui::UpdatePlatformWindows();
-		ImGui::RenderPlatformWindowsDefault();
-	}
 }
 
 void*
