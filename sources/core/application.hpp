@@ -27,10 +27,15 @@ struct ApplicationConfig
 
 void
 app_init( const ApplicationConfig* state );
+
 void
 app_run();
+
 void
 app_shutdown();
+
+void
+app_request_exit();
 
 void
 app_set_ui_context( const UiContext& context );

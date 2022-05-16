@@ -175,6 +175,12 @@ app_shutdown()
 	fluent::destroy_window( app_state.window );
 }
 
+void
+app_request_exit()
+{
+	app_state.is_running = false;
+}
+
 const Window*
 get_app_window()
 {
