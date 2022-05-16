@@ -1,7 +1,11 @@
 project('fluent-engine', [ 'c', 'cpp' ], default_options : ['default_library=static', 'c_std=c17', 'cpp_std=c++17'] )
 target = 'fluent-engine'
 
-ft_cpp_args = []
+ft_cpp_args = [
+	'-fno-rtti',
+	'-fno-exceptions'
+]
+
 ft_objcpp_args = []
 include_dirs = []
 libs = []
@@ -158,7 +162,7 @@ sources = [
 
 target_lib = library(target, sources, 
     dependencies: deps, 
-    include_directories: 'sources', 
+    include_directories: include_directories('sources'), 
     cpp_args: ft_cpp_args,
     objc_args: ft_objcpp_args,
     objcpp_args: ft_objcpp_args)
