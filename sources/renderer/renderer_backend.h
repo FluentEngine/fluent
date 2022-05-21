@@ -17,14 +17,14 @@ extern "C"
 #define FT_INIT_INTERNAL( name, ptr, type )                                    \
 	type* name             = ( type* ) calloc( 1, sizeof( type ) );            \
 	name->interface.handle = name;                                             \
-	ptr                    = &name->interface;
+	ptr                    = &name->interface
 
 #define FT_FROM_HANDLE( name, interface, impl )                                \
-	impl* name = ( impl* ) interface->handle;
+	impl* name = ( impl* ) interface->handle
 
 #define DECLARE_FUNCTION_POINTER( ret, name, ... )                             \
 	typedef ret ( *name##_fun )( __VA_ARGS__ );                                \
-	extern name##_fun name;
+	extern name##_fun name
 
 	// Forward declares
 	struct Window;
@@ -707,8 +707,8 @@ extern "C"
 	                          cmd_push_constants,
 	                          const CommandBuffer* cmd,
 	                          const Pipeline*      pipeline,
-	                          u64                  offset,
-	                          u64                  size,
+	                          u32                  offset,
+	                          u32                  size,
 	                          const void*          data );
 
 	DECLARE_FUNCTION_POINTER( void,

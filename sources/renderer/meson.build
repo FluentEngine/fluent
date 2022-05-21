@@ -1,6 +1,7 @@
 subdir('third_party/tiny_image_format')
 subdir('third_party/tinyddsloader')
 subdir('third_party/stb')
+subdir('third_party/hashmap.c')
 imgui = subproject('imgui')
 
 deps = [
@@ -8,6 +9,7 @@ deps = [
     tinyimageformat_dep,
     tinyddsloader_dep,
     stb_image_dep,
+    hashmap_dep,
     imgui.get_variable('imgui_dep')
 ]
 

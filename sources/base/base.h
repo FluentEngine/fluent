@@ -1,8 +1,11 @@
+#pragma once
+
 #include <string.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "assert.h"
+#include <assert.h>
+#include <alloca.h>
 
 typedef int8_t   i8;
 typedef uint8_t  u8;
@@ -28,3 +31,27 @@ typedef int      b32;
 
 #define ALLOC_STACK_ARRAY( T, NAME, COUNT )                                    \
 	T* NAME = ( T* ) alloca( sizeof( T ) * COUNT )
+
+#define ALLOC_HEAP_ARRAY( T, NAME, COUNT )                                     \
+	T* NAME = ( T* ) calloc( sizeof( T ), COUNT )
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+	static inline u64
+	hash_str( const char* str )
+	{
+		u64 res = 5381;
+		i32 c;
+
+		while ( ( c = *str++ ) )
+			res = ( ( res << 5 ) + res ) + c; /* hash * 33 + c */
+
+		return res;
+	}
+
+#ifdef __cplusplus
+}
+#endif

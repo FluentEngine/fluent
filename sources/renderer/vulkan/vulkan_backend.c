@@ -2,7 +2,7 @@
 
 #include <alloca.h>
 #include <tinyimageformat_apis.h>
-#include <stb_ds.h>
+#include <hashmap.h>
 #include "log/log.h"
 #include "wsi/wsi.h"
 #include "fs/fs.h"
@@ -22,40 +22,144 @@
 #define VK_ASSERT( x ) x
 #endif
 
-static inline f64
-clamp( f64 d, f64 min, f64 max )
+static inline u32
+clamp_u32( u32 d, u32 min, u32 max )
 {
 	return d < min ? min : ( max < d ) ? max : d;
 }
 
-typedef struct VulkanRenderPassPair
+struct RenderPassMapItem
 {
-	u32          key;
-	VkRenderPass value;
-} VulkanRenderPassPair;
-
-typedef struct VulkanFramebuffer
-{
-	u32           key;
-	VkFramebuffer value;
-} VulkanFramebufferPair;
-
-typedef VulkanRenderPassPair*  VulkanRenderPasses;
-typedef VulkanFramebufferPair* VulkanFramebuffers;
-
-struct PassesStorage
-{
-	VulkanRenderPasses passes[ MAX_DEVICE_COUNT ];
+	RenderPassBeginInfo info;
+	VkRenderPass        value;
 };
 
-struct FramebuffersStorage
+struct FramebufferMapItem
 {
-	VulkanFramebuffers framebuffers[ MAX_DEVICE_COUNT ];
+	RenderPassBeginInfo info;
+	VkFramebuffer       value;
 };
 
-static VulkanDevice*              devices[ MAX_DEVICE_COUNT ];
-static struct PassesStorage       passes_storage;
-static struct FramebuffersStorage framebuffers_storage;
+static b32
+compare_pass_info( const void* a, const void* b, void* udata )
+{
+	const struct RenderPassBeginInfo* rpa = a;
+	const struct RenderPassBeginInfo* rpb = b;
+	if ( rpa->color_attachment_count != rpb->color_attachment_count )
+		return 0;
+
+	for ( u32 i = 0; i < rpa->color_attachment_count; ++i )
+	{
+		if ( rpa->color_attachments[ i ]->format !=
+		     rpb->color_attachments[ i ]->format )
+		{
+			return 1;
+		}
+
+		if ( rpa->color_attachments[ i ]->sample_count !=
+		     rpb->color_attachments[ i ]->sample_count )
+		{
+			return 1;
+		}
+
+		if ( rpa->color_attachment_load_ops[ i ] !=
+		     rpb->color_attachment_load_ops[ i ] )
+		{
+			return 1;
+		}
+
+		if ( rpa->color_image_states[ i ] != rpb->color_image_states[ i ] )
+		{
+			return 1;
+		}
+	}
+
+	if ( ( rpa->depth_stencil != rpb->depth_stencil ) &&
+	     ( ( rpa->depth_stencil == NULL ) || ( rpb->depth_stencil == NULL ) ) )
+	{
+		return 1;
+	}
+
+	if ( rpa->depth_stencil )
+	{
+		if ( rpa->depth_stencil != rpb->depth_stencil )
+		{
+			return 1;
+		}
+
+		if ( rpa->depth_stencil->sample_count !=
+		     rpb->depth_stencil->sample_count )
+		{
+			return 1;
+		}
+
+		if ( rpa->depth_stencil_load_op != rpb->depth_stencil_load_op )
+		{
+			return 1;
+		}
+
+		if ( rpa->depth_stencil_state != rpb->depth_stencil_state )
+		{
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+static u64
+hash_pass_info( const void* item, u64 seed0, u64 seed1 )
+{
+	// TODO: hash function
+	return 0;
+}
+
+static b32
+compare_framebuffer_info( const void* a, const void* b, void* udata )
+{
+	const struct RenderPassBeginInfo* rpa = a;
+	const struct RenderPassBeginInfo* rpb = b;
+
+	if ( rpa->color_attachment_count != rpb->color_attachment_count )
+	{
+		return 1;
+	}
+
+	for ( u32 i = 0; i < rpa->color_attachment_count; ++i )
+	{
+		if ( rpa->color_attachments[ i ] != rpb->color_attachments[ i ] )
+		{
+			return 1;
+		}
+	}
+
+	if ( ( rpa->depth_stencil != rpb->depth_stencil ) &&
+	     ( ( rpa->depth_stencil == NULL ) || ( rpb->depth_stencil == NULL ) ) )
+	{
+		return 1;
+	}
+
+	if ( rpa->depth_stencil )
+	{
+		if ( rpa->depth_stencil != rpb->depth_stencil )
+		{
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+static u64
+hash_framebuffer_info( const void* item, u64 seed0, u64 seed1 )
+{
+	// TODO: hash function
+	return 0;
+}
+
+static VulkanDevice*   devices[ MAX_DEVICE_COUNT ];
+static struct hashmap* passes[ MAX_DEVICE_COUNT ]       = { NULL };
+static struct hashmap* framebuffers[ MAX_DEVICE_COUNT ] = { NULL };
 
 static inline VkFormat
 to_vk_format( Format format )
@@ -258,7 +362,7 @@ to_vk_polygon_mode( PolygonMode mode )
 	case FT_POLYGON_MODE_LINE: return VK_POLYGON_MODE_LINE;
 	default: FT_ASSERT( 0 ); return ( VkPolygonMode ) -1;
 	}
-};
+}
 
 static inline VkPrimitiveTopology
 to_vk_primitive_topology( PrimitiveTopology topology )
@@ -359,6 +463,7 @@ determine_pipeline_stage_flags( VkAccessFlags access_flags,
 	}
 	case FT_QUEUE_TYPE_COMPUTE:
 	{
+		break;
 	}
 	default:
 	{
@@ -535,6 +640,7 @@ vulkan_debug_callback(
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void*                                       user_data )
 {
+	( void ) flags;
 	( void ) user_data;
 
 	static char const* prefix = "[Vulkan]:";
@@ -748,7 +854,7 @@ get_image_subresource_layers( const VulkanImage* image )
 	return layers;
 }
 
-void
+static void
 vk_destroy_renderer_backend( RendererBackend* ibackend )
 {
 	FT_ASSERT( ibackend );
@@ -764,7 +870,7 @@ vk_destroy_renderer_backend( RendererBackend* ibackend )
 	free( backend );
 }
 
-void*
+static void*
 vk_map_memory( const Device* idevice, Buffer* ibuffer )
 {
 	FT_ASSERT( ibuffer != NULL );
@@ -780,7 +886,7 @@ vk_map_memory( const Device* idevice, Buffer* ibuffer )
 	return buffer->interface.mapped_memory;
 }
 
-void
+static void
 vk_unmap_memory( const Device* idevice, Buffer* ibuffer )
 {
 	FT_ASSERT( ibuffer );
@@ -793,7 +899,7 @@ vk_unmap_memory( const Device* idevice, Buffer* ibuffer )
 	buffer->interface.mapped_memory = NULL;
 }
 
-void
+static void
 vk_create_device( const RendererBackend* ibackend,
                   const DeviceInfo*      info,
                   Device**               p )
@@ -842,7 +948,6 @@ vk_create_device( const RendererBackend* ibackend,
 	// TODO: Select queues
 	for ( u32 i = 0; i < queue_family_count; ++i )
 	{
-		//		queue_create_infos[ queue_create_info_count ] = {};
 		queue_create_infos[ queue_create_info_count ].sType =
 		    VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 		queue_create_infos[ queue_create_info_count ].pNext      = NULL;
@@ -989,7 +1094,10 @@ vk_create_device( const RendererBackend* ibackend,
 	VK_ASSERT( vmaCreateAllocator( &vma_allocator_create_info,
 	                               &device->memory_allocator ) );
 
-#define POOL_SIZE_COUNT 11
+	enum
+	{
+		POOL_SIZE_COUNT = 11
+	};
 
 	VkDescriptorPoolSize pool_sizes[ POOL_SIZE_COUNT ] = {
 		{ VK_DESCRIPTOR_TYPE_SAMPLER, 1024 },
@@ -1019,35 +1127,57 @@ vk_create_device( const RendererBackend* ibackend,
 	                                   &descriptor_pool_create_info,
 	                                   device->vulkan_allocator,
 	                                   &device->descriptor_pool ) );
+
+	passes[ device->index ] = hashmap_new( sizeof( struct RenderPassMapItem ),
+	                                       0,
+	                                       0,
+	                                       0,
+	                                       hash_pass_info,
+	                                       compare_pass_info,
+	                                       NULL,
+	                                       NULL );
+
+	framebuffers[ device->index ] =
+	    hashmap_new( sizeof( struct FramebufferMapItem ),
+	                 0,
+	                 0,
+	                 0,
+	                 hash_framebuffer_info,
+	                 compare_framebuffer_info,
+	                 NULL,
+	                 NULL );
 }
 
-void
+static void
 vk_destroy_device( Device* idevice )
 {
 	FT_ASSERT( idevice );
 
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-	VulkanFramebuffers* framebuffers =
-	    &framebuffers_storage.framebuffers[ device->index ];
-	for ( u64 i = 0; i < hmlen( framebuffers ); ++i )
+	u64   iter = 0;
+	void* item;
+
+	while ( hashmap_iter( framebuffers[ device->index ], &iter, &item ) )
 	{
-		VkFramebuffer framebuffer = ( *framebuffers[ i ] ).value;
+		struct FramebufferMapItem* fb = item;
 		vkDestroyFramebuffer( device->logical_device,
-		                      framebuffer,
+		                      fb->value,
 		                      device->vulkan_allocator );
 	}
-	hmfree( *framebuffers );
+	hashmap_free( framebuffers[ device->index ] );
 
-	VulkanRenderPasses* render_passes = &passes_storage.passes[ device->index ];
-	for ( u64 i = 0; i < hmlen( render_passes ); ++i )
+	iter = 0;
+
+	while ( hashmap_iter( passes[ device->index ], &iter, &item ) )
 	{
-		VkRenderPass render_pass = ( *render_passes[ i ] ).value;
+		struct RenderPassMapItem* pass = item;
 		vkDestroyRenderPass( device->logical_device,
-		                     render_pass,
+		                     pass->value,
 		                     device->vulkan_allocator );
 	}
-	hmfree( *render_passes );
+
+	hashmap_free( passes[ device->index ] );
 
 	vkDestroyDescriptorPool( device->logical_device,
 	                         device->descriptor_pool,
@@ -1060,7 +1190,7 @@ vk_destroy_device( Device* idevice )
 	free( device );
 }
 
-void
+static void
 vk_create_queue( const Device* idevice, const QueueInfo* info, Queue** p )
 {
 	FT_ASSERT( p );
@@ -1077,7 +1207,7 @@ vk_create_queue( const Device* idevice, const QueueInfo* info, Queue** p )
 	vkGetDeviceQueue( device->logical_device, index, 0, &queue->queue );
 }
 
-void
+static void
 vk_destroy_queue( Queue* iqueue )
 {
 	FT_ASSERT( iqueue );
@@ -1085,14 +1215,14 @@ vk_destroy_queue( Queue* iqueue )
 	free( queue );
 }
 
-void
+static void
 vk_queue_wait_idle( const Queue* iqueue )
 {
 	FT_FROM_HANDLE( queue, iqueue, VulkanQueue );
 	vkQueueWaitIdle( queue->queue );
 }
 
-void
+static void
 vk_queue_submit( const Queue* iqueue, const QueueSubmitInfo* info )
 {
 	FT_FROM_HANDLE( queue, iqueue, VulkanQueue );
@@ -1152,7 +1282,7 @@ vk_queue_submit( const Queue* iqueue, const QueueSubmitInfo* info )
 	        : VK_NULL_HANDLE );
 }
 
-void
+static void
 vk_immediate_submit( const Queue* iqueue, CommandBuffer* cmd )
 {
 	QueueSubmitInfo queue_submit_info      = {};
@@ -1162,7 +1292,7 @@ vk_immediate_submit( const Queue* iqueue, CommandBuffer* cmd )
 	queue_wait_idle( iqueue );
 }
 
-void
+static void
 vk_queue_present( const Queue* iqueue, const QueuePresentInfo* info )
 {
 	FT_FROM_HANDLE( swapchain, info->swapchain, VulkanSwapchain );
@@ -1194,7 +1324,7 @@ vk_queue_present( const Queue* iqueue, const QueuePresentInfo* info )
 	vkQueuePresentKHR( queue->queue, &present_info );
 }
 
-void
+static void
 vk_create_semaphore( const Device* idevice, Semaphore** p )
 {
 	FT_ASSERT( p );
@@ -1214,7 +1344,7 @@ vk_create_semaphore( const Device* idevice, Semaphore** p )
 	                              &semaphore->semaphore ) );
 }
 
-void
+static void
 vk_destroy_semaphore( const Device* idevice, Semaphore* isemaphore )
 {
 	FT_ASSERT( isemaphore );
@@ -1228,7 +1358,7 @@ vk_destroy_semaphore( const Device* idevice, Semaphore* isemaphore )
 	free( semaphore );
 }
 
-void
+static void
 vk_create_fence( const Device* idevice, Fence** p )
 {
 	FT_ASSERT( p );
@@ -1248,7 +1378,7 @@ vk_create_fence( const Device* idevice, Fence** p )
 	                          &fence->fence ) );
 }
 
-void
+static void
 vk_destroy_fence( const Device* idevice, Fence* ifence )
 {
 	FT_ASSERT( ifence );
@@ -1262,7 +1392,7 @@ vk_destroy_fence( const Device* idevice, Fence* ifence )
 	free( fence );
 }
 
-void
+static void
 vk_wait_for_fences( const Device* idevice, u32 count, Fence** ifences )
 {
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
@@ -1278,7 +1408,7 @@ vk_wait_for_fences( const Device* idevice, u32 count, Fence** ifences )
 	vkWaitForFences( device->logical_device, count, fences, 1, UINT64_MAX );
 }
 
-void
+static void
 vk_reset_fences( const Device* idevice, u32 count, Fence** ifences )
 {
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
@@ -1294,10 +1424,10 @@ vk_reset_fences( const Device* idevice, u32 count, Fence** ifences )
 	vkResetFences( device->logical_device, count, fences );
 }
 
-void
-configure_swapchain( const VulkanDevice*  device,
-                     VulkanSwapchain*     swapchain,
-                     const SwapchainInfo* info )
+static void
+vk_configure_swapchain( const VulkanDevice*  device,
+                        VulkanSwapchain*     swapchain,
+                        const SwapchainInfo* info )
 {
 	WsiInfo* wsi = info->wsi_info;
 
@@ -1350,18 +1480,18 @@ configure_swapchain( const VulkanDevice*  device,
 
 	// determine swapchain size
 	swapchain->interface.width =
-	    clamp( info->width,
-	           surface_capabilities.minImageExtent.width,
-	           surface_capabilities.maxImageExtent.width );
+	    clamp_u32( info->width,
+	               surface_capabilities.minImageExtent.width,
+	               surface_capabilities.maxImageExtent.width );
 	swapchain->interface.height =
-	    clamp( info->height,
-	           surface_capabilities.minImageExtent.height,
-	           surface_capabilities.maxImageExtent.height );
+	    clamp_u32( info->height,
+	               surface_capabilities.minImageExtent.height,
+	               surface_capabilities.maxImageExtent.height );
 
 	swapchain->interface.min_image_count =
-	    clamp( info->min_image_count,
-	           surface_capabilities.minImageCount,
-	           surface_capabilities.maxImageCount );
+	    clamp_u32( info->min_image_count,
+	               surface_capabilities.minImageCount,
+	               surface_capabilities.maxImageCount );
 
 	/// find best surface format
 	u32 surface_format_count = 0;
@@ -1404,10 +1534,10 @@ configure_swapchain( const VulkanDevice*  device,
 	swapchain->interface.vsync = info->vsync;
 }
 
-void
-create_configured_swapchain( const VulkanDevice* device,
-                             VulkanSwapchain*    swapchain,
-                             b32                 resize )
+static void
+vk_create_configured_swapchain( const VulkanDevice* device,
+                                VulkanSwapchain*    swapchain,
+                                b32                 resize )
 {
 	// destroy old resources if it is resize
 	if ( resize )
@@ -1515,7 +1645,7 @@ create_configured_swapchain( const VulkanDevice* device,
 	}
 }
 
-void
+static void
 vk_create_swapchain( const Device*        idevice,
                      const SwapchainInfo* info,
                      Swapchain**          p )
@@ -1529,11 +1659,11 @@ vk_create_swapchain( const Device*        idevice,
 
 	FT_INIT_INTERNAL( swapchain, *p, VulkanSwapchain );
 
-	configure_swapchain( device, swapchain, info );
-	create_configured_swapchain( device, swapchain, 0 );
+	vk_configure_swapchain( device, swapchain, info );
+	vk_create_configured_swapchain( device, swapchain, 0 );
 }
 
-void
+static void
 vk_resize_swapchain( const Device* idevice,
                      Swapchain*    iswapchain,
                      u32           width,
@@ -1545,21 +1675,21 @@ vk_resize_swapchain( const Device* idevice,
 	iswapchain->width  = width;
 	iswapchain->height = height;
 
-	VulkanFramebuffers* framebuffers =
-	    &framebuffers_storage.framebuffers[ device->index ];
-	for ( u64 i = 0; i < hmlen( framebuffers ); ++i )
+	u64   iter;
+	void* item;
+	while ( hashmap_iter( framebuffers[ device->index ], &iter, &item ) )
 	{
-		VkFramebuffer framebuffer = ( *framebuffers[ i ] ).value;
+		struct FramebufferMapItem* fb = item;
 		vkDestroyFramebuffer( device->logical_device,
-		                      framebuffer,
+		                      fb->value,
 		                      device->vulkan_allocator );
 	}
-	hmfree( *framebuffers );
+	hashmap_clear( framebuffers[ device->index ], 0 );
 
-	create_configured_swapchain( device, swapchain, 1 );
+	vk_create_configured_swapchain( device, swapchain, 1 );
 }
 
-void
+static void
 vk_destroy_swapchain( const Device* idevice, Swapchain* iswapchain )
 {
 	FT_ASSERT( iswapchain );
@@ -1591,7 +1721,7 @@ vk_destroy_swapchain( const Device* idevice, Swapchain* iswapchain )
 	free( swapchain );
 }
 
-void
+static void
 vk_create_command_pool( const Device*          idevice,
                         const CommandPoolInfo* info,
                         CommandPool**          p )
@@ -1617,7 +1747,7 @@ vk_create_command_pool( const Device*          idevice,
 	                                &command_pool->command_pool ) );
 }
 
-void
+static void
 vk_destroy_command_pool( const Device* idevice, CommandPool* icommand_pool )
 {
 	FT_ASSERT( icommand_pool );
@@ -1631,7 +1761,7 @@ vk_destroy_command_pool( const Device* idevice, CommandPool* icommand_pool )
 	free( command_pool );
 }
 
-void
+static void
 vk_create_command_buffers( const Device*      idevice,
                            const CommandPool* icommand_pool,
                            u32                count,
@@ -1666,7 +1796,7 @@ vk_create_command_buffers( const Device*      idevice,
 	}
 }
 
-void
+static void
 vk_free_command_buffers( const Device*      idevice,
                          const CommandPool* icommand_pool,
                          u32                count,
@@ -1691,7 +1821,7 @@ vk_free_command_buffers( const Device*      idevice,
 	    buffers );
 }
 
-void
+static void
 vk_destroy_command_buffers( const Device*      idevice,
                             const CommandPool* icommand_pool,
                             u32                count,
@@ -1709,7 +1839,7 @@ vk_destroy_command_buffers( const Device*      idevice,
 	}
 }
 
-void
+static void
 vk_begin_command_buffer( const CommandBuffer* icmd )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
@@ -1726,14 +1856,14 @@ vk_begin_command_buffer( const CommandBuffer* icmd )
 	                                 &command_buffer_begin_info ) );
 }
 
-void
+static void
 vk_end_command_buffer( const CommandBuffer* icmd )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 	VK_ASSERT( vkEndCommandBuffer( cmd->command_buffer ) );
 }
 
-void
+static void
 vk_acquire_next_image( const Device*    idevice,
                        const Swapchain* iswapchain,
                        const Semaphore* isemaphore,
@@ -1756,10 +1886,10 @@ vk_acquire_next_image( const Device*    idevice,
 }
 
 static inline void
-create_framebuffer( const VulkanDevice*        device,
-                    const RenderPassBeginInfo* info,
-                    VkRenderPass               render_pass,
-                    VkFramebuffer*             p )
+vk_create_framebuffer( const VulkanDevice*        device,
+                       const RenderPassBeginInfo* info,
+                       VkRenderPass               render_pass,
+                       VkFramebuffer*             p )
 {
 	u32 attachment_count = info->color_attachment_count;
 
@@ -1796,9 +1926,9 @@ create_framebuffer( const VulkanDevice*        device,
 }
 
 static inline void
-create_render_pass( const VulkanDevice*        device,
-                    const RenderPassBeginInfo* info,
-                    VkRenderPass*              p )
+vk_create_render_pass( const VulkanDevice*        device,
+                       const RenderPassBeginInfo* info,
+                       VkRenderPass*              p )
 {
 	FT_ASSERT( p );
 
@@ -1893,57 +2023,26 @@ create_render_pass( const VulkanDevice*        device,
 	                               p ) );
 }
 
-static u64
-hash( u64 x )
-{
-	x = ( ( x >> 16 ) ^ x ) * 0x45d9f3b;
-	x = ( ( x >> 16 ) ^ x ) * 0x45d9f3b;
-	x = ( x >> 16 ) ^ x;
-	return x;
-}
-
-static void
-hash_combine( u64* s, u64 v )
-{
-	( *s ) ^= hash( v ) + 0x9e3779b9 + ( ( *s ) << 6 ) + ( ( *s ) >> 2 );
-}
-
 static inline VkRenderPass
 get_render_pass( const RenderPassBeginInfo* info )
 {
 	FT_FROM_HANDLE( device, info->device, VulkanDevice );
 
-	u64 pass_hash = 0;
-	hash_combine( &pass_hash, info->color_attachment_count );
-	for ( u32 i = 0; i < info->color_attachment_count; ++i )
+	struct RenderPassMapItem* it =
+	    hashmap_get( passes[ device->index ],
+	                 &( struct RenderPassMapItem ) { .info = *info } );
+
+	if ( it != NULL )
 	{
-		hash_combine( &pass_hash, info->color_attachments[ i ]->format );
-		hash_combine( &pass_hash, info->color_attachments[ i ]->sample_count );
-		hash_combine( &pass_hash, info->color_attachment_load_ops[ i ] );
-		hash_combine( &pass_hash, info->color_image_states[ i ] );
-	}
-
-	if ( info->depth_stencil )
-	{
-		hash_combine( &pass_hash, info->depth_stencil->format );
-		hash_combine( &pass_hash, info->depth_stencil->sample_count );
-		hash_combine( &pass_hash, info->depth_stencil_load_op );
-		hash_combine( &pass_hash, info->depth_stencil_state );
-	}
-
-	VulkanRenderPasses* passes = &passes_storage.passes[ device->index ];
-
-	u32 it = hmgeti( *passes, pass_hash );
-
-	if ( it != -1 )
-	{
-		return ( *passes )[ it ].value;
+		return it->value;
 	}
 	else
 	{
 		VkRenderPass render_pass;
-		create_render_pass( device, info, &render_pass );
-		hmput( *passes, pass_hash, render_pass );
+		vk_create_render_pass( device, info, &render_pass );
+		hashmap_set( passes[ device->index ],
+		             &( struct RenderPassMapItem ) { .info  = *info,
+		                                             .value = render_pass } );
 		return render_pass;
 	}
 }
@@ -1953,32 +2052,22 @@ get_framebuffer( VkRenderPass render_pass, const RenderPassBeginInfo* info )
 {
 	FT_FROM_HANDLE( device, info->device, VulkanDevice );
 
-	u64 fb_hash = 0;
-	hash_combine( &fb_hash, info->color_attachment_count );
-	for ( u32 i = 0; i < info->color_attachment_count; ++i )
+	struct FramebufferMapItem* it =
+	    hashmap_get( framebuffers[ device->index ],
+	                 &( struct FramebufferMapItem ) { .info = *info } );
+
+	if ( it != NULL )
 	{
-		hash_combine( &fb_hash, ( u64 ) info->color_attachments[ i ] );
-	}
-
-	if ( info->depth_stencil )
-	{
-		hash_combine( &fb_hash, ( u64 ) info->depth_stencil );
-	}
-
-	VulkanFramebuffers* framebuffers =
-	    &framebuffers_storage.framebuffers[ device->index ];
-
-	u32 it = hmgeti( *framebuffers, fb_hash );
-
-	if ( it != -1 )
-	{
-		return ( *framebuffers )[ it ].value;
+		return it->value;
 	}
 	else
 	{
 		VkFramebuffer framebuffer;
-		create_framebuffer( device, info, render_pass, &framebuffer );
-		hmput( *framebuffers, fb_hash, framebuffer );
+		vk_create_framebuffer( device, info, render_pass, &framebuffer );
+		hashmap_set( framebuffers[ device->index ],
+		             &( struct FramebufferMapItem ) { .info  = *info,
+		                                              .value = framebuffer } );
+
 		return framebuffer;
 	}
 }
@@ -2004,7 +2093,8 @@ vk_create_module( const VulkanDevice*     device,
 		                                 &shader->shaders[ stage ] ) );
 	}
 }
-void
+
+static void
 vk_create_shader( const Device* idevice, ShaderInfo* info, Shader** p )
 {
 	FT_ASSERT( p );
@@ -2047,7 +2137,8 @@ vk_destroy_module( const VulkanDevice* device,
 		                       device->vulkan_allocator );
 	}
 }
-void
+
+static void
 vk_destroy_shader( const Device* idevice, Shader* ishader )
 {
 	FT_ASSERT( ishader );
@@ -2064,10 +2155,16 @@ vk_destroy_shader( const Device* idevice, Shader* ishader )
 	vk_destroy_module( device, FT_SHADER_STAGE_GEOMETRY, shader );
 	vk_destroy_module( device, FT_SHADER_STAGE_FRAGMENT, shader );
 
+	if ( shader->interface.reflect_data.binding_count )
+	{
+		hashmap_free( shader->interface.reflect_data.binding_map );
+		free( shader->interface.reflect_data.bindings );
+	}
+
 	free( shader );
 }
 
-void
+static void
 vk_create_descriptor_set_layout( const Device*         idevice,
                                  Shader*               ishader,
                                  DescriptorSetLayout** p )
@@ -2078,7 +2175,37 @@ vk_create_descriptor_set_layout( const Device*         idevice,
 
 	FT_INIT_INTERNAL( descriptor_set_layout, *p, VulkanDescriptorSetLayout );
 
-	descriptor_set_layout->interface.reflection_data = ishader->reflect_data;
+	// copy reflection data because shader can be destroyed earlier
+	ReflectionData reflect_data = {};
+	reflect_data.binding_count  = ishader->reflect_data.binding_count;
+	reflect_data.binding_map    = hashmap_new( sizeof( struct BindingMapItem ),
+                                            0,
+                                            0,
+                                            0,
+                                            binding_map_hash,
+                                            binding_map_compare,
+                                            NULL,
+                                            NULL );
+	if ( reflect_data.binding_count != 0 )
+	{
+		u64   iter = 0;
+		void* item;
+		while (
+		    hashmap_iter( ishader->reflect_data.binding_map, &iter, &item ) )
+		{
+			hashmap_set( reflect_data.binding_map, item );
+		}
+
+		ALLOC_HEAP_ARRAY( struct Binding,
+		                  bindings,
+		                  ishader->reflect_data.binding_count );
+		reflect_data.bindings = bindings;
+		for ( u32 i = 0; i < ishader->reflect_data.binding_count; ++i )
+		{
+			reflect_data.bindings[ i ] = ishader->reflect_data.bindings[ i ];
+		}
+	}
+	descriptor_set_layout->interface.reflection_data = reflect_data;
 
 	// count bindings in all shaders
 	u32                      binding_counts[ MAX_SET_COUNT ] = { 0 };
@@ -2095,9 +2222,9 @@ vk_create_descriptor_set_layout( const Device*         idevice,
 
 	for ( u32 b = 0; b < reflection->binding_count; ++b )
 	{
-		Binding* binding       = &reflection->bindings[ b ];
-		u32      set           = binding->set;
-		u32      binding_count = binding_counts[ set ];
+		struct Binding* binding       = &reflection->bindings[ b ];
+		u32             set           = binding->set;
+		u32             binding_count = binding_counts[ set ];
 
 		bindings[ set ][ binding_count ].binding = binding->binding;
 		bindings[ set ][ binding_count ].descriptorCount =
@@ -2117,6 +2244,7 @@ vk_create_descriptor_set_layout( const Device*         idevice,
 		}
 
 		binding_count++;
+		binding_counts[ set ] = binding_count;
 
 		if ( set + 1 > set_count )
 		{
@@ -2158,7 +2286,7 @@ vk_create_descriptor_set_layout( const Device*         idevice,
 	}
 }
 
-void
+static void
 vk_destroy_descriptor_set_layout( const Device*        idevice,
                                   DescriptorSetLayout* ilayout )
 {
@@ -2177,10 +2305,16 @@ vk_destroy_descriptor_set_layout( const Device*        idevice,
 		}
 	}
 
+	if ( layout->interface.reflection_data.binding_count )
+	{
+		hashmap_free( layout->interface.reflection_data.binding_map );
+		free( layout->interface.reflection_data.bindings );
+	}
+
 	free( layout );
 }
 
-void
+static void
 vk_create_compute_pipeline( const Device*       idevice,
                             const PipelineInfo* info,
                             Pipeline**          p )
@@ -2245,7 +2379,7 @@ vk_create_compute_pipeline( const Device*       idevice,
 	                                     &pipeline->pipeline ) );
 }
 
-void
+static void
 vk_create_graphics_pipeline( const Device*       idevice,
                              const PipelineInfo* info,
                              Pipeline**          p )
@@ -2289,7 +2423,7 @@ vk_create_graphics_pipeline( const Device*       idevice,
 	}
 
 	VkRenderPass render_pass;
-	create_render_pass( device, &render_pass_info, &render_pass );
+	vk_create_render_pass( device, &render_pass_info, &render_pass );
 
 	pipeline->interface.type = FT_PIPELINE_TYPE_GRAPHICS;
 
@@ -2443,9 +2577,10 @@ vk_create_graphics_pipeline( const Device*       idevice,
 
 	enum
 	{
-		dynamic_state_count = 2
+		DYNAMIC_STATE_COUNT = 2
 	};
-	VkDynamicState dynamic_states[ dynamic_state_count ] = {
+
+	VkDynamicState dynamic_states[ DYNAMIC_STATE_COUNT ] = {
 		VK_DYNAMIC_STATE_SCISSOR,
 		VK_DYNAMIC_STATE_VIEWPORT
 	};
@@ -2453,7 +2588,7 @@ vk_create_graphics_pipeline( const Device*       idevice,
 	VkPipelineDynamicStateCreateInfo dynamic_state_create_info = {};
 	dynamic_state_create_info.sType =
 	    VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-	dynamic_state_create_info.dynamicStateCount = dynamic_state_count;
+	dynamic_state_create_info.dynamicStateCount = DYNAMIC_STATE_COUNT;
 	dynamic_state_create_info.pDynamicStates    = dynamic_states;
 
 	VkPushConstantRange push_constant_range = {};
@@ -2507,7 +2642,7 @@ vk_create_graphics_pipeline( const Device*       idevice,
 	                     device->vulkan_allocator );
 }
 
-void
+static void
 vk_destroy_pipeline( const Device* idevice, Pipeline* ipipeline )
 {
 	FT_ASSERT( ipipeline );
@@ -2524,7 +2659,7 @@ vk_destroy_pipeline( const Device* idevice, Pipeline* ipipeline )
 	free( pipeline );
 }
 
-void
+static void
 vk_create_buffer( const Device* idevice, const BufferInfo* info, Buffer** p )
 {
 	FT_ASSERT( p );
@@ -2560,7 +2695,7 @@ vk_create_buffer( const Device* idevice, const BufferInfo* info, Buffer** p )
 	                            NULL ) );
 }
 
-void
+static void
 vk_destroy_buffer( const Device* idevice, Buffer* ibuffer )
 {
 	FT_ASSERT( ibuffer );
@@ -2574,7 +2709,7 @@ vk_destroy_buffer( const Device* idevice, Buffer* ibuffer )
 	free( buffer );
 }
 
-void
+static void
 vk_create_sampler( const Device* idevice, const SamplerInfo* info, Sampler** p )
 {
 	FT_ASSERT( p );
@@ -2612,7 +2747,7 @@ vk_create_sampler( const Device* idevice, const SamplerInfo* info, Sampler** p )
 	                            &sampler->sampler ) );
 }
 
-void
+static void
 vk_destroy_sampler( const Device* idevice, Sampler* isampler )
 {
 	FT_ASSERT( isampler );
@@ -2626,7 +2761,7 @@ vk_destroy_sampler( const Device* idevice, Sampler* isampler )
 	free( sampler );
 }
 
-void
+static void
 vk_create_image( const Device* idevice, const ImageInfo* info, Image** p )
 {
 	FT_ASSERT( p );
@@ -2706,7 +2841,7 @@ vk_create_image( const Device* idevice, const ImageInfo* info, Image** p )
 	                              &image->image_view ) );
 }
 
-void
+static void
 vk_destroy_image( const Device* idevice, Image* iimage )
 {
 	FT_ASSERT( iimage );
@@ -2723,7 +2858,7 @@ vk_destroy_image( const Device* idevice, Image* iimage )
 	free( image );
 }
 
-void
+static void
 vk_create_descriptor_set( const Device*            idevice,
                           const DescriptorSetInfo* info,
                           DescriptorSet**          p )
@@ -2752,7 +2887,7 @@ vk_create_descriptor_set( const Device*            idevice,
 	                                     &descriptor_set->descriptor_set ) );
 }
 
-void
+static void
 vk_destroy_descriptor_set( const Device* idevice, DescriptorSet* iset )
 {
 	FT_ASSERT( iset );
@@ -2767,23 +2902,26 @@ vk_destroy_descriptor_set( const Device* idevice, DescriptorSet* iset )
 	free( set );
 }
 
-void
+static void
 vk_update_descriptor_set( const Device*          idevice,
                           DescriptorSet*         iset,
                           u32                    count,
                           const DescriptorWrite* writes )
 {
+	FT_ASSERT( idevice );
 	FT_ASSERT( iset );
-
-#ifdef FT_MOVED_C
+	FT_ASSERT( count );
+	FT_ASSERT( writes );
 
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( set, iset, VulkanDescriptorSet );
 
 	// TODO: rewrite
-	ALLOC_STACK_ARRAY( VkDescriptorBufferInfo, buffer_updates, count );
-	ALLOC_STACK_ARRAY( VkDescriptorImageInfo, image_updates, count );
-	ALLOC_STACK_ARRAY( VkWriteDescriptorSet, descriptor_writes, count );
+	ALLOC_HEAP_ARRAY( VkDescriptorBufferInfo*, buffer_updates, count );
+	u32 buffer_update_idx = 0;
+	ALLOC_HEAP_ARRAY( VkDescriptorImageInfo*, image_updates, count );
+	u32 image_update_idx = 0;
+	ALLOC_HEAP_ARRAY( VkWriteDescriptorSet, descriptor_writes, count );
 
 	u32 write = 0;
 
@@ -2792,105 +2930,124 @@ vk_update_descriptor_set( const Device*          idevice,
 		const DescriptorWrite* descriptor_write = &writes[ i ];
 
 		ReflectionData* reflection = &set->interface.layout->reflection_data;
-		FT_ASSERT(
-		    reflection.binding_map.find( descriptor_write->descriptor_name ) !=
-		    reflection.binding_map.cend() );
 
-		const auto& binding =
-		    reflection.bindings
-		        [ reflection.binding_map[ descriptor_write.descriptor_name ] ];
+		struct BindingMapItem item;
+		memset( item.name, '\0', MAX_BINDING_NAME_LENGTH );
+		strncpy( item.name,
+		         descriptor_write->descriptor_name,
+		         strlen( descriptor_write->descriptor_name ) );
+		struct BindingMapItem* it =
+		    hashmap_get( reflection->binding_map, &item );
 
-		auto& write_descriptor_set = descriptor_writes[ write++ ];
-		write_descriptor_set       = {};
-		write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_descriptor_set.dstBinding = binding.binding;
-		write_descriptor_set.descriptorCount =
-		    descriptor_write.descriptor_count;
-		write_descriptor_set.dstSet = set->descriptor_set;
-		write_descriptor_set.descriptorType =
-		    to_vk_descriptor_type( binding.descriptor_type );
+		FT_ASSERT( it != NULL );
 
-		if ( descriptor_write.buffer_descriptors )
+		const struct Binding* binding = &reflection->bindings[ it->value ];
+
+		VkWriteDescriptorSet* write_descriptor_set =
+		    &descriptor_writes[ write++ ];
+		//		write_descriptor_set       = {};
+		write_descriptor_set->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write_descriptor_set->dstBinding = binding->binding;
+		write_descriptor_set->descriptorCount =
+		    descriptor_write->descriptor_count;
+		write_descriptor_set->dstSet = set->descriptor_set;
+		write_descriptor_set->descriptorType =
+		    to_vk_descriptor_type( binding->descriptor_type );
+
+		if ( descriptor_write->buffer_descriptors )
 		{
-			auto& bds = buffer_updates.emplace_back();
-			bds.resize( descriptor_write.descriptor_count );
+			VkDescriptorBufferInfo* buffer_infos =
+			    ( VkDescriptorBufferInfo* ) calloc(
+			        sizeof( VkDescriptorBufferInfo ),
+			        descriptor_write->descriptor_count );
+			buffer_updates[ buffer_update_idx++ ] = buffer_infos;
 
-			for ( u32 j = 0; j < descriptor_write.descriptor_count; ++j )
+			for ( u32 j = 0; j < descriptor_write->descriptor_count; ++j )
 			{
-				bds[ j ]        = {};
-				bds[ j ].buffer = static_cast<VulkanBuffer*>(
-				                      descriptor_write.buffer_descriptors[ j ]
-				                          .buffer->handle )
-				                      ->buffer;
-				bds[ j ].offset =
-				    descriptor_write.buffer_descriptors[ j ].offset;
-				bds[ j ].range = descriptor_write.buffer_descriptors[ j ].range;
+				buffer_infos[ j ].buffer = ( ( VulkanBuffer* ) descriptor_write
+				                                 ->buffer_descriptors[ j ]
+				                                 .buffer->handle )
+				                               ->buffer;
+				buffer_infos[ j ].offset =
+				    descriptor_write->buffer_descriptors[ j ].offset;
+				buffer_infos[ j ].range =
+				    descriptor_write->buffer_descriptors[ j ].range;
 			}
 
-			write_descriptor_set.pBufferInfo = bds.data();
+			write_descriptor_set->pBufferInfo = buffer_infos;
 		}
-		else if ( descriptor_write.image_descriptors )
+		else if ( descriptor_write->image_descriptors )
 		{
-			auto& ids = image_updates.emplace_back();
-			ids.resize( descriptor_write.descriptor_count );
+			VkDescriptorImageInfo* image_infos =
+			    ( VkDescriptorImageInfo* ) calloc(
+			        sizeof( VkDescriptorImageInfo ),
+			        descriptor_write->descriptor_count );
+			image_updates[ image_update_idx++ ] = image_infos;
 
-			for ( u32 j = 0; j < descriptor_write.descriptor_count; ++j )
+			for ( u32 j = 0; j < descriptor_write->descriptor_count; ++j )
 			{
-				auto& image_write = descriptor_write.image_descriptors[ j ];
-				ids[ j ]          = {};
+				ImageDescriptor* descriptor =
+				    &descriptor_write->image_descriptors[ j ];
 
-				if ( image_write.image )
-				{
-					ids[ j ].imageLayout =
-					    determine_image_layout( image_write.resource_state );
-					ids[ j ].imageView =
-					    static_cast<VulkanImage*>( image_write.image->handle )
-					        ->image_view;
-					ids[ j ].sampler = NULL;
-				}
-				else
-				{
-					FT_ASSERT( 0 && "Null descriptor" );
-				}
+				FT_ASSERT( descriptor->image );
+
+				image_infos[ j ].imageLayout =
+				    determine_image_layout( descriptor->resource_state );
+				image_infos[ j ].imageView =
+				    ( ( VulkanImage* ) descriptor->image->handle )->image_view;
+				image_infos[ j ].sampler = NULL;
 			}
 
-			write_descriptor_set.pImageInfo = ids.data();
+			write_descriptor_set->pImageInfo = image_infos;
 		}
 		else
 		{
-			auto& ids = image_updates.emplace_back();
-			ids.resize( descriptor_write.descriptor_count );
+			VkDescriptorImageInfo* image_infos =
+			    ( VkDescriptorImageInfo* ) calloc(
+			        sizeof( VkDescriptorImageInfo ),
+			        descriptor_write->descriptor_count );
+			image_updates[ image_update_idx++ ] = image_infos;
 
-			for ( u32 j = 0; j < descriptor_write.descriptor_count; ++j )
+			for ( u32 j = 0; j < descriptor_write->descriptor_count; ++j )
 			{
-				auto& image_write = descriptor_write.sampler_descriptors[ j ];
-				ids[ j ]          = {};
+				SamplerDescriptor* descriptor =
+				    &descriptor_write->sampler_descriptors[ j ];
 
-				if ( image_write.sampler )
-				{
-					ids[ j ].sampler = static_cast<VulkanSampler*>(
-					                       image_write.sampler->handle )
-					                       ->sampler;
-				}
-				else
-				{
-					FT_ASSERT( 0 && "Null descriptor" );
-				}
+				FT_ASSERT( descriptor->sampler );
+
+				image_infos[ j ].sampler =
+				    ( ( VulkanSampler* ) descriptor->sampler->handle )->sampler;
 			}
 
-			write_descriptor_set.pImageInfo = ids.data();
+			write_descriptor_set->pImageInfo = image_infos;
 		}
 	}
 
 	vkUpdateDescriptorSets( device->logical_device,
-	                        descriptor_writes.size(),
-	                        descriptor_writes.data(),
+	                        count,
+	                        descriptor_writes,
 	                        0,
 	                        NULL );
-#endif
+
+	for ( u32 i = 0; i < count; ++i )
+	{
+		if ( buffer_updates[ i ] != NULL )
+		{
+			free( buffer_updates[ i ] );
+		}
+
+		if ( image_updates[ i ] != NULL )
+		{
+			free( image_updates[ i ] );
+		}
+	}
+
+	free( buffer_updates );
+	free( image_updates );
+	free( descriptor_writes );
 }
 
-void
+static void
 vk_cmd_begin_render_pass( const CommandBuffer*       icmd,
                           const RenderPassBeginInfo* info )
 {
@@ -2948,14 +3105,14 @@ vk_cmd_begin_render_pass( const CommandBuffer*       icmd,
 	                      VK_SUBPASS_CONTENTS_INLINE );
 }
 
-void
+static void
 vk_cmd_end_render_pass( const CommandBuffer* icmd )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 	vkCmdEndRenderPass( cmd->command_buffer );
 }
 
-void
+static void
 vk_cmd_barrier( const CommandBuffer* icmd,
                 u32                  memory_barriers_count,
                 const MemoryBarrier* memory_barriers,
@@ -3062,9 +3219,9 @@ vk_cmd_barrier( const CommandBuffer* icmd,
 	                      buffer_memory_barriers,
 	                      image_barriers_count,
 	                      image_memory_barriers );
-};
+}
 
-void
+static void
 vk_cmd_set_scissor( const CommandBuffer* icmd,
                     i32                  x,
                     i32                  y,
@@ -3081,7 +3238,7 @@ vk_cmd_set_scissor( const CommandBuffer* icmd,
 	vkCmdSetScissor( cmd->command_buffer, 0, 1, &scissor );
 }
 
-void
+static void
 vk_cmd_set_viewport( const CommandBuffer* icmd,
                      f32                  x,
                      f32                  y,
@@ -3103,7 +3260,7 @@ vk_cmd_set_viewport( const CommandBuffer* icmd,
 	vkCmdSetViewport( cmd->command_buffer, 0, 1, &viewport );
 }
 
-void
+static void
 vk_cmd_bind_pipeline( const CommandBuffer* icmd, const Pipeline* ipipeline )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
@@ -3114,7 +3271,7 @@ vk_cmd_bind_pipeline( const CommandBuffer* icmd, const Pipeline* ipipeline )
 	                   pipeline->pipeline );
 }
 
-void
+static void
 vk_cmd_draw( const CommandBuffer* icmd,
              u32                  vertex_count,
              u32                  instance_count,
@@ -3130,7 +3287,7 @@ vk_cmd_draw( const CommandBuffer* icmd,
 	           first_instance );
 }
 
-void
+static void
 vk_cmd_draw_indexed( const CommandBuffer* icmd,
                      u32                  index_count,
                      u32                  instance_count,
@@ -3148,7 +3305,7 @@ vk_cmd_draw_indexed( const CommandBuffer* icmd,
 	                  first_instance );
 }
 
-void
+static void
 vk_cmd_bind_vertex_buffer( const CommandBuffer* icmd,
                            const Buffer*        ibuffer,
                            const u64            offset )
@@ -3163,7 +3320,7 @@ vk_cmd_bind_vertex_buffer( const CommandBuffer* icmd,
 	                        &offset );
 }
 
-void
+static void
 vk_cmd_bind_index_buffer_u16( const CommandBuffer* icmd,
                               const Buffer*        ibuffer,
                               const u64            offset )
@@ -3177,7 +3334,7 @@ vk_cmd_bind_index_buffer_u16( const CommandBuffer* icmd,
 	                      VK_INDEX_TYPE_UINT16 );
 }
 
-void
+static void
 vk_cmd_bind_index_buffer_u32( const CommandBuffer* icmd,
                               const Buffer*        ibuffer,
                               u64                  offset )
@@ -3191,7 +3348,7 @@ vk_cmd_bind_index_buffer_u32( const CommandBuffer* icmd,
 	                      VK_INDEX_TYPE_UINT32 );
 }
 
-void
+static void
 vk_cmd_copy_buffer( const CommandBuffer* icmd,
                     const Buffer*        isrc,
                     u64                  src_offset,
@@ -3215,7 +3372,7 @@ vk_cmd_copy_buffer( const CommandBuffer* icmd,
 	                 &buffer_copy );
 }
 
-void
+static void
 vk_cmd_copy_buffer_to_image( const CommandBuffer* icmd,
                              const Buffer*        isrc,
                              u64                  src_offset,
@@ -3247,7 +3404,7 @@ vk_cmd_copy_buffer_to_image( const CommandBuffer* icmd,
 	    &buffer_to_image_copy_info );
 }
 
-void
+static void
 vk_cmd_dispatch( const CommandBuffer* icmd,
                  u32                  group_count_x,
                  u32                  group_count_y,
@@ -3261,11 +3418,11 @@ vk_cmd_dispatch( const CommandBuffer* icmd,
 	               group_count_z );
 }
 
-void
+static void
 vk_cmd_push_constants( const CommandBuffer* icmd,
                        const Pipeline*      ipipeline,
-                       u64                  offset,
-                       u64                  size,
+                       u32                  offset,
+                       u32                  size,
                        const void*          data )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
@@ -3281,7 +3438,7 @@ vk_cmd_push_constants( const CommandBuffer* icmd,
 	                    data );
 }
 
-void
+static void
 vk_cmd_blit_image( const CommandBuffer* icmd,
                    const Image*         isrc,
                    ResourceState        src_state,
@@ -3378,7 +3535,7 @@ vk_cmd_blit_image( const CommandBuffer* icmd,
 	                to_vk_filter( filter ) );
 }
 
-void
+static void
 vk_cmd_clear_color_image( const CommandBuffer* icmd,
                           Image*               iimage,
                           float                color[ 4 ] )
@@ -3402,7 +3559,7 @@ vk_cmd_clear_color_image( const CommandBuffer* icmd,
 	                      &range );
 }
 
-void
+static void
 vk_cmd_draw_indexed_indirect( const CommandBuffer* icmd,
                               const Buffer*        ibuffer,
                               u64                  offset,
@@ -3419,7 +3576,7 @@ vk_cmd_draw_indexed_indirect( const CommandBuffer* icmd,
 	                          stride );
 }
 
-void
+static void
 vk_cmd_bind_descriptor_set( const CommandBuffer* icmd,
                             u32                  first_set,
                             const DescriptorSet* iset,

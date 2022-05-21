@@ -1,8 +1,25 @@
 #ifdef VULKAN_BACKEND
 #include <spirv_reflect.h>
+#include <hashmap.h>
+#include "base/base.h"
 #include "renderer/vulkan/vulkan_backend.h"
 
-DescriptorType
+i32
+binding_map_compare( const void* a, const void* b, void* udata )
+{
+	const struct BindingMapItem* bma = a;
+	const struct BindingMapItem* bmb = b;
+	return strcmp( bma->name, bmb->name );
+}
+
+u64
+binding_map_hash( const void* item, u64 seed0, u64 seed1 )
+{
+	const struct BindingMapItem* map = item;
+	return hashmap_sip( map->name, strlen( map->name ), seed0, seed1 );
+}
+
+static DescriptorType
 to_descriptor_type( SpvReflectDescriptorType descriptor_type )
 {
 	switch ( descriptor_type )
@@ -10,7 +27,7 @@ to_descriptor_type( SpvReflectDescriptorType descriptor_type )
 	case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: return FT_DESCRIPTOR_TYPE_SAMPLER;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
 		FT_ASSERT( 0 && "Use separate types instead, texture + sampler" );
-		return -1;
+		return ( DescriptorType ) -1;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
 		return FT_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE:
@@ -29,11 +46,11 @@ to_descriptor_type( SpvReflectDescriptorType descriptor_type )
 		return FT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
 		return FT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-	default: FT_ASSERT( 0 ); return -1;
+	default: FT_ASSERT( 0 ); return ( DescriptorType ) -1;
 	}
 }
 
-void
+static void
 spirv_reflect_stage( ReflectionData* reflection,
                      ShaderStage     stage,
                      u32             byte_code_size,
@@ -52,9 +69,10 @@ spirv_reflect_stage( ReflectionData* reflection,
 	                                           &descriptor_binding_count,
 	                                           NULL );
 	FT_ASSERT( spv_result == SPV_REFLECT_RESULT_SUCCESS );
-	SpvReflectDescriptorBinding** descriptor_bindings =
-	    ( SpvReflectDescriptorBinding** ) malloc(
-	        sizeof( SpvReflectDescriptorBinding* ) * descriptor_binding_count );
+
+	ALLOC_STACK_ARRAY( SpvReflectDescriptorBinding*,
+	                   descriptor_bindings,
+	                   descriptor_binding_count );
 	spv_result =
 	    spvReflectEnumerateDescriptorBindings( &reflected_shader,
 	                                           &descriptor_binding_count,
@@ -63,10 +81,19 @@ spirv_reflect_stage( ReflectionData* reflection,
 
 	u32 i = reflection->binding_count;
 	reflection->binding_count += descriptor_binding_count;
-#ifdef FT_MOVED_C
-	reflection->bindings.resize( reflection.bindings.size() +
-	                             descriptor_binding_count );
-#endif
+	struct Binding* bindings =
+	    ( struct Binding* ) calloc( sizeof( struct Binding ),
+	                                reflection->binding_count );
+	if ( reflection->bindings )
+	{
+		for ( u32 b = 0; b < i; ++b )
+		{
+			bindings[ b ] = reflection->bindings[ b ];
+		}
+		free( reflection->bindings );
+	}
+	reflection->bindings = bindings;
+
 	for ( u32 b = 0; b < descriptor_binding_count; ++b )
 	{
 		reflection->bindings[ i ].binding = descriptor_bindings[ b ]->binding;
@@ -76,24 +103,37 @@ spirv_reflect_stage( ReflectionData* reflection,
 		    to_descriptor_type( descriptor_bindings[ b ]->descriptor_type );
 		reflection->bindings[ i ].set   = descriptor_bindings[ b ]->set;
 		reflection->bindings[ i ].stage = stage;
-#ifdef FT_MOVED_C
+
 		const char* name =
 		    descriptor_bindings[ b ]->type_description->type_name
 		        ? descriptor_bindings[ b ]->type_description->type_name
 		        : descriptor_bindings[ b ]->name;
 
-		reflection->binding_map[ name ] = i;
-#endif
+		struct BindingMapItem item;
+		item.value = i;
+		memset( item.name, '\0', MAX_BINDING_NAME_LENGTH );
+		strncpy( item.name, name, MAX_BINDING_NAME_LENGTH );
+		hashmap_set( reflection->binding_map, &item );
+
 		i++;
 	}
 
-	free( descriptor_bindings );
 	spvReflectDestroyShaderModule( &reflected_shader );
 }
 
 void
 spirv_reflect( const Device* device, const ShaderInfo* info, Shader* shader )
 {
+	shader->reflect_data.binding_map =
+	    hashmap_new( sizeof( struct BindingMapItem ),
+	                 0,
+	                 0,
+	                 0,
+	                 binding_map_hash,
+	                 binding_map_compare,
+	                 NULL,
+	                 NULL );
+
 	if ( info->vertex.bytecode )
 	{
 		spirv_reflect_stage( &shader->reflect_data,

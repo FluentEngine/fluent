@@ -186,8 +186,8 @@
  * UFloat10AsUintToFloat - returns the value stored as a 10 bit UFloat
  * UFloat11AsUintToFloat - returns the value stored as a 11 bit UFloat
  * SharedE5B9G9R9UFloatToFloats - return the pixel stored in shared
- * 															- shared 5 bit exponent,  9
- bit mantissa for RGB
+ * 															- shared 5 bit
+ exponent, 9 bit mantissa for RGB
  * HalfAsUintToFloat - returns the value stored as a 16 bit SFloat
  * BFloatAsUintToFloat - returns the value stored as a 16 bit BFloat
  * LookupSRGB - returns the value for an 8 bit sRGB encoded value

@@ -30,24 +30,24 @@ extern "C"
 	app_init( const ApplicationConfig* state );
 
 	void
-	app_run();
+	app_run( void );
 
 	void
-	app_shutdown();
+	app_shutdown( void );
 
 	void
-	app_request_exit();
+	app_request_exit( void );
 
 	const Window*
-	get_app_window();
+	get_app_window( void );
 
 	u32
-	get_time();
+	get_time( void );
 	f32
-	get_delta_time();
+	get_delta_time( void );
 
 	struct WsiInfo*
-	get_ft_wsi_info();
+	get_ft_wsi_info( void );
 
 #ifdef __cplusplus
 }

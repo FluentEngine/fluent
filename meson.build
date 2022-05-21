@@ -1,4 +1,4 @@
-project('fluent-engine', [ 'c' ], default_options : [ 'default_library=static', 'c_std=c17' ] )
+project('fluent-engine', [ 'c' ], default_options : [ 'default_library=static', 'c_std=c11' ] )
 
 ft_c_args = []
 ft_objc_args = []

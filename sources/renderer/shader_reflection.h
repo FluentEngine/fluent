@@ -4,6 +4,8 @@
 #include "renderer/renderer_enums.h"
 #include "renderer/renderer_backend.h"
 
+#define MAX_BINDING_NAME_LENGTH 20
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -13,28 +15,35 @@ extern "C"
 	struct Shader;
 	struct ShaderInfo;
 
-	typedef struct Binding
+	struct Binding
 	{
 		u32            set;
 		u32            binding;
 		u32            descriptor_count;
 		DescriptorType descriptor_type;
 		ShaderStage    stage;
-	} Binding;
+	};
 
-	typedef Binding* Bindings;
-	typedef struct BindingMap
+	typedef struct Binding* Bindings;
+
+	struct BindingMapItem
 	{
-		const char* key;
-		u32         value;
-	} BindingMap;
+		char name[ MAX_BINDING_NAME_LENGTH ];
+		u32  value;
+	};
 
 	typedef struct ReflectionData
 	{
-		u32        binding_count;
-		Bindings   bindings;
-		BindingMap binding_map;
+		u32             binding_count;
+		Bindings        bindings;
+		struct hashmap* binding_map;
 	} ReflectionData;
+
+	i32
+	binding_map_compare( const void* a, const void* b, void* udata );
+
+	u64
+	binding_map_hash( const void* item, u64 seed0, u64 seed1 );
 
 	void
 	dxil_reflect( const struct Device*     device,
