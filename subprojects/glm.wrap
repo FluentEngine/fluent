@@ -1,6 +1,0 @@
-[wrap-git]
-url = git@github.com:FluentEngine/glm.git
-revision = master
-
-[provide]
-glm = glm_dep

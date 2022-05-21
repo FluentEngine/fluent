@@ -1,14 +1,24 @@
-#ifdef FT_MOVED_C
-#include "renderer/resource_loader.hpp"
+#include "renderer/resource_loader.h"
 
-const struct Device*          ResourceLoader::device       = nullptr;
-struct Queue*                 ResourceLoader::queue        = nullptr;
-struct CommandPool*           ResourceLoader::command_pool = nullptr;
-struct CommandBuffer*         ResourceLoader::cmd          = nullptr;
-ResourceLoader::StagingBuffer ResourceLoader::staging_buffer;
-b32                           ResourceLoader::is_recording = false;
+struct StagingBuffer
+{
+	u64            offset;
+	struct Buffer* buffer;
+};
 
-static b32
+struct ResourceLoader
+{
+	const struct Device*  device;
+	struct Queue*         queue;
+	struct CommandPool*   command_pool;
+	struct CommandBuffer* cmd;
+	b32                   is_recording;
+	struct StagingBuffer  staging_buffer;
+};
+
+static struct ResourceLoader loader;
+
+static inline b32
 need_staging( struct Buffer* buffer )
 {
 	return !( buffer->memory_usage == FT_MEMORY_USAGE_CPU_ONLY ||
@@ -16,43 +26,48 @@ need_staging( struct Buffer* buffer )
 }
 
 void
-ResourceLoader::init( const struct Device* _device, u64 staging_buffer_size )
+resource_loader_init( const struct Device* device, u64 staging_buffer_size )
 {
-	device = _device;
+	loader.device                = device;
+	loader.is_recording          = 0;
+	loader.staging_buffer.offset = 0;
 
-	QueueInfo queue_info {};
-	queue_info.queue_type = FT_QUEUE_TYPE_GRAPHICS;
-	create_queue( device, &queue_info, &queue );
+	struct QueueInfo queue_info = {
+		.queue_type = FT_QUEUE_TYPE_GRAPHICS,
+	};
+	create_queue( device, &queue_info, &loader.queue );
 
-	CommandPoolInfo cmd_pool_info {};
-	cmd_pool_info.queue = queue;
-	create_command_pool( device, &cmd_pool_info, &command_pool );
+	struct CommandPoolInfo cmd_pool_info = { .queue = loader.queue };
+	create_command_pool( device, &cmd_pool_info, &loader.command_pool );
 
-	create_command_buffers( device, command_pool, 1, &cmd );
+	create_command_buffers( device, loader.command_pool, 1, &loader.cmd );
 
-	BufferInfo staging_buffer_info {};
-	staging_buffer_info.memory_usage = FT_MEMORY_USAGE_CPU_TO_GPU;
-	staging_buffer_info.size         = staging_buffer_size;
-	staging_buffer.offset            = 0;
-	create_buffer( device, &staging_buffer_info, &staging_buffer.buffer );
-	map_memory( device, staging_buffer.buffer );
+	struct BufferInfo staging_buffer_info = {
+		.memory_usage = FT_MEMORY_USAGE_CPU_TO_GPU,
+		.size         = staging_buffer_size,
+	};
+	loader.staging_buffer.offset = 0;
+	create_buffer( device,
+	               &staging_buffer_info,
+	               &loader.staging_buffer.buffer );
+	map_memory( device, loader.staging_buffer.buffer );
 }
 
 void
-ResourceLoader::shutdown()
+resource_loader_shutdown()
 {
-	unmap_memory( device, staging_buffer.buffer );
-	destroy_buffer( device, staging_buffer.buffer );
-	destroy_command_buffers( device, command_pool, 1, &cmd );
-	destroy_command_pool( device, command_pool );
-	destroy_queue( queue );
+	unmap_memory( loader.device, loader.staging_buffer.buffer );
+	destroy_buffer( loader.device, loader.staging_buffer.buffer );
+	destroy_command_buffers( loader.device,
+	                         loader.command_pool,
+	                         1,
+	                         &loader.cmd );
+	destroy_command_pool( loader.device, loader.command_pool );
+	destroy_queue( loader.queue );
 }
 
 void
-ResourceLoader::upload_buffer( struct Buffer* buffer,
-                               u64            offset,
-                               u64            size,
-                               const void*    data )
+upload_buffer( struct Buffer* buffer, u64 offset, u64 size, const void* data )
 {
 	FT_ASSERT( buffer );
 	FT_ASSERT( data );
@@ -60,58 +75,58 @@ ResourceLoader::upload_buffer( struct Buffer* buffer,
 
 	if ( need_staging( buffer ) )
 	{
-		memcpy( ( u8* ) staging_buffer.buffer->mapped_memory +
-		            staging_buffer.offset,
+		memcpy( ( u8* ) loader.staging_buffer.buffer->mapped_memory +
+		            loader.staging_buffer.offset,
 		        data,
 		        size );
 
-		b32 need_end_record = !is_recording;
+		b32 need_end_record = !loader.is_recording;
 		if ( need_end_record )
 		{
-			begin_command_buffer( cmd );
+			begin_command_buffer( loader.cmd );
 		}
 
-		cmd_copy_buffer( cmd,
-		                 staging_buffer.buffer,
-		                 staging_buffer.offset,
+		cmd_copy_buffer( loader.cmd,
+		                 loader.staging_buffer.buffer,
+		                 loader.staging_buffer.offset,
 		                 buffer,
 		                 offset,
 		                 size );
 
-		staging_buffer.offset += size;
+		loader.staging_buffer.offset += size;
 
 		if ( need_end_record )
 		{
-			end_command_buffer( cmd );
-			immediate_submit( queue, cmd );
+			end_command_buffer( loader.cmd );
+			immediate_submit( loader.queue, loader.cmd );
 		}
 	}
 	else
 	{
-		map_memory( device, buffer );
+		map_memory( loader.device, buffer );
 		memcpy( ( u8* ) buffer->mapped_memory + offset, data, size );
-		unmap_memory( device, buffer );
+		unmap_memory( loader.device, buffer );
 	}
 }
 
 void*
-ResourceLoader::begin_upload_buffer( struct Buffer* buffer )
+begin_upload_buffer( struct Buffer* buffer )
 {
 	FT_ASSERT( buffer );
 	if ( need_staging( buffer ) )
 	{
 		// TODO:
-		return nullptr;
+		return NULL;
 	}
 	else
 	{
-		map_memory( device, buffer );
+		map_memory( loader.device, buffer );
 		return buffer->mapped_memory;
 	}
 }
 
 void
-ResourceLoader::end_upload_buffer( struct Buffer* buffer )
+end_upload_buffer( struct Buffer* buffer )
 {
 	FT_ASSERT( buffer );
 	if ( need_staging( buffer ) )
@@ -120,68 +135,67 @@ ResourceLoader::end_upload_buffer( struct Buffer* buffer )
 	}
 	else
 	{
-		unmap_memory( device, buffer );
+		unmap_memory( loader.device, buffer );
 	}
 }
 
 void
-ResourceLoader::upload_image( struct Image* image, u64 size, const void* data )
+upload_image( struct Image* image, u64 size, const void* data )
 {
-	FT_ASSERT( staging_buffer.offset + size <= staging_buffer.buffer->size );
+	FT_ASSERT( loader.staging_buffer.offset + size <= loader.staging_buffer.buffer->size );
 
-	memcpy( ( u8* ) staging_buffer.buffer->mapped_memory +
-	            staging_buffer.offset,
+	memcpy( ( u8* ) loader.staging_buffer.buffer->mapped_memory +
+	            loader.staging_buffer.offset,
 	        data,
 	        size );
 
-	b32 need_end_record = !is_recording;
+	b32 need_end_record = !loader.is_recording;
 	if ( need_end_record )
 	{
-		begin_command_buffer( cmd );
+		begin_command_buffer( loader.cmd );
 	}
 
-	ImageBarrier barrier {};
-	barrier.image     = image;
-	barrier.src_queue = queue;
-	barrier.dst_queue = queue;
-	barrier.old_state = FT_RESOURCE_STATE_UNDEFINED;
-	barrier.new_state = FT_RESOURCE_STATE_TRANSFER_DST;
-	cmd_barrier( cmd, 0, nullptr, 0, nullptr, 1, &barrier );
-	cmd_copy_buffer_to_image( cmd,
-	                          staging_buffer.buffer,
-	                          staging_buffer.offset,
+	struct ImageBarrier barrier = {};
+	barrier.image               = image;
+	barrier.old_state           = FT_RESOURCE_STATE_UNDEFINED;
+	barrier.new_state           = FT_RESOURCE_STATE_TRANSFER_DST;
+	cmd_barrier( loader.cmd, 0, NULL, 0, NULL, 1, &barrier );
+
+	cmd_copy_buffer_to_image( loader.cmd,
+	                          loader.staging_buffer.buffer,
+	                          loader.staging_buffer.offset,
 	                          image );
+
 	barrier.old_state = FT_RESOURCE_STATE_TRANSFER_DST;
 	barrier.new_state = FT_RESOURCE_STATE_SHADER_READ_ONLY;
-	cmd_barrier( cmd, 0, nullptr, 0, nullptr, 1, &barrier );
+	cmd_barrier( loader.cmd, 0, NULL, 0, NULL, 1, &barrier );
 
-	staging_buffer.offset += size;
+	loader.staging_buffer.offset += size;
 
 	if ( need_end_record )
 	{
-		end_command_buffer( cmd );
-		immediate_submit( queue, cmd );
+		end_command_buffer( loader.cmd );
+		immediate_submit( loader.queue, loader.cmd );
 	}
 }
 
 void
-ResourceLoader::reset_staging_buffer()
+reset_staging_buffer()
 {
-	staging_buffer.offset = 0;
+	loader.staging_buffer.offset = 0;
 }
 
 void
-ResourceLoader::begin_recording()
+resource_loader_begin_recording()
 {
-	begin_command_buffer( cmd );
-	is_recording = true;
+	begin_command_buffer( loader.cmd );
+	loader.is_recording = 1;
 }
 
 void
-ResourceLoader::end_recording()
+resource_loader_end_recording()
 {
-	is_recording = false;
-	end_command_buffer( cmd );
-	immediate_submit( queue, cmd );
+	loader.is_recording = 0;
+	end_command_buffer( loader.cmd );
+	immediate_submit( loader.queue, loader.cmd );
 }
-#endif

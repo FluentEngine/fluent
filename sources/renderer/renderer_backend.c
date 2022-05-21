@@ -73,7 +73,8 @@ create_renderer_backend( const struct RendererBackendInfo* info,
 {
 	FT_ASSERT( info );
 	FT_ASSERT( info->wsi_info );
-
+	FT_ASSERT( backend );
+	
 	switch ( info->api )
 	{
 #ifdef VULKAN_BACKEND
@@ -118,7 +119,7 @@ create_device( const struct RendererBackend* backend,
 	FT_ASSERT( info );
 	FT_ASSERT( info->backend );
 	FT_ASSERT( device );
-	
+
 	create_device_impl( backend, info, device );
 }
 

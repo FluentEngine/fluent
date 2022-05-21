@@ -1,6 +1,0 @@
-[wrap-git]
-url = https://github.com/FluentEngine/SDL
-revision = head
-
-[provide]
-sdl2 = sdl2_dep

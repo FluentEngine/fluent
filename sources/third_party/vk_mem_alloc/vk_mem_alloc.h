@@ -138,7 +138,7 @@ extern "C"
 #endif
 
 #ifndef VULKAN_H_
-#include <volk.h>
+#include <volk/volk.h>
 #endif
 
 // Define this macro to declare maximum supported Vulkan version in format

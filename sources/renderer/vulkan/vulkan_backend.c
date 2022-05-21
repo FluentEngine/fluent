@@ -1,12 +1,11 @@
 #ifdef VULKAN_BACKEND
 
 #include <alloca.h>
-#include <tinyimageformat_apis.h>
-#include <hashmap.h>
+#include <tiny_image_format/tinyimageformat_apis.h>
+#include <hashmap.c/hashmap.h>
 #include "log/log.h"
 #include "wsi/wsi.h"
-#include "fs/fs.h"
-#include "renderer_backend_functions.h"
+#include "renderer/renderer_backend_functions.h"
 #include "vulkan_backend.h"
 
 #ifdef FLUENT_DEBUG
@@ -898,7 +897,7 @@ vk_create_device( const struct RendererBackend* ibackend,
                   struct Device**               p )
 {
 	FT_FROM_HANDLE( backend, ibackend, VulkanRendererBackend );
-	
+
 	FT_INIT_INTERNAL( device, *p, VulkanDevice );
 
 	b32 found_device_slot = 0;

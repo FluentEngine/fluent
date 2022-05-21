@@ -1,6 +1,6 @@
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #ifdef VULKAN_BACKEND
-#include <SDL_vulkan.h>
+#include <SDL2/SDL_vulkan.h>
 #endif
 #include "wsi/wsi.h"
 #include "window.h"
@@ -16,7 +16,7 @@ get_input_system( void );
 
 #define MAX_INSTANCE_EXTENSION_COUNT 3
 
-typedef struct ApplicationState
+struct ApplicationState
 {
 	b32              is_inited;
 	b32              is_running;
@@ -28,9 +28,9 @@ typedef struct ApplicationState
 	f32              delta_time;
 	WsiInfo          wsi_info;
 	const char*      extensions[ MAX_INSTANCE_EXTENSION_COUNT ];
-} ApplicationState;
+};
 
-static ApplicationState app_state;
+static struct ApplicationState app_state;
 
 #ifdef VULKAN_BACKEND
 static void
@@ -78,10 +78,6 @@ app_init( const struct ApplicationConfig* config )
 	log_init( FT_INFO );
 	init_input_system( &app_state.window );
 
-#ifdef FT_MOVED_C
-	fs::init( config->argv );
-#endif
-
 	app_state.is_inited = 1;
 }
 
@@ -109,7 +105,7 @@ app_run()
 		update_input_system();
 
 		u32 current_frame    = get_time();
-		app_state.delta_time = ( current_frame - last_frame ) / 1000.0f;
+		app_state.delta_time = ( f32 ) ( current_frame - last_frame ) / 1000.0f;
 		last_frame           = current_frame;
 
 		while ( SDL_PollEvent( &e ) != 0 )

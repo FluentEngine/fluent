@@ -1,6 +1,6 @@
 #ifdef VULKAN_BACKEND
-#include <spirv_reflect.h>
-#include <hashmap.h>
+#include <spirv_reflect/spirv_reflect.h>
+#include <hashmap.c/hashmap.h>
 #include "base/base.h"
 #include "renderer/vulkan/vulkan_backend.h"
 

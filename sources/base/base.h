@@ -34,24 +34,3 @@ typedef int      b32;
 
 #define ALLOC_HEAP_ARRAY( T, NAME, COUNT )                                     \
 	T* NAME = ( T* ) calloc( sizeof( T ), COUNT )
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
-	static inline u64
-	hash_str( const char* str )
-	{
-		u64 res = 5381;
-		i32 c;
-
-		while ( ( c = *str++ ) )
-			res = ( ( res << 5 ) + res ) + c; /* hash * 33 + c */
-
-		return res;
-	}
-
-#ifdef __cplusplus
-}
-#endif
