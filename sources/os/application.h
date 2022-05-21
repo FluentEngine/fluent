@@ -9,25 +9,25 @@ extern "C"
 {
 #endif
 
-	typedef void ( *InitCallback )();
+	typedef void ( *InitCallback )( void );
 	typedef void ( *UpdateCallback )( f32 deltaTime );
-	typedef void ( *ShutdownCallback )();
+	typedef void ( *ShutdownCallback )( void );
 	typedef void ( *ResizeCallback )( u32 width, u32 height );
 
-	typedef struct ApplicationConfig
+	struct ApplicationConfig
 	{
-		u32              argc;
-		char**           argv;
-		WindowInfo       window_info;
-		LogLevel         log_level;
-		InitCallback     on_init;
-		UpdateCallback   on_update;
-		ShutdownCallback on_shutdown;
-		ResizeCallback   on_resize;
-	} ApplicationConfig;
+		u32               argc;
+		char**            argv;
+		struct WindowInfo window_info;
+		LogLevel          log_level;
+		InitCallback      on_init;
+		UpdateCallback    on_update;
+		ShutdownCallback  on_shutdown;
+		ResizeCallback    on_resize;
+	};
 
 	void
-	app_init( const ApplicationConfig* state );
+	app_init( const struct ApplicationConfig* state );
 
 	void
 	app_run( void );
@@ -38,7 +38,7 @@ extern "C"
 	void
 	app_request_exit( void );
 
-	const Window*
+	const struct Window*
 	get_app_window( void );
 
 	u32

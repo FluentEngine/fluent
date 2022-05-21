@@ -133,6 +133,6 @@ struct D3D12UiContext
 
 void
 d3d12_create_renderer_backend( const RendererBackendInfo* info,
-                               RendererBackend**          backend );
+                               struct RendererBackend**   backend );
 } // namespace fluent
 #endif

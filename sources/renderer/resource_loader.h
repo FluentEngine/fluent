@@ -7,21 +7,21 @@ class ResourceLoader
 {
 	struct StagingBuffer
 	{
-		u64     offset = 0;
-		Buffer* buffer = nullptr;
+		u64            offset = 0;
+		struct Buffer* buffer = nullptr;
 	};
 
 private:
-	static const Device*  device;
-	static Queue*         queue;
-	static CommandPool*   command_pool;
-	static CommandBuffer* cmd;
-	static b32            is_recording;
-	static StagingBuffer  staging_buffer;
+	static const struct Device*  device;
+	static struct Queue*         queue;
+	static struct CommandPool*   command_pool;
+	static struct CommandBuffer* cmd;
+	static b32                   is_recording;
+	static StagingBuffer         staging_buffer;
 
 public:
 	static void
-	init( const Device* device, u64 staging_buffer_size );
+	init( const struct Device* device, u64 staging_buffer_size );
 
 	static void
 	shutdown();
@@ -32,15 +32,18 @@ public:
 	end_recording();
 
 	static void
-	upload_buffer( Buffer* buffer, u64 offset, u64 size, const void* data );
+	upload_buffer( struct Buffer* buffer,
+	               u64            offset,
+	               u64            size,
+	               const void*    data );
 
 	static void*
-	begin_upload_buffer( Buffer* buffer );
+	begin_upload_buffer( struct Buffer* buffer );
 	static void
-	end_upload_buffer( Buffer* buffer );
+	end_upload_buffer( struct Buffer* buffer );
 
 	static void
-	upload_image( Image* image, u64 size, const void* data );
+	upload_image( struct Image* image, u64 size, const void* data );
 	static void
 	reset_staging_buffer();
 };

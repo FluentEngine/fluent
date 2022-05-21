@@ -2,8 +2,8 @@
 #include <SDL_vulkan.h>
 #include "window.h"
 
-Window
-create_window( const WindowInfo* info )
+struct Window
+create_window( const struct WindowInfo* info )
 {
 	int init_result = SDL_Init( SDL_INIT_VIDEO );
 	FT_ASSERT( init_result == 0 && "SDL Init failed" );
@@ -51,14 +51,14 @@ create_window( const WindowInfo* info )
 	FT_ASSERT( window && "Failed to create window" );
 
 	SDL_SetWindowOpacity( window, 0.1f );
-	Window result = {};
-	result.handle = window;
+	struct Window result = {};
+	result.handle        = window;
 
 	return result;
 }
 
 void
-destroy_window( Window* window )
+destroy_window( struct Window* window )
 {
 	FT_ASSERT( window->handle && "Window is nullptr" );
 	SDL_DestroyWindow( ( SDL_Window* ) window->handle );
@@ -66,7 +66,7 @@ destroy_window( Window* window )
 }
 
 void
-window_get_size( const Window* window, u32* width, u32* height )
+window_get_size( const struct Window* window, u32* width, u32* height )
 {
 	SDL_Window* handle = ( SDL_Window* ) ( window->handle );
 	i32         w, h;
@@ -81,7 +81,7 @@ window_get_size( const Window* window, u32* width, u32* height )
 }
 
 u32
-window_get_width( const Window* window )
+window_get_width( const struct Window* window )
 {
 	u32 w, h;
 	window_get_size( window, &w, &h );
@@ -89,7 +89,7 @@ window_get_width( const Window* window )
 }
 
 u32
-window_get_height( const Window* window )
+window_get_height( const struct Window* window )
 {
 	u32 w, h;
 	window_get_size( window, &w, &h );
@@ -97,7 +97,7 @@ window_get_height( const Window* window )
 }
 
 f32
-window_get_aspect( const Window* window )
+window_get_aspect( const struct Window* window )
 {
 	u32 w, h;
 	window_get_size( window, &w, &h );

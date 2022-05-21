@@ -1,22 +1,22 @@
 #ifdef FT_MOVED_C
 #include "renderer/resource_loader.hpp"
 
-const Device*                 ResourceLoader::device       = nullptr;
-Queue*                        ResourceLoader::queue        = nullptr;
-CommandPool*                  ResourceLoader::command_pool = nullptr;
-CommandBuffer*                ResourceLoader::cmd          = nullptr;
+const struct Device*          ResourceLoader::device       = nullptr;
+struct Queue*                 ResourceLoader::queue        = nullptr;
+struct CommandPool*           ResourceLoader::command_pool = nullptr;
+struct CommandBuffer*         ResourceLoader::cmd          = nullptr;
 ResourceLoader::StagingBuffer ResourceLoader::staging_buffer;
 b32                           ResourceLoader::is_recording = false;
 
 static b32
-need_staging( Buffer* buffer )
+need_staging( struct Buffer* buffer )
 {
 	return !( buffer->memory_usage == FT_MEMORY_USAGE_CPU_ONLY ||
 	          buffer->memory_usage == FT_MEMORY_USAGE_CPU_TO_GPU );
 }
 
 void
-ResourceLoader::init( const Device* _device, u64 staging_buffer_size )
+ResourceLoader::init( const struct Device* _device, u64 staging_buffer_size )
 {
 	device = _device;
 
@@ -49,10 +49,10 @@ ResourceLoader::shutdown()
 }
 
 void
-ResourceLoader::upload_buffer( Buffer*     buffer,
-                               u64         offset,
-                               u64         size,
-                               const void* data )
+ResourceLoader::upload_buffer( struct Buffer* buffer,
+                               u64            offset,
+                               u64            size,
+                               const void*    data )
 {
 	FT_ASSERT( buffer );
 	FT_ASSERT( data );
@@ -95,7 +95,7 @@ ResourceLoader::upload_buffer( Buffer*     buffer,
 }
 
 void*
-ResourceLoader::begin_upload_buffer( Buffer* buffer )
+ResourceLoader::begin_upload_buffer( struct Buffer* buffer )
 {
 	FT_ASSERT( buffer );
 	if ( need_staging( buffer ) )
@@ -111,7 +111,7 @@ ResourceLoader::begin_upload_buffer( Buffer* buffer )
 }
 
 void
-ResourceLoader::end_upload_buffer( Buffer* buffer )
+ResourceLoader::end_upload_buffer( struct Buffer* buffer )
 {
 	FT_ASSERT( buffer );
 	if ( need_staging( buffer ) )
@@ -125,7 +125,7 @@ ResourceLoader::end_upload_buffer( Buffer* buffer )
 }
 
 void
-ResourceLoader::upload_image( Image* image, u64 size, const void* data )
+ResourceLoader::upload_image( struct Image* image, u64 size, const void* data )
 {
 	FT_ASSERT( staging_buffer.offset + size <= staging_buffer.buffer->size );
 

@@ -82,7 +82,9 @@ dxil_reflect_stage( ReflectionData* reflection_data,
 }
 
 void
-dxil_reflect( const Device* device, const ShaderInfo* info, Shader* shader )
+dxil_reflect( const struct Device*     device,
+              const struct ShaderInfo* info,
+              struct Shader*           shader )
 {
 	if ( info->vertex.bytecode )
 	{

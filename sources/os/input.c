@@ -2,16 +2,19 @@
 #include "window.h"
 #include "input.h"
 
-static InputSystem input_system;
+static struct InputSystem input_system;
 
-InputSystem*
+struct InputSystem*
+get_input_system( void );
+
+struct InputSystem*
 get_input_system()
 {
 	return &input_system;
 }
 
 void
-init_input_system( Window* window )
+init_input_system( struct Window* window )
 {
 	input_system.window       = window;
 	input_system.mouse_scroll = 0;
@@ -75,13 +78,13 @@ get_mouse_offset_y()
 }
 
 b32
-is_key_pressed( KeyCode key )
+is_key_pressed( enum KeyCode key )
 {
 	return input_system.keys[ key ];
 }
 
 b32
-is_button_pressed( Button button )
+is_button_pressed( enum Button button )
 {
 	return input_system.buttons[ button ];
 }

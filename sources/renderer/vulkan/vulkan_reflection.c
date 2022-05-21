@@ -19,7 +19,7 @@ binding_map_hash( const void* item, u64 seed0, u64 seed1 )
 	return hashmap_sip( map->name, strlen( map->name ), seed0, seed1 );
 }
 
-static DescriptorType
+static enum DescriptorType
 to_descriptor_type( SpvReflectDescriptorType descriptor_type )
 {
 	switch ( descriptor_type )
@@ -27,7 +27,7 @@ to_descriptor_type( SpvReflectDescriptorType descriptor_type )
 	case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER: return FT_DESCRIPTOR_TYPE_SAMPLER;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
 		FT_ASSERT( 0 && "Use separate types instead, texture + sampler" );
-		return ( DescriptorType ) -1;
+		return ( enum DescriptorType ) - 1;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
 		return FT_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE:
@@ -46,15 +46,15 @@ to_descriptor_type( SpvReflectDescriptorType descriptor_type )
 		return FT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
 	case SPV_REFLECT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
 		return FT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-	default: FT_ASSERT( 0 ); return ( DescriptorType ) -1;
+	default: FT_ASSERT( 0 ); return ( enum DescriptorType ) - 1;
 	}
 }
 
 static void
-spirv_reflect_stage( ReflectionData* reflection,
-                     ShaderStage     stage,
-                     u32             byte_code_size,
-                     const void*     byte_code )
+spirv_reflect_stage( ReflectionData*  reflection,
+                     enum ShaderStage stage,
+                     u32              byte_code_size,
+                     const void*      byte_code )
 {
 	SpvReflectResult       spv_result;
 	SpvReflectShaderModule reflected_shader;
@@ -112,7 +112,7 @@ spirv_reflect_stage( ReflectionData* reflection,
 		struct BindingMapItem item;
 		item.value = i;
 		memset( item.name, '\0', MAX_BINDING_NAME_LENGTH );
-		strncpy( item.name, name, MAX_BINDING_NAME_LENGTH );
+		strcpy( item.name, name );
 		hashmap_set( reflection->binding_map, &item );
 
 		i++;
@@ -122,7 +122,9 @@ spirv_reflect_stage( ReflectionData* reflection,
 }
 
 void
-spirv_reflect( const Device* device, const ShaderInfo* info, Shader* shader )
+spirv_reflect( const struct Device*     device,
+               const struct ShaderInfo* info,
+               struct Shader*           shader )
 {
 	shader->reflect_data.binding_map =
 	    hashmap_new( sizeof( struct BindingMapItem ),

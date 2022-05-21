@@ -17,11 +17,11 @@ extern "C"
 
 	struct Binding
 	{
-		u32            set;
-		u32            binding;
-		u32            descriptor_count;
-		DescriptorType descriptor_type;
-		ShaderStage    stage;
+		u32                 set;
+		u32                 binding;
+		u32                 descriptor_count;
+		enum DescriptorType descriptor_type;
+		enum ShaderStage    stage;
 	};
 
 	typedef struct Binding* Bindings;

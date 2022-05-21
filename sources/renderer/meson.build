@@ -48,7 +48,8 @@ endif
 sources = files([
     'shader_reflection.h', 
     'renderer_enums.h',
-    'renderer_backend.h', 
+    'renderer_backend.h',
+    'renderer_backend_functions.h',
     'renderer_backend.c', 
     'vulkan/vulkan_backend.h', 
     'vulkan/vulkan_backend.c',

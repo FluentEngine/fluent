@@ -2,7 +2,7 @@
 
 #include "base/base.h"
 
-typedef enum KeyCode
+enum KeyCode
 {
 	FT_KEY_SPACE      = 44,
 	FT_KEY_APOSTROPHE = 52, /* ' */
@@ -121,4 +121,4 @@ typedef enum KeyCode
 	FT_KEY_RIGHT_SUPER   = 101,
 	FT_KEY_MENU          = 348,
 	FT_KEY_COUNT         = 350
-} KeyCode;
+};

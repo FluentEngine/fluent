@@ -7,24 +7,20 @@
 
 #undef MemoryBarrier
 
+#define MAX_DEVICE_COUNT             1
+#define MAX_ATTACHMENTS_COUNT        10
+#define MAX_PUSH_CONSTANT_RANGE      128
+#define MAX_VERTEX_BINDING_COUNT     15
+#define MAX_VERTEX_ATTRIBUTE_COUNT   15
+#define MAX_DESCRIPTOR_BINDING_COUNT 15
+#define MAX_SET_COUNT                10
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
 	struct WsiInfo;
-
-#define FT_INIT_INTERNAL( name, ptr, type )                                    \
-	type* name             = ( type* ) calloc( 1, sizeof( type ) );            \
-	name->interface.handle = name;                                             \
-	ptr                    = &name->interface
-
-#define FT_FROM_HANDLE( name, interface, impl )                                \
-	impl* name = ( impl* ) interface->handle
-
-#define DECLARE_FUNCTION_POINTER( ret, name, ... )                             \
-	typedef ret ( *name##_fun )( __VA_ARGS__ );                                \
-	extern name##_fun name
 
 	// Forward declares
 	struct Window;
@@ -35,363 +31,359 @@ extern "C"
 	struct CommandBuffer;
 	struct CommandPool;
 
-#define MAX_DEVICE_COUNT             1
-#define MAX_ATTACHMENTS_COUNT        10
-#define MAX_PUSH_CONSTANT_RANGE      128
-#define MAX_VERTEX_BINDING_COUNT     15
-#define MAX_VERTEX_ATTRIBUTE_COUNT   15
-#define MAX_DESCRIPTOR_BINDING_COUNT 15
-#define MAX_SET_COUNT                10
-
 	typedef void* Handle;
 
-	typedef struct RendererBackendInfo
+	struct RendererBackendInfo
 	{
-		RendererAPI     api;
-		struct WsiInfo* wsi_info;
-	} RendererBackendInfo;
+		enum RendererAPI api;
+		struct WsiInfo*  wsi_info;
+	};
 
-	typedef struct RendererBackend
+	struct RendererBackend
 	{
-		Handle handle;
-	} RendererBackend;
+		enum RendererAPI api;
+		Handle           handle;
+	};
 
-	typedef struct DeviceInfo
+	struct DeviceInfo
 	{
-		u32 frame_in_use_count;
-	} DeviceInfo;
+		struct RendererBackend* backend;
+	};
 
-	typedef struct Device
+	struct Device
 	{
-		Handle handle;
-	} Device;
+		enum RendererAPI api;
+		Handle           handle;
+	};
 
-	typedef struct CommandPoolInfo
-	{
-		struct Queue* queue;
-	} CommandPoolInfo;
-
-	typedef struct CommandPool
+	struct CommandPoolInfo
 	{
 		struct Queue* queue;
-		Handle        handle;
-	} CommandPool;
+	};
 
-	typedef struct CommandBuffer
+	struct CommandPool
 	{
 		struct Queue* queue;
 		Handle        handle;
-	} CommandBuffer;
+	};
 
-	typedef struct QueueInfo
+	struct CommandBuffer
 	{
-		QueueType queue_type;
-	} QueueInfo;
+		struct Queue* queue;
+		Handle        handle;
+	};
 
-	typedef struct Queue
+	struct QueueInfo
 	{
-		u32       family_index;
-		QueueType type;
-		Handle    handle;
-	} Queue;
+		enum QueueType queue_type;
+	};
 
-	typedef struct Semaphore
+	struct Queue
 	{
-		Handle handle;
-	} Semaphore;
-
-	typedef struct Fence
-	{
-		Handle handle;
-	} Fence;
-
-	typedef struct SamplerInfo
-	{
-		Filter             mag_filter;
-		Filter             min_filter;
-		SamplerMipmapMode  mipmap_mode;
-		SamplerAddressMode address_mode_u;
-		SamplerAddressMode address_mode_v;
-		SamplerAddressMode address_mode_w;
-		f32                mip_lod_bias;
-		b32                anisotropy_enable;
-		f32                max_anisotropy;
-		b32                compare_enable;
-		CompareOp          compare_op;
-		f32                min_lod;
-		f32                max_lod;
-	} SamplerInfo;
-
-	typedef struct Sampler
-	{
-		Handle handle;
-	} Sampler;
-
-	typedef struct ImageInfo
-	{
-		u32            width;
-		u32            height;
-		u32            depth;
-		Format         format;
-		u32            sample_count;
-		u32            layer_count;
-		u32            mip_levels;
-		DescriptorType descriptor_type;
-	} ImageInfo;
-
-	typedef struct Image
-	{
-		u32            width;
-		u32            height;
-		u32            depth;
-		Format         format;
-		u32            sample_count;
-		u32            mip_level_count;
-		u32            layer_count;
-		DescriptorType descriptor_type;
+		u32            family_index;
+		enum QueueType type;
 		Handle         handle;
-	} Image;
+	};
 
-	typedef struct BufferInfo
+	struct Semaphore
 	{
-		u64            size;
-		DescriptorType descriptor_type;
-		MemoryUsage    memory_usage;
-	} BufferInfo;
+		Handle handle;
+	};
 
-	typedef struct Buffer
+	struct Fence
 	{
-		u64            size;
-		ResourceState  resource_state;
-		DescriptorType descriptor_type;
-		MemoryUsage    memory_usage;
-		void*          mapped_memory;
-		Handle         handle;
-	} Buffer;
+		Handle handle;
+	};
 
-	typedef struct SwapchainInfo
+	struct SamplerInfo
 	{
-		Queue*          queue;
+		enum Filter             mag_filter;
+		enum Filter             min_filter;
+		enum SamplerMipmapMode  mipmap_mode;
+		enum SamplerAddressMode address_mode_u;
+		enum SamplerAddressMode address_mode_v;
+		enum SamplerAddressMode address_mode_w;
+		f32                     mip_lod_bias;
+		b32                     anisotropy_enable;
+		f32                     max_anisotropy;
+		b32                     compare_enable;
+		enum CompareOp          compare_op;
+		f32                     min_lod;
+		f32                     max_lod;
+	};
+
+	struct Sampler
+	{
+		Handle handle;
+	};
+
+	struct ImageInfo
+	{
+		u32                 width;
+		u32                 height;
+		u32                 depth;
+		enum Format         format;
+		u32                 sample_count;
+		u32                 layer_count;
+		u32                 mip_levels;
+		enum DescriptorType descriptor_type;
+	};
+
+	struct Image
+	{
+		u32                 width;
+		u32                 height;
+		u32                 depth;
+		enum Format         format;
+		u32                 sample_count;
+		u32                 mip_level_count;
+		u32                 layer_count;
+		enum DescriptorType descriptor_type;
+		Handle              handle;
+	};
+
+	struct BufferInfo
+	{
+		u64                 size;
+		enum DescriptorType descriptor_type;
+		enum MemoryUsage    memory_usage;
+	};
+
+	struct Buffer
+	{
+		u64                 size;
+		enum ResourceState  resource_state;
+		enum DescriptorType descriptor_type;
+		enum MemoryUsage    memory_usage;
+		void*               mapped_memory;
+		Handle              handle;
+	};
+
+	struct SwapchainInfo
+	{
+		struct Queue*   queue;
 		u32             width;
 		u32             height;
-		Format          format;
+		enum Format     format;
 		b32             vsync;
 		u32             min_image_count;
 		struct WsiInfo* wsi_info;
-	} SwapchainInfo;
+	};
 
-	typedef struct Swapchain
+	struct Swapchain
 	{
-		u32     min_image_count;
-		u32     image_count;
-		u32     width;
-		u32     height;
-		Format  format;
-		Image** images;
-		Queue*  queue;
-		b32     vsync;
-		Handle  handle;
-	} Swapchain;
+		u32            min_image_count;
+		u32            image_count;
+		u32            width;
+		u32            height;
+		enum Format    format;
+		struct Image** images;
+		struct Queue*  queue;
+		b32            vsync;
+		Handle         handle;
+	};
 
-	typedef struct QueueSubmitInfo
+	struct QueueSubmitInfo
 	{
-		u32             wait_semaphore_count;
-		Semaphore**     wait_semaphores;
-		u32             command_buffer_count;
-		CommandBuffer** command_buffers;
-		u32             signal_semaphore_count;
-		Semaphore**     signal_semaphores;
-		Fence*          signal_fence;
-	} QueueSubmitInfo;
+		u32                    wait_semaphore_count;
+		struct Semaphore**     wait_semaphores;
+		u32                    command_buffer_count;
+		struct CommandBuffer** command_buffers;
+		u32                    signal_semaphore_count;
+		struct Semaphore**     signal_semaphores;
+		struct Fence*          signal_fence;
+	};
 
-	typedef struct QueuePresentInfo
+	struct QueuePresentInfo
 	{
-		u32         wait_semaphore_count;
-		Semaphore** wait_semaphores;
-		Swapchain*  swapchain;
-		u32         image_index;
-	} QueuePresentInfo;
+		u32                wait_semaphore_count;
+		struct Semaphore** wait_semaphores;
+		struct Swapchain*  swapchain;
+		u32                image_index;
+	};
 
 	typedef f32 ColorClearValue[ 4 ];
 
-	typedef struct DepthStencilClearValue
+	struct DepthStencilClearValue
 	{
 		f32 depth;
 		u32 stencil;
-	} DepthStencilClearValue;
+	};
 
-	typedef struct ClearValue
+	struct ClearValue
 	{
-		ColorClearValue        color;
-		DepthStencilClearValue depth_stencil;
-	} ClearValue;
+		ColorClearValue               color;
+		struct DepthStencilClearValue depth_stencil;
+	};
 
-	typedef struct RenderPassBeginInfo
+	struct RenderPassBeginInfo
 	{
-		const Device*    device;
-		u32              width;
-		u32              height;
-		u32              color_attachment_count;
-		Image*           color_attachments[ MAX_ATTACHMENTS_COUNT ];
-		AttachmentLoadOp color_attachment_load_ops[ MAX_ATTACHMENTS_COUNT ];
-		ResourceState    color_image_states[ MAX_ATTACHMENTS_COUNT ];
-		Image*           depth_stencil;
-		AttachmentLoadOp depth_stencil_load_op;
-		ResourceState    depth_stencil_state;
-		ClearValue       clear_values[ MAX_ATTACHMENTS_COUNT + 1 ];
-	} RenderPassBeginInfo;
+		const struct Device* device;
+		u32                  width;
+		u32                  height;
+		u32                  color_attachment_count;
+		struct Image*        color_attachments[ MAX_ATTACHMENTS_COUNT ];
+		enum AttachmentLoadOp
+		                   color_attachment_load_ops[ MAX_ATTACHMENTS_COUNT ];
+		enum ResourceState color_image_states[ MAX_ATTACHMENTS_COUNT ];
+		struct Image*      depth_stencil;
+		enum AttachmentLoadOp depth_stencil_load_op;
+		enum ResourceState    depth_stencil_state;
+		struct ClearValue     clear_values[ MAX_ATTACHMENTS_COUNT + 1 ];
+	};
 
 	// TODO:
-	typedef struct MemoryBarrier
+	struct MemoryBarrier
 	{
-	} MemoryBarrier;
+	};
 
-	typedef struct BufferBarrier
+	struct BufferBarrier
 	{
-		ResourceState old_state;
-		ResourceState new_state;
-		Buffer*       buffer;
-		Queue*        src_queue;
-		Queue*        dst_queue;
-		u32           size;
-		u32           offset;
-	} BufferBarrier;
+		enum ResourceState old_state;
+		enum ResourceState new_state;
+		struct Buffer*     buffer;
+		struct Queue*      src_queue;
+		struct Queue*      dst_queue;
+		u32                size;
+		u32                offset;
+	};
 
-	typedef struct ImageBarrier
+	struct ImageBarrier
 	{
-		ResourceState old_state;
-		ResourceState new_state;
-		const Image*  image;
-		const Queue*  src_queue;
-		const Queue*  dst_queue;
-	} ImageBarrier;
+		enum ResourceState  old_state;
+		enum ResourceState  new_state;
+		const struct Image* image;
+		const struct Queue* src_queue;
+		const struct Queue* dst_queue;
+	};
 
-	typedef struct ShaderModuleInfo
+	struct ShaderModuleInfo
 	{
 		u32         bytecode_size;
 		const void* bytecode;
-	} ShaderModuleInfo;
+	};
 
-	typedef struct ShaderInfo
+	struct ShaderInfo
 	{
-		ShaderModuleInfo compute;
-		ShaderModuleInfo vertex;
-		ShaderModuleInfo tessellation_control;
-		ShaderModuleInfo tessellation_evaluation;
-		ShaderModuleInfo geometry;
-		ShaderModuleInfo fragment;
-	} ShaderInfo;
+		struct ShaderModuleInfo compute;
+		struct ShaderModuleInfo vertex;
+		struct ShaderModuleInfo tessellation_control;
+		struct ShaderModuleInfo tessellation_evaluation;
+		struct ShaderModuleInfo geometry;
+		struct ShaderModuleInfo fragment;
+	};
 
-	typedef struct Shader
+	struct Shader
 	{
 		ReflectionData reflect_data;
 		Handle         handle;
-	} Shader;
+	};
 
-	typedef struct DescriptorSetLayout
+	struct DescriptorSetLayout
 	{
 		ReflectionData reflection_data;
 		Handle         handle;
-	} DescriptorSetLayout;
+	};
 
-	typedef struct VertexBindingInfo
+	struct VertexBindingInfo
 	{
-		u32             binding;
-		u32             stride;
-		VertexInputRate input_rate;
-	} VertexBindingInfo;
+		u32                  binding;
+		u32                  stride;
+		enum VertexInputRate input_rate;
+	};
 
-	typedef struct VertexAttributeInfo
+	struct VertexAttributeInfo
 	{
-		u32    location;
-		u32    binding;
-		Format format;
-		u32    offset;
-	} VertexAttributeInfo;
+		u32         location;
+		u32         binding;
+		enum Format format;
+		u32         offset;
+	};
 
-	typedef struct VertexLayout
+	struct VertexLayout
 	{
-		u32                 binding_info_count;
-		VertexBindingInfo   binding_infos[ MAX_VERTEX_BINDING_COUNT ];
-		u32                 attribute_info_count;
-		VertexAttributeInfo attribute_infos[ MAX_VERTEX_ATTRIBUTE_COUNT ];
-	} VertexLayout;
+		u32                      binding_info_count;
+		struct VertexBindingInfo binding_infos[ MAX_VERTEX_BINDING_COUNT ];
+		u32                      attribute_info_count;
+		struct VertexAttributeInfo
+		    attribute_infos[ MAX_VERTEX_ATTRIBUTE_COUNT ];
+	};
 
-	typedef struct RasterizerStateInfo
+	struct RasterizerStateInfo
 	{
-		CullMode    cull_mode;
-		FrontFace   front_face;
-		PolygonMode polygon_mode;
-	} RasterizerStateInfo;
+		enum CullMode    cull_mode;
+		enum FrontFace   front_face;
+		enum PolygonMode polygon_mode;
+	};
 
-	typedef struct DepthStateInfo
+	struct DepthStateInfo
 	{
-		b32       depth_test;
-		b32       depth_write;
-		CompareOp compare_op;
-	} DepthStateInfo;
+		b32            depth_test;
+		b32            depth_write;
+		enum CompareOp compare_op;
+	};
 
-	typedef struct PipelineInfo
+	struct PipelineInfo
 	{
-		VertexLayout         vertex_layout;
-		RasterizerStateInfo  rasterizer_info;
-		PrimitiveTopology    topology;
-		DepthStateInfo       depth_state_info;
-		Shader*              shader;
-		DescriptorSetLayout* descriptor_set_layout;
-		u32                  sample_count;
-		u32                  color_attachment_count;
-		Format               color_attachment_formats[ MAX_ATTACHMENTS_COUNT ];
-		Format               depth_stencil_format;
-	} PipelineInfo;
+		struct VertexLayout         vertex_layout;
+		struct RasterizerStateInfo  rasterizer_info;
+		enum PrimitiveTopology      topology;
+		struct DepthStateInfo       depth_state_info;
+		struct Shader*              shader;
+		struct DescriptorSetLayout* descriptor_set_layout;
+		u32                         sample_count;
+		u32                         color_attachment_count;
+		enum Format color_attachment_formats[ MAX_ATTACHMENTS_COUNT ];
+		enum Format depth_stencil_format;
+	};
 
-	typedef struct Pipeline
+	struct Pipeline
 	{
-		PipelineType type;
-		Handle       handle;
-	} Pipeline;
+		enum PipelineType type;
+		Handle            handle;
+	};
 
-	typedef struct DescriptorSetInfo
+	struct DescriptorSetInfo
 	{
-		u32                  set;
-		DescriptorSetLayout* descriptor_set_layout;
-	} DescriptorSetInfo;
+		u32                         set;
+		struct DescriptorSetLayout* descriptor_set_layout;
+	};
 
-	typedef struct DescriptorSet
+	struct DescriptorSet
 	{
-		DescriptorSetLayout* layout;
-		Handle               handle;
-	} DescriptorSet;
+		struct DescriptorSetLayout* layout;
+		Handle                      handle;
+	};
 
-	typedef struct BufferDescriptor
+	struct BufferDescriptor
 	{
-		Buffer* buffer;
-		u64     offset;
-		u64     range;
-	} BufferDescriptor;
+		struct Buffer* buffer;
+		u64            offset;
+		u64            range;
+	};
 
-	typedef struct ImageDescriptor
+	struct ImageDescriptor
 	{
-		Image*        image;
-		ResourceState resource_state;
-	} ImageDescriptor;
+		struct Image*      image;
+		enum ResourceState resource_state;
+	};
 
-	typedef struct SamplerDescriptor
+	struct SamplerDescriptor
 	{
-		Sampler* sampler;
-	} SamplerDescriptor;
+		struct Sampler* sampler;
+	};
 
-	typedef struct DescriptorWrite
+	struct DescriptorWrite
 	{
-		u32                descriptor_count;
-		const char*        descriptor_name;
-		SamplerDescriptor* sampler_descriptors;
-		ImageDescriptor*   image_descriptors;
-		BufferDescriptor*  buffer_descriptors;
-	} DescriptorWrite;
+		u32                       descriptor_count;
+		const char*               descriptor_name;
+		struct SamplerDescriptor* sampler_descriptors;
+		struct ImageDescriptor*   image_descriptors;
+		struct BufferDescriptor*  buffer_descriptors;
+	};
 
 	static inline b32
-	format_has_depth_aspect( Format format )
+	format_has_depth_aspect( enum Format format )
 	{
 		switch ( format )
 		{
@@ -406,7 +398,7 @@ extern "C"
 	}
 
 	static inline b32
-	format_has_stencil_aspect( Format format )
+	format_has_stencil_aspect( enum Format format )
 	{
 		switch ( format )
 		{
@@ -419,381 +411,307 @@ extern "C"
 	}
 
 	void
-	create_renderer_backend( const RendererBackendInfo* info,
-	                         RendererBackend**          backend );
+	create_renderer_backend( const struct RendererBackendInfo* info,
+	                         struct RendererBackend**          backend );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_renderer_backend,
-	                          RendererBackend* backend );
+	void
+	destroy_renderer_backend( struct RendererBackend* backend );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_device,
-	                          const RendererBackend* backend,
-	                          const DeviceInfo*      info,
-	                          Device**               device );
+	void
+	create_device( const struct RendererBackend* backend,
+	               const struct DeviceInfo*      info,
+	               struct Device**               device );
 
-	DECLARE_FUNCTION_POINTER( void, destroy_device, Device* device );
+	void
+	destroy_device( struct Device* device );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_queue,
-	                          const Device*    device,
-	                          const QueueInfo* info,
-	                          Queue**          queue );
+	void
+	create_queue( const struct Device*    device,
+	              const struct QueueInfo* info,
+	              struct Queue**          queue );
 
-	DECLARE_FUNCTION_POINTER( void, destroy_queue, Queue* queue );
+	void
+	destroy_queue( struct Queue* queue );
 
-	DECLARE_FUNCTION_POINTER( void, queue_wait_idle, const Queue* queue );
+	void
+	queue_wait_idle( const struct Queue* queue );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          queue_submit,
-	                          const Queue*           queue,
-	                          const QueueSubmitInfo* info );
+	void
+	queue_submit( const struct Queue*           queue,
+	              const struct QueueSubmitInfo* info );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          immediate_submit,
-	                          const Queue*   queue,
-	                          CommandBuffer* cmd );
+	void
+	immediate_submit( const struct Queue* queue, struct CommandBuffer* cmd );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          queue_present,
-	                          const Queue*            queue,
-	                          const QueuePresentInfo* info );
+	void
+	queue_present( const struct Queue*            queue,
+	               const struct QueuePresentInfo* info );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_semaphore,
-	                          const Device* device,
-	                          Semaphore**   semaphore );
+	void
+	create_semaphore( const struct Device* device,
+	                  struct Semaphore**   semaphore );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_semaphore,
-	                          const Device* device,
-	                          Semaphore*    semaphore );
+	void
+	destroy_semaphore( const struct Device* device,
+	                   struct Semaphore*    semaphore );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_fence,
-	                          const Device* device,
-	                          Fence**       fence );
+	void
+	create_fence( const struct Device* device, struct Fence** fence );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_fence,
-	                          const Device* device,
-	                          Fence*        fence );
+	void
+	destroy_fence( const struct Device* device, struct Fence* fence );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          wait_for_fences,
-	                          const Device* device,
-	                          u32           count,
-	                          Fence**       fences );
+	void
+	wait_for_fences( const struct Device* device,
+	                 u32                  count,
+	                 struct Fence**       fences );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          reset_fences,
-	                          const Device* device,
-	                          u32           count,
-	                          Fence**       fences );
+	void
+	reset_fences( const struct Device* device,
+	              u32                  count,
+	              struct Fence**       fences );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_swapchain,
-	                          const Device*        device,
-	                          const SwapchainInfo* info,
-	                          Swapchain**          swapchain );
+	void
+	create_swapchain( const struct Device*        device,
+	                  const struct SwapchainInfo* info,
+	                  struct Swapchain**          swapchain );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          resize_swapchain,
-	                          const Device* device,
-	                          Swapchain*    swapchain,
-	                          u32           width,
-	                          u32           height );
+	void
+	resize_swapchain( const struct Device* device,
+	                  struct Swapchain*    swapchain,
+	                  u32                  width,
+	                  u32                  height );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_swapchain,
-	                          const Device* device,
-	                          Swapchain*    swapchain );
+	void
+	destroy_swapchain( const struct Device* device,
+	                   struct Swapchain*    swapchain );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_command_pool,
-	                          const Device*          device,
-	                          const CommandPoolInfo* info,
-	                          CommandPool**          command_pool );
+	void
+	create_command_pool( const struct Device*          device,
+	                     const struct CommandPoolInfo* info,
+	                     struct CommandPool**          command_pool );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_command_pool,
-	                          const Device* device,
-	                          CommandPool*  command_pool );
+	void
+	destroy_command_pool( const struct Device* device,
+	                      struct CommandPool*  command_pool );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_command_buffers,
-	                          const Device*      device,
-	                          const CommandPool* command_pool,
-	                          u32                count,
-	                          CommandBuffer**    command_buffers );
+	void
+	create_command_buffers( const struct Device*      device,
+	                        const struct CommandPool* command_pool,
+	                        u32                       count,
+	                        struct CommandBuffer**    command_buffers );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          free_command_buffers,
-	                          const Device*      device,
-	                          const CommandPool* command_pool,
-	                          u32                count,
-	                          CommandBuffer**    command_buffers );
+	void
+	free_command_buffers( const struct Device*      device,
+	                      const struct CommandPool* command_pool,
+	                      u32                       count,
+	                      struct CommandBuffer**    command_buffers );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_command_buffers,
-	                          const Device*      device,
-	                          const CommandPool* command_pool,
-	                          u32                count,
-	                          CommandBuffer**    command_buffers );
+	void
+	destroy_command_buffers( const struct Device*      device,
+	                         const struct CommandPool* command_pool,
+	                         u32                       count,
+	                         struct CommandBuffer**    command_buffers );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          begin_command_buffer,
-	                          const CommandBuffer* cmd );
+	void
+	begin_command_buffer( const struct CommandBuffer* cmd );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          end_command_buffer,
-	                          const CommandBuffer* cmd );
+	void
+	end_command_buffer( const struct CommandBuffer* cmd );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          acquire_next_image,
-	                          const Device*    device,
-	                          const Swapchain* swapchain,
-	                          const Semaphore* semaphore,
-	                          const Fence*     fence,
-	                          u32*             image_index );
+	void
+	acquire_next_image( const struct Device*    device,
+	                    const struct Swapchain* swapchain,
+	                    const struct Semaphore* semaphore,
+	                    const struct Fence*     fence,
+	                    u32*                    image_index );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_shader,
-	                          const Device* device,
-	                          ShaderInfo*   info,
-	                          Shader**      shader );
+	void
+	create_shader( const struct Device* device,
+	               struct ShaderInfo*   info,
+	               struct Shader**      shader );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_shader,
-	                          const Device* device,
-	                          Shader*       shader );
+	void
+	destroy_shader( const struct Device* device, struct Shader* shader );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_descriptor_set_layout,
-	                          const Device*         device,
-	                          Shader*               shader,
-	                          DescriptorSetLayout** descriptor_set_layout );
+	void
+	create_descriptor_set_layout(
+	    const struct Device*         device,
+	    struct Shader*               shader,
+	    struct DescriptorSetLayout** descriptor_set_layout );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_descriptor_set_layout,
-	                          const Device*        device,
-	                          DescriptorSetLayout* layout );
+	void
+	destroy_descriptor_set_layout( const struct Device*        device,
+	                               struct DescriptorSetLayout* layout );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_compute_pipeline,
-	                          const Device*       device,
-	                          const PipelineInfo* info,
-	                          Pipeline**          pipeline );
+	void
+	create_compute_pipeline( const struct Device*       device,
+	                         const struct PipelineInfo* info,
+	                         struct Pipeline**          pipeline );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_graphics_pipeline,
-	                          const Device*       device,
-	                          const PipelineInfo* info,
-	                          Pipeline**          pipeline );
+	void
+	create_graphics_pipeline( const struct Device*       device,
+	                          const struct PipelineInfo* info,
+	                          struct Pipeline**          pipeline );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_pipeline,
-	                          const Device* device,
-	                          Pipeline*     pipeline );
+	void
+	destroy_pipeline( const struct Device* device, struct Pipeline* pipeline );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_begin_render_pass,
-	                          const CommandBuffer*       cmd,
-	                          const RenderPassBeginInfo* info );
+	void
+	cmd_begin_render_pass( const struct CommandBuffer*       cmd,
+	                       const struct RenderPassBeginInfo* info );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_end_render_pass,
-	                          const CommandBuffer* cmd );
+	void
+	cmd_end_render_pass( const struct CommandBuffer* cmd );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_barrier,
-	                          const CommandBuffer* cmd,
-	                          u32                  memory_barriers_count,
-	                          const MemoryBarrier* memory_barrier,
-	                          u32                  buffer_barriers_count,
-	                          const BufferBarrier* buffer_barriers,
-	                          u32                  image_barriers_count,
-	                          const ImageBarrier*  image_barriers );
+	void
+	cmd_barrier( const struct CommandBuffer* cmd,
+	             u32                         memory_barriers_count,
+	             const struct MemoryBarrier* memory_barrier,
+	             u32                         buffer_barriers_count,
+	             const struct BufferBarrier* buffer_barriers,
+	             u32                         image_barriers_count,
+	             const struct ImageBarrier*  image_barriers );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_set_scissor,
-	                          const CommandBuffer* cmd,
-	                          i32                  x,
-	                          i32                  y,
-	                          u32                  width,
-	                          u32                  height );
+	void
+	cmd_set_scissor( const struct CommandBuffer* cmd,
+	                 i32                         x,
+	                 i32                         y,
+	                 u32                         width,
+	                 u32                         height );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_set_viewport,
-	                          const CommandBuffer* cmd,
-	                          f32                  x,
-	                          f32                  y,
-	                          f32                  width,
-	                          f32                  height,
-	                          f32                  min_depth,
-	                          f32                  max_depth );
+	void
+	cmd_set_viewport( const struct CommandBuffer* cmd,
+	                  f32                         x,
+	                  f32                         y,
+	                  f32                         width,
+	                  f32                         height,
+	                  f32                         min_depth,
+	                  f32                         max_depth );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_bind_pipeline,
-	                          const CommandBuffer* cmd,
-	                          const Pipeline*      pipeline );
+	void
+	cmd_bind_pipeline( const struct CommandBuffer* cmd,
+	                   const struct Pipeline*      pipeline );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_draw,
-	                          const CommandBuffer* cmd,
-	                          u32                  vertex_count,
-	                          u32                  instance_count,
-	                          u32                  first_vertex,
-	                          u32                  first_instance );
+	void
+	cmd_draw( const struct CommandBuffer* cmd,
+	          u32                         vertex_count,
+	          u32                         instance_count,
+	          u32                         first_vertex,
+	          u32                         first_instance );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_draw_indexed,
-	                          const CommandBuffer* cmd,
-	                          u32                  index_count,
-	                          u32                  instance_count,
-	                          u32                  first_index,
-	                          i32                  vertex_offset,
-	                          u32                  first_instance );
+	void
+	cmd_draw_indexed( const struct CommandBuffer* cmd,
+	                  u32                         index_count,
+	                  u32                         instance_count,
+	                  u32                         first_index,
+	                  i32                         vertex_offset,
+	                  u32                         first_instance );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_bind_vertex_buffer,
-	                          const CommandBuffer* cmd,
-	                          const Buffer*        buffer,
-	                          const u64            offset );
+	void
+	cmd_bind_vertex_buffer( const struct CommandBuffer* cmd,
+	                        const struct Buffer*        buffer,
+	                        const u64                   offset );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_bind_index_buffer_u16,
-	                          const CommandBuffer* cmd,
-	                          const Buffer*        buffer,
-	                          const u64            offset );
+	void
+	cmd_bind_index_buffer_u16( const struct CommandBuffer* cmd,
+	                           const struct Buffer*        buffer,
+	                           const u64                   offset );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_bind_index_buffer_u32,
-	                          const CommandBuffer* cmd,
-	                          const Buffer*        buffer,
-	                          const u64            offset );
+	void
+	cmd_bind_index_buffer_u32( const struct CommandBuffer* cmd,
+	                           const struct Buffer*        buffer,
+	                           const u64                   offset );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_copy_buffer,
-	                          const CommandBuffer* cmd,
-	                          const Buffer*        src,
-	                          u64                  src_offset,
-	                          Buffer*              dst,
-	                          u64                  dst_offset,
-	                          u64                  size );
+	void
+	cmd_copy_buffer( const struct CommandBuffer* cmd,
+	                 const struct Buffer*        src,
+	                 u64                         src_offset,
+	                 struct Buffer*              dst,
+	                 u64                         dst_offset,
+	                 u64                         size );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_copy_buffer_to_image,
-	                          const CommandBuffer* cmd,
-	                          const Buffer*        src,
-	                          u64                  src_offset,
-	                          Image*               dst );
+	void
+	cmd_copy_buffer_to_image( const struct CommandBuffer* cmd,
+	                          const struct Buffer*        src,
+	                          u64                         src_offset,
+	                          struct Image*               dst );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_bind_descriptor_set,
-	                          const CommandBuffer* cmd,
-	                          u32                  first_set,
-	                          const DescriptorSet* set,
-	                          const Pipeline*      pipeline );
+	void
+	cmd_bind_descriptor_set( const struct CommandBuffer* cmd,
+	                         u32                         first_set,
+	                         const struct DescriptorSet* set,
+	                         const struct Pipeline*      pipeline );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_dispatch,
-	                          const CommandBuffer* cmd,
-	                          u32                  group_count_x,
-	                          u32                  group_count_y,
-	                          u32                  group_count_z );
+	void
+	cmd_dispatch( const struct CommandBuffer* cmd,
+	              u32                         group_count_x,
+	              u32                         group_count_y,
+	              u32                         group_count_z );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_push_constants,
-	                          const CommandBuffer* cmd,
-	                          const Pipeline*      pipeline,
-	                          u32                  offset,
-	                          u32                  size,
-	                          const void*          data );
+	void
+	cmd_push_constants( const struct CommandBuffer* cmd,
+	                    const struct Pipeline*      pipeline,
+	                    u32                         offset,
+	                    u32                         size,
+	                    const void*                 data );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_blit_image,
-	                          const CommandBuffer* cmd,
-	                          const Image*         src,
-	                          ResourceState        src_state,
-	                          Image*               dst,
-	                          ResourceState        dst_state,
-	                          Filter               filter );
+	void
+	cmd_clear_color_image( const struct CommandBuffer* cmd,
+	                       struct Image*               image,
+	                       float                       color[ 4 ] );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_clear_color_image,
-	                          const CommandBuffer* cmd,
-	                          Image*               image,
-	                          float                color[ 4 ] );
+	void
+	create_buffer( const struct Device*     device,
+	               const struct BufferInfo* info,
+	               struct Buffer**          buffer );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_buffer,
-	                          const Device*     device,
-	                          const BufferInfo* info,
-	                          Buffer**          buffer );
+	void
+	destroy_buffer( const struct Device* device, struct Buffer* buffer );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_buffer,
-	                          const Device* device,
-	                          Buffer*       buffer );
+	void*
+	map_memory( const struct Device* device, struct Buffer* buffer );
 
-	DECLARE_FUNCTION_POINTER( void*,
-	                          map_memory,
-	                          const Device* device,
-	                          Buffer*       buffer );
+	void
+	unmap_memory( const struct Device* device, struct Buffer* buffer );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          unmap_memory,
-	                          const Device* device,
-	                          Buffer*       buffer );
+	void
+	cmd_draw_indexed_indirect( const struct CommandBuffer* cmd,
+	                           const struct Buffer*        buffer,
+	                           u64                         offset,
+	                           u32                         draw_count,
+	                           u32                         stride );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_draw_indexed_indirect,
-	                          const CommandBuffer* cmd,
-	                          const Buffer*        buffer,
-	                          u64                  offset,
-	                          u32                  draw_count,
-	                          u32                  stride );
+	void
+	create_sampler( const struct Device*      device,
+	                const struct SamplerInfo* info,
+	                struct Sampler**          sampler );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_sampler,
-	                          const Device*      device,
-	                          const SamplerInfo* info,
-	                          Sampler**          sampler );
+	void
+	destroy_sampler( const struct Device* device, struct Sampler* sampler );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_sampler,
-	                          const Device* device,
-	                          Sampler*      sampler );
+	void
+	create_image( const struct Device*    device,
+	              const struct ImageInfo* info,
+	              struct Image**          image );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_image,
-	                          const Device*    device,
-	                          const ImageInfo* info,
-	                          Image**          image );
+	void
+	destroy_image( const struct Device* device, struct Image* image );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_image,
-	                          const Device* device,
-	                          Image*        image );
+	void
+	create_descriptor_set( const struct Device*            device,
+	                       const struct DescriptorSetInfo* info,
+	                       struct DescriptorSet**          descriptor_set );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_descriptor_set,
-	                          const Device*            device,
-	                          const DescriptorSetInfo* info,
-	                          DescriptorSet**          descriptor_set );
+	void
+	destroy_descriptor_set( const struct Device*  device,
+	                        struct DescriptorSet* set );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_descriptor_set,
-	                          const Device*  device,
-	                          DescriptorSet* set );
-
-	DECLARE_FUNCTION_POINTER( void,
-	                          update_descriptor_set,
-	                          const Device*          device,
-	                          DescriptorSet*         set,
-	                          u32                    count,
-	                          const DescriptorWrite* writes );
+	void
+	update_descriptor_set( const struct Device*          device,
+	                       struct DescriptorSet*         set,
+	                       u32                           count,
+	                       const struct DescriptorWrite* writes );
 #ifdef __cplusplus
 }
 #endif

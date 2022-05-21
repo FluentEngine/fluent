@@ -31,7 +31,7 @@ namespace fluent
 static D3D12UiContext ui_context;
 
 static inline DXGI_FORMAT
-to_dxgi_image_format( Format format )
+to_dxgi_image_format( enum Format format )
 {
 	switch ( format )
 	{
@@ -51,7 +51,7 @@ to_dxgi_image_format( Format format )
 }
 
 static inline DXGI_FORMAT
-to_dxgi_format( Format format )
+to_dxgi_format( enum Format format )
 {
 	return static_cast<DXGI_FORMAT>( TinyImageFormat_ToDXGI_FORMAT(
 	    static_cast<TinyImageFormat>( format ) ) );
@@ -70,7 +70,7 @@ to_d3d12_command_list_type( QueueType type )
 }
 
 static inline D3D12_RESOURCE_STATES
-to_d3d12_resource_state( ResourceState state )
+to_d3d12_resource_state( enum ResourceState state )
 {
 	switch ( state )
 	{
@@ -198,7 +198,7 @@ to_d3d12_heap_type( MemoryUsage usage )
 }
 
 static inline D3D12_FILTER_TYPE
-to_d3d12_filter_type( Filter filter )
+to_d3d12_filter_type( enum Filter filter )
 {
 	switch ( filter )
 	{
@@ -209,8 +209,8 @@ to_d3d12_filter_type( Filter filter )
 }
 
 static inline D3D12_FILTER
-to_d3d12_filter( Filter            min_filter,
-                 Filter            mag_filter,
+to_d3d12_filter( enum Filter       min_filter,
+                 enum Filter       mag_filter,
                  SamplerMipmapMode mip_map_mode,
                  b32               anisotropy,
                  b32               comparison_filter_enabled )
@@ -295,7 +295,7 @@ to_d3d12_shader_visibility( ShaderStage stage )
 }
 
 void
-d3d12_destroy_renderer_backend( RendererBackend* ibackend )
+d3d12_destroy_renderer_backend( struct RendererBackend* ibackend )
 {
 	FT_ASSERT( ibackend );
 
@@ -309,9 +309,9 @@ d3d12_destroy_renderer_backend( RendererBackend* ibackend )
 }
 
 void
-d3d12_create_device( const RendererBackend* ibackend,
-                     const DeviceInfo*      info,
-                     Device**               p )
+d3d12_create_device( const struct RendererBackend* ibackend,
+                     const struct DeviceInfo*      info,
+                     struct Device**               p )
 {
 	FT_ASSERT( p );
 
@@ -383,7 +383,7 @@ d3d12_create_device( const RendererBackend* ibackend,
 }
 
 void
-d3d12_destroy_device( Device* idevice )
+d3d12_destroy_device( struct Device* idevice )
 {
 	FT_ASSERT( idevice );
 
@@ -401,7 +401,9 @@ d3d12_destroy_device( Device* idevice )
 }
 
 void
-d3d12_create_queue( const Device* idevice, const QueueInfo* info, Queue** p )
+d3d12_create_queue( const struct Device*    idevice,
+                    const struct QueueInfo* info,
+                    struct Queue**          p )
 {
 	FT_ASSERT( p );
 
@@ -422,7 +424,7 @@ d3d12_create_queue( const Device* idevice, const QueueInfo* info, Queue** p )
 }
 
 void
-d3d12_destroy_queue( Queue* iqueue )
+d3d12_destroy_queue( struct Queue* iqueue )
 {
 	FT_ASSERT( iqueue );
 
@@ -434,9 +436,9 @@ d3d12_destroy_queue( Queue* iqueue )
 }
 
 void
-d3d12_create_command_pool( const Device*          idevice,
-                           const CommandPoolInfo* info,
-                           CommandPool**          p )
+d3d12_create_command_pool( const struct Device*          idevice,
+                           const struct CommandPoolInfo* info,
+                           struct CommandPool**          p )
 {
 	FT_ASSERT( idevice );
 	FT_ASSERT( info->queue );
@@ -454,7 +456,8 @@ d3d12_create_command_pool( const Device*          idevice,
 }
 
 void
-d3d12_destroy_command_pool( const Device* idevice, CommandPool* icommand_pool )
+d3d12_destroy_command_pool( const struct Device* idevice,
+                            struct CommandPool*  icommand_pool )
 {
 	FT_ASSERT( icommand_pool );
 
@@ -465,10 +468,10 @@ d3d12_destroy_command_pool( const Device* idevice, CommandPool* icommand_pool )
 }
 
 void
-d3d12_create_command_buffers( const Device*      idevice,
-                              const CommandPool* icommand_pool,
-                              u32                count,
-                              CommandBuffer**    icommand_buffers )
+d3d12_create_command_buffers( const struct Device*      idevice,
+                              const struct CommandPool* icommand_pool,
+                              u32                       count,
+                              struct CommandBuffer**    icommand_buffers )
 {
 	FT_ASSERT( idevice );
 	FT_ASSERT( icommand_pool );
@@ -503,19 +506,19 @@ d3d12_create_command_buffers( const Device*      idevice,
 }
 
 void
-d3d12_free_command_buffers( const Device*      idevice,
-                            const CommandPool* icommand_pool,
-                            u32                count,
-                            CommandBuffer**    icommand_buffers )
+d3d12_free_command_buffers( const struct Device*      idevice,
+                            const struct CommandPool* icommand_pool,
+                            u32                       count,
+                            struct CommandBuffer**    icommand_buffers )
 {
 	FT_ASSERT( false );
 }
 
 void
-d3d12_destroy_command_buffers( const Device*      idevice,
-                               const CommandPool* icommand_pool,
-                               u32                count,
-                               CommandBuffer**    icommand_buffers )
+d3d12_destroy_command_buffers( const struct Device*      idevice,
+                               const struct CommandPool* icommand_pool,
+                               u32                       count,
+                               struct CommandBuffer**    icommand_buffers )
 {
 	FT_ASSERT( icommand_buffers );
 
@@ -528,7 +531,7 @@ d3d12_destroy_command_buffers( const Device*      idevice,
 }
 
 void
-d3d12_create_semaphore( const Device* idevice, Semaphore** p )
+d3d12_create_semaphore( const struct Device* idevice, struct Semaphore** p )
 {
 	FT_ASSERT( p );
 
@@ -542,7 +545,8 @@ d3d12_create_semaphore( const Device* idevice, Semaphore** p )
 }
 
 void
-d3d12_destroy_semaphore( const Device* idevice, Semaphore* isemaphore )
+d3d12_destroy_semaphore( const struct Device* idevice,
+                         struct Semaphore*    isemaphore )
 {
 	FT_ASSERT( isemaphore );
 
@@ -553,7 +557,7 @@ d3d12_destroy_semaphore( const Device* idevice, Semaphore* isemaphore )
 }
 
 void
-d3d12_create_fence( const Device* idevice, Fence** p )
+d3d12_create_fence( const struct Device* idevice, struct Fence** p )
 {
 	FT_ASSERT( p );
 
@@ -568,7 +572,7 @@ d3d12_create_fence( const Device* idevice, Fence** p )
 }
 
 void
-d3d12_destroy_fence( const Device* idevice, Fence* ifence )
+d3d12_destroy_fence( const struct Device* idevice, struct Fence* ifence )
 {
 	FT_ASSERT( ifence );
 
@@ -580,7 +584,7 @@ d3d12_destroy_fence( const Device* idevice, Fence* ifence )
 }
 
 void
-d3d12_queue_wait_idle( const Queue* iqueue )
+d3d12_queue_wait_idle( const struct Queue* iqueue )
 {
 	FT_FROM_HANDLE( queue, iqueue, D3D12Queue );
 
@@ -598,7 +602,8 @@ d3d12_queue_wait_idle( const Queue* iqueue )
 }
 
 void
-d3d12_queue_submit( const Queue* iqueue, const QueueSubmitInfo* info )
+d3d12_queue_submit( const struct Queue*           iqueue,
+                    const struct QueueSubmitInfo* info )
 {
 	FT_FROM_HANDLE( queue, iqueue, D3D12Queue );
 
@@ -615,7 +620,7 @@ d3d12_queue_submit( const Queue* iqueue, const QueueSubmitInfo* info )
 }
 
 void
-d3d12_immediate_submit( const Queue* iqueue, CommandBuffer* icmd )
+d3d12_immediate_submit( const struct Queue* iqueue, struct CommandBuffer* icmd )
 {
 	QueueSubmitInfo queue_submit_desc {};
 	queue_submit_desc.command_buffer_count = 1;
@@ -625,7 +630,8 @@ d3d12_immediate_submit( const Queue* iqueue, CommandBuffer* icmd )
 }
 
 void
-d3d12_queue_present( const Queue* iqueue, const QueuePresentInfo* info )
+d3d12_queue_present( const struct Queue*            iqueue,
+                     const struct QueuePresentInfo* info )
 {
 	FT_FROM_HANDLE( queue, iqueue, D3D12Queue );
 	FT_FROM_HANDLE( swapchain, info->swapchain, D3D12Swapchain );
@@ -642,7 +648,9 @@ d3d12_queue_present( const Queue* iqueue, const QueuePresentInfo* info )
 }
 
 void
-d3d12_wait_for_fences( const Device* idevice, u32 count, Fence** ifences )
+d3d12_wait_for_fences( const struct Device* idevice,
+                       u32                  count,
+                       struct Fence**       ifences )
 {
 	for ( u32 i = 0; i < count; i++ )
 	{
@@ -657,14 +665,16 @@ d3d12_wait_for_fences( const Device* idevice, u32 count, Fence** ifences )
 }
 
 void
-d3d12_reset_fences( const Device* idevice, u32 count, Fence** ifences )
+d3d12_reset_fences( const struct Device* idevice,
+                    u32                  count,
+                    struct Fence**       ifences )
 {
 }
 
 void
-d3d12_create_swapchain( const Device*        idevice,
-                        const SwapchainInfo* info,
-                        Swapchain**          p )
+d3d12_create_swapchain( const struct Device*        idevice,
+                        const struct SwapchainInfo* info,
+                        struct Swapchain**          p )
 {
 	FT_ASSERT( p );
 
@@ -689,7 +699,7 @@ d3d12_create_swapchain( const Device*        idevice,
 	swapchain_desc.BufferDesc.Height = swapchain->interface.height;
 	swapchain_desc.BufferDesc.RefreshRate.Numerator   = 60;
 	swapchain_desc.BufferDesc.RefreshRate.Denominator = 1;
-	swapchain_desc.BufferDesc.Format =
+	swapchain_desc.BufferDesc.enum Format =
 	    to_dxgi_image_format( swapchain->interface.format );
 	swapchain_desc.BufferDesc.ScanlineOrdering =
 	    DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
@@ -714,8 +724,9 @@ d3d12_create_swapchain( const Device*        idevice,
 	    to_dxgi_image_format( swapchain->interface.format ),
 	    DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH ) );
 
-	swapchain->interface.images = static_cast<Image**>(
-	    std::calloc( swapchain->interface.image_count, sizeof( Image* ) ) );
+	swapchain->interface.images = static_cast<struct Image**>(
+	    std::calloc( swapchain->interface.image_count,
+	                 sizeof( struct Image* ) ) );
 
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv_heap_handle(
 	    device->rtv_heap->GetCPUDescriptorHandleForHeapStart() );
@@ -735,7 +746,7 @@ d3d12_create_swapchain( const Device*        idevice,
 
 		D3D12_RENDER_TARGET_VIEW_DESC view_desc {};
 		view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		view_desc.Format        = to_dxgi_format( swapchain->interface.format );
+		view_desc.enum Format   = to_dxgi_format( swapchain->interface.format );
 
 		device->device->CreateRenderTargetView( image->image,
 		                                        &view_desc,
@@ -747,15 +758,16 @@ d3d12_create_swapchain( const Device*        idevice,
 }
 
 void
-d3d12_resize_swapchain( const Device* idevice,
-                        Swapchain*    iswapchain,
-                        u32           width,
-                        u32           height )
+d3d12_resize_swapchain( const struct Device* idevice,
+                        struct Swapchain*    iswapchain,
+                        u32                  width,
+                        u32                  height )
 {
 }
 
 void
-d3d12_destroy_swapchain( const Device* idevice, Swapchain* iswapchain )
+d3d12_destroy_swapchain( const struct Device* idevice,
+                         struct Swapchain*    iswapchain )
 {
 	FT_ASSERT( iswapchain );
 
@@ -773,25 +785,25 @@ d3d12_destroy_swapchain( const Device* idevice, Swapchain* iswapchain )
 }
 
 void
-d3d12_begin_command_buffer( const CommandBuffer* icmd )
+d3d12_begin_command_buffer( const struct CommandBuffer* icmd )
 {
 	FT_FROM_HANDLE( cmd, icmd, D3D12CommandBuffer );
 	D3D12_ASSERT( cmd->command_list->Reset( cmd->command_allocator, nullptr ) );
 }
 
 void
-d3d12_end_command_buffer( const CommandBuffer* icmd )
+d3d12_end_command_buffer( const struct CommandBuffer* icmd )
 {
 	FT_FROM_HANDLE( cmd, icmd, D3D12CommandBuffer );
 	D3D12_ASSERT( cmd->command_list->Close() );
 }
 
 void
-d3d12_acquire_next_image( const Device*    idevice,
-                          const Swapchain* iswapchain,
-                          const Semaphore* isemaphore,
-                          const Fence*     ifence,
-                          u32*             image_index )
+d3d12_acquire_next_image( const struct Device*    idevice,
+                          const struct Swapchain* iswapchain,
+                          const struct Semaphore* isemaphore,
+                          const struct Fence*     ifence,
+                          u32*                    image_index )
 {
 	FT_FROM_HANDLE( swapchain, iswapchain, D3D12Swapchain );
 
@@ -801,7 +813,7 @@ d3d12_acquire_next_image( const Device*    idevice,
 }
 
 // void
-// d3d12_create_render_pass( const Device*         idevice,
+// d3d12_create_render_pass( const struct Device*         idevice,
 //                           const RenderPassInfo* info,
 //                           RenderPass**          p )
 //{
@@ -833,14 +845,15 @@ d3d12_acquire_next_image( const Device*    idevice,
 // }
 //
 // void
-// d3d12_resize_render_pass( const Device*         idevice,
+// d3d12_resize_render_pass( const struct Device*         idevice,
 //                           RenderPass*           irender_pass,
 //                           const RenderPassInfo* info )
 //{
 // }
 //
 // void
-// d3d12_destroy_render_pass( const Device* idevice, RenderPass* irender_pass )
+// d3d12_destroy_render_pass( const struct Device* idevice, RenderPass*
+// irender_pass )
 //{
 //	FT_ASSERT( irender_pass );
 //
@@ -850,7 +863,9 @@ d3d12_acquire_next_image( const Device*    idevice,
 // }
 
 void
-d3d12_create_shader( const Device* idevice, ShaderInfo* info, Shader** p )
+d3d12_create_shader( const struct Device* idevice,
+                     struct ShaderInfo*   info,
+                     struct Shader**      p )
 {
 	FT_ASSERT( p );
 
@@ -891,7 +906,7 @@ d3d12_create_shader( const Device* idevice, ShaderInfo* info, Shader** p )
 }
 
 void
-d3d12_destroy_shader( const Device* idevice, Shader* ishader )
+d3d12_destroy_shader( const struct Device* idevice, struct Shader* ishader )
 {
 	FT_ASSERT( ishader );
 
@@ -921,9 +936,9 @@ d3d12_destroy_shader( const Device* idevice, Shader* ishader )
 }
 
 void
-d3d12_create_descriptor_set_layout( const Device*         idevice,
-                                    Shader*               ishader,
-                                    DescriptorSetLayout** p )
+d3d12_create_descriptor_set_layout( const struct Device*         idevice,
+                                    struct Shader*               ishader,
+                                    struct DescriptorSetLayout** p )
 {
 	FT_ASSERT( p );
 	FT_ASSERT( shader_count );
@@ -1056,8 +1071,8 @@ d3d12_create_descriptor_set_layout( const Device*         idevice,
 };
 
 void
-d3d12_destroy_descriptor_set_layout( const Device*        idevice,
-                                     DescriptorSetLayout* ilayout )
+d3d12_destroy_descriptor_set_layout( const struct Device*        idevice,
+                                     struct DescriptorSetLayout* ilayout )
 {
 	FT_ASSERT( ilayout );
 
@@ -1072,16 +1087,16 @@ d3d12_destroy_descriptor_set_layout( const Device*        idevice,
 }
 
 void
-d3d12_create_compute_pipeline( const Device*       idevice,
-                               const PipelineInfo* info,
-                               Pipeline**          p )
+d3d12_create_compute_pipeline( const struct Device*       idevice,
+                               const struct PipelineInfo* info,
+                               struct Pipeline**          p )
 {
 }
 
 void
-d3d12_create_graphics_pipeline( const Device*       idevice,
-                                const PipelineInfo* info,
-                                Pipeline**          p )
+d3d12_create_graphics_pipeline( const struct Device*       idevice,
+                                const struct PipelineInfo* info,
+                                struct Pipeline**          p )
 {
 	FT_ASSERT( p );
 	FT_ASSERT( info->descriptor_set_layout );
@@ -1120,7 +1135,7 @@ d3d12_create_graphics_pipeline( const Device*       idevice,
 		const auto& attribute     = vertex_layout.attribute_infos[ i ];
 		auto&       input_element = input_elements[ input_element_count ];
 
-		input_element.Format            = to_dxgi_format( attribute.format );
+		input_element.enum Format       = to_dxgi_format( attribute.format );
 		input_element.InputSlot         = attribute.binding;
 		input_element.AlignedByteOffset = attribute.offset;
 		input_element.SemanticIndex     = 0;
@@ -1206,7 +1221,8 @@ d3d12_create_graphics_pipeline( const Device*       idevice,
 }
 
 void
-d3d12_destroy_pipeline( const Device* idevice, Pipeline* ipipeline )
+d3d12_destroy_pipeline( const struct Device* idevice,
+                        struct Pipeline*     ipipeline )
 {
 	FT_ASSERT( ipipeline );
 
@@ -1217,8 +1233,8 @@ d3d12_destroy_pipeline( const Device* idevice, Pipeline* ipipeline )
 }
 
 void
-d3d12_cmd_begin_render_pass( const CommandBuffer*       icmd,
-                             const RenderPassBeginInfo* info )
+d3d12_cmd_begin_render_pass( const struct CommandBuffer*       icmd,
+                             const struct RenderPassBeginInfo* info )
 {
 	FT_FROM_HANDLE( cmd, icmd, D3D12CommandBuffer );
 
@@ -1249,18 +1265,18 @@ d3d12_cmd_begin_render_pass( const CommandBuffer*       icmd,
 }
 
 void
-d3d12_cmd_end_render_pass( const CommandBuffer* icmd )
+d3d12_cmd_end_render_pass( const struct CommandBuffer* icmd )
 {
 }
 
 void
-d3d12_cmd_barrier( const CommandBuffer* icmd,
-                   u32                  memory_barriers_count,
-                   const MemoryBarrier* memory_barrier,
-                   u32                  buffer_barriers_count,
-                   const BufferBarrier* buffer_barriers,
-                   u32                  image_barriers_count,
-                   const ImageBarrier*  image_barriers )
+d3d12_cmd_barrier( const struct CommandBuffer* icmd,
+                   u32                         memory_barriers_count,
+                   const struct MemoryBarrier* memory_barrier,
+                   u32                         buffer_barriers_count,
+                   const struct BufferBarrier* buffer_barriers,
+                   u32                         image_barriers_count,
+                   const struct ImageBarrier*  image_barriers )
 {
 	FT_FROM_HANDLE( cmd, icmd, D3D12CommandBuffer );
 
@@ -1289,11 +1305,11 @@ d3d12_cmd_barrier( const CommandBuffer* icmd,
 };
 
 void
-d3d12_cmd_set_scissor( const CommandBuffer* icmd,
-                       i32                  x,
-                       i32                  y,
-                       u32                  width,
-                       u32                  height )
+d3d12_cmd_set_scissor( const struct CommandBuffer* icmd,
+                       i32                         x,
+                       i32                         y,
+                       u32                         width,
+                       u32                         height )
 {
 	FT_FROM_HANDLE( cmd, icmd, D3D12CommandBuffer );
 
@@ -1307,13 +1323,13 @@ d3d12_cmd_set_scissor( const CommandBuffer* icmd,
 }
 
 void
-d3d12_cmd_set_viewport( const CommandBuffer* icmd,
-                        f32                  x,
-                        f32                  y,
-                        f32                  width,
-                        f32                  height,
-                        f32                  min_depth,
-                        f32                  max_depth )
+d3d12_cmd_set_viewport( const struct CommandBuffer* icmd,
+                        f32                         x,
+                        f32                         y,
+                        f32                         width,
+                        f32                         height,
+                        f32                         min_depth,
+                        f32                         max_depth )
 {
 	FT_FROM_HANDLE( cmd, icmd, D3D12CommandBuffer );
 
@@ -1329,7 +1345,8 @@ d3d12_cmd_set_viewport( const CommandBuffer* icmd,
 }
 
 void
-d3d12_cmd_bind_pipeline( const CommandBuffer* icmd, const Pipeline* ipipeline )
+d3d12_cmd_bind_pipeline( const struct CommandBuffer* icmd,
+                         const struct Pipeline*      ipipeline )
 {
 	FT_FROM_HANDLE( cmd, icmd, D3D12CommandBuffer );
 	FT_FROM_HANDLE( pipeline, ipipeline, D3D12Pipeline );
@@ -1340,11 +1357,11 @@ d3d12_cmd_bind_pipeline( const CommandBuffer* icmd, const Pipeline* ipipeline )
 }
 
 void
-d3d12_cmd_draw( const CommandBuffer* icmd,
-                u32                  vertex_count,
-                u32                  instance_count,
-                u32                  first_vertex,
-                u32                  first_instance )
+d3d12_cmd_draw( const struct CommandBuffer* icmd,
+                u32                         vertex_count,
+                u32                         instance_count,
+                u32                         first_vertex,
+                u32                         first_instance )
 {
 	FT_FROM_HANDLE( cmd, icmd, D3D12CommandBuffer );
 
@@ -1355,12 +1372,12 @@ d3d12_cmd_draw( const CommandBuffer* icmd,
 }
 
 void
-d3d12_cmd_draw_indexed( const CommandBuffer* icmd,
-                        u32                  index_count,
-                        u32                  instance_count,
-                        u32                  first_index,
-                        i32                  vertex_offset,
-                        u32                  first_instance )
+d3d12_cmd_draw_indexed( const struct CommandBuffer* icmd,
+                        u32                         index_count,
+                        u32                         instance_count,
+                        u32                         first_index,
+                        i32                         vertex_offset,
+                        u32                         first_instance )
 {
 	FT_FROM_HANDLE( cmd, icmd, D3D12CommandBuffer );
 
@@ -1372,9 +1389,9 @@ d3d12_cmd_draw_indexed( const CommandBuffer* icmd,
 }
 
 void
-d3d12_cmd_bind_vertex_buffer( const CommandBuffer* icmd,
-                              const Buffer*        ibuffer,
-                              const u64            offset )
+d3d12_cmd_bind_vertex_buffer( const struct CommandBuffer* icmd,
+                              const struct Buffer*        ibuffer,
+                              const u64                   offset )
 {
 	FT_FROM_HANDLE( cmd, icmd, D3D12CommandBuffer );
 	FT_FROM_HANDLE( buffer, ibuffer, D3D12Buffer );
@@ -1387,26 +1404,26 @@ d3d12_cmd_bind_vertex_buffer( const CommandBuffer* icmd,
 }
 
 void
-d3d12_cmd_bind_index_buffer_u16( const CommandBuffer* cmd,
-                                 const Buffer*        buffer,
-                                 const u64            offset )
+d3d12_cmd_bind_index_buffer_u16( const struct CommandBuffer* cmd,
+                                 const struct Buffer*        buffer,
+                                 const u64                   offset )
 {
 }
 
 void
-d3d12_cmd_bind_index_buffer_u32( const CommandBuffer* cmd,
-                                 const Buffer*        buffer,
-                                 u64                  offset )
+d3d12_cmd_bind_index_buffer_u32( const struct CommandBuffer* cmd,
+                                 const struct Buffer*        buffer,
+                                 u64                         offset )
 {
 }
 
 void
-d3d12_cmd_copy_buffer( const CommandBuffer* icmd,
-                       const Buffer*        isrc,
-                       u64                  src_offset,
-                       Buffer*              idst,
-                       u64                  dst_offset,
-                       u64                  size )
+d3d12_cmd_copy_buffer( const struct CommandBuffer* icmd,
+                       const struct Buffer*        isrc,
+                       u64                         src_offset,
+                       struct Buffer*              idst,
+                       u64                         dst_offset,
+                       u64                         size )
 {
 	FT_FROM_HANDLE( cmd, icmd, D3D12CommandBuffer );
 	FT_FROM_HANDLE( src, isrc, D3D12Buffer );
@@ -1420,10 +1437,10 @@ d3d12_cmd_copy_buffer( const CommandBuffer* icmd,
 }
 
 void
-d3d12_cmd_copy_buffer_to_image( const CommandBuffer* icmd,
-                                const Buffer*        isrc,
-                                u64                  src_offset,
-                                Image*               idst )
+d3d12_cmd_copy_buffer_to_image( const struct CommandBuffer* icmd,
+                                const struct Buffer*        isrc,
+                                u64                         src_offset,
+                                struct Image*               idst )
 {
 	FT_FROM_HANDLE( cmd, icmd, D3D12CommandBuffer );
 	FT_FROM_HANDLE( src, isrc, D3D12Buffer );
@@ -1440,7 +1457,7 @@ d3d12_cmd_copy_buffer_to_image( const CommandBuffer* icmd,
 
 	D3D12_TEXTURE_COPY_LOCATION src_copy_location {};
 	src_copy_location.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-	src_copy_location.PlacedFootprint.Footprint.Format =
+	src_copy_location.PlacedFootprint.Footprint.enum Format =
 	    to_dxgi_image_format( dst->interface.format );
 	src_copy_location.PlacedFootprint.Footprint.Width  = dst->interface.width;
 	src_copy_location.PlacedFootprint.Footprint.Height = dst->interface.height;
@@ -1459,58 +1476,60 @@ d3d12_cmd_copy_buffer_to_image( const CommandBuffer* icmd,
 }
 
 void
-d3d12_cmd_dispatch( const CommandBuffer* cmd,
-                    u32                  group_count_x,
-                    u32                  group_count_y,
-                    u32                  group_count_z )
+d3d12_cmd_dispatch( const struct CommandBuffer* cmd,
+                    u32                         group_count_x,
+                    u32                         group_count_y,
+                    u32                         group_count_z )
 {
 }
 
 void
-d3d12_cmd_push_constants( const CommandBuffer* cmd,
-                          const Pipeline*      pipeline,
-                          u64                  offset,
-                          u64                  size,
-                          const void*          data )
+d3d12_cmd_push_constants( const struct CommandBuffer* cmd,
+                          const struct Pipeline*      pipeline,
+                          u64                         offset,
+                          u64                         size,
+                          const void*                 data )
 {
 }
 
 void
-d3d12_cmd_blit_image( const CommandBuffer* cmd,
-                      const Image*         src,
-                      ResourceState        src_state,
-                      Image*               dst,
-                      ResourceState        dst_state,
-                      Filter               filter )
+d3d12_cmd_blit_image( const struct CommandBuffer* cmd,
+                      const struct Image*         src,
+                      enum ResourceState          src_state,
+                      struct Image*               dst,
+                      enum ResourceState          dst_state,
+                      enum Filter                 filter )
 {
 }
 
 void
-d3d12_cmd_clear_color_image( const CommandBuffer* cmd,
-                             Image*               image,
-                             Vector4              color )
+d3d12_cmd_clear_color_image( const struct CommandBuffer* cmd,
+                             struct Image*               image,
+                             Vector4                     color )
 {
 }
 
 void
-d3d12_cmd_draw_indexed_indirect( const CommandBuffer* cmd,
-                                 const Buffer*        buffer,
-                                 u64                  offset,
-                                 u32                  draw_count,
-                                 u32                  stride )
+d3d12_cmd_draw_indexed_indirect( const struct CommandBuffer* cmd,
+                                 const struct Buffer*        buffer,
+                                 u64                         offset,
+                                 u32                         draw_count,
+                                 u32                         stride )
 {
 }
 
 void
-d3d12_cmd_bind_descriptor_set( const CommandBuffer* cmd,
-                               u32                  first_set,
-                               const DescriptorSet* set,
-                               const Pipeline*      pipeline )
+d3d12_cmd_bind_descriptor_set( const struct CommandBuffer* cmd,
+                               u32                         first_set,
+                               const struct DescriptorSet* set,
+                               const struct Pipeline*      pipeline )
 {
 }
 
 void
-d3d12_create_buffer( const Device* idevice, const BufferInfo* info, Buffer** p )
+d3d12_create_buffer( const struct Device*     idevice,
+                     const struct BufferInfo* info,
+                     struct Buffer**          p )
 {
 	FT_ASSERT( p );
 
@@ -1529,7 +1548,7 @@ d3d12_create_buffer( const Device* idevice, const BufferInfo* info, Buffer** p )
 	buffer_desc.Height           = 1u;
 	buffer_desc.DepthOrArraySize = 1;
 	buffer_desc.MipLevels        = 1;
-	buffer_desc.Format           = DXGI_FORMAT_UNKNOWN;
+	buffer_desc.enum Format      = DXGI_FORMAT_UNKNOWN;
 	buffer_desc.SampleDesc       = { 1u, 0u };
 	buffer_desc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 	buffer_desc.Flags            = D3D12_RESOURCE_FLAG_NONE;
@@ -1547,7 +1566,7 @@ d3d12_create_buffer( const Device* idevice, const BufferInfo* info, Buffer** p )
 }
 
 void
-d3d12_destroy_buffer( const Device* idevice, Buffer* ibuffer )
+d3d12_destroy_buffer( const struct Device* idevice, struct Buffer* ibuffer )
 {
 	FT_ASSERT( ibuffer );
 
@@ -1558,7 +1577,7 @@ d3d12_destroy_buffer( const Device* idevice, Buffer* ibuffer )
 }
 
 void*
-d3d12_map_memory( const Device* idevice, Buffer* ibuffer )
+d3d12_map_memory( const struct Device* idevice, struct Buffer* ibuffer )
 {
 	FT_ASSERT( ibuffer != nullptr );
 	FT_ASSERT( ibuffer->mapped_memory == nullptr );
@@ -1571,7 +1590,7 @@ d3d12_map_memory( const Device* idevice, Buffer* ibuffer )
 }
 
 void
-d3d12_unmap_memory( const Device* idevice, Buffer* ibuffer )
+d3d12_unmap_memory( const struct Device* idevice, struct Buffer* ibuffer )
 {
 	FT_ASSERT( ibuffer );
 	FT_ASSERT( ibuffer->mapped_memory );
@@ -1583,9 +1602,9 @@ d3d12_unmap_memory( const Device* idevice, Buffer* ibuffer )
 }
 
 void
-d3d12_create_sampler( const Device*      idevice,
-                      const SamplerInfo* info,
-                      Sampler**          p )
+d3d12_create_sampler( const struct Device*      idevice,
+                      const struct SamplerInfo* info,
+                      struct Sampler**          p )
 {
 	FT_ASSERT( p );
 
@@ -1594,15 +1613,15 @@ d3d12_create_sampler( const Device*      idevice,
 	FT_INIT_INTERNAL( sampler, *p, D3D12Sampler );
 
 	D3D12_SAMPLER_DESC sampler_desc {};
-	sampler_desc.Filter     = to_d3d12_filter( info->min_filter,
-                                           info->mag_filter,
-                                           info->mipmap_mode,
-                                           info->anisotropy_enable,
-                                           info->compare_enable );
-	sampler_desc.AddressU   = to_d3d12_address_mode( info->address_mode_u );
-	sampler_desc.AddressV   = to_d3d12_address_mode( info->address_mode_v );
-	sampler_desc.AddressW   = to_d3d12_address_mode( info->address_mode_w );
-	sampler_desc.MipLODBias = info->mip_lod_bias;
+	sampler_desc.enum Filter = to_d3d12_filter( info->min_filter,
+	                                            info->mag_filter,
+	                                            info->mipmap_mode,
+	                                            info->anisotropy_enable,
+	                                            info->compare_enable );
+	sampler_desc.AddressU    = to_d3d12_address_mode( info->address_mode_u );
+	sampler_desc.AddressV    = to_d3d12_address_mode( info->address_mode_v );
+	sampler_desc.AddressW    = to_d3d12_address_mode( info->address_mode_w );
+	sampler_desc.MipLODBias  = info->mip_lod_bias;
 	sampler_desc.MaxAnisotropy =
 	    static_cast<u32>( info->max_anisotropy ); // ??? TODO
 	sampler_desc.ComparisonFunc = to_d3d12_comparison_func( info->compare_op );
@@ -1617,7 +1636,7 @@ d3d12_create_sampler( const Device*      idevice,
 }
 
 void
-d3d12_destroy_sampler( const Device* device, Sampler* isampler )
+d3d12_destroy_sampler( const struct Device* device, struct Sampler* isampler )
 {
 	FT_ASSERT( isampler );
 
@@ -1627,7 +1646,9 @@ d3d12_destroy_sampler( const Device* device, Sampler* isampler )
 }
 
 void
-d3d12_create_image( const Device* idevice, const ImageInfo* info, Image** p )
+d3d12_create_image( const struct Device*    idevice,
+                    const struct ImageInfo* info,
+                    struct Image**          p )
 {
 	FT_ASSERT( p );
 
@@ -1650,7 +1671,7 @@ d3d12_create_image( const Device* idevice, const ImageInfo* info, Image** p )
 	image_desc.Height           = image->interface.height;
 	image_desc.DepthOrArraySize = image->interface.depth;
 	image_desc.MipLevels        = image->interface.mip_level_count;
-	image_desc.Format = to_dxgi_image_format( image->interface.format );
+	image_desc.enum Format = to_dxgi_image_format( image->interface.format );
 	image_desc.SampleDesc.Count =
 	    to_d3d12_sample_count( image->interface.sample_count );
 	// TODO:
@@ -1683,7 +1704,7 @@ d3d12_create_image( const Device* idevice, const ImageInfo* info, Image** p )
 		D3D12_DEPTH_STENCIL_VIEW_DESC view_desc {};
 		view_desc.Flags              = D3D12_DSV_FLAG_NONE;
 		view_desc.ViewDimension      = D3D12_DSV_DIMENSION_TEXTURE2D;
-		view_desc.Format             = image_desc.Format;
+		view_desc.enum Format        = image_desc.enum Format;
 		view_desc.Texture2D.MipSlice = 0;
 		device->device->CreateDepthStencilView( image->image,
 		                                        nullptr,
@@ -1698,7 +1719,7 @@ d3d12_create_image( const Device* idevice, const ImageInfo* info, Image** p )
 
 		D3D12_RENDER_TARGET_VIEW_DESC view_desc {};
 		view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		view_desc.Format        = image_desc.Format;
+		view_desc.enum Format   = image_desc.enum Format;
 
 		device->device->CreateRenderTargetView( image->image,
 		                                        nullptr,
@@ -1714,7 +1735,7 @@ d3d12_create_image( const Device* idevice, const ImageInfo* info, Image** p )
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC view_desc {};
 		view_desc.ViewDimension       = D3D12_SRV_DIMENSION_TEXTURE2D;
-		view_desc.Format              = image_desc.Format;
+		view_desc.enum Format         = image_desc.enum Format;
 		view_desc.Texture2D.MipLevels = 1;
 
 		device->device->CreateShaderResourceView( image->image,
@@ -1726,7 +1747,7 @@ d3d12_create_image( const Device* idevice, const ImageInfo* info, Image** p )
 }
 
 void
-d3d12_destroy_image( const Device* device, Image* iimage )
+d3d12_destroy_image( const struct Device* device, struct Image* iimage )
 {
 	FT_ASSERT( iimage );
 
@@ -1741,22 +1762,23 @@ d3d12_destroy_image( const Device* device, Image* iimage )
 }
 
 void
-d3d12_create_descriptor_set( const Device*            idevice,
-                             const DescriptorSetInfo* info,
-                             DescriptorSet**          p )
+d3d12_create_descriptor_set( const struct Device*            idevice,
+                             const struct DescriptorSetInfo* info,
+                             struct DescriptorSet**          p )
 {
 }
 
 void
-d3d12_destroy_descriptor_set( const Device* idevice, DescriptorSet* iset )
+d3d12_destroy_descriptor_set( const struct Device*  idevice,
+                              struct DescriptorSet* iset )
 {
 }
 
 void
-d3d12_update_descriptor_set( const Device*          idevice,
-                             DescriptorSet*         iset,
-                             u32                    count,
-                             const DescriptorWrite* writes )
+d3d12_update_descriptor_set( const struct Device*          idevice,
+                             struct DescriptorSet*         iset,
+                             u32                           count,
+                             const struct DescriptorWrite* writes )
 {
 }
 
@@ -1800,7 +1822,7 @@ d3d12_init_ui( const UiInfo* info )
 }
 
 void
-d3d12_ui_upload_resources( CommandBuffer* cmd )
+d3d12_ui_upload_resources( struct CommandBuffer* cmd )
 {
 }
 
@@ -1810,7 +1832,7 @@ d3d12_ui_destroy_upload_objects()
 }
 
 void
-d3d12_shutdown_ui( const Device* idevice )
+d3d12_shutdown_ui( const struct Device* idevice )
 {
 	ImGui_ImplDX12_Shutdown();
 	ImGui_ImplSDL2_Shutdown();
@@ -1819,7 +1841,7 @@ d3d12_shutdown_ui( const Device* idevice )
 }
 
 void
-d3d12_ui_begin_frame( CommandBuffer* icmd )
+d3d12_ui_begin_frame( struct CommandBuffer* icmd )
 {
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplSDL2_NewFrame();
@@ -1827,7 +1849,7 @@ d3d12_ui_begin_frame( CommandBuffer* icmd )
 }
 
 void
-d3d12_ui_end_frame( CommandBuffer* icmd )
+d3d12_ui_end_frame( struct CommandBuffer* icmd )
 {
 	FT_FROM_HANDLE( cmd, icmd, D3D12CommandBuffer );
 
@@ -1852,7 +1874,7 @@ d3d12_read_shader( const std::string& shader_name )
 
 void
 d3d12_create_renderer_backend( const RendererBackendInfo* info,
-                               RendererBackend**          p )
+                               struct RendererBackend**   p )
 {
 	FT_ASSERT( p );
 

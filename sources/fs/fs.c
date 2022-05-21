@@ -116,7 +116,7 @@ read_file_binary( const std::string& filename )
 //	image_info.depth  = image_data->m_depth;
 
 //	// TODO: formats
-//	image_info.format = ( Format ) TinyImageFormat_FromDXGI_FORMAT(
+//	image_info.format = ( enum Format ) TinyImageFormat_FromDXGI_FORMAT(
 //	    ( TinyImageFormat_DXGI_FORMAT ) dds.GetFormat() );
 //	image_info.mip_levels  = dds.GetMipCount();
 //	image_info.layer_count = dds.GetArraySize();

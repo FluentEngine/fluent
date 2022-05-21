@@ -7,7 +7,7 @@ extern "C"
 {
 #endif
 
-	typedef struct WindowInfo
+	struct WindowInfo
 	{
 		const char* title;
 		u32         x;
@@ -18,27 +18,27 @@ extern "C"
 		b32         centered;
 		b32         fullscreen;
 		b32         grab_mouse;
-	} WindowInfo;
+	};
 
-	typedef struct Window
+	struct Window
 	{
 		void* handle;
-	} Window;
+	};
 
-	Window
-	create_window( const WindowInfo* info );
-
-	void
-	destroy_window( Window* window );
+	struct Window
+	create_window( const struct WindowInfo* info );
 
 	void
-	window_get_size( const Window* window, u32* width, u32* height );
+	destroy_window( struct Window* window );
+
+	void
+	window_get_size( const struct Window* window, u32* width, u32* height );
 	u32
-	window_get_width( const Window* window );
+	window_get_width( const struct Window* window );
 	u32
-	window_get_height( const Window* window );
+	window_get_height( const struct Window* window );
 	f32
-	window_get_aspect( const Window* window );
+	window_get_aspect( const struct Window* window );
 	void
 	window_show_cursor( b32 show );
 

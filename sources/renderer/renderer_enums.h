@@ -5,22 +5,22 @@
 
 #define BIT( x ) 1 << x
 
-typedef enum RendererAPI
+enum RendererAPI
 {
 	FT_RENDERER_API_VULKAN = 0,
 	FT_RENDERER_API_D3D12  = 1,
 	FT_RENDERER_API_METAL  = 2,
-} RendererAPI;
+};
 
-typedef enum QueueType
+enum QueueType
 {
 	FT_QUEUE_TYPE_GRAPHICS = 0,
 	FT_QUEUE_TYPE_COMPUTE  = 1,
 	FT_QUEUE_TYPE_TRANSFER = 2,
 	FT_QUEUE_TYPE_COUNT
-} QueueType;
+};
 
-typedef enum Format
+enum Format
 {
 	FT_FORMAT_UNDEFINED             = TinyImageFormat_UNDEFINED,
 	FT_FORMAT_R1_UNORM              = TinyImageFormat_R1_UNORM,
@@ -224,25 +224,25 @@ typedef enum Format
 	FT_FORMAT_CLUT_P4A4             = TinyImageFormat_CLUT_P4A4,
 	FT_FORMAT_CLUT_P8               = TinyImageFormat_CLUT_P8,
 	FT_FORMAT_CLUT_P8A8             = TinyImageFormat_CLUT_P8A8,
-} Format;
+};
 
-typedef enum AttachmentLoadOp
+enum AttachmentLoadOp
 {
 	FT_ATTACHMENT_LOAD_OP_LOAD,
 	FT_ATTACHMENT_LOAD_OP_CLEAR     = 1,
 	FT_ATTACHMENT_LOAD_OP_DONT_CARE = 2
-} AttachmentLoadOp;
+};
 
-typedef enum MemoryUsage
+enum MemoryUsage
 {
 	FT_MEMORY_USAGE_GPU_ONLY   = 0,
 	FT_MEMORY_USAGE_CPU_ONLY   = 1,
 	FT_MEMORY_USAGE_CPU_TO_GPU = 2,
 	FT_MEMORY_USAGE_GPU_TO_CPU = 3,
 	FT_MEMORY_USAGE_CPU_COPY   = 4,
-} MemoryUsage;
+};
 
-typedef enum ResourceState
+enum ResourceState
 {
 	FT_RESOURCE_STATE_UNDEFINED               = BIT( 0 ),
 	FT_RESOURCE_STATE_GENERAL                 = BIT( 1 ),
@@ -253,9 +253,9 @@ typedef enum ResourceState
 	FT_RESOURCE_STATE_TRANSFER_SRC            = BIT( 6 ),
 	FT_RESOURCE_STATE_TRANSFER_DST            = BIT( 7 ),
 	FT_RESOURCE_STATE_PRESENT                 = BIT( 8 )
-} ResourceState;
+};
 
-typedef enum DescriptorType
+enum DescriptorType
 {
 	FT_DESCRIPTOR_TYPE_UNDEFINED                = BIT( 0 ),
 	FT_DESCRIPTOR_TYPE_VERTEX_BUFFER            = BIT( 1 ),
@@ -274,47 +274,47 @@ typedef enum DescriptorType
 	FT_DESCRIPTOR_TYPE_DEPTH_STENCIL_ATTACHMENT = BIT( 14 ),
 	FT_DESCRIPTOR_TYPE_COLOR_ATTACHMENT         = BIT( 15 ),
 	FT_DESCRIPTOR_TYPE_TRANSIENT_ATTACHMENT     = BIT( 16 )
-} DescriptorType;
+};
 
-typedef enum PipelineType
+enum PipelineType
 {
 	FT_PIPELINE_TYPE_COMPUTE,
 	FT_PIPELINE_TYPE_GRAPHICS
-} PipelineType;
+};
 
-typedef enum VertexInputRate
+enum VertexInputRate
 {
 	FT_VERTEX_INPUT_RATE_VERTEX,
 	FT_VERTEX_INPUT_RATE_INSTANCE
-} VertexInputRate;
+};
 
-typedef enum FrontFace
+enum FrontFace
 {
 	FT_FRONT_FACE_CLOCKWISE,
 	FT_FRONT_FACE_COUNTER_CLOCKWISE
-} FrontFace;
+};
 
-typedef enum PolygonMode
+enum PolygonMode
 {
 	FT_POLYGON_MODE_FILL,
 	FT_POLYGON_MODE_LINE
-} PolygonMode;
+};
 
-typedef enum SamplerMipmapMode
+enum SamplerMipmapMode
 {
 	FT_SAMPLER_MIPMAP_MODE_NEAREST,
 	FT_SAMPLER_MIPMAP_MODE_LINEAR
-} SamplerMipmapMode;
+};
 
-typedef enum SamplerAddressMode
+enum SamplerAddressMode
 {
 	FT_SAMPLER_ADDRESS_MODE_REPEAT,
 	FT_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
 	FT_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
 	FT_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER
-} SamplerAddressMode;
+};
 
-typedef enum CompareOp
+enum CompareOp
 {
 	FT_COMPARE_OP_NEVER,
 	FT_COMPARE_OP_LESS,
@@ -324,16 +324,16 @@ typedef enum CompareOp
 	FT_COMPARE_OP_NOT_EQUAL,
 	FT_COMPARE_OP_GREATER_OR_EQUAL,
 	FT_COMPARE_OP_ALWAYS
-} CompareOp;
+};
 
-typedef enum CullMode
+enum CullMode
 {
 	FT_CULL_MODE_NONE,
 	FT_CULL_MODE_FRONT,
 	FT_CULL_MODE_BACK
-} CullMode;
+};
 
-typedef enum ShaderStage
+enum ShaderStage
 {
 	FT_SHADER_STAGE_VERTEX,
 	FT_SHADER_STAGE_TESSELLATION_CONTROL,
@@ -342,19 +342,19 @@ typedef enum ShaderStage
 	FT_SHADER_STAGE_FRAGMENT,
 	FT_SHADER_STAGE_COMPUTE,
 	FT_SHADER_STAGE_COUNT
-} ShaderStage;
+};
 
-typedef enum Filter
+enum Filter
 {
 	FT_FILTER_NEAREST = 0,
 	FT_FILTER_LINEAR  = 1,
-} Filter;
+};
 
-typedef enum PrimitiveTopology
+enum PrimitiveTopology
 {
 	FT_PRIMITIVE_TOPOLOGY_POINT_LIST,
 	FT_PRIMITIVE_TOPOLOGY_LINE_LIST,
 	FT_PRIMITIVE_TOPOLOGY_LINE_STRIP,
 	FT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 	FT_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP
-} PrimitiveTopology;
+};

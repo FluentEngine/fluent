@@ -11,8 +11,8 @@
 #endif
 
 // defined in input.c
-InputSystem*
-get_input_system();
+struct InputSystem*
+get_input_system( void );
 
 #define MAX_INSTANCE_EXTENSION_COUNT 3
 
@@ -20,7 +20,7 @@ typedef struct ApplicationState
 {
 	b32              is_inited;
 	b32              is_running;
-	Window           window;
+	struct Window    window;
 	InitCallback     on_init;
 	UpdateCallback   on_update;
 	ShutdownCallback on_shutdown;
@@ -33,15 +33,7 @@ typedef struct ApplicationState
 static ApplicationState app_state;
 
 #ifdef VULKAN_BACKEND
-void
-ft_get_vulkan_instance_extensions( u32* count, const char** extensions )
-{
-	SDL_Vulkan_GetInstanceExtensions( ( SDL_Window* ) app_state.window.handle,
-	                                  count,
-	                                  extensions );
-}
-
-void
+static void
 ft_create_vulkan_surface( void* window, void* instance, void** p )
 {
 	VkSurfaceKHR surface;
@@ -53,7 +45,7 @@ ft_create_vulkan_surface( void* window, void* instance, void** p )
 #endif
 
 void
-app_init( const ApplicationConfig* config )
+app_init( const struct ApplicationConfig* config )
 {
 	FT_ASSERT( config->argv );
 	FT_ASSERT( config->on_init );
@@ -107,7 +99,7 @@ app_run()
 	u32 last_frame       = 0.0f;
 	app_state.delta_time = 0.0;
 
-	InputSystem* input_system = get_input_system();
+	struct InputSystem* input_system = get_input_system();
 
 	static u32 width, height;
 	window_get_size( &app_state.window, &width, &height );
@@ -201,7 +193,7 @@ app_request_exit()
 	app_state.is_running = 0;
 }
 
-const Window*
+const struct Window*
 get_app_window()
 {
 	return &app_state.window;

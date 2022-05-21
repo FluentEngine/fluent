@@ -5,17 +5,17 @@
 #include <vk_mem_alloc.h>
 #include "renderer/renderer_backend.h"
 
-typedef struct VulkanRendererBackend
+struct VulkanRendererBackend
 {
 	VkAllocationCallbacks*   vulkan_allocator;
 	VkInstance               instance;
 	VkDebugUtilsMessengerEXT debug_messenger;
 	VkPhysicalDevice         physical_device;
 	u32                      api_version;
-	RendererBackend          interface;
-} VulkanRendererBackend;
+	struct RendererBackend   interface;
+};
 
-typedef struct VulkanDevice
+struct VulkanDevice
 {
 	u32                    index;
 	VkAllocationCallbacks* vulkan_allocator;
@@ -24,98 +24,98 @@ typedef struct VulkanDevice
 	VkDevice               logical_device;
 	VmaAllocator           memory_allocator;
 	VkDescriptorPool       descriptor_pool;
-	Device                 interface;
-} VulkanDevice;
+	struct Device          interface;
+};
 
-typedef struct VulkanCommandPool
+struct VulkanCommandPool
 {
-	VkCommandPool command_pool;
-	CommandPool   interface;
-} VulkanCommandPool;
+	VkCommandPool      command_pool;
+	struct CommandPool interface;
+};
 
-typedef struct VulkanCommandBuffer
+struct VulkanCommandBuffer
 {
-	VkCommandBuffer command_buffer;
-	CommandBuffer   interface;
-} VulkanCommandBuffer;
+	VkCommandBuffer      command_buffer;
+	struct CommandBuffer interface;
+};
 
-typedef struct VulkanQueue
+struct VulkanQueue
 {
-	VkQueue queue;
-	Queue   interface;
-} VulkanQueue;
+	VkQueue      queue;
+	struct Queue interface;
+};
 
-typedef struct VulkanSemaphore
+struct VulkanSemaphore
 {
-	VkSemaphore semaphore;
-	Semaphore   interface;
-} VulkanSemaphore;
+	VkSemaphore      semaphore;
+	struct Semaphore interface;
+};
 
-typedef struct VulkanFence
+struct VulkanFence
 {
-	VkFence fence;
-	Fence   interface;
-} VulkanFence;
+	VkFence      fence;
+	struct Fence interface;
+};
 
-typedef struct VulkanSampler
+struct VulkanSampler
 {
-	VkSampler sampler;
-	Sampler   interface;
-} VulkanSampler;
+	VkSampler      sampler;
+	struct Sampler interface;
+};
 
-typedef struct VulkanImage
+struct VulkanImage
 {
 	VkImage       image;
 	VkImageView   image_view;
 	VmaAllocation allocation;
-	Image         interface;
-} VulkanImage;
+	struct Image  interface;
+};
 
-typedef struct VulkanBuffer
+struct VulkanBuffer
 {
 	VkBuffer      buffer;
 	VmaAllocation allocation;
-	Buffer        interface;
-} VulkanBuffer;
+	struct Buffer interface;
+};
 
-typedef struct VulkanSwapchain
+struct VulkanSwapchain
 {
 	VkPresentModeKHR              present_mode;
 	VkColorSpaceKHR               color_space;
 	VkSurfaceTransformFlagBitsKHR pre_transform;
 	VkSurfaceKHR                  surface;
 	VkSwapchainKHR                swapchain;
-	Swapchain                     interface;
-} VulkanSwapchain;
+	struct Swapchain              interface;
+};
 
-typedef struct VulkanShader
+struct VulkanShader
 {
 	VkShaderModule shaders[ FT_SHADER_STAGE_COUNT ];
-	Shader         interface;
-} VulkanShader;
+	struct Shader  interface;
+};
 
-typedef struct VulkanDescriptorSetLayout
+struct VulkanDescriptorSetLayout
 {
-	u32                   descriptor_set_layout_count;
-	VkDescriptorSetLayout descriptor_set_layouts[ MAX_SET_COUNT ];
-	DescriptorSetLayout   interface;
-} VulkanDescriptorSetLayout;
+	u32                        descriptor_set_layout_count;
+	VkDescriptorSetLayout      descriptor_set_layouts[ MAX_SET_COUNT ];
+	struct DescriptorSetLayout interface;
+};
 
-typedef struct VulkanPipeline
+struct VulkanPipeline
 {
 	VkPipelineLayout pipeline_layout;
 	VkPipeline       pipeline;
-	Pipeline         interface;
-} VulkanPipeline;
+	struct Pipeline  interface;
+};
 
-typedef struct VulkanDescriptorSet
+struct VulkanDescriptorSet
 {
-	VkDescriptorSet descriptor_set;
-	DescriptorSet   interface;
-} VulkanDescriptorSet;
+	VkDescriptorSet      descriptor_set;
+	struct DescriptorSet interface;
+};
 
 void
-vk_create_renderer_backend( const RendererBackendInfo* info,
-                            RendererBackend**          backend );
+vk_create_renderer_backend( const struct RendererBackendInfo* info,
+                            struct RendererBackend**          backend );
 
 #endif

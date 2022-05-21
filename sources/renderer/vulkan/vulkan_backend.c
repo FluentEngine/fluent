@@ -6,6 +6,7 @@
 #include "log/log.h"
 #include "wsi/wsi.h"
 #include "fs/fs.h"
+#include "renderer_backend_functions.h"
 #include "vulkan_backend.h"
 
 #ifdef FLUENT_DEBUG
@@ -30,14 +31,14 @@ clamp_u32( u32 d, u32 min, u32 max )
 
 struct RenderPassMapItem
 {
-	RenderPassBeginInfo info;
-	VkRenderPass        value;
+	struct RenderPassBeginInfo info;
+	VkRenderPass               value;
 };
 
 struct FramebufferMapItem
 {
-	RenderPassBeginInfo info;
-	VkFramebuffer       value;
+	struct RenderPassBeginInfo info;
+	VkFramebuffer              value;
 };
 
 static b32
@@ -157,21 +158,21 @@ hash_framebuffer_info( const void* item, u64 seed0, u64 seed1 )
 	return 0;
 }
 
-static VulkanDevice*   devices[ MAX_DEVICE_COUNT ];
-static struct hashmap* passes[ MAX_DEVICE_COUNT ]       = { NULL };
-static struct hashmap* framebuffers[ MAX_DEVICE_COUNT ] = { NULL };
+static struct VulkanDevice* devices[ MAX_DEVICE_COUNT ];
+static struct hashmap*      passes[ MAX_DEVICE_COUNT ]       = { NULL };
+static struct hashmap*      framebuffers[ MAX_DEVICE_COUNT ] = { NULL };
 
 static inline VkFormat
-to_vk_format( Format format )
+to_vk_format( enum Format format )
 {
 	return ( VkFormat ) TinyImageFormat_ToVkFormat(
 	    ( TinyImageFormat ) format );
 }
 
-static inline Format
+static inline enum Format
 from_vk_format( VkFormat format )
 {
-	return ( Format ) TinyImageFormat_FromVkFormat(
+	return ( enum Format ) TinyImageFormat_FromVkFormat(
 	    ( TinyImageFormat_VkFormat ) format );
 }
 
@@ -183,7 +184,7 @@ to_vk_sample_count( u32 sample_count )
 }
 
 static inline VkAttachmentLoadOp
-to_vk_load_op( AttachmentLoadOp load_op )
+to_vk_load_op( enum AttachmentLoadOp load_op )
 {
 	switch ( load_op )
 	{
@@ -196,7 +197,7 @@ to_vk_load_op( AttachmentLoadOp load_op )
 }
 
 static inline VkQueueFlagBits
-to_vk_queue_type( QueueType type )
+to_vk_queue_type( enum QueueType type )
 {
 	switch ( type )
 	{
@@ -208,7 +209,7 @@ to_vk_queue_type( QueueType type )
 }
 
 static inline VkVertexInputRate
-to_vk_vertex_input_rate( VertexInputRate input_rate )
+to_vk_vertex_input_rate( enum VertexInputRate input_rate )
 {
 	switch ( input_rate )
 	{
@@ -219,7 +220,7 @@ to_vk_vertex_input_rate( VertexInputRate input_rate )
 }
 
 static inline VkCullModeFlagBits
-to_vk_cull_mode( CullMode cull_mode )
+to_vk_cull_mode( enum CullMode cull_mode )
 {
 	switch ( cull_mode )
 	{
@@ -231,7 +232,7 @@ to_vk_cull_mode( CullMode cull_mode )
 }
 
 static inline VkFrontFace
-to_vk_front_face( FrontFace front_face )
+to_vk_front_face( enum FrontFace front_face )
 {
 	switch ( front_face )
 	{
@@ -243,7 +244,7 @@ to_vk_front_face( FrontFace front_face )
 }
 
 static inline VkCompareOp
-to_vk_compare_op( CompareOp op )
+to_vk_compare_op( enum CompareOp op )
 {
 	switch ( op )
 	{
@@ -260,7 +261,7 @@ to_vk_compare_op( CompareOp op )
 }
 
 static inline VkShaderStageFlagBits
-to_vk_shader_stage( ShaderStage shader_stage )
+to_vk_shader_stage( enum ShaderStage shader_stage )
 {
 	switch ( shader_stage )
 	{
@@ -277,7 +278,7 @@ to_vk_shader_stage( ShaderStage shader_stage )
 }
 
 static inline VkPipelineBindPoint
-to_vk_pipeline_bind_point( PipelineType type )
+to_vk_pipeline_bind_point( enum PipelineType type )
 {
 	switch ( type )
 	{
@@ -288,7 +289,7 @@ to_vk_pipeline_bind_point( PipelineType type )
 }
 
 static inline VkDescriptorType
-to_vk_descriptor_type( DescriptorType descriptor_type )
+to_vk_descriptor_type( enum DescriptorType descriptor_type )
 {
 	switch ( descriptor_type )
 	{
@@ -316,7 +317,7 @@ to_vk_descriptor_type( DescriptorType descriptor_type )
 }
 
 static inline VkFilter
-to_vk_filter( Filter filter )
+to_vk_filter( enum Filter filter )
 {
 	switch ( filter )
 	{
@@ -327,7 +328,7 @@ to_vk_filter( Filter filter )
 }
 
 static inline VkSamplerMipmapMode
-to_vk_sampler_mipmap_mode( SamplerMipmapMode mode )
+to_vk_sampler_mipmap_mode( enum SamplerMipmapMode mode )
 {
 	switch ( mode )
 	{
@@ -338,7 +339,7 @@ to_vk_sampler_mipmap_mode( SamplerMipmapMode mode )
 }
 
 static inline VkSamplerAddressMode
-to_vk_sampler_address_mode( SamplerAddressMode mode )
+to_vk_sampler_address_mode( enum SamplerAddressMode mode )
 {
 	switch ( mode )
 	{
@@ -354,7 +355,7 @@ to_vk_sampler_address_mode( SamplerAddressMode mode )
 }
 
 static inline VkPolygonMode
-to_vk_polygon_mode( PolygonMode mode )
+to_vk_polygon_mode( enum PolygonMode mode )
 {
 	switch ( mode )
 	{
@@ -365,7 +366,7 @@ to_vk_polygon_mode( PolygonMode mode )
 }
 
 static inline VkPrimitiveTopology
-to_vk_primitive_topology( PrimitiveTopology topology )
+to_vk_primitive_topology( enum PrimitiveTopology topology )
 {
 	switch ( topology )
 	{
@@ -384,7 +385,7 @@ to_vk_primitive_topology( PrimitiveTopology topology )
 }
 
 static inline VkAccessFlags
-determine_access_flags( ResourceState resource_state )
+determine_access_flags( enum ResourceState resource_state )
 {
 	VkAccessFlags access_flags = 0;
 
@@ -418,8 +419,8 @@ determine_access_flags( ResourceState resource_state )
 }
 
 static inline VkPipelineStageFlags
-determine_pipeline_stage_flags( VkAccessFlags access_flags,
-                                QueueType     queue_type )
+determine_pipeline_stage_flags( VkAccessFlags  access_flags,
+                                enum QueueType queue_type )
 {
 	// TODO: FIX THIS
 	VkPipelineStageFlags flags = 0;
@@ -501,7 +502,7 @@ determine_pipeline_stage_flags( VkAccessFlags access_flags,
 }
 
 static inline VkImageLayout
-determine_image_layout( ResourceState resource_state )
+determine_image_layout( enum ResourceState resource_state )
 {
 	if ( resource_state & FT_RESOURCE_STATE_GENERAL )
 		return VK_IMAGE_LAYOUT_GENERAL;
@@ -531,7 +532,7 @@ determine_image_layout( ResourceState resource_state )
 }
 
 static inline VmaMemoryUsage
-determine_vma_memory_usage( MemoryUsage usage )
+determine_vma_memory_usage( enum MemoryUsage usage )
 {
 	switch ( usage )
 	{
@@ -547,8 +548,8 @@ determine_vma_memory_usage( MemoryUsage usage )
 }
 
 static inline VkBufferUsageFlags
-determine_vk_buffer_usage( DescriptorType descriptor_type,
-                           MemoryUsage    memory_usage )
+determine_vk_buffer_usage( enum DescriptorType descriptor_type,
+                           enum MemoryUsage    memory_usage )
 {
 	// TODO: determine buffer usage flags
 	VkBufferUsageFlags buffer_usage = ( VkBufferUsageFlags ) 0;
@@ -593,7 +594,7 @@ determine_vk_buffer_usage( DescriptorType descriptor_type,
 }
 
 static inline VkImageUsageFlags
-determine_vk_image_usage( DescriptorType descriptor_type )
+determine_vk_image_usage( enum DescriptorType descriptor_type )
 {
 	VkImageUsageFlags image_usage = ( VkImageUsageFlags ) 0;
 
@@ -667,7 +668,7 @@ vulkan_debug_callback(
 }
 
 static inline void
-create_debug_messenger( VulkanRendererBackend* backend )
+create_debug_messenger( struct VulkanRendererBackend* backend )
 {
 	VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info = {};
 	debug_messenger_create_info.sType =
@@ -691,10 +692,10 @@ create_debug_messenger( VulkanRendererBackend* backend )
 }
 
 static inline void
-get_instance_extensions( const RendererBackendInfo* info,
-                         u32*                       instance_create_flags,
-                         u32*                       count,
-                         const char**               names )
+get_instance_extensions( const struct RendererBackendInfo* info,
+                         u32*         instance_create_flags,
+                         u32*         count,
+                         const char** names )
 {
 	*instance_create_flags = 0;
 
@@ -776,7 +777,7 @@ get_instance_layers( u32* count, const char** names )
 
 static inline u32
 find_queue_family_index( VkPhysicalDevice physical_device,
-                         QueueType        queue_type )
+                         enum QueueType   queue_type )
 {
 	u32 index = UINT32_MAX;
 
@@ -810,7 +811,7 @@ find_queue_family_index( VkPhysicalDevice physical_device,
 }
 
 static inline VkImageAspectFlags
-get_aspect_mask( Format format )
+get_aspect_mask( enum Format format )
 {
 	VkImageAspectFlags aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -829,7 +830,7 @@ get_aspect_mask( Format format )
 }
 
 static inline VkImageSubresourceRange
-get_image_subresource_range( const VulkanImage* image )
+get_image_subresource_range( const struct VulkanImage* image )
 {
 	VkImageSubresourceRange image_subresource_range = {};
 	image_subresource_range.aspectMask =
@@ -843,7 +844,7 @@ get_image_subresource_range( const VulkanImage* image )
 }
 
 static inline VkImageSubresourceLayers
-get_image_subresource_layers( const VulkanImage* image )
+get_image_subresource_layers( const struct VulkanImage* image )
 {
 	VkImageSubresourceRange subresourceRange =
 	    get_image_subresource_range( image );
@@ -855,10 +856,8 @@ get_image_subresource_layers( const VulkanImage* image )
 }
 
 static void
-vk_destroy_renderer_backend( RendererBackend* ibackend )
+vk_destroy_renderer_backend( struct RendererBackend* ibackend )
 {
-	FT_ASSERT( ibackend );
-
 	FT_FROM_HANDLE( backend, ibackend, VulkanRendererBackend );
 
 #ifdef FLUENT_DEBUG
@@ -871,11 +870,8 @@ vk_destroy_renderer_backend( RendererBackend* ibackend )
 }
 
 static void*
-vk_map_memory( const Device* idevice, Buffer* ibuffer )
+vk_map_memory( const struct Device* idevice, struct Buffer* ibuffer )
 {
-	FT_ASSERT( ibuffer != NULL );
-	FT_ASSERT( ibuffer->mapped_memory == NULL );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
 
@@ -887,11 +883,8 @@ vk_map_memory( const Device* idevice, Buffer* ibuffer )
 }
 
 static void
-vk_unmap_memory( const Device* idevice, Buffer* ibuffer )
+vk_unmap_memory( const struct Device* idevice, struct Buffer* ibuffer )
 {
-	FT_ASSERT( ibuffer );
-	FT_ASSERT( ibuffer->mapped_memory );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
 
@@ -900,15 +893,12 @@ vk_unmap_memory( const Device* idevice, Buffer* ibuffer )
 }
 
 static void
-vk_create_device( const RendererBackend* ibackend,
-                  const DeviceInfo*      info,
-                  Device**               p )
+vk_create_device( const struct RendererBackend* ibackend,
+                  const struct DeviceInfo*      info,
+                  struct Device**               p )
 {
-	FT_ASSERT( p );
-	FT_ASSERT( info->frame_in_use_count > 0 );
-
 	FT_FROM_HANDLE( backend, ibackend, VulkanRendererBackend );
-
+	
 	FT_INIT_INTERNAL( device, *p, VulkanDevice );
 
 	b32 found_device_slot = 0;
@@ -924,8 +914,9 @@ vk_create_device( const RendererBackend* ibackend,
 	}
 
 	FT_ASSERT( found_device_slot &&
-	           "MAX_DEVICE_COUNT less than real device count" );
+	           "MAX_DEVICE_COUNT less than created device count" );
 
+	device->interface.api    = backend->interface.api;
 	device->vulkan_allocator = backend->vulkan_allocator;
 	device->instance         = backend->instance;
 	device->physical_device  = backend->physical_device;
@@ -1149,10 +1140,8 @@ vk_create_device( const RendererBackend* ibackend,
 }
 
 static void
-vk_destroy_device( Device* idevice )
+vk_destroy_device( struct Device* idevice )
 {
-	FT_ASSERT( idevice );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
 	u64   iter = 0;
@@ -1191,10 +1180,10 @@ vk_destroy_device( Device* idevice )
 }
 
 static void
-vk_create_queue( const Device* idevice, const QueueInfo* info, Queue** p )
+vk_create_queue( const struct Device*    idevice,
+                 const struct QueueInfo* info,
+                 struct Queue**          p )
 {
-	FT_ASSERT( p );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
 	FT_INIT_INTERNAL( queue, *p, VulkanQueue );
@@ -1208,22 +1197,22 @@ vk_create_queue( const Device* idevice, const QueueInfo* info, Queue** p )
 }
 
 static void
-vk_destroy_queue( Queue* iqueue )
+vk_destroy_queue( struct Queue* iqueue )
 {
-	FT_ASSERT( iqueue );
 	FT_FROM_HANDLE( queue, iqueue, VulkanQueue );
 	free( queue );
 }
 
 static void
-vk_queue_wait_idle( const Queue* iqueue )
+vk_queue_wait_idle( const struct Queue* iqueue )
 {
 	FT_FROM_HANDLE( queue, iqueue, VulkanQueue );
 	vkQueueWaitIdle( queue->queue );
 }
 
 static void
-vk_queue_submit( const Queue* iqueue, const QueueSubmitInfo* info )
+vk_queue_submit( const struct Queue*           iqueue,
+                 const struct QueueSubmitInfo* info )
 {
 	FT_FROM_HANDLE( queue, iqueue, VulkanQueue );
 
@@ -1278,22 +1267,23 @@ vk_queue_submit( const Queue* iqueue, const QueueSubmitInfo* info )
 	    1,
 	    &submit_info,
 	    info->signal_fence
-	        ? ( ( VulkanFence* ) ( info->signal_fence->handle ) )->fence
+	        ? ( ( struct VulkanFence* ) ( info->signal_fence->handle ) )->fence
 	        : VK_NULL_HANDLE );
 }
 
 static void
-vk_immediate_submit( const Queue* iqueue, CommandBuffer* cmd )
+vk_immediate_submit( const struct Queue* iqueue, struct CommandBuffer* cmd )
 {
-	QueueSubmitInfo queue_submit_info      = {};
-	queue_submit_info.command_buffer_count = 1;
-	queue_submit_info.command_buffers      = &cmd;
+	struct QueueSubmitInfo queue_submit_info = {};
+	queue_submit_info.command_buffer_count   = 1;
+	queue_submit_info.command_buffers        = &cmd;
 	queue_submit( iqueue, &queue_submit_info );
 	queue_wait_idle( iqueue );
 }
 
 static void
-vk_queue_present( const Queue* iqueue, const QueuePresentInfo* info )
+vk_queue_present( const struct Queue*            iqueue,
+                  const struct QueuePresentInfo* info )
 {
 	FT_FROM_HANDLE( swapchain, info->swapchain, VulkanSwapchain );
 	FT_FROM_HANDLE( queue, iqueue, VulkanQueue );
@@ -1325,7 +1315,7 @@ vk_queue_present( const Queue* iqueue, const QueuePresentInfo* info )
 }
 
 static void
-vk_create_semaphore( const Device* idevice, Semaphore** p )
+vk_create_semaphore( const struct Device* idevice, struct Semaphore** p )
 {
 	FT_ASSERT( p );
 
@@ -1345,7 +1335,8 @@ vk_create_semaphore( const Device* idevice, Semaphore** p )
 }
 
 static void
-vk_destroy_semaphore( const Device* idevice, Semaphore* isemaphore )
+vk_destroy_semaphore( const struct Device* idevice,
+                      struct Semaphore*    isemaphore )
 {
 	FT_ASSERT( isemaphore );
 
@@ -1359,10 +1350,8 @@ vk_destroy_semaphore( const Device* idevice, Semaphore* isemaphore )
 }
 
 static void
-vk_create_fence( const Device* idevice, Fence** p )
+vk_create_fence( const struct Device* idevice, struct Fence** p )
 {
-	FT_ASSERT( p );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
 	FT_INIT_INTERNAL( fence, *p, VulkanFence );
@@ -1379,10 +1368,8 @@ vk_create_fence( const Device* idevice, Fence** p )
 }
 
 static void
-vk_destroy_fence( const Device* idevice, Fence* ifence )
+vk_destroy_fence( const struct Device* idevice, struct Fence* ifence )
 {
-	FT_ASSERT( ifence );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( fence, ifence, VulkanFence );
 
@@ -1393,7 +1380,9 @@ vk_destroy_fence( const Device* idevice, Fence* ifence )
 }
 
 static void
-vk_wait_for_fences( const Device* idevice, u32 count, Fence** ifences )
+vk_wait_for_fences( const struct Device* idevice,
+                    u32                  count,
+                    struct Fence**       ifences )
 {
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
@@ -1409,7 +1398,9 @@ vk_wait_for_fences( const Device* idevice, u32 count, Fence** ifences )
 }
 
 static void
-vk_reset_fences( const Device* idevice, u32 count, Fence** ifences )
+vk_reset_fences( const struct Device* idevice,
+                 u32                  count,
+                 struct Fence**       ifences )
 {
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
@@ -1425,9 +1416,9 @@ vk_reset_fences( const Device* idevice, u32 count, Fence** ifences )
 }
 
 static void
-vk_configure_swapchain( const VulkanDevice*  device,
-                        VulkanSwapchain*     swapchain,
-                        const SwapchainInfo* info )
+vk_configure_swapchain( const struct VulkanDevice*  device,
+                        struct VulkanSwapchain*     swapchain,
+                        const struct SwapchainInfo* info )
 {
 	WsiInfo* wsi = info->wsi_info;
 
@@ -1535,9 +1526,9 @@ vk_configure_swapchain( const VulkanDevice*  device,
 }
 
 static void
-vk_create_configured_swapchain( const VulkanDevice* device,
-                                VulkanSwapchain*    swapchain,
-                                b32                 resize )
+vk_create_configured_swapchain( const struct VulkanDevice* device,
+                                struct VulkanSwapchain*    swapchain,
+                                b32                        resize )
 {
 	// destroy old resources if it is resize
 	if ( resize )
@@ -1600,8 +1591,8 @@ vk_create_configured_swapchain( const VulkanDevice* device,
 	if ( !resize )
 	{
 		swapchain->interface.images =
-		    ( Image** ) ( calloc( swapchain->interface.image_count,
-		                          sizeof( Image* ) ) );
+		    ( struct Image** ) ( calloc( swapchain->interface.image_count,
+		                                 sizeof( struct Image* ) ) );
 	}
 
 	VkImageViewCreateInfo image_view_create_info = {};
@@ -1646,13 +1637,10 @@ vk_create_configured_swapchain( const VulkanDevice* device,
 }
 
 static void
-vk_create_swapchain( const Device*        idevice,
-                     const SwapchainInfo* info,
-                     Swapchain**          p )
+vk_create_swapchain( const struct Device*        idevice,
+                     const struct SwapchainInfo* info,
+                     struct Swapchain**          p )
 {
-	FT_ASSERT( p );
-	FT_ASSERT( info );
-	FT_ASSERT( info->wsi_info );
 	FT_ASSERT( info->wsi_info->create_vulkan_surface );
 
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
@@ -1664,10 +1652,10 @@ vk_create_swapchain( const Device*        idevice,
 }
 
 static void
-vk_resize_swapchain( const Device* idevice,
-                     Swapchain*    iswapchain,
-                     u32           width,
-                     u32           height )
+vk_resize_swapchain( const struct Device* idevice,
+                     struct Swapchain*    iswapchain,
+                     u32                  width,
+                     u32                  height )
 {
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( swapchain, iswapchain, VulkanSwapchain );
@@ -1690,11 +1678,9 @@ vk_resize_swapchain( const Device* idevice,
 }
 
 static void
-vk_destroy_swapchain( const Device* idevice, Swapchain* iswapchain )
+vk_destroy_swapchain( const struct Device* idevice,
+                      struct Swapchain*    iswapchain )
 {
-	FT_ASSERT( iswapchain );
-	FT_ASSERT( iswapchain->image_count );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( swapchain, iswapchain, VulkanSwapchain );
 
@@ -1722,12 +1708,10 @@ vk_destroy_swapchain( const Device* idevice, Swapchain* iswapchain )
 }
 
 static void
-vk_create_command_pool( const Device*          idevice,
-                        const CommandPoolInfo* info,
-                        CommandPool**          p )
+vk_create_command_pool( const struct Device*          idevice,
+                        const struct CommandPoolInfo* info,
+                        struct CommandPool**          p )
 {
-	FT_ASSERT( p );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
 	FT_INIT_INTERNAL( command_pool, *p, VulkanCommandPool );
@@ -1748,10 +1732,9 @@ vk_create_command_pool( const Device*          idevice,
 }
 
 static void
-vk_destroy_command_pool( const Device* idevice, CommandPool* icommand_pool )
+vk_destroy_command_pool( const struct Device* idevice,
+                         struct CommandPool*  icommand_pool )
 {
-	FT_ASSERT( icommand_pool );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( command_pool, icommand_pool, VulkanCommandPool );
 
@@ -1762,13 +1745,11 @@ vk_destroy_command_pool( const Device* idevice, CommandPool* icommand_pool )
 }
 
 static void
-vk_create_command_buffers( const Device*      idevice,
-                           const CommandPool* icommand_pool,
-                           u32                count,
-                           CommandBuffer**    icommand_buffers )
+vk_create_command_buffers( const struct Device*      idevice,
+                           const struct CommandPool* icommand_pool,
+                           u32                       count,
+                           struct CommandBuffer**    icommand_buffers )
 {
-	FT_ASSERT( icommand_buffers );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( command_pool, icommand_pool, VulkanCommandPool );
 
@@ -1797,13 +1778,11 @@ vk_create_command_buffers( const Device*      idevice,
 }
 
 static void
-vk_free_command_buffers( const Device*      idevice,
-                         const CommandPool* icommand_pool,
-                         u32                count,
-                         CommandBuffer**    icommand_buffers )
+vk_free_command_buffers( const struct Device*      idevice,
+                         const struct CommandPool* icommand_pool,
+                         u32                       count,
+                         struct CommandBuffer**    icommand_buffers )
 {
-	FT_ASSERT( icommand_buffers );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
 	ALLOC_STACK_ARRAY( VkCommandBuffer, buffers, count );
@@ -1816,19 +1795,18 @@ vk_free_command_buffers( const Device*      idevice,
 
 	vkFreeCommandBuffers(
 	    device->logical_device,
-	    ( ( VulkanCommandPool* ) ( icommand_pool->handle ) )->command_pool,
+	    ( ( struct VulkanCommandPool* ) ( icommand_pool->handle ) )
+	        ->command_pool,
 	    count,
 	    buffers );
 }
 
 static void
-vk_destroy_command_buffers( const Device*      idevice,
-                            const CommandPool* icommand_pool,
-                            u32                count,
-                            CommandBuffer**    icommand_buffers )
+vk_destroy_command_buffers( const struct Device*      idevice,
+                            const struct CommandPool* icommand_pool,
+                            u32                       count,
+                            struct CommandBuffer**    icommand_buffers )
 {
-	FT_ASSERT( icommand_buffers );
-
 	( void ) idevice;
 	( void ) icommand_pool;
 
@@ -1840,7 +1818,7 @@ vk_destroy_command_buffers( const Device*      idevice,
 }
 
 static void
-vk_begin_command_buffer( const CommandBuffer* icmd )
+vk_begin_command_buffer( const struct CommandBuffer* icmd )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 
@@ -1857,18 +1835,18 @@ vk_begin_command_buffer( const CommandBuffer* icmd )
 }
 
 static void
-vk_end_command_buffer( const CommandBuffer* icmd )
+vk_end_command_buffer( const struct CommandBuffer* icmd )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 	VK_ASSERT( vkEndCommandBuffer( cmd->command_buffer ) );
 }
 
 static void
-vk_acquire_next_image( const Device*    idevice,
-                       const Swapchain* iswapchain,
-                       const Semaphore* isemaphore,
-                       const Fence*     ifence,
-                       u32*             image_index )
+vk_acquire_next_image( const struct Device*    idevice,
+                       const struct Swapchain* iswapchain,
+                       const struct Semaphore* isemaphore,
+                       const struct Fence*     ifence,
+                       u32*                    image_index )
 {
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( swapchain, iswapchain, VulkanSwapchain );
@@ -1879,17 +1857,18 @@ vk_acquire_next_image( const Device*    idevice,
 	    swapchain->swapchain,
 	    UINT64_MAX,
 	    semaphore->semaphore,
-	    ifence ? ( ( VulkanFence* ) ifence->handle )->fence : VK_NULL_HANDLE,
+	    ifence ? ( ( struct VulkanFence* ) ifence->handle )->fence
+	           : VK_NULL_HANDLE,
 	    image_index );
 	// TODO: check status
 	( void ) result;
 }
 
 static inline void
-vk_create_framebuffer( const VulkanDevice*        device,
-                       const RenderPassBeginInfo* info,
-                       VkRenderPass               render_pass,
-                       VkFramebuffer*             p )
+vk_create_framebuffer( const struct VulkanDevice*        device,
+                       const struct RenderPassBeginInfo* info,
+                       VkRenderPass                      render_pass,
+                       VkFramebuffer*                    p )
 {
 	u32 attachment_count = info->color_attachment_count;
 
@@ -1905,8 +1884,6 @@ vk_create_framebuffer( const VulkanDevice*        device,
 		FT_FROM_HANDLE( image, info->depth_stencil, VulkanImage );
 		image_views[ attachment_count++ ] = image->image_view;
 	}
-
-	FT_ASSERT( info->width > 0 && info->height > 0 );
 
 	VkFramebufferCreateInfo framebuffer_create_info = {};
 	framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -1926,12 +1903,10 @@ vk_create_framebuffer( const VulkanDevice*        device,
 }
 
 static inline void
-vk_create_render_pass( const VulkanDevice*        device,
-                       const RenderPassBeginInfo* info,
-                       VkRenderPass*              p )
+vk_create_render_pass( const struct VulkanDevice*        device,
+                       const struct RenderPassBeginInfo* info,
+                       VkRenderPass*                     p )
 {
-	FT_ASSERT( p );
-
 	u32 attachments_count = info->color_attachment_count;
 
 	VkAttachmentDescription
@@ -2024,7 +1999,7 @@ vk_create_render_pass( const VulkanDevice*        device,
 }
 
 static inline VkRenderPass
-get_render_pass( const RenderPassBeginInfo* info )
+get_render_pass( const struct RenderPassBeginInfo* info )
 {
 	FT_FROM_HANDLE( device, info->device, VulkanDevice );
 
@@ -2048,7 +2023,8 @@ get_render_pass( const RenderPassBeginInfo* info )
 }
 
 static inline VkFramebuffer
-get_framebuffer( VkRenderPass render_pass, const RenderPassBeginInfo* info )
+get_framebuffer( VkRenderPass                      render_pass,
+                 const struct RenderPassBeginInfo* info )
 {
 	FT_FROM_HANDLE( device, info->device, VulkanDevice );
 
@@ -2073,10 +2049,10 @@ get_framebuffer( VkRenderPass render_pass, const RenderPassBeginInfo* info )
 }
 
 static inline void
-vk_create_module( const VulkanDevice*     device,
-                  VulkanShader*           shader,
-                  ShaderStage             stage,
-                  const ShaderModuleInfo* info )
+vk_create_module( const struct VulkanDevice*     device,
+                  struct VulkanShader*           shader,
+                  enum ShaderStage               stage,
+                  const struct ShaderModuleInfo* info )
 {
 	if ( info->bytecode )
 	{
@@ -2095,10 +2071,10 @@ vk_create_module( const VulkanDevice*     device,
 }
 
 static void
-vk_create_shader( const Device* idevice, ShaderInfo* info, Shader** p )
+vk_create_shader( const struct Device* idevice,
+                  struct ShaderInfo*   info,
+                  struct Shader**      p )
 {
-	FT_ASSERT( p );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
 	FT_INIT_INTERNAL( shader, *p, VulkanShader );
@@ -2126,9 +2102,9 @@ vk_create_shader( const Device* idevice, ShaderInfo* info, Shader** p )
 }
 
 static inline void
-vk_destroy_module( const VulkanDevice* device,
-                   ShaderStage         stage,
-                   VulkanShader*       shader )
+vk_destroy_module( const struct VulkanDevice* device,
+                   enum ShaderStage           stage,
+                   struct VulkanShader*       shader )
 {
 	if ( shader->shaders[ stage ] )
 	{
@@ -2139,10 +2115,8 @@ vk_destroy_module( const VulkanDevice* device,
 }
 
 static void
-vk_destroy_shader( const Device* idevice, Shader* ishader )
+vk_destroy_shader( const struct Device* idevice, struct Shader* ishader )
 {
-	FT_ASSERT( ishader );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( shader, ishader, VulkanShader );
 
@@ -2165,12 +2139,10 @@ vk_destroy_shader( const Device* idevice, Shader* ishader )
 }
 
 static void
-vk_create_descriptor_set_layout( const Device*         idevice,
-                                 Shader*               ishader,
-                                 DescriptorSetLayout** p )
+vk_create_descriptor_set_layout( const struct Device*         idevice,
+                                 struct Shader*               ishader,
+                                 struct DescriptorSetLayout** p )
 {
-	FT_ASSERT( p );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
 	FT_INIT_INTERNAL( descriptor_set_layout, *p, VulkanDescriptorSetLayout );
@@ -2287,11 +2259,9 @@ vk_create_descriptor_set_layout( const Device*         idevice,
 }
 
 static void
-vk_destroy_descriptor_set_layout( const Device*        idevice,
-                                  DescriptorSetLayout* ilayout )
+vk_destroy_descriptor_set_layout( const struct Device*        idevice,
+                                  struct DescriptorSetLayout* ilayout )
 {
-	FT_ASSERT( ilayout );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( layout, ilayout, VulkanDescriptorSetLayout );
 
@@ -2315,13 +2285,10 @@ vk_destroy_descriptor_set_layout( const Device*        idevice,
 }
 
 static void
-vk_create_compute_pipeline( const Device*       idevice,
-                            const PipelineInfo* info,
-                            Pipeline**          p )
+vk_create_compute_pipeline( const struct Device*       idevice,
+                            const struct PipelineInfo* info,
+                            struct Pipeline**          p )
 {
-	FT_ASSERT( p );
-	FT_ASSERT( info->descriptor_set_layout );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( shader, info->shader, VulkanShader );
 	FT_FROM_HANDLE( dsl,
@@ -2355,7 +2322,8 @@ vk_create_compute_pipeline( const Device*       idevice,
 	pipeline_layout_create_info.setLayoutCount =
 	    dsl->descriptor_set_layout_count;
 	pipeline_layout_create_info.pSetLayouts =
-	    ( ( VulkanDescriptorSetLayout* ) info->descriptor_set_layout->handle )
+	    ( ( struct VulkanDescriptorSetLayout* )
+	          info->descriptor_set_layout->handle )
 	        ->descriptor_set_layouts;
 	pipeline_layout_create_info.pushConstantRangeCount = 1;
 	pipeline_layout_create_info.pPushConstantRanges    = &push_constant_range;
@@ -2380,14 +2348,10 @@ vk_create_compute_pipeline( const Device*       idevice,
 }
 
 static void
-vk_create_graphics_pipeline( const Device*       idevice,
-                             const PipelineInfo* info,
-                             Pipeline**          p )
+vk_create_graphics_pipeline( const struct Device*       idevice,
+                             const struct PipelineInfo* info,
+                             struct Pipeline**          p )
 {
-	FT_ASSERT( p );
-	FT_ASSERT( info->descriptor_set_layout );
-	FT_ASSERT( info->sample_count != 0 );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( shader, info->shader, VulkanShader );
 	FT_FROM_HANDLE( dsl,
@@ -2396,9 +2360,11 @@ vk_create_graphics_pipeline( const Device*       idevice,
 
 	FT_INIT_INTERNAL( pipeline, *p, VulkanPipeline );
 
-	RenderPassBeginInfo render_pass_info    = {};
-	render_pass_info.color_attachment_count = info->color_attachment_count;
-	ALLOC_STACK_ARRAY( Image, color_images, info->color_attachment_count );
+	struct RenderPassBeginInfo render_pass_info = {};
+	render_pass_info.color_attachment_count     = info->color_attachment_count;
+	ALLOC_STACK_ARRAY( struct Image,
+	                   color_images,
+	                   info->color_attachment_count );
 	for ( u32 i = 0; i < info->color_attachment_count; ++i )
 	{
 		color_images[ i ].format       = info->color_attachment_formats[ i ];
@@ -2410,7 +2376,7 @@ vk_create_graphics_pipeline( const Device*       idevice,
 		    FT_RESOURCE_STATE_COLOR_ATTACHMENT;
 	}
 
-	Image depth_image;
+	struct Image depth_image;
 	if ( info->depth_stencil_format != FT_FORMAT_UNDEFINED )
 	{
 		depth_image.format             = info->depth_stencil_format;
@@ -2454,7 +2420,7 @@ vk_create_graphics_pipeline( const Device*       idevice,
 
 	FT_ASSERT( shader_stage_count > 0 );
 
-	const VertexLayout* vertex_layout = &info->vertex_layout;
+	const struct VertexLayout* vertex_layout = &info->vertex_layout;
 
 	VkVertexInputBindingDescription
 	    binding_descriptions[ MAX_VERTEX_BINDING_COUNT ];
@@ -2603,7 +2569,8 @@ vk_create_graphics_pipeline( const Device*       idevice,
 	pipeline_layout_create_info.setLayoutCount =
 	    dsl->descriptor_set_layout_count;
 	pipeline_layout_create_info.pSetLayouts =
-	    ( ( VulkanDescriptorSetLayout* ) info->descriptor_set_layout->handle )
+	    ( ( struct VulkanDescriptorSetLayout* )
+	          info->descriptor_set_layout->handle )
 	        ->descriptor_set_layouts;
 	pipeline_layout_create_info.pushConstantRangeCount = 1;
 	pipeline_layout_create_info.pPushConstantRanges    = &push_constant_range;
@@ -2643,10 +2610,8 @@ vk_create_graphics_pipeline( const Device*       idevice,
 }
 
 static void
-vk_destroy_pipeline( const Device* idevice, Pipeline* ipipeline )
+vk_destroy_pipeline( const struct Device* idevice, struct Pipeline* ipipeline )
 {
-	FT_ASSERT( ipipeline );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( pipeline, ipipeline, VulkanPipeline );
 
@@ -2660,10 +2625,10 @@ vk_destroy_pipeline( const Device* idevice, Pipeline* ipipeline )
 }
 
 static void
-vk_create_buffer( const Device* idevice, const BufferInfo* info, Buffer** p )
+vk_create_buffer( const struct Device*     idevice,
+                  const struct BufferInfo* info,
+                  struct Buffer**          p )
 {
-	FT_ASSERT( p );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
 	FT_INIT_INTERNAL( buffer, *p, VulkanBuffer );
@@ -2696,10 +2661,8 @@ vk_create_buffer( const Device* idevice, const BufferInfo* info, Buffer** p )
 }
 
 static void
-vk_destroy_buffer( const Device* idevice, Buffer* ibuffer )
+vk_destroy_buffer( const struct Device* idevice, struct Buffer* ibuffer )
 {
-	FT_ASSERT( ibuffer );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
 
@@ -2710,10 +2673,10 @@ vk_destroy_buffer( const Device* idevice, Buffer* ibuffer )
 }
 
 static void
-vk_create_sampler( const Device* idevice, const SamplerInfo* info, Sampler** p )
+vk_create_sampler( const struct Device*      idevice,
+                   const struct SamplerInfo* info,
+                   struct Sampler**          p )
 {
-	FT_ASSERT( p );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
 	FT_INIT_INTERNAL( sampler, *p, VulkanSampler );
@@ -2748,10 +2711,8 @@ vk_create_sampler( const Device* idevice, const SamplerInfo* info, Sampler** p )
 }
 
 static void
-vk_destroy_sampler( const Device* idevice, Sampler* isampler )
+vk_destroy_sampler( const struct Device* idevice, struct Sampler* isampler )
 {
-	FT_ASSERT( isampler );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( sampler, isampler, VulkanSampler );
 
@@ -2762,12 +2723,10 @@ vk_destroy_sampler( const Device* idevice, Sampler* isampler )
 }
 
 static void
-vk_create_image( const Device* idevice, const ImageInfo* info, Image** p )
+vk_create_image( const struct Device*    idevice,
+                 const struct ImageInfo* info,
+                 struct Image**          p )
 {
-	FT_ASSERT( p );
-	FT_ASSERT( info );
-	FT_ASSERT( info->sample_count );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
 	FT_INIT_INTERNAL( image, *p, VulkanImage );
@@ -2842,10 +2801,8 @@ vk_create_image( const Device* idevice, const ImageInfo* info, Image** p )
 }
 
 static void
-vk_destroy_image( const Device* idevice, Image* iimage )
+vk_destroy_image( const struct Device* idevice, struct Image* iimage )
 {
-	FT_ASSERT( iimage );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( image, iimage, VulkanImage );
 
@@ -2859,13 +2816,10 @@ vk_destroy_image( const Device* idevice, Image* iimage )
 }
 
 static void
-vk_create_descriptor_set( const Device*            idevice,
-                          const DescriptorSetInfo* info,
-                          DescriptorSet**          p )
+vk_create_descriptor_set( const struct Device*            idevice,
+                          const struct DescriptorSetInfo* info,
+                          struct DescriptorSet**          p )
 {
-	FT_ASSERT( p );
-	FT_ASSERT( info->descriptor_set_layout );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
 	FT_INIT_INTERNAL( descriptor_set, *p, VulkanDescriptorSet );
@@ -2879,7 +2833,8 @@ vk_create_descriptor_set( const Device*            idevice,
 	descriptor_set_allocate_info.descriptorPool     = device->descriptor_pool;
 	descriptor_set_allocate_info.descriptorSetCount = 1;
 	descriptor_set_allocate_info.pSetLayouts =
-	    &( ( VulkanDescriptorSetLayout* ) info->descriptor_set_layout->handle )
+	    &( ( struct VulkanDescriptorSetLayout* )
+	           info->descriptor_set_layout->handle )
 	         ->descriptor_set_layouts[ info->set ];
 
 	VK_ASSERT( vkAllocateDescriptorSets( device->logical_device,
@@ -2888,10 +2843,9 @@ vk_create_descriptor_set( const Device*            idevice,
 }
 
 static void
-vk_destroy_descriptor_set( const Device* idevice, DescriptorSet* iset )
+vk_destroy_descriptor_set( const struct Device*  idevice,
+                           struct DescriptorSet* iset )
 {
-	FT_ASSERT( iset );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( set, iset, VulkanDescriptorSet );
 
@@ -2903,16 +2857,11 @@ vk_destroy_descriptor_set( const Device* idevice, DescriptorSet* iset )
 }
 
 static void
-vk_update_descriptor_set( const Device*          idevice,
-                          DescriptorSet*         iset,
-                          u32                    count,
-                          const DescriptorWrite* writes )
+vk_update_descriptor_set( const struct Device*          idevice,
+                          struct DescriptorSet*         iset,
+                          u32                           count,
+                          const struct DescriptorWrite* writes )
 {
-	FT_ASSERT( idevice );
-	FT_ASSERT( iset );
-	FT_ASSERT( count );
-	FT_ASSERT( writes );
-
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 	FT_FROM_HANDLE( set, iset, VulkanDescriptorSet );
 
@@ -2927,15 +2876,13 @@ vk_update_descriptor_set( const Device*          idevice,
 
 	for ( u32 i = 0; i < count; ++i )
 	{
-		const DescriptorWrite* descriptor_write = &writes[ i ];
+		const struct DescriptorWrite* descriptor_write = &writes[ i ];
 
 		ReflectionData* reflection = &set->interface.layout->reflection_data;
 
 		struct BindingMapItem item;
 		memset( item.name, '\0', MAX_BINDING_NAME_LENGTH );
-		strncpy( item.name,
-		         descriptor_write->descriptor_name,
-		         strlen( descriptor_write->descriptor_name ) );
+		strcpy( item.name, descriptor_write->descriptor_name );
 		struct BindingMapItem* it =
 		    hashmap_get( reflection->binding_map, &item );
 
@@ -2964,10 +2911,11 @@ vk_update_descriptor_set( const Device*          idevice,
 
 			for ( u32 j = 0; j < descriptor_write->descriptor_count; ++j )
 			{
-				buffer_infos[ j ].buffer = ( ( VulkanBuffer* ) descriptor_write
-				                                 ->buffer_descriptors[ j ]
-				                                 .buffer->handle )
-				                               ->buffer;
+				buffer_infos[ j ].buffer =
+				    ( ( struct VulkanBuffer* ) descriptor_write
+				          ->buffer_descriptors[ j ]
+				          .buffer->handle )
+				        ->buffer;
 				buffer_infos[ j ].offset =
 				    descriptor_write->buffer_descriptors[ j ].offset;
 				buffer_infos[ j ].range =
@@ -2986,7 +2934,7 @@ vk_update_descriptor_set( const Device*          idevice,
 
 			for ( u32 j = 0; j < descriptor_write->descriptor_count; ++j )
 			{
-				ImageDescriptor* descriptor =
+				struct ImageDescriptor* descriptor =
 				    &descriptor_write->image_descriptors[ j ];
 
 				FT_ASSERT( descriptor->image );
@@ -2994,7 +2942,8 @@ vk_update_descriptor_set( const Device*          idevice,
 				image_infos[ j ].imageLayout =
 				    determine_image_layout( descriptor->resource_state );
 				image_infos[ j ].imageView =
-				    ( ( VulkanImage* ) descriptor->image->handle )->image_view;
+				    ( ( struct VulkanImage* ) descriptor->image->handle )
+				        ->image_view;
 				image_infos[ j ].sampler = NULL;
 			}
 
@@ -3010,13 +2959,14 @@ vk_update_descriptor_set( const Device*          idevice,
 
 			for ( u32 j = 0; j < descriptor_write->descriptor_count; ++j )
 			{
-				SamplerDescriptor* descriptor =
+				struct SamplerDescriptor* descriptor =
 				    &descriptor_write->sampler_descriptors[ j ];
 
 				FT_ASSERT( descriptor->sampler );
 
 				image_infos[ j ].sampler =
-				    ( ( VulkanSampler* ) descriptor->sampler->handle )->sampler;
+				    ( ( struct VulkanSampler* ) descriptor->sampler->handle )
+				        ->sampler;
 			}
 
 			write_descriptor_set->pImageInfo = image_infos;
@@ -3048,12 +2998,9 @@ vk_update_descriptor_set( const Device*          idevice,
 }
 
 static void
-vk_cmd_begin_render_pass( const CommandBuffer*       icmd,
-                          const RenderPassBeginInfo* info )
+vk_cmd_begin_render_pass( const struct CommandBuffer*       icmd,
+                          const struct RenderPassBeginInfo* info )
 {
-	FT_ASSERT( info );
-	FT_ASSERT( info->device );
-
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 
 	VkRenderPass  render_pass = get_render_pass( info );
@@ -3106,20 +3053,20 @@ vk_cmd_begin_render_pass( const CommandBuffer*       icmd,
 }
 
 static void
-vk_cmd_end_render_pass( const CommandBuffer* icmd )
+vk_cmd_end_render_pass( const struct CommandBuffer* icmd )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 	vkCmdEndRenderPass( cmd->command_buffer );
 }
 
 static void
-vk_cmd_barrier( const CommandBuffer* icmd,
-                u32                  memory_barriers_count,
-                const MemoryBarrier* memory_barriers,
-                u32                  buffer_barriers_count,
-                const BufferBarrier* buffer_barriers,
-                u32                  image_barriers_count,
-                const ImageBarrier*  image_barriers )
+vk_cmd_barrier( const struct CommandBuffer* icmd,
+                u32                         memory_barriers_count,
+                const struct MemoryBarrier* memory_barriers,
+                u32                         buffer_barriers_count,
+                const struct BufferBarrier* buffer_barriers,
+                u32                         image_barriers_count,
+                const struct ImageBarrier*  image_barriers )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 
@@ -3222,11 +3169,11 @@ vk_cmd_barrier( const CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_set_scissor( const CommandBuffer* icmd,
-                    i32                  x,
-                    i32                  y,
-                    u32                  width,
-                    u32                  height )
+vk_cmd_set_scissor( const struct CommandBuffer* icmd,
+                    i32                         x,
+                    i32                         y,
+                    u32                         width,
+                    u32                         height )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 
@@ -3239,13 +3186,13 @@ vk_cmd_set_scissor( const CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_set_viewport( const CommandBuffer* icmd,
-                     f32                  x,
-                     f32                  y,
-                     f32                  width,
-                     f32                  height,
-                     f32                  min_depth,
-                     f32                  max_depth )
+vk_cmd_set_viewport( const struct CommandBuffer* icmd,
+                     f32                         x,
+                     f32                         y,
+                     f32                         width,
+                     f32                         height,
+                     f32                         min_depth,
+                     f32                         max_depth )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 
@@ -3261,7 +3208,8 @@ vk_cmd_set_viewport( const CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_bind_pipeline( const CommandBuffer* icmd, const Pipeline* ipipeline )
+vk_cmd_bind_pipeline( const struct CommandBuffer* icmd,
+                      const struct Pipeline*      ipipeline )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 	FT_FROM_HANDLE( pipeline, ipipeline, VulkanPipeline );
@@ -3272,11 +3220,11 @@ vk_cmd_bind_pipeline( const CommandBuffer* icmd, const Pipeline* ipipeline )
 }
 
 static void
-vk_cmd_draw( const CommandBuffer* icmd,
-             u32                  vertex_count,
-             u32                  instance_count,
-             u32                  first_vertex,
-             u32                  first_instance )
+vk_cmd_draw( const struct CommandBuffer* icmd,
+             u32                         vertex_count,
+             u32                         instance_count,
+             u32                         first_vertex,
+             u32                         first_instance )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 
@@ -3288,12 +3236,12 @@ vk_cmd_draw( const CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_draw_indexed( const CommandBuffer* icmd,
-                     u32                  index_count,
-                     u32                  instance_count,
-                     u32                  first_index,
-                     i32                  vertex_offset,
-                     u32                  first_instance )
+vk_cmd_draw_indexed( const struct CommandBuffer* icmd,
+                     u32                         index_count,
+                     u32                         instance_count,
+                     u32                         first_index,
+                     i32                         vertex_offset,
+                     u32                         first_instance )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 
@@ -3306,9 +3254,9 @@ vk_cmd_draw_indexed( const CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_bind_vertex_buffer( const CommandBuffer* icmd,
-                           const Buffer*        ibuffer,
-                           const u64            offset )
+vk_cmd_bind_vertex_buffer( const struct CommandBuffer* icmd,
+                           const struct Buffer*        ibuffer,
+                           const u64                   offset )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 	FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
@@ -3321,9 +3269,9 @@ vk_cmd_bind_vertex_buffer( const CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_bind_index_buffer_u16( const CommandBuffer* icmd,
-                              const Buffer*        ibuffer,
-                              const u64            offset )
+vk_cmd_bind_index_buffer_u16( const struct CommandBuffer* icmd,
+                              const struct Buffer*        ibuffer,
+                              const u64                   offset )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 	FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
@@ -3335,9 +3283,9 @@ vk_cmd_bind_index_buffer_u16( const CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_bind_index_buffer_u32( const CommandBuffer* icmd,
-                              const Buffer*        ibuffer,
-                              u64                  offset )
+vk_cmd_bind_index_buffer_u32( const struct CommandBuffer* icmd,
+                              const struct Buffer*        ibuffer,
+                              u64                         offset )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 	FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
@@ -3349,12 +3297,12 @@ vk_cmd_bind_index_buffer_u32( const CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_copy_buffer( const CommandBuffer* icmd,
-                    const Buffer*        isrc,
-                    u64                  src_offset,
-                    Buffer*              idst,
-                    u64                  dst_offset,
-                    u64                  size )
+vk_cmd_copy_buffer( const struct CommandBuffer* icmd,
+                    const struct Buffer*        isrc,
+                    u64                         src_offset,
+                    struct Buffer*              idst,
+                    u64                         dst_offset,
+                    u64                         size )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 	FT_FROM_HANDLE( src, isrc, VulkanBuffer );
@@ -3373,10 +3321,10 @@ vk_cmd_copy_buffer( const CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_copy_buffer_to_image( const CommandBuffer* icmd,
-                             const Buffer*        isrc,
-                             u64                  src_offset,
-                             Image*               idst )
+vk_cmd_copy_buffer_to_image( const struct CommandBuffer* icmd,
+                             const struct Buffer*        isrc,
+                             u64                         src_offset,
+                             struct Image*               idst )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 	FT_FROM_HANDLE( src, isrc, VulkanBuffer );
@@ -3405,10 +3353,10 @@ vk_cmd_copy_buffer_to_image( const CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_dispatch( const CommandBuffer* icmd,
-                 u32                  group_count_x,
-                 u32                  group_count_y,
-                 u32                  group_count_z )
+vk_cmd_dispatch( const struct CommandBuffer* icmd,
+                 u32                         group_count_x,
+                 u32                         group_count_y,
+                 u32                         group_count_z )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 
@@ -3419,11 +3367,11 @@ vk_cmd_dispatch( const CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_push_constants( const CommandBuffer* icmd,
-                       const Pipeline*      ipipeline,
-                       u32                  offset,
-                       u32                  size,
-                       const void*          data )
+vk_cmd_push_constants( const struct CommandBuffer* icmd,
+                       const struct Pipeline*      ipipeline,
+                       u32                         offset,
+                       u32                         size,
+                       const void*                 data )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 	FT_FROM_HANDLE( pipeline, ipipeline, VulkanPipeline );
@@ -3439,106 +3387,9 @@ vk_cmd_push_constants( const CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_blit_image( const CommandBuffer* icmd,
-                   const Image*         isrc,
-                   ResourceState        src_state,
-                   Image*               idst,
-                   ResourceState        dst_state,
-                   Filter               filter )
-{
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
-	FT_FROM_HANDLE( src, isrc, VulkanImage );
-	FT_FROM_HANDLE( dst, idst, VulkanImage );
-
-	u32 barrier_count = 0;
-	u32 index         = 0;
-
-	ImageBarrier barriers[ 2 ] = {};
-	barriers[ 0 ].src_queue    = cmd->interface.queue;
-	barriers[ 0 ].dst_queue    = cmd->interface.queue;
-	barriers[ 0 ].image        = &src->interface;
-	barriers[ 0 ].old_state    = src_state;
-	barriers[ 0 ].new_state    = FT_RESOURCE_STATE_TRANSFER_SRC;
-
-	barriers[ 1 ].src_queue = cmd->interface.queue;
-	barriers[ 1 ].dst_queue = cmd->interface.queue;
-	barriers[ 1 ].image     = &dst->interface;
-	barriers[ 1 ].old_state = dst_state;
-	barriers[ 1 ].new_state = FT_RESOURCE_STATE_TRANSFER_DST;
-
-	if ( src_state != FT_RESOURCE_STATE_TRANSFER_SRC )
-	{
-		barrier_count++;
-	}
-
-	if ( dst_state != FT_RESOURCE_STATE_TRANSFER_DST )
-	{
-		if ( barrier_count == 0 )
-		{
-			index = 1;
-		}
-
-		barrier_count++;
-	}
-
-	if ( barrier_count > 0 )
-	{
-		cmd_barrier( &cmd->interface,
-		             0,
-		             NULL,
-		             0,
-		             NULL,
-		             barrier_count,
-		             &barriers[ index ] );
-	}
-
-	VkImageSubresourceLayers src_layers = get_image_subresource_layers( src );
-	VkImageSubresourceLayers dst_layers = get_image_subresource_layers( dst );
-
-	VkOffset3D src_offset = {
-		0,
-		0,
-		0,
-	};
-	VkOffset3D src_extent = {
-		( i32 ) src->interface.width,
-		( i32 ) src->interface.height,
-		1,
-	};
-
-	VkOffset3D dst_offset = {
-		0,
-		0,
-		0,
-	};
-	VkOffset3D dst_extent = {
-		( i32 ) dst->interface.width,
-		( i32 ) dst->interface.height,
-		1,
-	};
-
-	VkImageBlit image_blit_info     = {};
-	image_blit_info.srcOffsets[ 0 ] = src_offset;
-	image_blit_info.srcOffsets[ 1 ] = src_extent;
-	image_blit_info.dstOffsets[ 0 ] = dst_offset;
-	image_blit_info.dstOffsets[ 1 ] = dst_extent;
-	image_blit_info.srcSubresource  = src_layers;
-	image_blit_info.dstSubresource  = dst_layers;
-
-	vkCmdBlitImage( cmd->command_buffer,
-	                src->image,
-	                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-	                dst->image,
-	                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-	                1,
-	                &image_blit_info,
-	                to_vk_filter( filter ) );
-}
-
-static void
-vk_cmd_clear_color_image( const CommandBuffer* icmd,
-                          Image*               iimage,
-                          float                color[ 4 ] )
+vk_cmd_clear_color_image( const struct CommandBuffer* icmd,
+                          struct Image*               iimage,
+                          float                       color[ 4 ] )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 	FT_FROM_HANDLE( image, iimage, VulkanImage );
@@ -3560,11 +3411,11 @@ vk_cmd_clear_color_image( const CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_draw_indexed_indirect( const CommandBuffer* icmd,
-                              const Buffer*        ibuffer,
-                              u64                  offset,
-                              u32                  draw_count,
-                              u32                  stride )
+vk_cmd_draw_indexed_indirect( const struct CommandBuffer* icmd,
+                              const struct Buffer*        ibuffer,
+                              u64                         offset,
+                              u32                         draw_count,
+                              u32                         stride )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 	FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
@@ -3577,10 +3428,10 @@ vk_cmd_draw_indexed_indirect( const CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_bind_descriptor_set( const CommandBuffer* icmd,
-                            u32                  first_set,
-                            const DescriptorSet* iset,
-                            const Pipeline*      ipipeline )
+vk_cmd_bind_descriptor_set( const struct CommandBuffer* icmd,
+                            u32                         first_set,
+                            const struct DescriptorSet* iset,
+                            const struct Pipeline*      ipipeline )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 	FT_FROM_HANDLE( pipeline, ipipeline, VulkanPipeline );
@@ -3598,76 +3449,71 @@ vk_cmd_bind_descriptor_set( const CommandBuffer* icmd,
 }
 
 void
-vk_create_renderer_backend( const RendererBackendInfo* info,
-                            RendererBackend**          p )
+vk_create_renderer_backend( const struct RendererBackendInfo* info,
+                            struct RendererBackend**          p )
 {
-	FT_ASSERT( p );
-	FT_ASSERT( info );
-	FT_ASSERT( info->wsi_info );
-
-	destroy_renderer_backend      = vk_destroy_renderer_backend;
-	create_device                 = vk_create_device;
-	destroy_device                = vk_destroy_device;
-	create_queue                  = vk_create_queue;
-	destroy_queue                 = vk_destroy_queue;
-	queue_wait_idle               = vk_queue_wait_idle;
-	queue_submit                  = vk_queue_submit;
-	immediate_submit              = vk_immediate_submit;
-	queue_present                 = vk_queue_present;
-	create_semaphore              = vk_create_semaphore;
-	destroy_semaphore             = vk_destroy_semaphore;
-	create_fence                  = vk_create_fence;
-	destroy_fence                 = vk_destroy_fence;
-	wait_for_fences               = vk_wait_for_fences;
-	reset_fences                  = vk_reset_fences;
-	create_swapchain              = vk_create_swapchain;
-	resize_swapchain              = vk_resize_swapchain;
-	destroy_swapchain             = vk_destroy_swapchain;
-	create_command_pool           = vk_create_command_pool;
-	destroy_command_pool          = vk_destroy_command_pool;
-	create_command_buffers        = vk_create_command_buffers;
-	free_command_buffers          = vk_free_command_buffers;
-	destroy_command_buffers       = vk_destroy_command_buffers;
-	begin_command_buffer          = vk_begin_command_buffer;
-	end_command_buffer            = vk_end_command_buffer;
-	acquire_next_image            = vk_acquire_next_image;
-	create_shader                 = vk_create_shader;
-	destroy_shader                = vk_destroy_shader;
-	create_descriptor_set_layout  = vk_create_descriptor_set_layout;
-	destroy_descriptor_set_layout = vk_destroy_descriptor_set_layout;
-	create_compute_pipeline       = vk_create_compute_pipeline;
-	create_graphics_pipeline      = vk_create_graphics_pipeline;
-	destroy_pipeline              = vk_destroy_pipeline;
-	create_buffer                 = vk_create_buffer;
-	destroy_buffer                = vk_destroy_buffer;
-	map_memory                    = vk_map_memory;
-	unmap_memory                  = vk_unmap_memory;
-	create_sampler                = vk_create_sampler;
-	destroy_sampler               = vk_destroy_sampler;
-	create_image                  = vk_create_image;
-	destroy_image                 = vk_destroy_image;
-	create_descriptor_set         = vk_create_descriptor_set;
-	destroy_descriptor_set        = vk_destroy_descriptor_set;
-	update_descriptor_set         = vk_update_descriptor_set;
-	cmd_begin_render_pass         = vk_cmd_begin_render_pass;
-	cmd_end_render_pass           = vk_cmd_end_render_pass;
-	cmd_barrier                   = vk_cmd_barrier;
-	cmd_set_scissor               = vk_cmd_set_scissor;
-	cmd_set_viewport              = vk_cmd_set_viewport;
-	cmd_bind_pipeline             = vk_cmd_bind_pipeline;
-	cmd_draw                      = vk_cmd_draw;
-	cmd_draw_indexed              = vk_cmd_draw_indexed;
-	cmd_bind_vertex_buffer        = vk_cmd_bind_vertex_buffer;
-	cmd_bind_index_buffer_u16     = vk_cmd_bind_index_buffer_u16;
-	cmd_bind_index_buffer_u32     = vk_cmd_bind_index_buffer_u32;
-	cmd_copy_buffer               = vk_cmd_copy_buffer;
-	cmd_copy_buffer_to_image      = vk_cmd_copy_buffer_to_image;
-	cmd_bind_descriptor_set       = vk_cmd_bind_descriptor_set;
-	cmd_dispatch                  = vk_cmd_dispatch;
-	cmd_push_constants            = vk_cmd_push_constants;
-	cmd_blit_image                = vk_cmd_blit_image;
-	cmd_clear_color_image         = vk_cmd_clear_color_image;
-	cmd_draw_indexed_indirect     = vk_cmd_draw_indexed_indirect;
+	destroy_renderer_backend_impl      = vk_destroy_renderer_backend;
+	create_device_impl                 = vk_create_device;
+	destroy_device_impl                = vk_destroy_device;
+	create_queue_impl                  = vk_create_queue;
+	destroy_queue_impl                 = vk_destroy_queue;
+	queue_wait_idle_impl               = vk_queue_wait_idle;
+	queue_submit_impl                  = vk_queue_submit;
+	immediate_submit_impl              = vk_immediate_submit;
+	queue_present_impl                 = vk_queue_present;
+	create_semaphore_impl              = vk_create_semaphore;
+	destroy_semaphore_impl             = vk_destroy_semaphore;
+	create_fence_impl                  = vk_create_fence;
+	destroy_fence_impl                 = vk_destroy_fence;
+	wait_for_fences_impl               = vk_wait_for_fences;
+	reset_fences_impl                  = vk_reset_fences;
+	create_swapchain_impl              = vk_create_swapchain;
+	resize_swapchain_impl              = vk_resize_swapchain;
+	destroy_swapchain_impl             = vk_destroy_swapchain;
+	create_command_pool_impl           = vk_create_command_pool;
+	destroy_command_pool_impl          = vk_destroy_command_pool;
+	create_command_buffers_impl        = vk_create_command_buffers;
+	free_command_buffers_impl          = vk_free_command_buffers;
+	destroy_command_buffers_impl       = vk_destroy_command_buffers;
+	begin_command_buffer_impl          = vk_begin_command_buffer;
+	end_command_buffer_impl            = vk_end_command_buffer;
+	acquire_next_image_impl            = vk_acquire_next_image;
+	create_shader_impl                 = vk_create_shader;
+	destroy_shader_impl                = vk_destroy_shader;
+	create_descriptor_set_layout_impl  = vk_create_descriptor_set_layout;
+	destroy_descriptor_set_layout_impl = vk_destroy_descriptor_set_layout;
+	create_compute_pipeline_impl       = vk_create_compute_pipeline;
+	create_graphics_pipeline_impl      = vk_create_graphics_pipeline;
+	destroy_pipeline_impl              = vk_destroy_pipeline;
+	create_buffer_impl                 = vk_create_buffer;
+	destroy_buffer_impl                = vk_destroy_buffer;
+	map_memory_impl                    = vk_map_memory;
+	unmap_memory_impl                  = vk_unmap_memory;
+	create_sampler_impl                = vk_create_sampler;
+	destroy_sampler_impl               = vk_destroy_sampler;
+	create_image_impl                  = vk_create_image;
+	destroy_image_impl                 = vk_destroy_image;
+	create_descriptor_set_impl         = vk_create_descriptor_set;
+	destroy_descriptor_set_impl        = vk_destroy_descriptor_set;
+	update_descriptor_set_impl         = vk_update_descriptor_set;
+	cmd_begin_render_pass_impl         = vk_cmd_begin_render_pass;
+	cmd_end_render_pass_impl           = vk_cmd_end_render_pass;
+	cmd_barrier_impl                   = vk_cmd_barrier;
+	cmd_set_scissor_impl               = vk_cmd_set_scissor;
+	cmd_set_viewport_impl              = vk_cmd_set_viewport;
+	cmd_bind_pipeline_impl             = vk_cmd_bind_pipeline;
+	cmd_draw_impl                      = vk_cmd_draw;
+	cmd_draw_indexed_impl              = vk_cmd_draw_indexed;
+	cmd_bind_vertex_buffer_impl        = vk_cmd_bind_vertex_buffer;
+	cmd_bind_index_buffer_u16_impl     = vk_cmd_bind_index_buffer_u16;
+	cmd_bind_index_buffer_u32_impl     = vk_cmd_bind_index_buffer_u32;
+	cmd_copy_buffer_impl               = vk_cmd_copy_buffer;
+	cmd_copy_buffer_to_image_impl      = vk_cmd_copy_buffer_to_image;
+	cmd_bind_descriptor_set_impl       = vk_cmd_bind_descriptor_set;
+	cmd_dispatch_impl                  = vk_cmd_dispatch;
+	cmd_push_constants_impl            = vk_cmd_push_constants;
+	cmd_clear_color_image_impl         = vk_cmd_clear_color_image;
+	cmd_draw_indexed_indirect_impl     = vk_cmd_draw_indexed_indirect;
 
 	FT_INIT_INTERNAL( backend, *p, VulkanRendererBackend );
 

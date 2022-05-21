@@ -206,7 +206,8 @@ struct MetalDescriptorSet
 };
 
 void
-mtl_create_renderer_backend( const RendererBackendInfo*, RendererBackend** p );
+mtl_create_renderer_backend( const RendererBackendInfo*,
+                             struct RendererBackend** p );
 
 } // namespace fluent
 
