@@ -4,15 +4,20 @@ include("sources/third_party/tiny_image_format/premake5.lua")
 include("sources/third_party/vk_mem_alloc/premake5.lua")
 include("sources/third_party/volk/premake5.lua")
 
-filter { "configurations:debug" }
-    defines( "FLUENT_DEBUG" )
-	symbols "On"
-	optimize "Off"
-filter { "configurations:debug" }
-	optimize "Speed"
-
-filter "system:windows"
-	defines("NOMINMAX")
+local commons = {}
+commons.opts = function()
+	filter { "configurations:debug" }
+		defines( "FLUENT_DEBUG" )
+		symbols "On"
+		optimize "Off"
+	filter { "configurations:release" }
+		optimize "Speed"
+	filter {}
+	
+	filter "system:windows"
+		defines("NOMINMAX")
+	filter {}
+end
 
 -- renderer
 -- todo: option
@@ -43,7 +48,9 @@ end
 project "ft_log"
 	kind "StaticLib"
 	language "C"
-
+	
+	commons.opts()
+	
 	includedirs {
 		"sources"
 	}
@@ -57,6 +64,8 @@ project "ft_os"
     kind "StaticLib"
     language "C"
 	
+	commons.opts()
+
 	declare_backend_defines()
 	
     includedirs {
@@ -66,6 +75,8 @@ project "ft_os"
     files {
         "sources/os/application.c", 
         "sources/os/application.h",
+        "sources/os/camera.h",
+        "sources/os/camera.c",
         "sources/os/input.c",
         "sources/os/input.h",
         "sources/os/key_codes.h",
@@ -77,6 +88,8 @@ project "ft_os"
 project "ft_renderer"
     kind "StaticLib"
     language "C"
+	
+	commons.opts()
 	
 	declare_backend_defines()
 	

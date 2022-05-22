@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/base.h"
 #include <string.h>
 #include <math.h>
 #include <string.h>
@@ -9,6 +10,11 @@
 #else
 #define LINMATH_H_FUNC static inline
 #endif
+
+LINMATH_H_FUNC f32 radians(f32 degree)
+{
+	return degree * ( f32 ) ( M_PI / 180.0 );
+}
 
 #define LINMATH_H_DEFINE_VEC(n) \
 typedef float vec##n[n]; \
