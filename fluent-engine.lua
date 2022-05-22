@@ -6,14 +6,13 @@ include("sources/third_party/volk/premake5.lua")
 
 filter { "configurations:debug" }
     defines( "FLUENT_DEBUG" )
-    filter "system:linux or macosx"
-        buildoptions( "-g" )
+	symbols "On"
+	optimize "Off"
 filter { "configurations:debug" }
-    filter "system:linux or macosx"
-        buildoptions( "-O3" )
+	optimize "Speed"
 
 filter "system:windows"
-defines("NOMINMAX")
+	defines("NOMINMAX")
 
 -- renderer
 -- todo: option
