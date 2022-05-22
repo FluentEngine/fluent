@@ -26,7 +26,7 @@ struct ApplicationState
 	ShutdownCallback on_shutdown;
 	ResizeCallback   on_resize;
 	f32              delta_time;
-	WsiInfo          wsi_info;
+	struct WsiInfo          wsi_info;
 	const char*      extensions[ MAX_INSTANCE_EXTENSION_COUNT ];
 };
 
@@ -60,7 +60,7 @@ app_init( const struct ApplicationConfig* config )
 	app_state.on_shutdown = config->on_shutdown;
 	app_state.on_resize   = config->on_resize;
 
-	WsiInfo* wsi_info = &app_state.wsi_info;
+	struct WsiInfo* wsi_info = &app_state.wsi_info;
 	wsi_info->window  = ( SDL_Window* ) app_state.window.handle;
 #ifdef VULKAN_BACKEND
 	SDL_Vulkan_GetInstanceExtensions(
@@ -207,7 +207,7 @@ get_delta_time()
 	return app_state.delta_time;
 }
 
-WsiInfo*
+struct WsiInfo*
 get_ft_wsi_info()
 {
 	return &app_state.wsi_info;

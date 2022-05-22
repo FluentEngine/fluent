@@ -698,7 +698,7 @@ get_instance_extensions( const struct RendererBackendInfo* info,
 {
 	*instance_create_flags = 0;
 
-	WsiInfo* wsi = info->wsi_info;
+	struct WsiInfo* wsi = info->wsi_info;
 
 	if ( names == NULL )
 	{
@@ -1419,7 +1419,7 @@ vk_configure_swapchain( const struct VulkanDevice*  device,
                         struct VulkanSwapchain*     swapchain,
                         const struct SwapchainInfo* info )
 {
-	WsiInfo* wsi = info->wsi_info;
+	struct WsiInfo* wsi = info->wsi_info;
 
 	wsi->create_vulkan_surface( wsi->window,
 	                            device->instance,
