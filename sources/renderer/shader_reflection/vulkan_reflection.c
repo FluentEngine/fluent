@@ -1,9 +1,9 @@
 #ifdef VULKAN_BACKEND
 #include <spirv_reflect/spirv_reflect.h>
-#include <hashmap.c/hashmap.h>
+#include <hashmap_c/hashmap_c.h>
 #include "base/base.h"
 #include "log/log.h"
-#include "renderer/vulkan/vulkan_backend.h"
+#include "renderer/backend/vulkan/vulkan_backend.h"
 
 i32
 binding_map_compare( const void* a, const void* b, void* udata )

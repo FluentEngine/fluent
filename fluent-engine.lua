@@ -1,4 +1,11 @@
-include("sources/third_party/hashmap.c/premake5.lua")
+if (not os.isdir(root_directory .. "/deps/SDL"))
+then
+    sdl_repo = "https://github.com/FluentEngine/SDL.git " .. root_directory .. "/deps/SDL"
+    os.execute("git clone " .. sdl_repo )
+end
+
+include(root_directory .. "/deps/SDL/sdl2.lua")
+include("sources/third_party/hashmap_c/premake5.lua")
 include("sources/third_party/spirv_reflect/premake5.lua")
 include("sources/third_party/tiny_image_format/premake5.lua")
 include("sources/third_party/vk_mem_alloc/premake5.lua")
@@ -21,7 +28,8 @@ end
 
 -- renderer
 -- todo: option
-vulkan_include_directory = "/usr/include/vulkan/"
+sdl_include_dir = root_directory .. "/deps/SDL/include"
+vulkan_include_directory = os.findheader("vulkan.h")
 
 renderer_backend_vulkan = true
 renderer_backend_d3d12 = false
@@ -69,7 +77,8 @@ project "ft_os"
 	declare_backend_defines()
 	
     includedirs {
-        "sources"
+		sdl_include_dir,
+        "sources",
     }
 
     files {
@@ -97,21 +106,23 @@ project "ft_renderer"
         "sources",
         "sources/third_party"
     }
-
+	
+	backend_dir = "sources/renderer/backend/"
+	nuklear_dir = "sources/renderer/nuklear/"
+	resource_loader_dir = "sources/renderer/resource_loader/"
+	shader_reflection_dir = "sources/renderer/shader_reflection/"
+	
     files {
-        "sources/renderer/shader_reflection.h", 
-        "sources/renderer/renderer_enums.h",
-        "sources/renderer/renderer_backend.h",
-        "sources/renderer/renderer_backend_functions.h",
-        "sources/renderer/renderer_backend.c",
-        "sources/renderer/nuklear/ft_nuklear.h",
-        "sources/renderer/nuklear/ft_nuklear.c",
-        "sources/renderer/vulkan/vulkan_backend.h", 
-        "sources/renderer/vulkan/vulkan_backend.c",
-        "sources/renderer/vulkan/vulkan_reflection.c",
-        "sources/renderer/d3d12/d3d12_backend.h", 
-        "sources/renderer/d3d12/d3d12_backend.c",
-        "sources/renderer/d3d12/d3d12_reflection.c",
-        "sources/renderer/resource_loader.h", 
-        "sources/renderer/resource_loader.c"
+		backend_dir .. "renderer_backend.c",
+		backend_dir .. "renderer_backend.h",
+		backend_dir .. "renderer_enums.h",
+		backend_dir .. "renderer_private.h",
+		backend_dir .. "vulkan/vulkan_backend.c",
+		backend_dir .. "vulkan/vulkan_backend.h",
+		nuklear_dir .. "ft_nuklear.h",
+		nuklear_dir .. "ft_nuklear.c",
+		resource_loader_dir .. "resource_loader.c",
+		resource_loader_dir .. "resource_loader.h",
+		shader_reflection_dir .. "shader_reflection.h",
+		shader_reflection_dir .. "vulkan_reflection.c"
     }

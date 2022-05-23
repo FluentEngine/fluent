@@ -1,8 +1,8 @@
-#include "renderer/renderer_private.h"
-#include "renderer/renderer_backend.h"
-#include "renderer/vulkan/vulkan_backend.h"
-#include "renderer/d3d12/d3d12_backend.h"
-#include "renderer/metal/metal_backend.h"
+#include "renderer_private.h"
+#include "renderer_backend.h"
+#include "vulkan/vulkan_backend.h"
+#include "d3d12/d3d12_backend.h"
+#include "metal/metal_backend.h"
 
 destroy_renderer_backend_fun      destroy_renderer_backend_impl;
 create_device_fun                 create_device_impl;

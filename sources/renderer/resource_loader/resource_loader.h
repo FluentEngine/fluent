@@ -1,6 +1,6 @@
 #pragma once
 
-#include "renderer/renderer_backend.h"
+#include "renderer/backend/renderer_backend.h"
 
 void
 resource_loader_init( const struct Device*, u64 staging_buffer_size );

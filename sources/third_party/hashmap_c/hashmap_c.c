@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stddef.h>
-#include "hashmap.h"
+#include "hashmap_c.h"
 
 static void *( *_malloc )( size_t )          = NULL;
 static void *( *_realloc )( void *, size_t ) = NULL;

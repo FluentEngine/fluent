@@ -13,7 +13,7 @@
 
 LINMATH_H_FUNC f32 radians(f32 degree)
 {
-	return degree * ( f32 ) ( M_PI / 180.0 );
+	return degree * ( ( f32 ) M_PI / 180.0f );
 }
 
 #define LINMATH_H_DEFINE_VEC(n) \
@@ -584,13 +584,13 @@ LINMATH_H_FUNC void mat4x4_arcball(mat4x4 R, mat4x4 const M, vec2 const _a, vec2
 	float z_b = 0.;
 
 	if(vec2_len(a) < 1.) {
-		z_a = sqrtf(1. - vec2_mul_inner(a, a));
+		z_a = sqrtf(1.0f - vec2_mul_inner(a, a));
 	} else {
 		vec2_norm(a, a);
 	}
 
 	if(vec2_len(b) < 1.) {
-		z_b = sqrtf(1. - vec2_mul_inner(b, b));
+		z_b = sqrtf(1.0f - vec2_mul_inner(b, b));
 	} else {
 		vec2_norm(b, b);
 	}

@@ -2,8 +2,8 @@
 
 #include "base/base.h"
 
-#include "renderer/renderer_enums.h"
-#include "renderer/shader_reflection.h"
+#include "renderer/backend/renderer_enums.h"
+#include "renderer/shader_reflection/shader_reflection.h"
 
 #undef MemoryBarrier
 
@@ -14,6 +14,19 @@
 #define MAX_VERTEX_ATTRIBUTE_COUNT   15
 #define MAX_DESCRIPTOR_BINDING_COUNT 15
 #define MAX_SET_COUNT                10
+
+#define FT_INIT_INTERNAL( name, ptr, type )                                    \
+	struct type* name = ( struct type* ) calloc( 1, sizeof( struct type ) );   \
+	name->interface.handle = name;                                             \
+	ptr                    = &name->interface
+
+#define FT_FROM_HANDLE( name, interface, impl )                                \
+	struct impl* name = ( struct impl* ) interface->handle
+
+#define DECLARE_FUNCTION_POINTER( ret, name, ... )                             \
+	typedef ret ( *name##_fun )( __VA_ARGS__ );                                \
+	extern name##_fun name##_impl
+
 
 #ifdef __cplusplus
 extern "C"
@@ -235,6 +248,7 @@ extern "C"
 	// TODO:
 	struct MemoryBarrier
 	{
+		void* allocation;
 	};
 
 	struct BufferBarrier

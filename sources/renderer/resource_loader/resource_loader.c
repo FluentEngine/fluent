@@ -1,4 +1,4 @@
-#include "renderer/resource_loader.h"
+#include "resource_loader.h"
 
 struct StagingBuffer
 {

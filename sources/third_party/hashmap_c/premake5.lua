@@ -7,6 +7,6 @@ project "hashmap_c"
     }
 
     files {
-        "hashmap.h",
-        "hashmap.c"
+        "hashmap_c.h",
+        "hashmap_c.c"
     }

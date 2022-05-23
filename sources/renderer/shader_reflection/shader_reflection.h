@@ -1,8 +1,8 @@
 #pragma once
 
 #include "base/base.h"
-#include "renderer/renderer_enums.h"
-#include "renderer/renderer_backend.h"
+#include "renderer/backend/renderer_enums.h"
+#include "renderer/backend/renderer_backend.h"
 
 #define MAX_BINDING_NAME_LENGTH 20
 

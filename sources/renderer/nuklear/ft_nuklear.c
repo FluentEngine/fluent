@@ -1,3 +1,5 @@
+#include <SDL2/SDL.h>
+
 #define NK_IMPLEMENTATION
 #include "ft_nuklear.h"
 
@@ -306,20 +308,86 @@ nk_ft_new_frame()
 	wsi->get_window_size( win, &ft.width, &ft.height );
 	wsi->get_framebuffer_size( win, &ft.display_width, &ft.display_height );
 
-	ft.fb_scale.x = ft.display_width / ft.width;
-	ft.fb_scale.y = ft.display_height / ft.height;
+	ft.fb_scale.x = ( f32 ) (ft.display_width /  ft.width);
+	ft.fb_scale.y = ( f32 ) ( ft.display_height / ft.height );
 
 	nk_input_begin( ctx );
 
-	i32 x = ( i32 ) get_mouse_pos_x();
-	i32 y = ( i32 ) get_mouse_pos_y();
-	nk_input_motion( ctx, x, y );
+	nk_input_key( ctx, NK_KEY_DEL, is_key_pressed( FT_KEY_DELETE ) );
+	nk_input_key( ctx, NK_KEY_ENTER, is_key_pressed( FT_KEY_ENTER ) );
+	nk_input_key( ctx, NK_KEY_TAB, is_key_pressed( FT_KEY_TAB ) );
+	nk_input_key( ctx, NK_KEY_BACKSPACE, is_key_pressed( FT_KEY_BACKSPACE ) );
+	nk_input_key( ctx, NK_KEY_UP, is_key_pressed( FT_KEY_UP ) );
+	nk_input_key( ctx, NK_KEY_DOWN, is_key_pressed( FT_KEY_DOWN ) );
+	nk_input_key( ctx, NK_KEY_TEXT_START, is_key_pressed( FT_KEY_HOME ) );
+	nk_input_key( ctx, NK_KEY_TEXT_END, is_key_pressed( FT_KEY_END ) );
+	nk_input_key( ctx, NK_KEY_SCROLL_START, is_key_pressed( FT_KEY_HOME ) );
+	nk_input_key( ctx, NK_KEY_SCROLL_END, is_key_pressed( FT_KEY_END ) );
+	nk_input_key( ctx, NK_KEY_SCROLL_DOWN, is_key_pressed( FT_KEY_PAGE_DOWN ) );
+	nk_input_key( ctx, NK_KEY_SCROLL_UP, is_key_pressed( FT_KEY_PAGE_UP ) );
+	nk_input_key( ctx,
+	              NK_KEY_SHIFT,
+	              is_key_pressed( FT_KEY_LEFT_SHIFT ) ||
+	                  is_key_pressed( FT_KEY_RIGHT_SHIFT ) );
+
+	if ( is_key_pressed( FT_KEY_LEFT_CONTROL ) ||
+	     is_key_pressed( FT_KEY_RIGHT_CONTROL ) )
+	{
+		nk_input_key( ctx, NK_KEY_COPY, is_key_pressed( FT_KEY_C ) );
+		nk_input_key( ctx, NK_KEY_PASTE, is_key_pressed( FT_KEY_V ) );
+		nk_input_key( ctx, NK_KEY_CUT, is_key_pressed( FT_KEY_X ) );
+		nk_input_key( ctx, NK_KEY_TEXT_UNDO, is_key_pressed( FT_KEY_Z ) );
+		nk_input_key( ctx, NK_KEY_TEXT_REDO, is_key_pressed( FT_KEY_R ) );
+		nk_input_key( ctx,
+		              NK_KEY_TEXT_WORD_LEFT,
+		              is_key_pressed( FT_KEY_LEFT ) );
+		nk_input_key( ctx,
+		              NK_KEY_TEXT_WORD_RIGHT,
+		              is_key_pressed( FT_KEY_RIGHT ) );
+		nk_input_key( ctx, NK_KEY_TEXT_LINE_START, is_key_pressed( FT_KEY_B ) );
+		nk_input_key( ctx, NK_KEY_TEXT_LINE_END, is_key_pressed( FT_KEY_E ) );
+	}
+	else
+	{
+		nk_input_key( ctx, NK_KEY_LEFT, is_key_pressed( FT_KEY_LEFT ) );
+		nk_input_key( ctx, NK_KEY_RIGHT, is_key_pressed( FT_KEY_RIGHT ) );
+		nk_input_key( ctx, NK_KEY_COPY, 0 );
+		nk_input_key( ctx, NK_KEY_PASTE, 0 );
+		nk_input_key( ctx, NK_KEY_CUT, 0 );
+		nk_input_key( ctx, NK_KEY_SHIFT, 0 );
+	}
+
+	i32 x, y;
+	get_mouse_position( &x, &y );
+
+	nk_input_motion( ctx, ( int ) x, ( int ) y );
 
 	nk_input_button( ctx,
 	                 NK_BUTTON_LEFT,
+	                 ( int ) x,
+	                 ( int ) y,
+	                 is_button_pressed( FT_BUTTON_LEFT ) );
+
+	nk_input_button( ctx,
+	                 NK_BUTTON_MIDDLE,
 	                 x,
 	                 y,
-	                 is_button_pressed( FT_BUTTON_LEFT ) );
+	                 is_button_pressed( FT_BUTTON_MIDDLE ) );
+
+	nk_input_button( ctx,
+	                 NK_BUTTON_RIGHT,
+	                 x,
+	                 y,
+	                 is_button_pressed( FT_BUTTON_RIGHT ) );
+
+	nk_input_button( ctx,
+	                 NK_BUTTON_DOUBLE,
+	                 ( i32 ) ft.double_click_pos.x,
+	                 ( i32 ) ft.double_click_pos.y,
+	                 ft.is_double_click_down );
+	                 
+	nk_input_scroll( ctx, ft.scroll );
+
 	nk_input_end( &ft.ctx );
 }
 
@@ -413,11 +481,13 @@ nk_ft_render( const struct CommandBuffer *cmd, enum nk_anti_aliasing AA )
 			if ( !draw_cmd->elem_count )
 				continue;
 
-			cmd_set_scissor( cmd,
-			                 MAX( draw_cmd->clip_rect.x * ft.fb_scale.x, 0 ),
-			                 MAX( draw_cmd->clip_rect.y * ft.fb_scale.y, 0 ),
-			                 draw_cmd->clip_rect.w * ft.fb_scale.x,
-			                 draw_cmd->clip_rect.h * ft.fb_scale.y );
+			cmd_set_scissor(
+			    cmd,
+			    MAX( ( i32 ) ( draw_cmd->clip_rect.x * ft.fb_scale.x ), 0 ),
+			    MAX( ( i32 ) ( draw_cmd->clip_rect.y * ft.fb_scale.y ), 0 ),
+			    ( u32 ) ( draw_cmd->clip_rect.w * ft.fb_scale.x ),
+			    ( u32 ) ( draw_cmd->clip_rect.h * ft.fb_scale.y ) );
+			    
 			cmd_draw_indexed( cmd,
 			                  draw_cmd->elem_count,
 			                  1,

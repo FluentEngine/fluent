@@ -19,7 +19,7 @@ extern "C"
 		u32               argc;
 		char**            argv;
 		struct WindowInfo window_info;
-		LogLevel          log_level;
+		enum LogLevel     log_level;
 		InitCallback      on_init;
 		UpdateCallback    on_update;
 		ShutdownCallback  on_shutdown;

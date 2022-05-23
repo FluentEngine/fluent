@@ -2,10 +2,10 @@
 
 #include <alloca.h>
 #include <tiny_image_format/tinyimageformat_apis.h>
-#include <hashmap.c/hashmap.h>
+#include <hashmap_c/hashmap_c.h>
 #include "log/log.h"
 #include "wsi/wsi.h"
-#include "renderer/renderer_private.h"
+#include "../renderer_private.h"
 #include "vulkan_backend.h"
 
 #ifdef FLUENT_DEBUG
@@ -43,6 +43,8 @@ struct FramebufferMapItem
 static b32
 compare_pass_info( const void* a, const void* b, void* udata )
 {
+	FT_UNUSED( udata );
+
 	const struct RenderPassBeginInfo* rpa = a;
 	const struct RenderPassBeginInfo* rpb = b;
 	if ( rpa->color_attachment_count != rpb->color_attachment_count )
@@ -110,6 +112,9 @@ compare_pass_info( const void* a, const void* b, void* udata )
 static u64
 hash_pass_info( const void* item, u64 seed0, u64 seed1 )
 {
+	FT_UNUSED( item );
+	FT_UNUSED( seed0 );
+	FT_UNUSED( seed1 );
 	// TODO: hash function
 	return 0;
 }
@@ -117,6 +122,8 @@ hash_pass_info( const void* item, u64 seed0, u64 seed1 )
 static b32
 compare_framebuffer_info( const void* a, const void* b, void* udata )
 {
+	FT_UNUSED( udata );
+
 	const struct RenderPassBeginInfo* rpa = a;
 	const struct RenderPassBeginInfo* rpb = b;
 
@@ -153,6 +160,9 @@ compare_framebuffer_info( const void* a, const void* b, void* udata )
 static u64
 hash_framebuffer_info( const void* item, u64 seed0, u64 seed1 )
 {
+	FT_UNUSED( item );
+	FT_UNUSED( seed0 );
+	FT_UNUSED( seed1 );
 	// TODO: hash function
 	return 0;
 }
@@ -672,6 +682,7 @@ determine_vk_image_usage( enum DescriptorType descriptor_type )
 	return image_usage;
 }
 
+#ifdef FLUENT_DEBUG
 static VKAPI_ATTR VkBool32 VKAPI_CALL
 vulkan_debug_callback(
     VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
@@ -679,15 +690,18 @@ vulkan_debug_callback(
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void*                                       user_data )
 {
-	( void ) flags;
-	( void ) user_data;
+	FT_UNUSED( flags );
+	FT_UNUSED( pCallbackData );
+	FT_UNUSED( user_data );
 
 	static char const* prefix = "[Vulkan]:";
+	FT_UNUSED( prefix );
 
 	if ( messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT )
 	{
 		FT_TRACE( "%9s %s", prefix, pCallbackData->pMessage );
 	}
+
 	else if ( messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT )
 	{
 		FT_INFO( "%10s %s", prefix, pCallbackData->pMessage );
@@ -728,6 +742,7 @@ create_debug_messenger( struct VulkanRendererBackend* backend )
 	                                backend->vulkan_allocator,
 	                                &backend->debug_messenger );
 }
+#endif
 
 static inline void
 get_instance_extensions( const struct RendererBackendInfo* info,
@@ -803,6 +818,8 @@ get_instance_extensions( const struct RendererBackendInfo* info,
 static inline void
 get_instance_layers( u32* count, const char** names )
 {
+	FT_UNUSED( names );
+
 	*count = 0;
 #ifdef FLUENT_DEBUG
 	( *count )++;
@@ -935,11 +952,15 @@ vk_create_device( const struct RendererBackend* ibackend,
                   const struct DeviceInfo*      info,
                   struct Device**               p )
 {
+	FT_UNUSED( info );
+
 	FT_FROM_HANDLE( backend, ibackend, VulkanRendererBackend );
 
 	FT_INIT_INTERNAL( device, *p, VulkanDevice );
 
 	b32 found_device_slot = 0;
+	FT_UNUSED( found_device_slot );
+
 	for ( u32 i = 0; i < MAX_DEVICE_COUNT; ++i )
 	{
 		if ( devices[ i ] == NULL )
@@ -1701,7 +1722,7 @@ vk_resize_swapchain( const struct Device* idevice,
 	iswapchain->width  = width;
 	iswapchain->height = height;
 
-	u64   iter;
+	u64   iter = 0;
 	void* item;
 	while ( hashmap_iter( framebuffers[ device->index ], &iter, &item ) )
 	{
@@ -3114,6 +3135,9 @@ vk_cmd_barrier( const struct CommandBuffer* icmd,
                 u32                         image_barriers_count,
                 const struct ImageBarrier*  image_barriers )
 {
+	FT_UNUSED( memory_barriers_count );
+	FT_UNUSED( memory_barriers );
+
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 
 	ALLOC_STACK_ARRAY( VkBufferMemoryBarrier,
@@ -3594,8 +3618,12 @@ vk_create_renderer_backend( const struct RendererBackendInfo* info,
 	                         extensions );
 
 	get_instance_layers( &layer_count, NULL );
-	ALLOC_STACK_ARRAY( const char*, layers, layer_count );
-	get_instance_layers( &layer_count, layers );
+	const char** layers = NULL;
+	if ( layer_count != 0 )
+	{
+		layers = ( const char** ) malloc( sizeof( const char* ) * layer_count );
+		get_instance_layers( &layer_count, layers );
+	}
 
 	VkInstanceCreateInfo instance_create_info = {};
 	instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -3610,6 +3638,10 @@ vk_create_renderer_backend( const struct RendererBackendInfo* info,
 	VK_ASSERT( vkCreateInstance( &instance_create_info,
 	                             backend->vulkan_allocator,
 	                             &backend->instance ) );
+	if ( layers != NULL )
+	{
+		free( layers );
+	}
 
 	volkLoadInstance( backend->instance );
 

@@ -41,10 +41,10 @@ static struct
 	unsigned long long flushedTime;
 } s_flog;
 
-static volatile int      s_logger;
-static volatile LogLevel s_logLevel      = FT_INFO;
-static volatile long     s_flushInterval = 0; /* msec, 0 is auto flush off */
-static volatile int      s_initialized   = 0; /* false */
+static volatile int           s_logger;
+static volatile enum LogLevel s_logLevel = FT_INFO;
+static volatile long s_flushInterval     = 0; /* msec, 0 is auto flush off */
+static volatile int  s_initialized       = 0; /* false */
 #if defined( _WIN32 ) || defined( _WIN64 )
 static CRITICAL_SECTION s_mutex;
 #else
@@ -195,19 +195,19 @@ cleanup:
 }
 
 void
-logger_setLevel( LogLevel level )
+logger_setLevel( enum LogLevel level )
 {
 	s_logLevel = level;
 }
 
-LogLevel
+enum LogLevel
 logger_getLevel( void )
 {
 	return s_logLevel;
 }
 
 int
-logger_isEnabled( LogLevel level )
+logger_isEnabled( enum LogLevel level )
 {
 	return s_logLevel <= level;
 }
@@ -244,7 +244,7 @@ logger_flush()
 }
 
 static const char*
-getLevelChar( LogLevel level )
+getLevelChar( enum LogLevel level )
 {
 	switch ( level )
 	{
@@ -375,7 +375,7 @@ vflog( FILE*               fp,
 }
 
 void
-logger_log( LogLevel level, const char* file, int line, const char* fmt, ... )
+logger_log( enum LogLevel level, const char* fmt, ... )
 {
 	struct timeval     now;
 	unsigned long long currentTime; /* milliseconds */
@@ -425,7 +425,7 @@ logger_log( LogLevel level, const char* file, int line, const char* fmt, ... )
 }
 
 void
-log_init( LogLevel log_level )
+log_init( enum LogLevel log_level )
 {
 	int result = logger_initConsoleLogger( NULL );
 	FT_ASSERT( result );
@@ -434,7 +434,7 @@ log_init( LogLevel log_level )
 }
 
 void
-log_shutdown()
+log_shutdown( )
 {
 	logger_flush();
 }

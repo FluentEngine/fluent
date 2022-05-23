@@ -10,8 +10,8 @@
 #include <nuklear/nuklear.h>
 #include "wsi/wsi.h"
 #include "os/input.h"
-#include "renderer/renderer_backend.h"
-#include "renderer/resource_loader.h"
+#include "renderer/backend/renderer_backend.h"
+#include "renderer/resource_loader/resource_loader.h"
 #include "string.h"
 
 NK_API struct nk_context *
@@ -28,7 +28,7 @@ nk_ft_font_stash_begin( struct nk_font_atlas **atlas );
 NK_API void
 nk_ft_font_stash_end( void );
 NK_API void
-nk_ft_new_frame();
+nk_ft_new_frame( void );
 
 NK_API void
 nk_ft_render( const struct CommandBuffer *cmd, enum nk_anti_aliasing AA );

@@ -1,20 +1,8 @@
 #pragma once
 
-#include "renderer/renderer_backend.h"
+#include "renderer_backend.h"
 
 #undef MemoryBarrier
-
-#define FT_INIT_INTERNAL( name, ptr, type )                                    \
-	struct type* name = ( struct type* ) calloc( 1, sizeof( struct type ) );   \
-	name->interface.handle = name;                                             \
-	ptr                    = &name->interface
-
-#define FT_FROM_HANDLE( name, interface, impl )                                \
-	struct impl* name = ( struct impl* ) interface->handle
-
-#define DECLARE_FUNCTION_POINTER( ret, name, ... )                             \
-	typedef ret ( *name##_fun )( __VA_ARGS__ );                                \
-	extern name##_fun name##_impl
 
 #ifdef __cplusplus
 extern "C"

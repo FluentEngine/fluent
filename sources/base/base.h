@@ -34,3 +34,5 @@ typedef int      b32;
 
 #define ALLOC_HEAP_ARRAY( T, NAME, COUNT )                                     \
 	T* NAME = ( T* ) calloc( sizeof( T ), COUNT )
+
+#define FT_UNUSED( X ) ( void ) ( X )
