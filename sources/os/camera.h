@@ -60,6 +60,7 @@ camera_on_resize( struct Camera*, u32 width, u32 height );
 struct CameraController
 {
 	struct Camera* camera;
+	i32            last_mouse_positon[ 2 ];
 };
 
 void
@@ -67,3 +68,6 @@ camera_controller_init( struct CameraController*, struct Camera* );
 
 void
 camera_controller_update( struct CameraController*, f32 delta_time );
+
+void
+camera_controller_reset( struct CameraController* );

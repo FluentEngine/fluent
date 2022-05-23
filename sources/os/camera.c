@@ -106,17 +106,19 @@ camera_on_rotate( struct Camera* camera, f32 x_offset, f32 y_offset )
 		camera->pitch = -89.0f;
 
 	vec3 dir;
-	dir[0] = cosf(radians(camera->yaw)) * cosf(radians(camera->pitch));
-	dir[1] = sinf(radians(camera->pitch));
-	dir[2] = sinf(radians(camera->yaw)) * cosf(radians(camera->pitch));
-	vec3_norm(camera->direction, dir);
-	
-	vec3_mul_cross(camera->right, camera->direction, camera->world_up);
-	vec3_norm(camera->right, camera->right);
-	vec3_mul_cross(camera->up, camera->right, camera->direction);
-	vec3_norm(camera->up, camera->up);
+	dir[ 0 ] =
+	    cosf( radians( camera->yaw ) ) * cosf( radians( camera->pitch ) );
+	dir[ 1 ] = sinf( radians( camera->pitch ) );
+	dir[ 2 ] =
+	    sinf( radians( camera->yaw ) ) * cosf( radians( camera->pitch ) );
+	vec3_norm( camera->direction, dir );
 
-	recalculate_view_matrix(camera);
+	vec3_mul_cross( camera->right, camera->direction, camera->world_up );
+	vec3_norm( camera->right, camera->right );
+	vec3_mul_cross( camera->up, camera->right, camera->direction );
+	vec3_norm( camera->up, camera->up );
+
+	recalculate_view_matrix( camera );
 }
 
 void
@@ -153,5 +155,18 @@ camera_controller_update( struct CameraController* c, f32 delta_time )
 		camera_on_move( c->camera, FT_CAMERA_DIRECTION_RIGHT, delta_time );
 	}
 
-	camera_on_rotate( c->camera, get_mouse_offset_x(), -get_mouse_offset_y() );
+	i32 x, y;
+	get_mouse_position( &x, &y );
+	f32 xoffset = ( f32 ) ( x - c->last_mouse_positon[ 0 ] );
+	f32 yoffset = ( f32 ) ( c->last_mouse_positon[ 1 ] - y );
+	camera_on_rotate( c->camera, xoffset, yoffset );
+	c->last_mouse_positon[ 0 ] = x;
+	c->last_mouse_positon[ 1 ] = y;
+}
+
+void
+camera_controller_reset( struct CameraController* c )
+{
+	get_mouse_position( &c->last_mouse_positon[ 0 ],
+	                    &c->last_mouse_positon[ 1 ] );
 }

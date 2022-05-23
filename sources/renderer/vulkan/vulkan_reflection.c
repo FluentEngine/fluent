@@ -2,6 +2,7 @@
 #include <spirv_reflect/spirv_reflect.h>
 #include <hashmap.c/hashmap.h>
 #include "base/base.h"
+#include "log/log.h"
 #include "renderer/vulkan/vulkan_backend.h"
 
 i32
@@ -114,7 +115,6 @@ spirv_reflect_stage( ReflectionData*  reflection,
 		memset( item.name, '\0', MAX_BINDING_NAME_LENGTH );
 		strcpy( item.name, name );
 		hashmap_set( reflection->binding_map, &item );
-
 		i++;
 	}
 

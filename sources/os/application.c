@@ -10,10 +10,6 @@
 #include "fs/fs.hpp"
 #endif
 
-// defined in input.c
-struct InputSystem*
-get_input_system( void );
-
 #define MAX_INSTANCE_EXTENSION_COUNT 3
 
 struct ApplicationState
@@ -37,10 +33,23 @@ static void
 ft_create_vulkan_surface( void* window, void* instance, void** p )
 {
 	VkSurfaceKHR surface;
-	SDL_Vulkan_CreateSurface( ( SDL_Window* ) window,
-	                          ( VkInstance ) instance,
-	                          &surface );
+	SDL_Vulkan_CreateSurface(
+	    ( SDL_Window* ) ( ( struct Window* ) window )->handle,
+	    ( VkInstance ) instance,
+	    &surface );
 	*p = surface;
+}
+
+static void
+ft_window_get_size( void* window, u32* width, u32* height)
+{
+	window_get_size( ( struct Window* ) window, width, height );
+}
+
+static void
+ft_window_get_framebuffer_size( void* window, u32* width, u32* height)
+{
+	window_get_framebuffer_size( ( struct Window* ) window, width, height );
 }
 #endif
 
@@ -61,7 +70,7 @@ app_init( const struct ApplicationConfig* config )
 	app_state.on_resize   = config->on_resize;
 
 	struct WsiInfo* wsi_info = &app_state.wsi_info;
-	wsi_info->window  = ( SDL_Window* ) app_state.window.handle;
+	wsi_info->window  = &app_state.window;
 #ifdef VULKAN_BACKEND
 	SDL_Vulkan_GetInstanceExtensions(
 	    ( SDL_Window* ) app_state.window.handle,
@@ -74,9 +83,10 @@ app_init( const struct ApplicationConfig* config )
 	wsi_info->vulkan_instance_extensions = app_state.extensions;
 	wsi_info->create_vulkan_surface      = ft_create_vulkan_surface;
 #endif
+	wsi_info->get_window_size = ft_window_get_size;
+	wsi_info->get_framebuffer_size = ft_window_get_framebuffer_size;
 
 	log_init( FT_INFO );
-	init_input_system( &app_state.window );
 
 	app_state.is_inited = 1;
 }
@@ -95,15 +105,11 @@ app_run()
 	u32 last_frame       = 0.0f;
 	app_state.delta_time = 0.0;
 
-	struct InputSystem* input_system = get_input_system();
-
 	static u32 width, height;
 	window_get_size( &app_state.window, &width, &height );
 
 	while ( app_state.is_running )
 	{
-		update_input_system();
-
 		u32 current_frame    = get_time();
 		app_state.delta_time = ( f32 ) ( current_frame - last_frame ) / 1000.0f;
 		last_frame           = current_frame;
@@ -128,38 +134,6 @@ app_run()
 						break;
 					}
 					app_state.on_resize( w, h );
-				}
-				break;
-			}
-			case SDL_KEYDOWN:
-			{
-				input_system->keys[ e.key.keysym.scancode ] = 1;
-				break;
-			}
-			case SDL_KEYUP:
-			{
-				input_system->keys[ e.key.keysym.scancode ] = 0;
-				break;
-			}
-			case SDL_MOUSEBUTTONDOWN:
-			{
-				input_system->buttons[ e.button.button ] = 1;
-				break;
-			}
-			case SDL_MOUSEBUTTONUP:
-			{
-				input_system->buttons[ e.button.button ] = 0;
-				break;
-			}
-			case SDL_MOUSEWHEEL:
-			{
-				if ( e.wheel.y > 0 )
-				{
-					input_system->mouse_scroll = 1;
-				}
-				else if ( e.wheel.y < 0 )
-				{
-					input_system->mouse_scroll = -1;
 				}
 				break;
 			}

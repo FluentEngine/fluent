@@ -5,7 +5,7 @@
 #include <hashmap.c/hashmap.h>
 #include "log/log.h"
 #include "wsi/wsi.h"
-#include "renderer/renderer_backend_functions.h"
+#include "renderer/renderer_private.h"
 #include "vulkan_backend.h"
 
 #ifdef FLUENT_DEBUG
@@ -380,6 +380,45 @@ to_vk_primitive_topology( enum PrimitiveTopology topology )
 	case FT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:
 		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	default: FT_ASSERT( 0 ); return ( VkPrimitiveTopology ) -1;
+	}
+}
+
+static inline VkBlendFactor
+to_vk_blend_factor( enum BlendFactor factor )
+{
+	switch ( factor )
+	{
+	case FT_BLEND_FACTOR_ZERO: return VK_BLEND_FACTOR_ZERO;
+	case FT_BLEND_FACTOR_ONE: return VK_BLEND_FACTOR_ONE;
+	case FT_BLEND_FACTOR_SRC_COLOR: return VK_BLEND_FACTOR_SRC_COLOR;
+	case FT_BLEND_FACTOR_ONE_MINUS_SRC_COLOR:
+		return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+	case FT_BLEND_FACTOR_DST_COLOR: return VK_BLEND_FACTOR_DST_COLOR;
+	case FT_BLEND_FACTOR_ONE_MINUS_DST_COLOR:
+		return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+	case FT_BLEND_FACTOR_SRC_ALPHA: return VK_BLEND_FACTOR_SRC_ALPHA;
+	case FT_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA:
+		return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	case FT_BLEND_FACTOR_DST_ALPHA: return VK_BLEND_FACTOR_DST_ALPHA;
+	case FT_BLEND_FACTOR_ONE_MINUS_DST_ALPHA:
+		return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+	case FT_BLEND_FACTOR_SRC_ALPHA_SATURATE:
+		return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
+	default: FT_ASSERT( 0 ); return ( VkBlendFactor ) -1;
+	}
+}
+
+static inline VkBlendOp
+to_vk_blend_op( enum BlendOp op )
+{
+	switch ( op )
+	{
+	case FT_BLEND_OP_ADD: return VK_BLEND_OP_ADD;
+	case FT_BLEND_OP_SUBTRACT: return VK_BLEND_OP_SUBTRACT;
+	case FT_BLEND_OP_REVERSE_SUBTRACT: return VK_BLEND_OP_REVERSE_SUBTRACT;
+	case FT_BLEND_OP_MIN: return VK_BLEND_OP_MIN;
+	case FT_BLEND_OP_MAX: return VK_BLEND_OP_MAX;
+	default: FT_ASSERT( 0 ); return ( VkBlendOp ) -1;
 	}
 }
 
@@ -2501,15 +2540,25 @@ vk_create_graphics_pipeline( const struct Device*       idevice,
 	ALLOC_STACK_ARRAY( VkPipelineColorBlendAttachmentState,
 	                   attachment_states,
 	                   info->color_attachment_count );
+	const struct BlendStateInfo* blend = &info->blend_state_info;
 	for ( u32 i = 0; i < info->color_attachment_count; ++i )
 	{
 		VkPipelineColorBlendAttachmentState attachment_state = {};
 		attachment_states[ i ]                               = attachment_state;
-		attachment_states[ i ].srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-		attachment_states[ i ].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-		attachment_states[ i ].colorBlendOp        = VK_BLEND_OP_ADD;
-		attachment_states[ i ].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		attachment_states[ i ].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		attachment_states[ i ].blendEnable =
+		    blend->src_blend_factors[ i ] != FT_BLEND_FACTOR_ZERO;
+		attachment_states[ i ].srcColorBlendFactor =
+		    to_vk_blend_factor( blend->src_blend_factors[ i ] );
+		attachment_states[ i ].dstColorBlendFactor =
+		    to_vk_blend_factor( blend->dst_blend_factors[ i ] );
+		attachment_states[ i ].colorBlendOp =
+		    to_vk_blend_op( blend->blend_ops[ i ] );
+		attachment_states[ i ].srcAlphaBlendFactor =
+		    to_vk_blend_factor( blend->src_alpha_blend_factors[ i ] );
+		attachment_states[ i ].dstAlphaBlendFactor =
+		    to_vk_blend_factor( blend->dst_alpha_blend_factors[ i ] );
+		attachment_states[ i ].alphaBlendOp =
+		    to_vk_blend_op( blend->alpha_blend_ops[ i ] );
 		attachment_states[ i ].colorWriteMask =
 		    VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
 		    VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -2518,8 +2567,6 @@ vk_create_graphics_pipeline( const struct Device*       idevice,
 	VkPipelineColorBlendStateCreateInfo color_blend_state_create_info = {};
 	color_blend_state_create_info.sType =
 	    VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	color_blend_state_create_info.logicOpEnable = 0;
-	color_blend_state_create_info.logicOp       = VK_LOGIC_OP_COPY;
 	color_blend_state_create_info.attachmentCount =
 	    info->color_attachment_count;
 	color_blend_state_create_info.pAttachments = attachment_states;

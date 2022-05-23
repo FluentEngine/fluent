@@ -323,6 +323,16 @@ extern "C"
 		enum CompareOp compare_op;
 	};
 
+	struct BlendStateInfo
+	{
+		enum BlendFactor src_blend_factors[ MAX_ATTACHMENTS_COUNT ];
+		enum BlendFactor dst_blend_factors[ MAX_ATTACHMENTS_COUNT ];
+		enum BlendFactor src_alpha_blend_factors[ MAX_ATTACHMENTS_COUNT ];
+		enum BlendFactor dst_alpha_blend_factors[ MAX_ATTACHMENTS_COUNT ];
+		enum BlendOp     blend_ops[ MAX_ATTACHMENTS_COUNT ];
+		enum BlendOp     alpha_blend_ops[ MAX_ATTACHMENTS_COUNT ];
+	};
+
 	struct PipelineInfo
 	{
 		struct VertexLayout         vertex_layout;
@@ -333,8 +343,9 @@ extern "C"
 		struct DescriptorSetLayout* descriptor_set_layout;
 		u32                         sample_count;
 		u32                         color_attachment_count;
-		enum Format color_attachment_formats[ MAX_ATTACHMENTS_COUNT ];
-		enum Format depth_stencil_format;
+		enum Format           color_attachment_formats[ MAX_ATTACHMENTS_COUNT ];
+		enum Format           depth_stencil_format;
+		struct BlendStateInfo blend_state_info;
 	};
 
 	struct Pipeline

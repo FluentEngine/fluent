@@ -1,4 +1,4 @@
-#include "renderer/renderer_backend_functions.h"
+#include "renderer/renderer_private.h"
 #include "renderer/renderer_backend.h"
 #include "renderer/vulkan/vulkan_backend.h"
 #include "renderer/d3d12/d3d12_backend.h"

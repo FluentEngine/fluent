@@ -15,7 +15,7 @@ create_window( const struct WindowInfo* info )
 	u32 x            = info->x;
 	u32 y            = info->y;
 
-	window_flags |= SDL_WINDOW_ALLOW_HIGHDPI;
+//	window_flags |= SDL_WINDOW_ALLOW_HIGHDPI;
 
 	if ( info->resizable )
 	{
@@ -50,7 +50,6 @@ create_window( const struct WindowInfo* info )
 
 	FT_ASSERT( window && "Failed to create window" );
 
-	SDL_SetWindowOpacity( window, 0.1f );
 	struct Window result = {};
 	result.handle        = window;
 
@@ -67,6 +66,18 @@ destroy_window( struct Window* window )
 
 void
 window_get_size( const struct Window* window, u32* width, u32* height )
+{
+	SDL_Window* handle = ( SDL_Window* ) ( window->handle );
+	i32         w, h;
+	
+	SDL_GetWindowSize(handle, &w, &h);
+
+	*width  = ( u32 ) w;
+	*height = ( u32 ) h;
+}
+
+void
+window_get_framebuffer_size( const struct Window* window, u32* width, u32* height )
 {
 	SDL_Window* handle = ( SDL_Window* ) ( window->handle );
 	i32         w, h;

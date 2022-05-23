@@ -33,6 +33,10 @@ extern "C"
 
 	void
 	window_get_size( const struct Window* window, u32* width, u32* height );
+	
+	void
+	window_get_framebuffer_size( const struct Window* window, u32* width, u32* height );
+	
 	u32
 	window_get_width( const struct Window* window );
 	u32
