@@ -11,7 +11,6 @@
 #include "wsi/wsi.h"
 #include "os/input.h"
 #include "renderer/backend/renderer_backend.h"
-#include "renderer/resource_loader/resource_loader.h"
 #include "string.h"
 
 NK_API struct nk_context *

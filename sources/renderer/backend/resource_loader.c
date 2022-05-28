@@ -1,4 +1,4 @@
-#include "resource_loader.h"
+#include "renderer_backend.h"
 
 struct StagingBuffer
 {
@@ -14,6 +14,7 @@ struct ResourceLoader
 	struct CommandBuffer* cmd;
 	b32                   is_recording;
 	struct StagingBuffer  staging_buffer;
+	u64                   last_batch_write_size;
 };
 
 static struct ResourceLoader loader;
@@ -31,6 +32,7 @@ resource_loader_init( const struct Device* device, u64 staging_buffer_size )
 	loader.device                = device;
 	loader.is_recording          = 0;
 	loader.staging_buffer.offset = 0;
+	loader.last_batch_write_size = 0;
 
 	struct QueueInfo queue_info = {
 		.queue_type = FT_QUEUE_TYPE_GRAPHICS,
@@ -43,8 +45,9 @@ resource_loader_init( const struct Device* device, u64 staging_buffer_size )
 	create_command_buffers( device, loader.command_pool, 1, &loader.cmd );
 
 	struct BufferInfo staging_buffer_info = {
-		.memory_usage = FT_MEMORY_USAGE_CPU_TO_GPU,
-		.size         = staging_buffer_size,
+		.memory_usage    = FT_MEMORY_USAGE_CPU_TO_GPU,
+		.size            = staging_buffer_size,
+		.descriptor_type = 0,
 	};
 	loader.staging_buffer.offset = 0;
 	create_buffer( device,
@@ -99,6 +102,11 @@ upload_buffer( struct Buffer* buffer, u64 offset, u64 size, const void* data )
 		{
 			end_command_buffer( loader.cmd );
 			immediate_submit( loader.queue, loader.cmd );
+			loader.staging_buffer.offset -= size;
+		}
+		else
+		{
+			loader.last_batch_write_size += size;
 		}
 	}
 	else
@@ -109,40 +117,11 @@ upload_buffer( struct Buffer* buffer, u64 offset, u64 size, const void* data )
 	}
 }
 
-void*
-begin_upload_buffer( struct Buffer* buffer )
-{
-	FT_ASSERT( buffer );
-	if ( need_staging( buffer ) )
-	{
-		// TODO:
-		return NULL;
-	}
-	else
-	{
-		map_memory( loader.device, buffer );
-		return buffer->mapped_memory;
-	}
-}
-
-void
-end_upload_buffer( struct Buffer* buffer )
-{
-	FT_ASSERT( buffer );
-	if ( need_staging( buffer ) )
-	{
-		// TODO:
-	}
-	else
-	{
-		unmap_memory( loader.device, buffer );
-	}
-}
-
 void
 upload_image( struct Image* image, u64 size, const void* data )
 {
-	FT_ASSERT( loader.staging_buffer.offset + size <= loader.staging_buffer.buffer->size );
+	FT_ASSERT( loader.staging_buffer.offset + size <=
+	           loader.staging_buffer.buffer->size );
 
 	memcpy( ( u8* ) loader.staging_buffer.buffer->mapped_memory +
 	            loader.staging_buffer.offset,
@@ -176,26 +155,27 @@ upload_image( struct Image* image, u64 size, const void* data )
 	{
 		end_command_buffer( loader.cmd );
 		immediate_submit( loader.queue, loader.cmd );
+		loader.staging_buffer.offset -= size;
+	}
+	else
+	{
+		loader.last_batch_write_size += size;
 	}
 }
 
 void
-reset_staging_buffer()
-{
-	loader.staging_buffer.offset = 0;
-}
-
-void
-resource_loader_begin_recording()
+begin_upload_batch()
 {
 	begin_command_buffer( loader.cmd );
 	loader.is_recording = 1;
 }
 
 void
-resource_loader_end_recording()
+end_upload_batch()
 {
 	loader.is_recording = 0;
+	loader.staging_buffer.offset -= loader.last_batch_write_size;
+	loader.last_batch_write_size = 0;
 	end_command_buffer( loader.cmd );
 	immediate_submit( loader.queue, loader.cmd );
 }

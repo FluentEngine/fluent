@@ -1,4 +1,4 @@
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 #define NK_IMPLEMENTATION
 #include "ft_nuklear.h"

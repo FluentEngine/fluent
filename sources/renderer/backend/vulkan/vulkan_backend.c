@@ -1650,8 +1650,7 @@ vk_create_configured_swapchain( const struct VulkanDevice* device,
 	if ( !resize )
 	{
 		swapchain->interface.images =
-		    ( struct Image** ) ( calloc( swapchain->interface.image_count,
-		                                 sizeof( struct Image* ) ) );
+		    calloc( swapchain->interface.image_count, sizeof( struct Image* ) );
 	}
 
 	VkImageViewCreateInfo image_view_create_info = {};
@@ -2971,9 +2970,8 @@ vk_update_descriptor_set( const struct Device*          idevice,
 		if ( descriptor_write->buffer_descriptors )
 		{
 			VkDescriptorBufferInfo* buffer_infos =
-			    ( VkDescriptorBufferInfo* ) calloc(
-			        sizeof( VkDescriptorBufferInfo ),
-			        descriptor_write->descriptor_count );
+			    calloc( sizeof( VkDescriptorBufferInfo ),
+			            descriptor_write->descriptor_count );
 			buffer_updates[ buffer_update_idx++ ] = buffer_infos;
 
 			for ( u32 j = 0; j < descriptor_write->descriptor_count; ++j )
@@ -2994,9 +2992,8 @@ vk_update_descriptor_set( const struct Device*          idevice,
 		else if ( descriptor_write->image_descriptors )
 		{
 			VkDescriptorImageInfo* image_infos =
-			    ( VkDescriptorImageInfo* ) calloc(
-			        sizeof( VkDescriptorImageInfo ),
-			        descriptor_write->descriptor_count );
+			    calloc( sizeof( VkDescriptorImageInfo ),
+			            descriptor_write->descriptor_count );
 			image_updates[ image_update_idx++ ] = image_infos;
 
 			for ( u32 j = 0; j < descriptor_write->descriptor_count; ++j )
@@ -3019,9 +3016,8 @@ vk_update_descriptor_set( const struct Device*          idevice,
 		else
 		{
 			VkDescriptorImageInfo* image_infos =
-			    ( VkDescriptorImageInfo* ) calloc(
-			        sizeof( VkDescriptorImageInfo ),
-			        descriptor_write->descriptor_count );
+			    calloc( sizeof( VkDescriptorImageInfo ),
+			            descriptor_write->descriptor_count );
 			image_updates[ image_update_idx++ ] = image_infos;
 
 			for ( u32 j = 0; j < descriptor_write->descriptor_count; ++j )
@@ -3621,7 +3617,7 @@ vk_create_renderer_backend( const struct RendererBackendInfo* info,
 	const char** layers = NULL;
 	if ( layer_count != 0 )
 	{
-		layers = ( const char** ) malloc( sizeof( const char* ) * layer_count );
+		layers = malloc( sizeof( const char* ) * layer_count );
 		get_instance_layers( &layer_count, layers );
 	}
 

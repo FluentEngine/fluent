@@ -67,6 +67,13 @@ cmd_push_constants_fun            cmd_push_constants_impl;
 cmd_clear_color_image_fun         cmd_clear_color_image_impl;
 cmd_draw_indexed_indirect_fun     cmd_draw_indexed_indirect_impl;
 
+// defined in resource_loader.c
+void
+resource_loader_init( const struct Device* device, u64 staging_buffer_size );
+
+void
+resource_loader_shutdown();
+
 void
 create_renderer_backend( const struct RendererBackendInfo* info,
                          struct RendererBackend**          backend )
@@ -121,13 +128,15 @@ create_device( const struct RendererBackend* backend,
 	FT_ASSERT( device );
 
 	create_device_impl( backend, info, device );
+	resource_loader_init( *device, RESOURCE_LOADER_STAGING_BUFFER_SIZE );
 }
 
 void
 destroy_device( struct Device* device )
 {
 	FT_ASSERT( device );
-
+	
+	resource_loader_shutdown();
 	destroy_device_impl( device );
 }
 

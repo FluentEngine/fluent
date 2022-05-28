@@ -7,26 +7,26 @@
 
 #undef MemoryBarrier
 
-#define MAX_DEVICE_COUNT             1
-#define MAX_ATTACHMENTS_COUNT        10
-#define MAX_PUSH_CONSTANT_RANGE      128
-#define MAX_VERTEX_BINDING_COUNT     15
-#define MAX_VERTEX_ATTRIBUTE_COUNT   15
-#define MAX_DESCRIPTOR_BINDING_COUNT 15
-#define MAX_SET_COUNT                10
+#define MAX_DEVICE_COUNT                    1
+#define MAX_ATTACHMENTS_COUNT               10
+#define MAX_PUSH_CONSTANT_RANGE             128
+#define MAX_VERTEX_BINDING_COUNT            15
+#define MAX_VERTEX_ATTRIBUTE_COUNT          15
+#define MAX_DESCRIPTOR_BINDING_COUNT        15
+#define MAX_SET_COUNT                       10
+#define RESOURCE_LOADER_STAGING_BUFFER_SIZE 25 * 1024 * 1024 * 8
 
 #define FT_INIT_INTERNAL( name, ptr, type )                                    \
-	struct type* name = ( struct type* ) calloc( 1, sizeof( struct type ) );   \
+	struct type* name      = calloc( 1, sizeof( struct type ) );               \
 	name->interface.handle = name;                                             \
 	ptr                    = &name->interface
 
 #define FT_FROM_HANDLE( name, interface, impl )                                \
-	struct impl* name = ( struct impl* ) interface->handle
+	struct impl* name = interface->handle
 
 #define DECLARE_FUNCTION_POINTER( ret, name, ... )                             \
 	typedef ret ( *name##_fun )( __VA_ARGS__ );                                \
 	extern name##_fun name##_impl
-
 
 #ifdef __cplusplus
 extern "C"
@@ -737,6 +737,22 @@ extern "C"
 	                       struct DescriptorSet*         set,
 	                       u32                           count,
 	                       const struct DescriptorWrite* writes );
+
+	void
+	begin_upload_batch( void );
+
+	void
+	end_upload_batch( void );
+
+	void
+	upload_buffer( struct Buffer* buffer,
+	               u64            offset,
+	               u64            size,
+	               const void*    data );
+
+	void
+	upload_image( struct Image* image, u64 size, const void* data );
+
 #ifdef __cplusplus
 }
 #endif

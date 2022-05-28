@@ -26,13 +26,13 @@ typedef int      b32;
 #ifdef FLUENT_DEBUG
 #define FT_ASSERT( x ) assert( x )
 #else
-#define FT_ASSERT( x )
+#define FT_ASSERT( x ) ( void ) ( x )
 #endif
 
 #define ALLOC_STACK_ARRAY( T, NAME, COUNT )                                    \
-	T* NAME = ( T* ) alloca( sizeof( T ) * COUNT )
+	T* NAME = alloca( sizeof( T ) * COUNT )
 
 #define ALLOC_HEAP_ARRAY( T, NAME, COUNT )                                     \
-	T* NAME = ( T* ) calloc( sizeof( T ), COUNT )
+	T* NAME = calloc( sizeof( T ), COUNT )
 
 #define FT_UNUSED( X ) ( void ) ( X )

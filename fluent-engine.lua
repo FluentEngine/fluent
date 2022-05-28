@@ -103,13 +103,13 @@ project "ft_renderer"
 	declare_backend_defines()
 	
     includedirs {
+		sdl_include_dir,
         "sources",
         "sources/third_party"
     }
 	
 	backend_dir = "sources/renderer/backend/"
 	nuklear_dir = "sources/renderer/nuklear/"
-	resource_loader_dir = "sources/renderer/resource_loader/"
 	shader_reflection_dir = "sources/renderer/shader_reflection/"
 	
     files {
@@ -117,12 +117,11 @@ project "ft_renderer"
 		backend_dir .. "renderer_backend.h",
 		backend_dir .. "renderer_enums.h",
 		backend_dir .. "renderer_private.h",
+		backend_dir .. "resource_loader.c",
 		backend_dir .. "vulkan/vulkan_backend.c",
 		backend_dir .. "vulkan/vulkan_backend.h",
 		nuklear_dir .. "ft_nuklear.h",
 		nuklear_dir .. "ft_nuklear.c",
-		resource_loader_dir .. "resource_loader.c",
-		resource_loader_dir .. "resource_loader.h",
 		shader_reflection_dir .. "shader_reflection.h",
 		shader_reflection_dir .. "vulkan_reflection.c"
     }
