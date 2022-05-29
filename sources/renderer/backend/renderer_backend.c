@@ -609,7 +609,7 @@ cmd_bind_index_buffer_u32( const struct CommandBuffer* cmd,
 {
 	FT_ASSERT( cmd );
 	FT_ASSERT( buffer );
-	FT_ASSERT( offset < buffer->size );
+	FT_ASSERT( offset <= buffer->size );
 
 	cmd_bind_index_buffer_u32_impl( cmd, buffer, offset );
 }
@@ -625,7 +625,7 @@ cmd_copy_buffer( const struct CommandBuffer* cmd,
 	FT_ASSERT( cmd );
 	FT_ASSERT( src );
 	FT_ASSERT( dst );
-	FT_ASSERT( dst_offset + size < dst->size );
+	FT_ASSERT( dst_offset + size <= dst->size );
 
 	cmd_copy_buffer_impl( cmd, src, src_offset, dst, dst_offset, size );
 }
