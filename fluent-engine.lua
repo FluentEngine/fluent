@@ -7,6 +7,7 @@ end
 include(root_directory .. "/deps/SDL/sdl2.lua")
 include("sources/third_party/hashmap_c/premake5.lua")
 include("sources/third_party/spirv_reflect/premake5.lua")
+include("sources/third_party/cgltf/premake5.lua")
 include("sources/third_party/tiny_image_format/premake5.lua")
 include("sources/third_party/vk_mem_alloc/premake5.lua")
 include("sources/third_party/volk/premake5.lua")
@@ -111,6 +112,7 @@ project "ft_renderer"
 	backend_dir = "sources/renderer/backend/"
 	nuklear_dir = "sources/renderer/nuklear/"
 	shader_reflection_dir = "sources/renderer/shader_reflection/"
+	scene_dir = "sources/renderer/scene/"
 	
     files {
 		backend_dir .. "renderer_backend.c",
@@ -123,5 +125,7 @@ project "ft_renderer"
 		nuklear_dir .. "ft_nuklear.h",
 		nuklear_dir .. "ft_nuklear.c",
 		shader_reflection_dir .. "shader_reflection.h",
-		shader_reflection_dir .. "vulkan_reflection.c"
+		shader_reflection_dir .. "vulkan_reflection.c",
+		scene_dir .. "model_loader.h",
+		scene_dir .. "model_loader.c"
     }
