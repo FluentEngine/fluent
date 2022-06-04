@@ -132,6 +132,8 @@ project "ft_renderer"
 		backend_dir .. "resource_loader.c",
 		backend_dir .. "vulkan/vulkan_backend.c",
 		backend_dir .. "vulkan/vulkan_backend.h",
+		backend_dir .. "d3d12/d3d12_backend.c",
+		backend_dir .. "d3d12/d3d12_backend.h",
 		nuklear_dir .. "ft_nuklear.h",
 		nuklear_dir .. "ft_nuklear.c",
 		shader_reflection_dir .. "shader_reflection.h",
@@ -139,3 +141,33 @@ project "ft_renderer"
 		scene_dir .. "model_loader.h",
 		scene_dir .. "model_loader.c"
     }
+
+	fluent_engine = {}
+
+	fluent_engine.link = function()
+		links {
+			"hashmap_c",
+			"cgltf",
+			"spirv_reflect",
+			"tiny_image_format",
+			"sdl2",
+			"stb"
+		}
+
+		if (renderer_backend_vulkan) then
+			links
+			{
+				"vk_mem_alloc",
+				"volk",
+			}
+		end
+
+		if (renderer_backend_d3d12) then
+			links
+			{
+				"d3d12", 
+				"dxgi",
+				"dxguid",
+			}
+		end
+	end
