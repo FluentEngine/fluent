@@ -5,7 +5,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
+#ifndef _WIN32
 #include <alloca.h>
+#else
+#include <malloc.h>
+#endif
 
 typedef int8_t   i8;
 typedef uint8_t  u8;

@@ -81,7 +81,7 @@ create_renderer_backend( const struct RendererBackendInfo* info,
 	FT_ASSERT( info );
 	FT_ASSERT( info->wsi_info );
 	FT_ASSERT( backend );
-	
+
 	switch ( info->api )
 	{
 #ifdef VULKAN_BACKEND
@@ -135,7 +135,7 @@ void
 destroy_device( struct Device* device )
 {
 	FT_ASSERT( device );
-	
+
 	resource_loader_shutdown();
 	destroy_device_impl( device );
 }

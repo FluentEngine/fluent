@@ -1,6 +1,6 @@
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #ifdef VULKAN_BACKEND
-#include <SDL2/SDL_vulkan.h>
+#include <SDL_vulkan.h>
 #endif
 #include "wsi/wsi.h"
 #include "window.h"
@@ -22,7 +22,7 @@ struct ApplicationState
 	ShutdownCallback on_shutdown;
 	ResizeCallback   on_resize;
 	f32              delta_time;
-	struct WsiInfo          wsi_info;
+	struct WsiInfo   wsi_info;
 	const char*      extensions[ MAX_INSTANCE_EXTENSION_COUNT ];
 };
 
@@ -41,13 +41,13 @@ ft_create_vulkan_surface( void* window, void* instance, void** p )
 }
 
 static void
-ft_window_get_size( void* window, u32* width, u32* height)
+ft_window_get_size( void* window, u32* width, u32* height )
 {
 	window_get_size( ( struct Window* ) window, width, height );
 }
 
 static void
-ft_window_get_framebuffer_size( void* window, u32* width, u32* height)
+ft_window_get_framebuffer_size( void* window, u32* width, u32* height )
 {
 	window_get_framebuffer_size( ( struct Window* ) window, width, height );
 }
@@ -70,7 +70,7 @@ app_init( const struct ApplicationConfig* config )
 	app_state.on_resize   = config->on_resize;
 
 	struct WsiInfo* wsi_info = &app_state.wsi_info;
-	wsi_info->window  = &app_state.window;
+	wsi_info->window         = &app_state.window;
 #ifdef VULKAN_BACKEND
 	SDL_Vulkan_GetInstanceExtensions(
 	    ( SDL_Window* ) app_state.window.handle,
@@ -83,7 +83,7 @@ app_init( const struct ApplicationConfig* config )
 	wsi_info->vulkan_instance_extensions = app_state.extensions;
 	wsi_info->create_vulkan_surface      = ft_create_vulkan_surface;
 #endif
-	wsi_info->get_window_size = ft_window_get_size;
+	wsi_info->get_window_size      = ft_window_get_size;
 	wsi_info->get_framebuffer_size = ft_window_get_framebuffer_size;
 
 	log_init( FT_INFO );

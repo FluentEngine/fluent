@@ -4,7 +4,8 @@ project "vk_mem_alloc"
 
     includedirs {
         ".",
-        "../"
+        "../",
+        vulkan_include_directory
     }
 
     files {

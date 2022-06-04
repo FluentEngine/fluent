@@ -4,14 +4,6 @@ then
     os.execute("git clone " .. sdl_repo )
 end
 
-include(root_directory .. "/deps/SDL/sdl2.lua")
-include("sources/third_party/hashmap_c/premake5.lua")
-include("sources/third_party/spirv_reflect/premake5.lua")
-include("sources/third_party/cgltf/premake5.lua")
-include("sources/third_party/tiny_image_format/premake5.lua")
-include("sources/third_party/vk_mem_alloc/premake5.lua")
-include("sources/third_party/volk/premake5.lua")
-
 local commons = {}
 commons.opts = function()
 	filter { "configurations:debug" }
@@ -30,7 +22,15 @@ end
 -- renderer
 -- todo: option
 sdl_include_dir = root_directory .. "/deps/SDL/include"
-vulkan_include_directory = os.findheader("vulkan.h")
+vulkan_include_directory = os.findheader("vulkan/vulkan.h")
+
+if (os.host() == "windows") then
+	local vk_sdk = os.getenv("VULKAN_SDK")
+
+	if (vk_sdk ~= nil) then
+		vulkan_include_directory = vk_sdk .. "/Include"
+	end
+end
 
 renderer_backend_vulkan = true
 renderer_backend_d3d12 = false
@@ -53,6 +53,15 @@ function declare_backend_defines()
 		buildoptions( "-fobjc-arc", "-fobjc-weak", "-fmodules")
 	end
 end
+
+include(root_directory .. "/deps/SDL/sdl2.lua")
+include("sources/third_party/hashmap_c/premake5.lua")
+include("sources/third_party/spirv_reflect/premake5.lua")
+include("sources/third_party/cgltf/premake5.lua")
+include("sources/third_party/tiny_image_format/premake5.lua")
+include("sources/third_party/vk_mem_alloc/premake5.lua")
+include("sources/third_party/volk/premake5.lua")
+include("sources/third_party/stb/premake5.lua")
 
 project "ft_log"
 	kind "StaticLib"
@@ -105,6 +114,7 @@ project "ft_renderer"
 	
     includedirs {
 		sdl_include_dir,
+		vulkan_include_directory,
         "sources",
         "sources/third_party"
     }

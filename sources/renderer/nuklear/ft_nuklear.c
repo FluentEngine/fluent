@@ -112,7 +112,7 @@ prepare_pipeline( struct nk_vulkan_adapter *adapter )
 {
 	struct Shader *shader;
 
-	struct ShaderInfo shader_info      = {};
+	struct ShaderInfo shader_info      = { 0 };
 	shader_info.vertex.bytecode        = nuklear_vert;
 	shader_info.vertex.bytecode_size   = sizeof( nuklear_vert );
 	shader_info.fragment.bytecode      = nuklear_frag;
@@ -126,7 +126,7 @@ prepare_pipeline( struct nk_vulkan_adapter *adapter )
 	};
 	create_descriptor_set( adapter->device, &set_info, &adapter->set );
 
-	struct PipelineInfo pipeline_info   = {};
+	struct PipelineInfo pipeline_info   = { 0 };
 	pipeline_info.shader                = shader;
 	pipeline_info.descriptor_set_layout = adapter->dsl;
 	pipeline_info.topology              = FT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -188,7 +188,7 @@ nk_ft_device_create( struct Device *device,
 	adapter->color_format = color_format;
 	adapter->depth_format = depth_format;
 
-	struct BufferInfo buffer_info = {};
+	struct BufferInfo buffer_info = { 0 };
 	buffer_info.memory_usage      = FT_MEMORY_USAGE_CPU_TO_GPU;
 	buffer_info.descriptor_type   = FT_DESCRIPTOR_TYPE_VERTEX_BUFFER;
 	buffer_info.size              = MAX_VERTEX_BUFFER;
@@ -304,11 +304,11 @@ nk_ft_new_frame()
 	struct nk_context *ctx = &ft.ctx;
 
 	struct WsiInfo *wsi = ft.wsi;
-	void           *win = wsi->window;
+	void	       *win = wsi->window;
 	wsi->get_window_size( win, &ft.width, &ft.height );
 	wsi->get_framebuffer_size( win, &ft.display_width, &ft.display_height );
 
-	ft.fb_scale.x = ( f32 ) (ft.display_width /  ft.width);
+	ft.fb_scale.x = ( f32 ) ( ft.display_width / ft.width );
 	ft.fb_scale.y = ( f32 ) ( ft.display_height / ft.height );
 
 	nk_input_begin( ctx );
@@ -385,7 +385,7 @@ nk_ft_new_frame()
 	                 ( i32 ) ft.double_click_pos.x,
 	                 ( i32 ) ft.double_click_pos.y,
 	                 ft.is_double_click_down );
-	                 
+
 	nk_input_scroll( ctx, ft.scroll );
 
 	nk_input_end( &ft.ctx );
@@ -487,7 +487,7 @@ nk_ft_render( const struct CommandBuffer *cmd, enum nk_anti_aliasing AA )
 			    MAX( ( i32 ) ( draw_cmd->clip_rect.y * ft.fb_scale.y ), 0 ),
 			    ( u32 ) ( draw_cmd->clip_rect.w * ft.fb_scale.x ),
 			    ( u32 ) ( draw_cmd->clip_rect.h * ft.fb_scale.y ) );
-			    
+
 			cmd_draw_indexed( cmd,
 			                  draw_cmd->elem_count,
 			                  1,

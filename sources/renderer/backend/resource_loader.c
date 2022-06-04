@@ -134,7 +134,7 @@ upload_image( struct Image* image, u64 size, const void* data )
 		begin_command_buffer( loader.cmd );
 	}
 
-	struct ImageBarrier barrier = {};
+	struct ImageBarrier barrier = { 0 };
 	barrier.image               = image;
 	barrier.old_state           = FT_RESOURCE_STATE_UNDEFINED;
 	barrier.new_state           = FT_RESOURCE_STATE_TRANSFER_DST;

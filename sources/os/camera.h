@@ -33,11 +33,11 @@ struct Camera
 	f32 yaw;
 	f32 pitch;
 
-	vec3 position;
-	vec3 direction;
-	vec3 up;
-	vec3 world_up;
-	vec3 right;
+	vec3   position;
+	vec3   direction;
+	vec3   up;
+	vec3   world_up;
+	vec3   right;
 	mat4x4 projection;
 	mat4x4 view;
 
@@ -49,7 +49,9 @@ void
 camera_init( struct Camera*, const struct CameraInfo* info );
 
 void
-camera_on_move( struct Camera*, enum CameraDirection direction, f32 delta_time );
+camera_on_move( struct Camera*,
+                enum CameraDirection direction,
+                f32                  delta_time );
 
 void
 camera_on_rotate( struct Camera*, f32 x_offset, f32 y_offset );
