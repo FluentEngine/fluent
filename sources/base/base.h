@@ -22,6 +22,7 @@ typedef uint64_t u64;
 typedef float    f32;
 typedef double   f64;
 typedef int      b32;
+typedef void*    ft_handle;
 
 #ifdef FLUENT_DEBUG
 #undef NDEBUG
@@ -32,6 +33,10 @@ typedef int      b32;
 #else
 #define FT_ASSERT( x ) ( void ) ( x )
 #endif
+
+#define DECLARE_FUNCTION_POINTER( ret, name, ... )                             \
+	typedef ret ( *name##_fun )( __VA_ARGS__ );                                \
+	extern name##_fun name##_impl
 
 #define ALLOC_STACK_ARRAY( T, NAME, COUNT )                                    \
 	T* NAME = alloca( sizeof( T ) * COUNT )

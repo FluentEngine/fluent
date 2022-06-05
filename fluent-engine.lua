@@ -69,11 +69,13 @@ project "ft_log"
 	
 	commons.opts()
 	
-	includedirs {
+	includedirs 
+	{
 		"sources"
 	}
 
-	files {
+	files 
+	{
 		"sources/log/log.h",
 		"sources/log/log.c"
 	}
@@ -86,12 +88,14 @@ project "ft_os"
 
 	declare_backend_defines()
 	
-    includedirs {
+    includedirs 
+    {
 		sdl_include_dir,
         "sources",
     }
 
-    files {
+    files 
+    {
         "sources/os/application.c", 
         "sources/os/application.h",
         "sources/os/camera.h",
@@ -112,7 +116,8 @@ project "ft_renderer"
 	
 	declare_backend_defines()
 	
-    includedirs {
+    includedirs 
+    {
 		sdl_include_dir,
 		vulkan_include_directory,
         "sources",
@@ -120,26 +125,33 @@ project "ft_renderer"
     }
 	
 	backend_dir = "sources/renderer/backend/"
+	rg_dir = "sources/renderer/render_graph/"
 	nuklear_dir = "sources/renderer/nuklear/"
 	shader_reflection_dir = "sources/renderer/shader_reflection/"
 	scene_dir = "sources/renderer/scene/"
 	
-    files {
-		backend_dir .. "renderer_backend.c",
-		backend_dir .. "renderer_backend.h",
-		backend_dir .. "renderer_enums.h",
-		backend_dir .. "renderer_private.h",
-		backend_dir .. "resource_loader.c",
-		backend_dir .. "vulkan/vulkan_backend.c",
-		backend_dir .. "vulkan/vulkan_backend.h",
-		backend_dir .. "d3d12/d3d12_backend.c",
-		backend_dir .. "d3d12/d3d12_backend.h",
-		nuklear_dir .. "ft_nuklear.h",
-		nuklear_dir .. "ft_nuklear.c",
-		shader_reflection_dir .. "shader_reflection.h",
-		shader_reflection_dir .. "vulkan_reflection.c",
-		scene_dir .. "model_loader.h",
-		scene_dir .. "model_loader.c"
+    files 
+    {
+		path.join(backend_dir, "renderer_backend.c"),
+		path.join(backend_dir, "renderer_backend.h"),
+		path.join(backend_dir, "renderer_enums.h"),
+		path.join(backend_dir, "renderer_private.h"),
+		path.join(backend_dir, "resource_loader.c"),
+		path.join(backend_dir, "vulkan/vulkan_backend.c"),
+		path.join(backend_dir, "vulkan/vulkan_backend.h"),
+		path.join(backend_dir, "d3d12/d3d12_backend.c"),
+		path.join(backend_dir, "d3d12/d3d12_backend.h"),
+		path.join(rg_dir, "render_graph.h"),
+		path.join(rg_dir, "render_graph.c"),
+		path.join(rg_dir, "render_graph_private.h"),
+		path.join(rg_dir, "vulkan_graph.c"),
+		path.join(rg_dir, "vulkan_graph.h"),
+		path.join(nuklear_dir, "ft_nuklear.h"),
+		path.join(nuklear_dir, "ft_nuklear.c"),
+		path.join(shader_reflection_dir, "shader_reflection.h"),
+		path.join(shader_reflection_dir, "vulkan_reflection.c"),
+		path.join(scene_dir, "model_loader.h"),
+		path.join(scene_dir, "model_loader.c")
     }
 
 	fluent_engine = {}

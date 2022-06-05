@@ -24,10 +24,6 @@
 #define FT_FROM_HANDLE( name, interface, impl )                                \
 	struct impl* name = interface->handle
 
-#define DECLARE_FUNCTION_POINTER( ret, name, ... )                             \
-	typedef ret ( *name##_fun )( __VA_ARGS__ );                                \
-	extern name##_fun name##_impl
-
 #ifdef __cplusplus
 extern "C"
 {
@@ -44,8 +40,6 @@ extern "C"
 	struct CommandBuffer;
 	struct CommandPool;
 
-	typedef void* Handle;
-
 	struct RendererBackendInfo
 	{
 		enum RendererAPI api;
@@ -55,7 +49,7 @@ extern "C"
 	struct RendererBackend
 	{
 		enum RendererAPI api;
-		Handle           handle;
+		ft_handle        handle;
 	};
 
 	struct DeviceInfo
@@ -66,7 +60,7 @@ extern "C"
 	struct Device
 	{
 		enum RendererAPI api;
-		Handle           handle;
+		ft_handle        handle;
 	};
 
 	struct CommandPoolInfo
@@ -77,13 +71,13 @@ extern "C"
 	struct CommandPool
 	{
 		struct Queue* queue;
-		Handle        handle;
+		ft_handle     handle;
 	};
 
 	struct CommandBuffer
 	{
 		struct Queue* queue;
-		Handle        handle;
+		ft_handle     handle;
 	};
 
 	struct QueueInfo
@@ -95,17 +89,17 @@ extern "C"
 	{
 		u32            family_index;
 		enum QueueType type;
-		Handle         handle;
+		ft_handle      handle;
 	};
 
 	struct Semaphore
 	{
-		Handle handle;
+		ft_handle handle;
 	};
 
 	struct Fence
 	{
-		Handle handle;
+		ft_handle handle;
 	};
 
 	struct SamplerInfo
@@ -127,7 +121,7 @@ extern "C"
 
 	struct Sampler
 	{
-		Handle handle;
+		ft_handle handle;
 	};
 
 	struct ImageInfo
@@ -152,7 +146,7 @@ extern "C"
 		u32                 mip_level_count;
 		u32                 layer_count;
 		enum DescriptorType descriptor_type;
-		Handle              handle;
+		ft_handle           handle;
 	};
 
 	struct BufferInfo
@@ -169,7 +163,7 @@ extern "C"
 		enum DescriptorType descriptor_type;
 		enum MemoryUsage    memory_usage;
 		void*               mapped_memory;
-		Handle              handle;
+		ft_handle           handle;
 	};
 
 	struct SwapchainInfo
@@ -193,7 +187,7 @@ extern "C"
 		struct Image** images;
 		struct Queue*  queue;
 		b32            vsync;
-		Handle         handle;
+		ft_handle      handle;
 	};
 
 	struct QueueSubmitInfo
@@ -290,13 +284,13 @@ extern "C"
 	struct Shader
 	{
 		ReflectionData reflect_data;
-		Handle         handle;
+		ft_handle      handle;
 	};
 
 	struct DescriptorSetLayout
 	{
 		ReflectionData reflection_data;
-		Handle         handle;
+		ft_handle      handle;
 	};
 
 	struct VertexBindingInfo
@@ -365,7 +359,7 @@ extern "C"
 	struct Pipeline
 	{
 		enum PipelineType type;
-		Handle            handle;
+		ft_handle         handle;
 	};
 
 	struct DescriptorSetInfo
@@ -377,7 +371,7 @@ extern "C"
 	struct DescriptorSet
 	{
 		struct DescriptorSetLayout* layout;
-		Handle                      handle;
+		ft_handle                   handle;
 	};
 
 	struct BufferDescriptor
