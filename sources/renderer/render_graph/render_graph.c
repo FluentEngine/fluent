@@ -9,6 +9,32 @@ rg_build_fun             rg_build_impl;
 rg_setup_attachments_fun rg_setup_attachments_impl;
 rg_execute_fun           rg_execute_impl;
 
+static b32
+compare_name_to_index( const void* a, const void* b, void* udata )
+{
+	const struct NameToIndex* na = a;
+	const struct NameToIndex* nb = b;
+	return strcmp(na->name, nb->name);
+}
+
+static u64
+hash_name_to_index( const void* item, u64 seed0, u64 seed1 )
+{
+	return 0;
+}
+
+struct hashmap* create_name_to_index_map()
+{
+	return  hashmap_new( sizeof( struct NameToIndex ),
+	                                       0,
+	                                       0,
+	                                       0,
+	                                       hash_name_to_index,
+	                                       compare_name_to_index,
+	                                       NULL,
+	                                       NULL );
+}
+
 void
 rg_create( const struct Device* device, struct RenderGraph** graph )
 {

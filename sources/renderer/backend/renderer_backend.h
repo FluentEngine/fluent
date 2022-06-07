@@ -229,11 +229,11 @@ extern "C"
 		u32                  width;
 		u32                  height;
 		u32                  color_attachment_count;
-		struct Image*        color_attachments[ MAX_ATTACHMENTS_COUNT ];
+		const struct Image*  color_attachments[ MAX_ATTACHMENTS_COUNT ];
 		enum AttachmentLoadOp
-		                   color_attachment_load_ops[ MAX_ATTACHMENTS_COUNT ];
-		enum ResourceState color_image_states[ MAX_ATTACHMENTS_COUNT ];
-		struct Image*      depth_stencil;
+		                    color_attachment_load_ops[ MAX_ATTACHMENTS_COUNT ];
+		enum ResourceState  color_image_states[ MAX_ATTACHMENTS_COUNT ];
+		const struct Image* depth_stencil;
 		enum AttachmentLoadOp depth_stencil_load_op;
 		enum ResourceState    depth_stencil_state;
 		struct ClearValue     clear_values[ MAX_ATTACHMENTS_COUNT + 1 ];

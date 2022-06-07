@@ -146,6 +146,8 @@ project "ft_renderer"
 		path.join(rg_dir, "render_graph_private.h"),
 		path.join(rg_dir, "vulkan_graph.c"),
 		path.join(rg_dir, "vulkan_graph.h"),
+		path.join(rg_dir, "vulkan_pass_hasher.c"),
+		path.join(rg_dir, "vulkan_pass_hasher.h"),
 		path.join(nuklear_dir, "ft_nuklear.h"),
 		path.join(nuklear_dir, "ft_nuklear.c"),
 		path.join(shader_reflection_dir, "shader_reflection.h"),

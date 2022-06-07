@@ -2,6 +2,14 @@
 
 #include "render_graph.h"
 
+struct NameToIndex
+{
+	const char* name;
+	u32         idx;
+};
+
+struct hashmap* create_name_to_index_map();
+
 DECLARE_FUNCTION_POINTER( void, rg_destroy, struct RenderGraph* );
 
 DECLARE_FUNCTION_POINTER( struct RenderGraphPass*,
