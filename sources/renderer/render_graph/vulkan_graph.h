@@ -24,6 +24,12 @@ struct VulkanGraphPass
 	struct RenderGraphPass interface;
 };
 
+struct VulkanPassInfo
+{
+	VkRenderPassCreateInfo  pass_info;
+	VkFramebufferCreateInfo framebuffer_info;
+};
+
 struct VulkanGraph
 {
 	const struct VulkanDevice* device;
@@ -39,8 +45,8 @@ struct VulkanGraph
 	u32                      pass_capacity;
 	struct VulkanGraphPass** passes;
 
-	u32                         physical_pass_count;
-	struct VulkanPassInfo*      physical_passes;
+	u32                            physical_pass_count;
+	struct VulkanPassInfo*         physical_passes;
 
 	struct VulkanPassHasher pass_hasher;
 
