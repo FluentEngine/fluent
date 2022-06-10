@@ -108,68 +108,58 @@ vk_rg_execute( struct RenderGraph* igraph, struct CommandBuffer* icmd )
 {
 	FT_FROM_HANDLE( graph, igraph, VulkanGraph );
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
-	
+
 	const struct Image* image = &graph->backbuffer_image->interface;
 
-	VkAttachmentDescription attachment_description = {
-		.flags          = 0,
-		.format         = to_vk_format( image->format ),
-		.samples        = to_vk_sample_count( image->sample_count ),
-		.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED,
-		.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-		.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR,
-		.storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
-		.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-	};
+	struct VulkanRenderPassInfo render_pass_info;
+	memset( &render_pass_info, 0, sizeof( struct VulkanRenderPassInfo ) );
+	render_pass_info.attachment_count    = 1;
+	VkAttachmentDescription* attachments = render_pass_info.attachments;
 
-	VkAttachmentReference attachment_ref = {
-		.attachment = 0,
-		.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-	};
+	for ( u32 i = 0; i < render_pass_info.attachment_count; ++i )
+	{
+		attachments[ i ] = ( VkAttachmentDescription ) {
+			.flags          = 0,
+			.format         = to_vk_format( image->format ),
+			.samples        = to_vk_sample_count( image->sample_count ),
+			.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED,
+			.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
+			.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		};
+	}
 
-	VkSubpassDescription subpass_description = {
-		.flags                   = 0,
-		.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS,
-		.colorAttachmentCount    = 1,
-		.pColorAttachments       = &attachment_ref,
-		.pDepthStencilAttachment = NULL,
-		.inputAttachmentCount    = 0,
-		.pInputAttachments       = NULL,
-		.preserveAttachmentCount = 0,
-		.pPreserveAttachments    = NULL,
-		.pResolveAttachments     = NULL,
-	};
+	render_pass_info.subpass_count      = 1;
+	struct VulkanSubpassInfo* subpasses = render_pass_info.subpasses;
+	for ( u32 i = 0; i < 1; ++i )
+	{
+		subpasses[ i ].color_attachment_count                      = 1;
+		subpasses[ i ].color_attachment_references[ 0 ].attachment = 0;
+		subpasses[ i ].color_attachment_references[ 0 ].layout =
+		    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		subpasses[ i ].has_depth_stencil = 0;
+	}
 
-	VkRenderPassCreateInfo render_pass_info = {
-		.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-		.pNext           = NULL,
-		.flags           = 0,
-		.attachmentCount = 1,
-		.pAttachments    = &attachment_description,
-		.subpassCount    = 1,
-		.pSubpasses      = &subpass_description,
-		.dependencyCount = 0,
-		.pDependencies   = NULL,
-	};
-	
-	VkRenderPass render_pass = vk_pass_hasher_get_render_pass(&graph->pass_hasher, &render_pass_info);
+	VkRenderPass render_pass =
+	    vk_pass_hasher_get_render_pass( &graph->pass_hasher,
+	                                    &render_pass_info );
 
-	VkFramebufferCreateInfo framebuffer_create_info = {
-		.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-		.flags           = 0,
-		.pNext           = NULL,
-		.renderPass      = render_pass,
-		.attachmentCount = 1,
-		.pAttachments    = &graph->backbuffer_image->image_view,
-		.width           = image->width,
-		.height          = image->height,
-		.layers          = 1,
+	struct VulkanFramebufferInfo framebuffer_info = {
+		.render_pass = render_pass,
+		.width = image->width,
+		.height = image->height,
+		.layers = 1,
+		.attachment_count = 1,
+		.attachments = {
+			graph->backbuffer_image->image_view,
+		},
 	};
 
 	VkFramebuffer framebuffer =
 	    vk_pass_hasher_get_framebuffer( &graph->pass_hasher,
-	                                    &framebuffer_create_info );
+	                                    &framebuffer_info );
 
 	VkClearValue clear_value = { 0 };
 
@@ -195,7 +185,7 @@ vk_rg_execute( struct RenderGraph* igraph, struct CommandBuffer* icmd )
 	vkCmdBeginRenderPass( cmd->command_buffer,
 	                      &render_pass_begin_info,
 	                      VK_SUBPASS_CONTENTS_INLINE );
-	                      
+
 	vkCmdEndRenderPass( cmd->command_buffer );
 }
 

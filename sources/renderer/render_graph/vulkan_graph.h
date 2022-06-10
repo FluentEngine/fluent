@@ -26,8 +26,8 @@ struct VulkanGraphPass
 
 struct VulkanPassInfo
 {
-	VkRenderPassCreateInfo  pass_info;
-	VkFramebufferCreateInfo framebuffer_info;
+	VkRenderPassCreateInfo       pass_info;
+	struct VulkanFramebufferInfo framebuffer_info;
 };
 
 struct VulkanGraph
