@@ -1,9 +1,9 @@
 #pragma once
 
 #include <hashmap_c/hashmap_c.h>
-#include "../backend/vulkan/vulkan_backend.h"
+#include "vulkan_backend.h"
 #include "vulkan_pass_hasher.h"
-#include "render_graph.h"
+#include "../render_graph.h"
 
 struct VulkanGraph;
 
@@ -26,10 +26,13 @@ struct VulkanGraphPass
 
 struct VulkanPhysicalPass
 {
+	u32                          graph_pass_index;
 	struct VulkanRenderPassInfo  render_pass_info;
 	struct VulkanFramebufferInfo framebuffer_info;
 	VkClearValue                 clear_values[ MAX_ATTACHMENTS_COUNT + 1 ];
 	VkRenderPassBeginInfo        begin_info;
+	VkRenderPass                 render_pass;
+	VkFramebuffer                framebuffer;
 };
 
 struct VulkanGraph
@@ -47,7 +50,6 @@ struct VulkanGraph
 
 	u32                        physical_pass_count;
 	struct VulkanPhysicalPass* physical_passes;
-	u32                        swap_graph_pass_index;
 	u32                        swap_pass_index;
 
 	struct VulkanPassHasher pass_hasher;

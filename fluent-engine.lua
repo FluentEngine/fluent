@@ -60,6 +60,14 @@ if sdl2_library_directory == nil then
 	end
 end
 
+if vulkan_include_directory == nil then
+	if _OPTIONS["vulkan_include_directory"] ~= nil then
+		vulkan_include_directory = _OPTIONS["vulkan_include_directory"]
+	else
+		error("vulkan headers not found you should manually specify directories")
+	end
+end
+
 renderer_backend_vulkan = true
 renderer_backend_d3d12 = false
 renderer_backend_metal = true
@@ -177,13 +185,13 @@ project "ft_renderer"
 		path.join(backend_dir, "vulkan/vulkan_backend.h"),
 		path.join(backend_dir, "d3d12/d3d12_backend.c"),
 		path.join(backend_dir, "d3d12/d3d12_backend.h"),
-		path.join(rg_dir, "render_graph.h"),
-		path.join(rg_dir, "render_graph.c"),
-		path.join(rg_dir, "render_graph_private.h"),
-		path.join(rg_dir, "vulkan_graph.c"),
-		path.join(rg_dir, "vulkan_graph.h"),
-		path.join(rg_dir, "vulkan_pass_hasher.c"),
-		path.join(rg_dir, "vulkan_pass_hasher.h"),
+		path.join(backend_dir, "render_graph.h"),
+		path.join(backend_dir, "render_graph.c"),
+		path.join(backend_dir, "render_graph_private.h"),
+		path.join(backend_dir, "vulkan/vulkan_graph.c"),
+		path.join(backend_dir, "vulkan/vulkan_graph.h"),
+		path.join(backend_dir, "vulkan/vulkan_pass_hasher.c"),
+		path.join(backend_dir, "vulkan/vulkan_pass_hasher.h"),
 		path.join(nuklear_dir, "ft_nuklear.h"),
 		path.join(nuklear_dir, "ft_nuklear.c"),
 		path.join(shader_reflection_dir, "shader_reflection.h"),
@@ -204,12 +212,12 @@ project "ft_renderer"
 	fluent_engine = {}
 
 	fluent_engine.link = function()
-		includedirs 
+		sysincludedirs 
 		{
 			sdl2_include_directory
 		}
 		
-		libdirs 
+		syslibdirs 
 		{
 			sdl2_library_directory
 		}

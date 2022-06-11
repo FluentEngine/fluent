@@ -1,5 +1,5 @@
 #include "render_graph_private.h"
-#include "vulkan_graph.h"
+#include "vulkan/vulkan_graph.h"
 #include "render_graph.h"
 
 rg_destroy_fun               rg_destroy_impl;
@@ -15,7 +15,7 @@ compare_name_to_index( const void* a, const void* b, void* udata )
 {
 	const struct NameToIndex* na = a;
 	const struct NameToIndex* nb = b;
-	return strcmp(na->name, nb->name);
+	return strcmp( na->name, nb->name );
 }
 
 static u64
@@ -24,16 +24,23 @@ hash_name_to_index( const void* item, u64 seed0, u64 seed1 )
 	return 0;
 }
 
-struct hashmap* create_name_to_index_map()
+struct hashmap*
+create_name_to_index_map()
 {
-	return  hashmap_new( sizeof( struct NameToIndex ),
-	                                       0,
-	                                       0,
-	                                       0,
-	                                       hash_name_to_index,
-	                                       compare_name_to_index,
-	                                       NULL,
-	                                       NULL );
+	return hashmap_new( sizeof( struct NameToIndex ),
+	                    0,
+	                    0,
+	                    0,
+	                    hash_name_to_index,
+	                    compare_name_to_index,
+	                    NULL,
+	                    NULL );
+}
+
+static b32
+default_get_color_clear_value( u32 idx, ColorClearValue* clear_values )
+{
+	return 0;
 }
 
 void
@@ -68,12 +75,16 @@ rg_add_pass( struct RenderGraph* graph, const char* pass_name )
 {
 	FT_ASSERT( graph );
 	FT_ASSERT( pass_name );
-	return rg_add_pass_impl( graph, pass_name );
+
+	struct RenderGraphPass* pass         = rg_add_pass_impl( graph, pass_name );
+	pass->get_color_clear_value_callback = default_get_color_clear_value;
+
+	return pass;
 }
 
 void
 rg_add_color_output( struct RenderGraphPass* pass,
-                     const struct ImageInfo*       image_info,
+                     const struct ImageInfo* image_info,
                      const char*             name )
 {
 	FT_ASSERT( pass );

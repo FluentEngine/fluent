@@ -1,5 +1,5 @@
 #include "log/log.h"
-#include "render_graph_private.h"
+#include "../render_graph_private.h"
 #include "vulkan_graph.h"
 
 #define APPEND_ARRAY_IF_NEED( ARR, COUNT, CAP, TYPE )                          \
@@ -85,6 +85,91 @@ vk_rg_set_backbuffer_source( struct RenderGraph* igraph, const char* name )
 	FT_UNUSED( rg_get_image( graph, name, &graph->backbuffer_image_index ) );
 }
 
+static inline void
+create_render_passes( struct VulkanGraph* graph )
+{
+	for ( u32 p = 0; p < graph->physical_pass_count; ++p )
+	{
+		struct VulkanGraphPass*      graph_pass = graph->passes[ p ];
+		struct VulkanPhysicalPass*   pass       = &graph->physical_passes[ p ];
+		struct VulkanRenderPassInfo* info       = &pass->render_pass_info;
+		struct VulkanSubpassInfo*    subpass_info = &info->subpasses[ 0 ];
+
+		pass->graph_pass_index               = p;
+		pass->begin_info.clearValueCount     = info->attachment_count;
+		info->subpass_count                  = 1;
+		subpass_info->color_attachment_count = graph_pass->color_output_count;
+		info->attachment_count               = graph_pass->color_output_count;
+
+		b32 swapchain_pass = 0;
+
+		ColorClearValue color_clear_values[ MAX_ATTACHMENTS_COUNT ];
+		b32 ( *get_clear_color )( u32, ColorClearValue* ) =
+		    graph_pass->interface.get_color_clear_value_callback;
+
+		for ( u32 a = 0; a < info->attachment_count; ++a )
+		{
+			u32 image_index              = graph_pass->color_outputs[ a ];
+			VkAttachmentDescription* att = &info->attachments[ a ];
+			struct ImageInfo* image_info = &graph->images[ image_index ].info;
+
+			if ( image_index == graph->backbuffer_image_index )
+			{
+				swapchain_pass = 1;
+			}
+
+			att->flags         = 0;
+			att->format        = to_vk_format( image_info->format );
+			att->samples       = to_vk_sample_count( image_info->sample_count );
+			att->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			att->finalLayout   = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			att->loadOp        = get_clear_color( a, color_clear_values )
+			                         ? VK_ATTACHMENT_LOAD_OP_CLEAR
+			                         : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			att->storeOp       = VK_ATTACHMENT_STORE_OP_STORE;
+			att->stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			att->stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+			subpass_info->color_attachment_references[ a ].attachment = a;
+			subpass_info->color_attachment_references[ a ].layout =
+			    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+			VkClearColorValue* color = &pass->clear_values[ a ].color;
+			color->float32[ 0 ]      = color_clear_values[ a ][ 0 ];
+			color->float32[ 1 ]      = color_clear_values[ a ][ 1 ];
+			color->float32[ 2 ]      = color_clear_values[ a ][ 2 ];
+			color->float32[ 3 ]      = color_clear_values[ a ][ 3 ];
+		}
+
+		if ( swapchain_pass )
+		{
+			graph->swap_pass_index = p;
+		}
+		else
+		{
+		}
+
+		pass->render_pass =
+		    vk_pass_hasher_get_render_pass( &graph->pass_hasher,
+		                                    &pass->render_pass_info );
+	}
+}
+
+static inline void
+create_framebuffers( struct VulkanGraph* graph )
+{
+	for ( u32 p = 0; p < graph->physical_pass_count; ++p )
+	{
+		struct VulkanGraphPass*       graph_pass = graph->passes[ p ];
+		struct VulkanPhysicalPass*    pass       = &graph->physical_passes[ p ];
+		struct VulkanFramebufferInfo* info       = &pass->framebuffer_info;
+
+		info->attachment_count = graph_pass->color_output_count;
+		info->attachment_count = info->attachment_count;
+		info->render_pass      = pass->render_pass;
+	}
+}
+
 static void
 vk_rg_build( struct RenderGraph* igraph )
 {
@@ -99,58 +184,8 @@ vk_rg_build( struct RenderGraph* igraph )
 	graph->physical_passes     = calloc( graph->physical_pass_count,
                                      sizeof( struct VulkanPhysicalPass ) );
 
-	for ( u32 p = 0; p < graph->physical_pass_count; ++p )
-	{
-		struct VulkanGraphPass*       graph_pass = graph->passes[ p ];
-		struct VulkanPhysicalPass*    pass       = &graph->physical_passes[ p ];
-		struct VulkanRenderPassInfo*  info       = &pass->render_pass_info;
-		struct VulkanFramebufferInfo* fb_info    = &pass->framebuffer_info;
-		struct VulkanSubpassInfo*     subpass_info = &info->subpasses[ 0 ];
-
-		info->subpass_count                  = 1;
-		subpass_info->color_attachment_count = graph_pass->color_output_count;
-		info->attachment_count               = graph_pass->color_output_count;
-
-		b32 swapchain_pass = 0;
-				
-		for ( u32 a = 0; a < info->attachment_count; ++a )
-		{
-			u32 image_index = graph_pass->color_outputs[ a ];
-
-			if ( image_index == graph->backbuffer_image_index )
-			{
-				swapchain_pass = 1;
-			}
-
-			struct ImageInfo* image_info  = &graph->images[ image_index ].info;
-
-			VkAttachmentDescription* att = &info->attachments[ a ];
-			att->flags                   = 0;
-			att->format                  = to_vk_format( image_info->format );
-			att->samples       = to_vk_sample_count( image_info->sample_count );
-			att->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			att->finalLayout   = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-			att->loadOp        = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			att->storeOp       = VK_ATTACHMENT_STORE_OP_STORE;
-			att->stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			att->stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-
-			subpass_info->color_attachment_references[ a ].attachment = a;
-			subpass_info->color_attachment_references[ a ].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		}
-
-		fb_info->attachment_count = info->attachment_count;
-		fb_info->render_pass =
-		    vk_pass_hasher_get_render_pass( &graph->pass_hasher, info );
-		if (swapchain_pass)
-		{
-			graph->swap_graph_pass_index = p;
-			graph->swap_pass_index       = p;
-		}
-		else
-		{
-		}
-	}
+	create_render_passes( graph );
+	create_framebuffers( graph );
 }
 
 static void
@@ -160,9 +195,10 @@ vk_rg_setup_attachments( struct RenderGraph* igraph,
 	FT_FROM_HANDLE( graph, igraph, VulkanGraph );
 	FT_FROM_HANDLE( backbuffer_image, iimage, VulkanImage );
 
+	struct VulkanPhysicalPass* pass =
+	    &graph->physical_passes[ graph->swap_pass_index ];
 	struct VulkanGraphPass* graph_pass =
-	    graph->passes[ graph->swap_graph_pass_index ];
-	struct VulkanPhysicalPass*    pass = &graph->physical_passes[ graph->swap_pass_index ];
+	    graph->passes[ pass->graph_pass_index ];
 	struct VulkanFramebufferInfo* info = &pass->framebuffer_info;
 
 	for ( u32 a = 0; a < info->attachment_count; ++a )
@@ -179,7 +215,7 @@ vk_rg_setup_attachments( struct RenderGraph* igraph,
 
 	pass->begin_info.sType      = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	pass->begin_info.pNext      = NULL;
-	pass->begin_info.renderPass = pass->framebuffer_info.render_pass;
+	pass->begin_info.renderPass = pass->render_pass;
 	pass->begin_info.framebuffer =
 	    vk_pass_hasher_get_framebuffer( &graph->pass_hasher, info );
 	pass->begin_info.clearValueCount          = 1;

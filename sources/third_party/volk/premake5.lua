@@ -2,14 +2,18 @@ project "volk"
     kind "StaticLib"
     language "C"
 
-    includedirs {
+    includedirs 
+    {
         ".",
-        vulkan_include_directory
     }
-
-    print(vulkan_include_directory)
     
-    files {
+    sysincludedirs
+    {
+		vulkan_include_directory
+    }
+    
+    files 
+    {
         "volk.h",
         "volk.c"
     }

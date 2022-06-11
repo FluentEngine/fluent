@@ -4,6 +4,14 @@
 
 #undef MemoryBarrier
 
+#define FT_INIT_INTERNAL( name, ptr, type )                                    \
+	struct type* name      = calloc( 1, sizeof( struct type ) );               \
+	name->interface.handle = name;                                             \
+	ptr                    = &name->interface
+
+#define FT_FROM_HANDLE( name, interface, impl )                                \
+	struct impl* name = interface->handle
+
 #ifdef __cplusplus
 extern "C"
 {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <hashmap_c/hashmap_c.h>
-#include "../backend/vulkan/vulkan_backend.h"
+#include "vulkan_backend.h"
 
 struct VulkanPassHasher
 {

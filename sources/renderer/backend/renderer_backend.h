@@ -16,14 +16,6 @@
 #define MAX_SET_COUNT                       10
 #define RESOURCE_LOADER_STAGING_BUFFER_SIZE 25 * 1024 * 1024 * 8
 
-#define FT_INIT_INTERNAL( name, ptr, type )                                    \
-	struct type* name      = calloc( 1, sizeof( struct type ) );               \
-	name->interface.handle = name;                                             \
-	ptr                    = &name->interface
-
-#define FT_FROM_HANDLE( name, interface, impl )                                \
-	struct impl* name = interface->handle
-
 #ifdef __cplusplus
 extern "C"
 {

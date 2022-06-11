@@ -6,6 +6,7 @@
 struct RenderGraphPass
 {
 	ft_handle handle;
+	b32 ( *get_color_clear_value_callback )( u32, ColorClearValue* );
 };
 
 struct RenderGraph

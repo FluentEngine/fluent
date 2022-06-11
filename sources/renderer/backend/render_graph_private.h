@@ -1,6 +1,7 @@
 #pragma once
 
 #include "render_graph.h"
+#include "renderer_private.h"
 
 struct NameToIndex
 {
