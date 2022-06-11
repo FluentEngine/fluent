@@ -2,12 +2,13 @@
 #include "vulkan_graph.h"
 #include "render_graph.h"
 
-rg_destroy_fun           rg_destroy_impl;
-rg_add_pass_fun          rg_add_pass_impl;
-rg_add_color_output_fun  rg_add_color_output_impl;
-rg_build_fun             rg_build_impl;
-rg_setup_attachments_fun rg_setup_attachments_impl;
-rg_execute_fun           rg_execute_impl;
+rg_destroy_fun               rg_destroy_impl;
+rg_add_pass_fun              rg_add_pass_impl;
+rg_add_color_output_fun      rg_add_color_output_impl;
+rg_set_backbuffer_source_fun rg_set_backbuffer_source_impl;
+rg_build_fun                 rg_build_impl;
+rg_setup_attachments_fun     rg_setup_attachments_impl;
+rg_execute_fun               rg_execute_impl;
 
 static b32
 compare_name_to_index( const void* a, const void* b, void* udata )
@@ -79,6 +80,13 @@ rg_add_color_output( struct RenderGraphPass* pass,
 	FT_ASSERT( image_info );
 	FT_ASSERT( name );
 	rg_add_color_output_impl( pass, image_info, name );
+}
+
+void
+rg_set_backbuffer_source( struct RenderGraph* graph, const char* name )
+{
+	FT_ASSERT( graph );
+	rg_set_backbuffer_source_impl( graph, name );
 }
 
 void

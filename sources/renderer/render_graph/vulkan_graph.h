@@ -24,17 +24,17 @@ struct VulkanGraphPass
 	struct RenderGraphPass interface;
 };
 
-struct VulkanPassInfo
+struct VulkanPhysicalPass
 {
-	VkRenderPassCreateInfo       pass_info;
+	struct VulkanRenderPassInfo  render_pass_info;
 	struct VulkanFramebufferInfo framebuffer_info;
+	VkClearValue                 clear_values[ MAX_ATTACHMENTS_COUNT + 1 ];
+	VkRenderPassBeginInfo        begin_info;
 };
 
 struct VulkanGraph
 {
 	const struct VulkanDevice* device;
-
-	const struct VulkanImage* backbuffer_image;
 
 	u32                      image_count;
 	u32                      image_capacity;
@@ -45,10 +45,14 @@ struct VulkanGraph
 	u32                      pass_capacity;
 	struct VulkanGraphPass** passes;
 
-	u32                            physical_pass_count;
-	struct VulkanPassInfo*         physical_passes;
+	u32                        physical_pass_count;
+	struct VulkanPhysicalPass* physical_passes;
+	u32                        swap_graph_pass_index;
+	u32                        swap_pass_index;
 
 	struct VulkanPassHasher pass_hasher;
+
+	u32 backbuffer_image_index;
 
 	struct RenderGraph interface;
 };

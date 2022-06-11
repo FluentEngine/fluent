@@ -28,6 +28,9 @@ rg_add_color_output( struct RenderGraphPass* pass,
                      const char*             name );
 
 void
+rg_set_backbuffer_source( struct RenderGraph* graph, const char* name );
+
+void
 rg_build( struct RenderGraph* graph );
 
 void
