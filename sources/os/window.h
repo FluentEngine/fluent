@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base/base.h"
+#include "renderer/backend/renderer_enums.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -9,15 +10,16 @@ extern "C"
 
 	struct WindowInfo
 	{
-		const char* title;
-		u32         x;
-		u32         y;
-		u32         width;
-		u32         height;
-		b32         resizable;
-		b32         centered;
-		b32         fullscreen;
-		b32         grab_mouse;
+		const char*      title;
+		u32              x;
+		u32              y;
+		u32              width;
+		u32              height;
+		b32              resizable;
+		b32              centered;
+		b32              fullscreen;
+		b32              grab_mouse;
+		enum RendererAPI renderer_api;
 	};
 
 	struct Window

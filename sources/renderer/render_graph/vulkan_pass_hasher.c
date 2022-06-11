@@ -201,8 +201,8 @@ vk_pass_hasher_init( struct VulkanPassHasher*   hasher,
 void
 vk_pass_hasher_shutdown( struct VulkanPassHasher* hasher )
 {
-	size_t   iter = 0;
-	void* item;
+	size_t iter = 0;
+	void*  item;
 
 	while ( hashmap_iter( hasher->framebuffers, &iter, &item ) )
 	{
@@ -229,8 +229,8 @@ vk_pass_hasher_shutdown( struct VulkanPassHasher* hasher )
 void
 vk_pass_hasher_framebuffers_clear( struct VulkanPassHasher* hasher )
 {
-	u64   iter = 0;
-	void* item;
+	size_t iter = 0;
+	void*  item;
 	while ( hashmap_iter( hasher->framebuffers, &iter, &item ) )
 	{
 		struct FramebufferMapItem* info = item;

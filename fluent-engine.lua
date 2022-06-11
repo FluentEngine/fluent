@@ -62,7 +62,7 @@ end
 
 renderer_backend_vulkan = true
 renderer_backend_d3d12 = false
-renderer_backend_metal = false
+renderer_backend_metal = true
 
 function declare_backend_defines()
 	if (renderer_backend_vulkan) 
@@ -78,7 +78,7 @@ function declare_backend_defines()
 	if (renderer_backend_metal) 
 	then 
 		defines { "METAL_BACKEND" }
-		buildoptions { "-fobjc-arc", "-fobjc-weak", "-fmodules" }
+		buildoptions { "-fobjc-arc", "-fmodules" }
 	end
 end
 
@@ -122,7 +122,8 @@ project "ft_os"
 	
 	sysincludedirs
 	{	
-		sdl2_include_directory
+		sdl2_include_directory,
+		"sources/third_party"
 	}
 	
     files 
@@ -190,7 +191,16 @@ project "ft_renderer"
 		path.join(scene_dir, "model_loader.h"),
 		path.join(scene_dir, "model_loader.c")
     }
-
+	
+	if (renderer_backend_metal) then
+		files
+		{
+			path.join(backend_dir, "metal/metal_backend.h"),
+			path.join(backend_dir, "metal/metal_backend.m"),
+			path.join(shader_reflection_dir, "metal_reflection.m"),
+		}
+	end
+	
 	fluent_engine = {}
 
 	fluent_engine.link = function()

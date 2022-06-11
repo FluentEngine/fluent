@@ -1573,7 +1573,7 @@ extern "C"
 	} TinyImageFormat_MTLPixelFormat;
 #endif
 
-	inline TinyImageFormat_MTLPixelFormat
+	static inline TinyImageFormat_MTLPixelFormat
 	TinyImageFormat_ToMTLPixelFormat( TinyImageFormat fmt )
 	{
 		switch ( fmt )

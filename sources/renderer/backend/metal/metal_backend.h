@@ -7,14 +7,12 @@
 #import <Cocoa/Cocoa.h>
 #import <QuartzCore/CAMetalLayer.h>
 #endif
-#include "renderer/renderer_backend.hpp"
-
-namespace fluent
-{
+#include "../renderer_backend.h"
 
 struct MetalRendererBackend
 {
-	RendererBackend interface;
+	void*                  window;
+	struct RendererBackend interface;
 };
 
 struct MetalDevice
@@ -24,13 +22,13 @@ struct MetalDevice
 #else
 	void* device;
 #endif
-	void*  view;
-	Device interface;
+	void*         view;
+	struct Device interface;
 };
 
 struct MetalCommandPool
 {
-	CommandPool interface;
+	struct CommandPool interface;
 };
 
 struct MetalCommandBuffer
@@ -50,7 +48,7 @@ struct MetalCommandBuffer
 	u32   index_type;
 	u32   primitive_type;
 #endif
-	CommandBuffer interface;
+	struct CommandBuffer interface;
 };
 
 struct MetalQueue
@@ -60,17 +58,17 @@ struct MetalQueue
 #else
 	void* queue;
 #endif
-	Queue interface;
+	struct Queue interface;
 };
 
 struct MetalSemaphore
 {
-	Semaphore interface;
+	struct Semaphore interface;
 };
 
 struct MetalFence
 {
-	Fence interface;
+	struct Fence interface;
 };
 
 struct MetalSampler
@@ -82,7 +80,7 @@ struct MetalSampler
 	void* sampler_descriptor;
 	void* sampler;
 #endif
-	Sampler interface;
+	struct Sampler interface;
 };
 
 struct MetalImage
@@ -92,7 +90,7 @@ struct MetalImage
 #else
 	void* texture;
 #endif
-	Image interface;
+	struct Image interface;
 };
 
 struct MetalBuffer
@@ -102,7 +100,7 @@ struct MetalBuffer
 #else
 	void* buffer;
 #endif
-	Buffer interface;
+	struct Buffer interface;
 };
 
 struct MetalSwapchain
@@ -114,8 +112,8 @@ struct MetalSwapchain
 	void* swapchain;
 	void* drawable;
 #endif
-	u32       current_image_index;
-	Swapchain interface;
+	u32              current_image_index;
+	struct Swapchain interface;
 };
 
 struct MetalRenderPass
@@ -125,24 +123,24 @@ struct MetalRenderPass
 #else
 	void* render_pass;
 #endif
-	b32         swapchain_render_pass;
-	MetalImage* color_attachments[ MAX_ATTACHMENTS_COUNT ];
-	MetalImage* depth_attachment;
+	b32                swapchain_render_pass;
+	struct MetalImage* color_attachments[ MAX_ATTACHMENTS_COUNT ];
+	struct MetalImage* depth_attachment;
 };
 
 struct MetalShader
 {
 #ifdef METAL_BACKEND_INCLUDE_OBJC
-	id<MTLFunction> shaders[ static_cast<u32>( FT_SHADER_STAGE_COUNT ) ];
+	id<MTLFunction> shaders[ FT_SHADER_STAGE_COUNT ];
 #else
-	void* shaders[ static_cast<u32>( FT_SHADER_STAGE_COUNT ) ];
+	void* shaders[ FT_SHADER_STAGE_COUNT ];
 #endif
-	Shader interface;
+	struct Shader interface;
 };
 
 struct MetalDescriptorSetLayout
 {
-	DescriptorSetLayout interface;
+	struct DescriptorSetLayout interface;
 };
 
 struct MetalPipeline
@@ -158,13 +156,13 @@ struct MetalPipeline
 	void* depth_stencil_state;
 	u32   primitive_type;
 #endif
-	Pipeline interface;
+	struct Pipeline interface;
 };
 
 struct MetalSamplerBinding
 {
-	ShaderStage stage;
-	u32         binding;
+	enum ShaderStage stage;
+	u32              binding;
 #ifdef METAL_BACKEND_INCLUDE_OBJC
 	id<MTLSamplerState> sampler;
 #else
@@ -174,8 +172,8 @@ struct MetalSamplerBinding
 
 struct MetalImageBinding
 {
-	ShaderStage stage;
-	u32         binding;
+	enum ShaderStage stage;
+	u32              binding;
 #ifdef METAL_BACKEND_INCLUDE_OBJC
 	id<MTLTexture> image;
 #else
@@ -185,8 +183,8 @@ struct MetalImageBinding
 
 struct MetalBufferBinding
 {
-	ShaderStage stage;
-	u32         binding;
+	enum ShaderStage stage;
+	u32              binding;
 #ifdef METAL_BACKEND_INCLUDE_OBJC
 	id<MTLBuffer> buffer;
 #else
@@ -196,19 +194,17 @@ struct MetalBufferBinding
 
 struct MetalDescriptorSet
 {
-	u32                  sampler_binding_count;
-	MetalSamplerBinding* sampler_bindings;
-	u32                  image_binding_count;
-	MetalImageBinding*   image_bindings;
-	u32                  buffer_binding_count;
-	MetalBufferBinding*  buffer_bindings;
-	DescriptorSet        interface;
+	u32                         sampler_binding_count;
+	struct MetalSamplerBinding* sampler_bindings;
+	u32                         image_binding_count;
+	struct MetalImageBinding*   image_bindings;
+	u32                         buffer_binding_count;
+	struct MetalBufferBinding*  buffer_bindings;
+	struct DescriptorSet        interface;
 };
 
 void
-mtl_create_renderer_backend( const RendererBackendInfo*,
+mtl_create_renderer_backend( const struct RendererBackendInfo*,
                              struct RendererBackend** p );
-
-} // namespace fluent
 
 #endif

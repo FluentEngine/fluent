@@ -1,25 +1,25 @@
 #ifdef METAL_BACKEND
+#ifndef METAL_BACKEND_INCLUDE_OBJC
 #define METAL_BACKEND_INCLUDE_OBJC
-#include "renderer/metal/metal_backend.hpp"
+#endif
+#include "../backend/metal/metal_backend.h"
 
-namespace fluent
-{
-
-static inline DescriptorType
+static inline enum DescriptorType
 to_descriptor_type( MTLArgumentType type )
 {
 	switch ( type )
 	{
-	case MTLArgumentTypeBuffer: return DescriptorType::UNIFORM_BUFFER;
-	case MTLArgumentTypeSampler: return DescriptorType::SAMPLER;
-	case MTLArgumentTypeTexture: return DescriptorType::SAMPLED_IMAGE;
-	default: FT_ASSERT( false ); return DescriptorType( -1 );
+	case MTLArgumentTypeBuffer: return FT_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	case MTLArgumentTypeSampler: return FT_DESCRIPTOR_TYPE_SAMPLER;
+	case MTLArgumentTypeTexture: return FT_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	default: FT_ASSERT( 0 ); return (enum DescriptorType) -1;
 	}
 }
 
 void
-mtl_reflect( const Device* idevice, const ShaderInfo* info, Shader* ishader )
+mtl_reflect( const struct Device* idevice, const struct ShaderInfo* info, struct Shader* ishader )
 {
+#if 0
 	@autoreleasepool
 	{
 		FT_FROM_HANDLE( device, idevice, MetalDevice );
@@ -42,9 +42,9 @@ mtl_reflect( const Device* idevice, const ShaderInfo* info, Shader* ishader )
 		    [MTLRenderPipelineDescriptor new];
 		descriptor.vertexDescriptor = vertex_descriptor;
 		descriptor.vertexFunction =
-		    shader->shaders[ static_cast<u32>( ShaderStage::VERTEX ) ];
+		    shader->shaders[ FT_SHADER_STAGE_VERTEX ];
 		descriptor.fragmentFunction =
-		    shader->shaders[ static_cast<u32>( ShaderStage::FRAGMENT ) ];
+		    shader->shaders[ FT_SHADER_STAGE_FRAGMENT ];
 		descriptor.colorAttachments[ 0 ].pixelFormat = MTLPixelFormatRGBA8Unorm;
 
 		id pipeline_state = [device->device
@@ -65,9 +65,9 @@ mtl_reflect( const Device* idevice, const ShaderInfo* info, Shader* ishader )
 				auto& binding            = bindings.emplace_back();
 				binding.descriptor_count = arg.arrayLength;
 				binding.descriptor_type  = to_descriptor_type( arg.type );
-				binding.binding          = static_cast<u32>( arg.index );
+				binding.binding          = arg.index;
 				binding.set              = 0;
-				binding.stage            = ShaderStage::VERTEX;
+				binding.stage            = FT_SHADER_STAGE_VERTEX;
 
 				binding_map[ [arg.name UTF8String] ] = binding_count;
 				binding_count++;
@@ -79,9 +79,9 @@ mtl_reflect( const Device* idevice, const ShaderInfo* info, Shader* ishader )
 			auto& binding            = bindings.emplace_back();
 			binding.descriptor_count = arg.arrayLength;
 			binding.descriptor_type  = to_descriptor_type( arg.type );
-			binding.binding          = static_cast<u32>( arg.index );
+			binding.binding          = arg.index;
 			binding.set              = 0;
-			binding.stage            = ShaderStage::FRAGMENT;
+			binding.stage            = FT_SHADER_STAGE_FRAGMENT;
 
 			binding_map[ [arg.name UTF8String] ] = binding_count;
 			binding_count++;
@@ -92,7 +92,7 @@ mtl_reflect( const Device* idevice, const ShaderInfo* info, Shader* ishader )
 		descriptor        = nil;
 		vertex_descriptor = nil;
 	}
+#endif
 }
 
-} // namespace fluent
 #endif

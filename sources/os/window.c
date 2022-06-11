@@ -33,13 +33,27 @@ create_window( const struct WindowInfo* info )
 		y = SDL_WINDOWPOS_CENTERED;
 	}
 
+	switch ( info->renderer_api )
+	{
+	case FT_RENDERER_API_VULKAN:
+	{
 #ifdef VULKAN_BACKEND
-	window_flags |= SDL_WINDOW_VULKAN;
+		window_flags |= SDL_WINDOW_VULKAN;
 #endif
-
+		break;
+	}
+	case FT_RENDERER_API_METAL:
+	{
 #ifdef METAL_BACKEND
-	window_flags |= SDL_WINDOW_METAL;
+		window_flags |= SDL_WINDOW_METAL;
 #endif
+		break;
+	}
+	default:
+	{
+		break;
+	}
+	}
 
 	SDL_Window* window = SDL_CreateWindow( info->title,
 	                                       x,

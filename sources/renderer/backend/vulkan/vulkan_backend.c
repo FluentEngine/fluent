@@ -155,7 +155,6 @@ static struct VulkanDevice* devices[ MAX_DEVICE_COUNT ];
 static struct hashmap*      passes[ MAX_DEVICE_COUNT ]       = { NULL };
 static struct hashmap*      framebuffers[ MAX_DEVICE_COUNT ] = { NULL };
 
-
 #ifdef FLUENT_DEBUG
 static VKAPI_ATTR VkBool32 VKAPI_CALL
 vulkan_debug_callback(
