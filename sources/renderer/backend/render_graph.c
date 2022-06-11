@@ -1,5 +1,6 @@
 #include "render_graph_private.h"
 #include "vulkan/vulkan_graph.h"
+#include "metal/metal_graph.h"
 #include "render_graph.h"
 
 rg_destroy_fun               rg_destroy_impl;
@@ -51,11 +52,20 @@ rg_create( const struct Device* device, struct RenderGraph** graph )
 
 	switch ( device->api )
 	{
+#ifdef VULKAN_BACKEND
 	case FT_RENDERER_API_VULKAN:
 	{
 		vk_rg_create( device, graph );
 		break;
 	}
+#endif
+#ifdef METAL_BACKEND
+	case FT_RENDERER_API_METAL:
+	{
+		mtl_rg_create( device, graph );
+		break;
+	}
+#endif
 	default:
 	{
 		FT_ASSERT( 0 && "unimplemented api" );

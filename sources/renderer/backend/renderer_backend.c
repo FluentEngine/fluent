@@ -76,37 +76,40 @@ resource_loader_shutdown();
 
 void
 create_renderer_backend( const struct RendererBackendInfo* info,
-                         struct RendererBackend**          backend )
+                         struct RendererBackend**          p )
 {
 	FT_ASSERT( info );
 	FT_ASSERT( info->wsi_info );
-	FT_ASSERT( backend );
+	FT_ASSERT( p );
 
 	switch ( info->api )
 	{
 #ifdef VULKAN_BACKEND
 	case FT_RENDERER_API_VULKAN:
 	{
-		vk_create_renderer_backend( info, backend );
+		vk_create_renderer_backend( info, p );
 		break;
 	}
 #endif
 #ifdef D3D12_BACKEND
 	case FT_RENDERER_API_D3D12:
 	{
-		d3d12_create_renderer_backend( info, backend );
+		d3d12_create_renderer_backend( info, p );
 		break;
 	}
 #endif
 #ifdef METAL_BACKEND
 	case FT_RENDERER_API_METAL:
 	{
-		mtl_create_renderer_backend( info, backend );
+		mtl_create_renderer_backend( info, p );
 		break;
 	}
 #endif
 	default: FT_ASSERT( 0 && "no supported api available" );
 	}
+
+	struct RendererBackend* backend = *p;
+	backend->api                    = info->api;
 }
 
 void
@@ -120,15 +123,17 @@ destroy_renderer_backend( struct RendererBackend* backend )
 void
 create_device( const struct RendererBackend* backend,
                const struct DeviceInfo*      info,
-               struct Device**               device )
+               struct Device**               p )
 {
 	FT_ASSERT( backend );
 	FT_ASSERT( info );
 	FT_ASSERT( info->backend );
-	FT_ASSERT( device );
+	FT_ASSERT( p );
 
-	create_device_impl( backend, info, device );
-	resource_loader_init( *device, RESOURCE_LOADER_STAGING_BUFFER_SIZE );
+	create_device_impl( backend, info, p );
+	struct Device* device = *p;
+	device->api           = backend->api;
+	resource_loader_init( device, RESOURCE_LOADER_STAGING_BUFFER_SIZE );
 }
 
 void

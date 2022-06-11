@@ -93,7 +93,6 @@ end
 include("sources/third_party/hashmap_c/premake5.lua")
 include("sources/third_party/spirv_reflect/premake5.lua")
 include("sources/third_party/cgltf/premake5.lua")
-include("sources/third_party/tiny_image_format/premake5.lua")
 include("sources/third_party/vk_mem_alloc/premake5.lua")
 include("sources/third_party/volk/premake5.lua")
 include("sources/third_party/stb/premake5.lua")
@@ -205,6 +204,8 @@ project "ft_renderer"
 		{
 			path.join(backend_dir, "metal/metal_backend.h"),
 			path.join(backend_dir, "metal/metal_backend.m"),
+			path.join(backend_dir, "metal/metal_graph.h"),
+			path.join(backend_dir, "metal/metal_graph.m"),
 			path.join(shader_reflection_dir, "metal_reflection.m"),
 		}
 	end
@@ -227,7 +228,6 @@ project "ft_renderer"
 			"hashmap_c",
 			"cgltf",
 			"spirv_reflect",
-			"tiny_image_format",
 			"SDL2",
 			"stb"
 		}

@@ -448,7 +448,6 @@ vk_create_device( const struct RendererBackend* ibackend,
 	FT_ASSERT( found_device_slot &&
 	           "MAX_DEVICE_COUNT less than created device count" );
 
-	device->interface.api    = backend->interface.api;
 	device->vulkan_allocator = backend->vulkan_allocator;
 	device->instance         = backend->instance;
 	device->physical_device  = backend->physical_device;
