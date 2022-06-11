@@ -1,8 +1,20 @@
-if (not os.isdir(root_directory .. "/deps/SDL"))
-then
-    sdl_repo = "https://github.com/FluentEngine/SDL.git " .. root_directory .. "/deps/SDL"
-    os.execute("git clone " .. sdl_repo )
-end
+newoption 
+{
+   trigger = "sdl2_include_directory",
+   description = "SDL2 include directory"
+}
+
+newoption
+{
+	trigger = "sdl2_library_directory",
+	description = "SDL2 library directory"
+}
+
+newoption
+{	
+	trigger = "vulkan_include_directory",
+	description = "Vulkan include directory"
+}
 
 local commons = {}
 commons.opts = function()
@@ -19,9 +31,9 @@ commons.opts = function()
 	filter {}
 end
 
--- renderer
--- todo: option
-sdl_include_dir = root_directory .. "/deps/SDL/include"
+-- try to find deps first
+sdl2_include_directory = os.findheader("SDL.h")
+sdl2_library_directory = os.findlib("SDL2")
 vulkan_include_directory = os.findheader("vulkan/vulkan.h")
 
 if (os.host() == "windows") then
@@ -29,6 +41,22 @@ if (os.host() == "windows") then
 
 	if (vk_sdk ~= nil) then
 		vulkan_include_directory = vk_sdk .. "/Include"
+	end
+end
+
+if sdl2_include_directory == nil then
+	if _OPTIONS["sdl2_include_directory"] ~= nil then
+		sdl2_include_directory = _OPTIONS["sdl2_include_directory"]
+	else
+		error("SDL2 headers not found you should manually specify directories")
+	end
+end
+
+if sdl2_library_directory == nil then
+	if _OPTIONS["sdl2_library_directory"] ~= nil then
+		sdl2_library_directory = _OPTIONS["sdl2_library_directory"]
+	else
+		error("SDL2 library not found you should manually specify directories")
 	end
 end
 
@@ -50,11 +78,10 @@ function declare_backend_defines()
 	if (renderer_backend_metal) 
 	then 
 		defines { "METAL_BACKEND" }
-		buildoptions( "-fobjc-arc", "-fobjc-weak", "-fmodules")
+		buildoptions { "-fobjc-arc", "-fobjc-weak", "-fmodules" }
 	end
 end
 
-include(root_directory .. "/deps/SDL/sdl2.lua")
 include("sources/third_party/hashmap_c/premake5.lua")
 include("sources/third_party/spirv_reflect/premake5.lua")
 include("sources/third_party/cgltf/premake5.lua")
@@ -90,10 +117,14 @@ project "ft_os"
 	
     includedirs 
     {
-		sdl_include_dir,
         "sources",
     }
-
+	
+	sysincludedirs
+	{	
+		sdl2_include_directory
+	}
+	
     files 
     {
         "sources/os/application.c", 
@@ -118,11 +149,15 @@ project "ft_renderer"
 	
     includedirs 
     {
-		sdl_include_dir,
-		vulkan_include_directory,
         "sources",
-        "sources/third_party"
     }
+	
+	sysincludedirs
+	{	
+		sdl2_include_directory,
+		vulkan_include_directory,
+		"sources/third_party"
+	}
 	
 	backend_dir = "sources/renderer/backend/"
 	rg_dir = "sources/renderer/render_graph/"
@@ -159,12 +194,23 @@ project "ft_renderer"
 	fluent_engine = {}
 
 	fluent_engine.link = function()
-		links {
+		includedirs 
+		{
+			sdl2_include_directory
+		}
+		
+		libdirs 
+		{
+			sdl2_library_directory
+		}
+		
+		links 
+		{
 			"hashmap_c",
 			"cgltf",
 			"spirv_reflect",
 			"tiny_image_format",
-			"sdl2",
+			"SDL2",
 			"stb"
 		}
 

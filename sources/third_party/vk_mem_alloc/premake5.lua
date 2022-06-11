@@ -1,14 +1,25 @@
 project "vk_mem_alloc"
     kind "StaticLib"
     language "C++"
-
-    includedirs {
+	cppdialect "C++17"
+	
+    includedirs 
+    {
         ".",
         "../",
-        vulkan_include_directory
     }
-
-    files {
+	
+	sysincludedirs 
+	{
+		vulkan_include_directory
+	}
+	
+    files 
+    {
         "vk_mem_alloc.h",
         "vk_mem_alloc.cpp"
     }
+	
+	filter { "toolset:clang" }
+		buildoptions { "-Wno-nullability-completeness" }
+	filter { }

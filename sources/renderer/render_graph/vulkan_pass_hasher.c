@@ -201,7 +201,7 @@ vk_pass_hasher_init( struct VulkanPassHasher*   hasher,
 void
 vk_pass_hasher_shutdown( struct VulkanPassHasher* hasher )
 {
-	u64   iter = 0;
+	size_t   iter = 0;
 	void* item;
 
 	while ( hashmap_iter( hasher->framebuffers, &iter, &item ) )
