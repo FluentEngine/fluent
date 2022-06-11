@@ -1,19 +1,48 @@
+function toboolean(str)
+    local bool = false
+    if str == "true" or str == "1" then
+        bool = true
+    end
+    return bool
+end
+
 newoption 
 {
-   trigger = "sdl2_include_directory",
-   description = "SDL2 include directory"
+   trigger			= "sdl2_include_directory",
+   description		= "SDL2 include directory"
 }
 
 newoption
 {
-	trigger = "sdl2_library_directory",
-	description = "SDL2 library directory"
+	trigger			= "sdl2_library_directory",
+	description		= "SDL2 library directory"
 }
 
 newoption
 {	
-	trigger = "vulkan_include_directory",
-	description = "Vulkan include directory"
+	trigger			= "vulkan_include_directory",
+	description		= "Vulkan include directory",
+}
+
+newoption
+{
+	trigger			= "vulkan_backend",
+	description		= "enable vulkan backend",
+	default			= true
+}
+
+newoption
+{
+	trigger			= "d3d12_backend",
+	description		= "enable directx12 backend",
+	default			= true
+}
+
+newoption
+{
+	trigger			= "metal_backend",
+	description		= "enable metal backend",
+	default			= true
 }
 
 local commons = {}
@@ -60,21 +89,42 @@ if sdl2_library_directory == nil then
 	end
 end
 
-if vulkan_include_directory == nil then
-	if _OPTIONS["vulkan_include_directory"] ~= nil then
-		vulkan_include_directory = _OPTIONS["vulkan_include_directory"]
-	else
-		error("vulkan headers not found you should manually specify directories")
+renderer_backend_vulkan = toboolean(_OPTIONS["vulkan_backend"])
+renderer_backend_d3d12 = toboolean(_OPTIONS["d3d12_backend"])
+renderer_backend_metal = toboolean(_OPTIONS["metal_backend"])
+
+if os.host() ~= "macosx" then
+	renderer_backend_metal = false
+end
+
+if os.host() ~= "windows" then
+	renderer_backend_d3d12 = false
+end
+
+print("Enabled backends: ")
+if (renderer_backend_vulkan) then
+	print("\tVulkan")
+end
+if (renderer_backend_d3d12) then
+	print("\tDirectX12")
+end
+if (renderer_backend_metal) then
+	print("\tMetal")
+end
+
+if (renderer_backend_vulkan) then
+	if vulkan_include_directory == nil then
+		if _OPTIONS["vulkan_include_directory"] ~= nil then
+			vulkan_include_directory = _OPTIONS["vulkan_include_directory"]
+		else
+			error("vulkan headers not found you should manually specify directories")
+		end
 	end
 end
 
-renderer_backend_vulkan = true
-renderer_backend_d3d12 = false
-renderer_backend_metal = true
-
 function declare_backend_defines()
 	if (renderer_backend_vulkan) 
-	then 
+	then
 		defines { "VULKAN_BACKEND" }
 	end
 	
@@ -90,12 +140,20 @@ function declare_backend_defines()
 	end
 end
 
+-- TODO: -isystem /usr/include breaks #include_next
+if (vulkan_include_directory == '/usr/include') then
+	vulkan_include_directory = ""
+end
+
+if (renderer_backend_vulkan) then
+	include("sources/third_party/vk_mem_alloc/premake5.lua")
+	include("sources/third_party/volk/premake5.lua")
+end
 include("sources/third_party/hashmap_c/premake5.lua")
 include("sources/third_party/spirv_reflect/premake5.lua")
 include("sources/third_party/cgltf/premake5.lua")
-include("sources/third_party/vk_mem_alloc/premake5.lua")
-include("sources/third_party/volk/premake5.lua")
 include("sources/third_party/stb/premake5.lua")
+
 
 project "ft_log"
 	kind "StaticLib"

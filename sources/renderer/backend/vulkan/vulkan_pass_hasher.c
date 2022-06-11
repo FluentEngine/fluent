@@ -1,3 +1,5 @@
+#ifdef VULKAN_BACKEND
+
 #include "log/log.h"
 #include "vulkan_pass_hasher.h"
 
@@ -350,3 +352,5 @@ vk_pass_hasher_get_framebuffer( struct VulkanPassHasher*            hasher,
 		return framebuffer;
 	}
 }
+
+#endif

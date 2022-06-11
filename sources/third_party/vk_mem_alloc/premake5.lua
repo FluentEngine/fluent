@@ -2,15 +2,10 @@ project "vk_mem_alloc"
     kind "StaticLib"
     language "C++"
 	cppdialect "C++17"
-	
-    includedirs 
-    {
-        ".",
-        "../",
-    }
-	
+
 	sysincludedirs 
 	{
+		"../",
 		vulkan_include_directory
 	}
 	

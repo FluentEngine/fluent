@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef VULKAN_BACKEND
+
 #include <hashmap_c/hashmap_c.h>
 #include "vulkan_backend.h"
 
@@ -52,3 +54,5 @@ vk_pass_hasher_get_render_pass( struct VulkanPassHasher*           hasher,
 VkFramebuffer
 vk_pass_hasher_get_framebuffer( struct VulkanPassHasher*            hasher,
                                 const struct VulkanFramebufferInfo* info );
+
+#endif

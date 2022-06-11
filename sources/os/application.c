@@ -39,6 +39,7 @@ ft_create_vulkan_surface( void* window, void* instance, void** p )
 	    &surface );
 	*p = surface;
 }
+#endif
 
 static void
 ft_window_get_size( void* window, u32* width, u32* height )
@@ -51,7 +52,6 @@ ft_window_get_framebuffer_size( void* window, u32* width, u32* height )
 {
 	window_get_framebuffer_size( ( struct Window* ) window, width, height );
 }
-#endif
 
 void
 app_init( const struct ApplicationConfig* config )

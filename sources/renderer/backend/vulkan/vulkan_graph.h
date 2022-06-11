@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef VULKAN_BACKEND
+
 #include <hashmap_c/hashmap_c.h>
 #include "vulkan_backend.h"
 #include "vulkan_pass_hasher.h"
@@ -61,3 +63,5 @@ struct VulkanGraph
 
 void
 vk_rg_create( const struct Device*, struct RenderGraph** );
+
+#endif

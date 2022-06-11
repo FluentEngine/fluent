@@ -1,3 +1,5 @@
+#ifdef VULKAN_BACKEND
+
 #include "log/log.h"
 #include "../render_graph_private.h"
 #include "vulkan_graph.h"
@@ -304,3 +306,5 @@ vk_rg_create( const struct Device* idevice, struct RenderGraph** p )
 
 	vk_pass_hasher_init( &graph->pass_hasher, graph->device );
 }
+
+#endif
