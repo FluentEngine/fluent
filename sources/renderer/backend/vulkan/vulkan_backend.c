@@ -676,8 +676,8 @@ vk_destroy_device( struct Device* idevice )
 {
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-	u64   iter = 0;
-	void* item;
+	size_t iter = 0;
+	void*  item;
 
 	while ( hashmap_iter( framebuffers[ device->index ], &iter, &item ) )
 	{
@@ -1194,8 +1194,8 @@ vk_resize_swapchain( const struct Device* idevice,
 	iswapchain->width  = width;
 	iswapchain->height = height;
 
-	u64   iter = 0;
-	void* item;
+	size_t iter = 0;
+	void*  item;
 	while ( hashmap_iter( framebuffers[ device->index ], &iter, &item ) )
 	{
 		struct FramebufferMapItem* fb = item;
@@ -1690,8 +1690,8 @@ vk_create_descriptor_set_layout( const struct Device*         idevice,
                                             NULL );
 	if ( reflect_data.binding_count != 0 )
 	{
-		u64   iter = 0;
-		void* item;
+		size_t iter = 0;
+		void*  item;
 		while (
 		    hashmap_iter( ishader->reflect_data.binding_map, &iter, &item ) )
 		{
