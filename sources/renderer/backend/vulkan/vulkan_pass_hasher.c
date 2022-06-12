@@ -25,7 +25,8 @@ struct FramebufferMapItem
 	VkFramebuffer              framebuffer;
 };
 
-static inline b32 has_depth_stencil(const struct RenderPassBeginInfo* info)
+static inline b32
+has_depth_stencil( const struct RenderPassBeginInfo* info )
 {
 	return info->depth_attachment.image != NULL;
 }
@@ -48,11 +49,6 @@ compare_attachments( const struct AttachmentInfo* a,
 	}
 
 	if ( a->load_op != b->load_op )
-	{
-		return 1;
-	}
-
-	if ( a->state != b->state )
 	{
 		return 1;
 	}
@@ -160,7 +156,7 @@ vk_create_render_pass( const struct VulkanDevice*        device,
                        VkRenderPass*                     p )
 {
 	u32 attachments_count = info->color_attachment_count;
-	
+
 	VkAttachmentDescription attachments[ MAX_ATTACHMENTS_COUNT + 2 ];
 	VkAttachmentReference   color_references[ MAX_ATTACHMENTS_COUNT ];
 	VkAttachmentReference   depth_reference = { 0 };
@@ -177,13 +173,13 @@ vk_create_render_pass( const struct VulkanDevice*        device,
 			.storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
 			.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			.initialLayout  = determine_image_layout( att->state ),
-			.finalLayout    = determine_image_layout( att->state ),
+			.initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		};
 
 		color_references[ i ] = ( VkAttachmentReference ) {
 			.attachment = i,
-			.layout     = determine_image_layout( att->state ),
+			.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		};
 	}
 
@@ -200,13 +196,13 @@ vk_create_render_pass( const struct VulkanDevice*        device,
 			.storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 			.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			.initialLayout  = determine_image_layout( att->state ),
-			.finalLayout    = determine_image_layout( att->state ),
+			.initialLayout  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 		};
 
 		depth_reference = ( VkAttachmentReference ) {
 			.attachment = i,
-			.layout     = determine_image_layout( att->state ),
+			.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 		};
 
 		attachments_count++;

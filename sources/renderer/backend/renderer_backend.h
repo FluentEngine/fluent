@@ -219,7 +219,6 @@ extern "C"
 	{
 		const struct Image*   image;
 		enum AttachmentLoadOp load_op;
-		enum ResourceState    state;
 		struct ClearValue     clear_value;
 	};
 

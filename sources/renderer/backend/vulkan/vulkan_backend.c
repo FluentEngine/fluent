@@ -1510,8 +1510,6 @@ vk_create_graphics_pipeline( const struct Device*       idevice,
 		render_pass_info.color_attachments[ i ].image = &color_images[ i ];
 		render_pass_info.color_attachments[ i ].load_op =
 		    FT_ATTACHMENT_LOAD_OP_DONT_CARE;
-		render_pass_info.color_attachments[ i ].state =
-		    FT_RESOURCE_STATE_COLOR_ATTACHMENT;
 	}
 
 	struct Image depth_image;
@@ -1522,8 +1520,6 @@ vk_create_graphics_pipeline( const struct Device*       idevice,
 		render_pass_info.depth_attachment.image = &depth_image;
 		render_pass_info.depth_attachment.load_op =
 		    FT_ATTACHMENT_LOAD_OP_DONT_CARE;
-		render_pass_info.depth_attachment.state =
-		    FT_RESOURCE_STATE_DEPTH_STENCIL_WRITE;
 	}
 
 	VkRenderPass render_pass;
