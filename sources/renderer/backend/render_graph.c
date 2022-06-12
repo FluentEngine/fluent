@@ -132,16 +132,16 @@ rg_add_pass( struct RenderGraph* graph,
 	    &graph->render_passes[ graph->render_pass_count++ ];
 
 	memset( pass, 0, sizeof( struct RenderPass ) );
-
-	pass->name                = name;
-	pass->graph               = graph;
-	pass->create              = default_create;
-	pass->execute             = default_execute;
-	pass->destroy             = default_destroy;
-	pass->clear_color         = default_clear_color;
-	pass->clear_depth_stencil = default_clear_depth_stencil;
-
-	pass->color_attachment_count = 0;
+	
+	*pass = ( struct RenderPass ) {
+		.name                = name,
+		.graph               = graph,
+		.create              = default_create,
+		.execute             = default_execute,
+		.destroy             = default_destroy,
+		.clear_color         = default_clear_color,
+		.clear_depth_stencil = default_clear_depth_stencil,
+	};
 
 	*p = pass;
 }
@@ -156,12 +156,14 @@ rg_add_color_output( struct RenderPass*      pass,
 void
 rg_set_user_data( struct RenderPass* pass, void* data )
 {
+	FT_ASSERT( pass );
 	pass->user_data = data;
 }
 
 void
 rg_set_pass_create_callback( struct RenderPass* pass, create_cb cb )
 {
+	FT_ASSERT( pass );
 	FT_ASSERT( cb );
 	pass->create = cb;
 }
@@ -169,6 +171,7 @@ rg_set_pass_create_callback( struct RenderPass* pass, create_cb cb )
 void
 rg_set_pass_execute_callback( struct RenderPass* pass, execute_cb cb )
 {
+	FT_ASSERT( pass );
 	FT_ASSERT( cb );
 	pass->execute = cb;
 }
@@ -176,6 +179,7 @@ rg_set_pass_execute_callback( struct RenderPass* pass, execute_cb cb )
 void
 rg_set_pass_destroy_callback( struct RenderPass* pass, destroy_cb cb )
 {
+	FT_ASSERT( pass );
 	FT_ASSERT( cb );
 	pass->destroy = cb;
 }
@@ -183,6 +187,7 @@ rg_set_pass_destroy_callback( struct RenderPass* pass, destroy_cb cb )
 void
 rg_set_get_clear_color( struct RenderPass* pass, get_clear_color_cb cb )
 {
+	FT_ASSERT( pass );
 	FT_ASSERT( cb );
 	pass->clear_color = cb;
 }
@@ -191,6 +196,7 @@ void
 rg_set_get_clear_depth_stencil( struct RenderPass*         pass,
                                 get_clear_depth_stencil_cb cb )
 {
+	FT_ASSERT( pass );
 	FT_ASSERT( cb );
 	pass->clear_depth_stencil = cb;
 }

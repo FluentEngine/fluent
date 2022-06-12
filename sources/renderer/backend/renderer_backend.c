@@ -790,6 +790,15 @@ create_image( const struct Device*    device,
 	FT_ASSERT( image );
 
 	create_image_impl( device, info, image );
+
+	( *image )->width           = info->width;
+	( *image )->height          = info->height;
+	( *image )->depth           = info->depth;
+	( *image )->format          = info->format;
+	( *image )->sample_count    = info->sample_count;
+	( *image )->mip_level_count = info->mip_levels;
+	( *image )->layer_count     = info->layer_count;
+	( *image )->descriptor_type = info->descriptor_type;
 }
 
 void
