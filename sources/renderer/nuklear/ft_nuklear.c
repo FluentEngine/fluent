@@ -522,6 +522,7 @@ nk_ft_shutdown( void )
 	destroy_buffer( adapter->device, adapter->index_buffer );
 	destroy_buffer( adapter->device, adapter->uniform_buffer );
 	destroy_pipeline( adapter->device, adapter->pipeline );
+	destroy_descriptor_set( adapter->device, adapter->set );
 	destroy_descriptor_set_layout( adapter->device, adapter->dsl );
 
 	nk_ft_device_destroy();
