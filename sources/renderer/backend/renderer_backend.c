@@ -64,7 +64,6 @@ cmd_copy_buffer_to_image_fun      cmd_copy_buffer_to_image_impl;
 cmd_bind_descriptor_set_fun       cmd_bind_descriptor_set_impl;
 cmd_dispatch_fun                  cmd_dispatch_impl;
 cmd_push_constants_fun            cmd_push_constants_impl;
-cmd_clear_color_image_fun         cmd_clear_color_image_impl;
 cmd_draw_indexed_indirect_fun     cmd_draw_indexed_indirect_impl;
 
 // defined in resource_loader.c
@@ -686,17 +685,6 @@ cmd_push_constants( const struct CommandBuffer* cmd,
 	FT_ASSERT( data );
 
 	cmd_push_constants_impl( cmd, pipeline, offset, size, data );
-}
-
-void
-cmd_clear_color_image( const struct CommandBuffer* cmd,
-                       struct Image*               image,
-                       float                       color[ 4 ] )
-{
-	FT_ASSERT( cmd );
-	FT_ASSERT( image );
-
-	cmd_clear_color_image_impl( cmd, image, color );
 }
 
 void

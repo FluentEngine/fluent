@@ -668,11 +668,6 @@ extern "C"
 	                    const void*                 data );
 
 	void
-	cmd_clear_color_image( const struct CommandBuffer* cmd,
-	                       struct Image*               image,
-	                       float                       color[ 4 ] );
-
-	void
 	create_buffer( const struct Device*     device,
 	               const struct BufferInfo* info,
 	               struct Buffer**          buffer );

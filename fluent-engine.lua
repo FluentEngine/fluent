@@ -28,21 +28,21 @@ newoption
 {
 	trigger			= "vulkan_backend",
 	description		= "enable vulkan backend",
-	default			= true
+	default			= "true"
 }
 
 newoption
 {
 	trigger			= "d3d12_backend",
 	description		= "enable directx12 backend",
-	default			= true
+	default			= "true"
 }
 
 newoption
 {
 	trigger			= "metal_backend",
 	description		= "enable metal backend",
-	default			= true
+	default			= "true"
 }
 
 local commons = {}
@@ -258,8 +258,6 @@ project "ft_renderer"
 		{
 			path.join(backend_dir, "metal/metal_backend.h"),
 			path.join(backend_dir, "metal/metal_backend.m"),
-			path.join(backend_dir, "metal/metal_graph.h"),
-			path.join(backend_dir, "metal/metal_graph.m"),
 			path.join(shader_reflection_dir, "metal_reflection.m"),
 		}
 	end

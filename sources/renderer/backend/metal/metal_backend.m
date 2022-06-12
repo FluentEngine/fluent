@@ -1199,19 +1199,22 @@ mtl_cmd_begin_render_pass( const struct CommandBuffer*       icmd,
 
 		for ( u32 i = 0; i < info->color_attachment_count; ++i )
 		{
-			FT_FROM_HANDLE( image, info->color_attachments[ i ], MetalImage );
+			FT_FROM_HANDLE( image,
+			                info->color_attachments[ i ].image,
+			                MetalImage );
 			pass_descriptor.colorAttachments[ i ].loadAction =
-			    to_mtl_load_action( info->color_attachment_load_ops[ i ] );
+			    to_mtl_load_action( info->color_attachments[ i ].load_op );
 			pass_descriptor.colorAttachments[ i ].storeAction =
 			    MTLStoreActionStore;
 
 			pass_descriptor.colorAttachments[ i ].texture = image->texture;
 
 			pass_descriptor.colorAttachments[ i ].clearColor =
-			    MTLClearColorMake( info->clear_values[ i ].color[ 0 ],
-			                       info->clear_values[ i ].color[ 1 ],
-			                       info->clear_values[ i ].color[ 2 ],
-			                       info->clear_values[ i ].color[ 3 ] );
+			    MTLClearColorMake(
+			        info->color_attachments[ i ].clear_value.color[ 0 ],
+			        info->color_attachments[ i ].clear_value.color[ 1 ],
+			        info->color_attachments[ i ].clear_value.color[ 2 ],
+			        info->color_attachments[ i ].clear_value.color[ 3 ] );
 			// TODO:
 			pass_descriptor.renderTargetWidth  = image->interface.width;
 			pass_descriptor.renderTargetHeight = image->interface.height;
@@ -1219,18 +1222,17 @@ mtl_cmd_begin_render_pass( const struct CommandBuffer*       icmd,
 			    image->interface.sample_count;
 		}
 
-		if ( info->depth_stencil != NULL )
+		if ( info->depth_attachment.image != NULL )
 		{
-			FT_FROM_HANDLE( image, info->depth_stencil, MetalImage );
+			FT_FROM_HANDLE( image, info->depth_attachment.image, MetalImage );
 			pass_descriptor.depthAttachment.texture = image->texture;
 			pass_descriptor.depthAttachment.loadAction =
-			    to_mtl_load_action( info->depth_stencil_load_op );
+			    to_mtl_load_action( info->depth_attachment.load_op );
 			pass_descriptor.depthAttachment.storeAction = MTLStoreActionStore;
 			pass_descriptor.depthAttachment.texture     = image->texture;
 
 			pass_descriptor.depthAttachment.clearDepth =
-			    info->clear_values[ info->color_attachment_count ]
-			        .depth_stencil.depth;
+			    info->depth_attachment.clear_value.depth_stencil.depth;
 
 			// TODO:
 			pass_descriptor.renderTargetWidth  = image->interface.width;
@@ -1473,13 +1475,6 @@ mtl_cmd_blit_image( const struct CommandBuffer* icmd,
                     struct Image*               idst,
                     enum ResourceState          dst_state,
                     enum Filter                 filter )
-{
-}
-
-static void
-mtl_cmd_clear_color_image( const struct CommandBuffer* icmd,
-                           struct Image*               iimage,
-                           f32                         color[ 4 ] )
 {
 }
 

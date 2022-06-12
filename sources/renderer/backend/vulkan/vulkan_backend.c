@@ -2636,7 +2636,6 @@ vk_create_renderer_backend( const struct RendererBackendInfo* info,
 	cmd_bind_descriptor_set_impl       = vk_cmd_bind_descriptor_set;
 	cmd_dispatch_impl                  = vk_cmd_dispatch;
 	cmd_push_constants_impl            = vk_cmd_push_constants;
-	cmd_clear_color_image_impl         = vk_cmd_clear_color_image;
 	cmd_draw_indexed_indirect_impl     = vk_cmd_draw_indexed_indirect;
 
 	FT_INIT_INTERNAL( backend, *p, VulkanRendererBackend );

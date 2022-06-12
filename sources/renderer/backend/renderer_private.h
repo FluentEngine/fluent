@@ -310,12 +310,6 @@ extern "C"
 	                          const void*                 data );
 
 	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_clear_color_image,
-	                          const struct CommandBuffer* cmd,
-	                          struct Image*               image,
-	                          float                       color[ 4 ] );
-
-	DECLARE_FUNCTION_POINTER( void,
 	                          create_buffer,
 	                          const struct Device*     device,
 	                          const struct BufferInfo* info,
