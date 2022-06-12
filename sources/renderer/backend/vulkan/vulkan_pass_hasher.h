@@ -20,7 +20,8 @@ VkRenderPass
 vk_pass_hasher_get_render_pass( const struct RenderPassBeginInfo* info );
 
 VkFramebuffer
-vk_pass_hasher_get_framebuffer(  VkRenderPass render_pass, const struct RenderPassBeginInfo* info );
+vk_pass_hasher_get_framebuffer( VkRenderPass                      render_pass,
+                                const struct RenderPassBeginInfo* info );
 
 void
 vk_create_render_pass( const struct VulkanDevice*        device,

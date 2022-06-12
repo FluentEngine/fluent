@@ -107,22 +107,23 @@ void
 rg_execute( struct CommandBuffer* cmd, struct RenderGraph* graph )
 {
 	struct ImageBarrier barrier = {
-		.image     = graph->swapchain_image,
-		.old_state = FT_RESOURCE_STATE_UNDEFINED,
-		.new_state = FT_RESOURCE_STATE_COLOR_ATTACHMENT,
+	    .image     = graph->swapchain_image,
+	    .old_state = FT_RESOURCE_STATE_UNDEFINED,
+	    .new_state = FT_RESOURCE_STATE_COLOR_ATTACHMENT,
 	};
 
 	cmd_barrier( cmd, 0, NULL, 0, NULL, 1, &barrier );
 
 	struct RenderPassBeginInfo begin_info = {
-		.color_attachment_count = 1,
-		.width                  = graph->swapchain_image->width,
-		.height                 = graph->swapchain_image->height,
-		.color_attachments[ 0 ] = {
-			.image             = graph->swapchain_image,
-			.load_op           = FT_ATTACHMENT_LOAD_OP_CLEAR,
-			.clear_value.color = { 0.0f, 0.0f, 0.0f, 1.0f },
-	   },
+	    .color_attachment_count = 1,
+	    .width                  = graph->swapchain_image->width,
+	    .height                 = graph->swapchain_image->height,
+	    .color_attachments[ 0 ] =
+	        {
+	            .image             = graph->swapchain_image,
+	            .load_op           = FT_ATTACHMENT_LOAD_OP_CLEAR,
+	            .clear_value.color = { 0.2f, 0.3f, 0.4f, 1.0f },
+	        },
 	};
 
 	cmd_begin_render_pass( cmd, &begin_info );
@@ -152,13 +153,13 @@ rg_add_pass( struct RenderGraph* graph,
 	memset( pass, 0, sizeof( struct RenderPass ) );
 
 	*pass = ( struct RenderPass ) {
-		.name                = name,
-		.graph               = graph,
-		.create              = default_create,
-		.execute             = default_execute,
-		.destroy             = default_destroy,
-		.clear_color         = default_clear_color,
-		.clear_depth_stencil = default_clear_depth_stencil,
+	    .name                = name,
+	    .graph               = graph,
+	    .create              = default_create,
+	    .execute             = default_execute,
+	    .destroy             = default_destroy,
+	    .clear_color         = default_clear_color,
+	    .clear_depth_stencil = default_clear_depth_stencil,
 	};
 
 	*p = pass;

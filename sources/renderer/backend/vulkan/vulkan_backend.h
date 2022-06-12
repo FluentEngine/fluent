@@ -531,7 +531,6 @@ determine_vk_image_usage( enum DescriptorType descriptor_type )
 	return image_usage;
 }
 
-
 struct VulkanRendererBackend
 {
 	VkAllocationCallbacks*   vulkan_allocator;

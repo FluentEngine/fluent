@@ -166,20 +166,20 @@ vk_create_render_pass( const struct VulkanDevice*        device,
 		const struct AttachmentInfo* att = &info->color_attachments[ i ];
 
 		attachments[ i ] = ( VkAttachmentDescription ) {
-			.flags          = 0,
-			.format         = to_vk_format( att->image->format ),
-			.samples        = to_vk_sample_count( att->image->sample_count ),
-			.loadOp         = to_vk_load_op( att->load_op ),
-			.storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
-			.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			.initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		    .flags          = 0,
+		    .format         = to_vk_format( att->image->format ),
+		    .samples        = to_vk_sample_count( att->image->sample_count ),
+		    .loadOp         = to_vk_load_op( att->load_op ),
+		    .storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
+		    .stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+		    .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		    .initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		    .finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		};
 
 		color_references[ i ] = ( VkAttachmentReference ) {
-			.attachment = i,
-			.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		    .attachment = i,
+		    .layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		};
 	}
 
@@ -189,49 +189,49 @@ vk_create_render_pass( const struct VulkanDevice*        device,
 		const struct AttachmentInfo* att = &info->depth_attachment;
 
 		attachments[ i ] = ( VkAttachmentDescription ) {
-			.flags          = 0,
-			.format         = to_vk_format( att->image->format ),
-			.samples        = to_vk_sample_count( att->image->sample_count ),
-			.loadOp         = to_vk_load_op( att->load_op ),
-			.storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			.initialLayout  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-			.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+		    .flags          = 0,
+		    .format         = to_vk_format( att->image->format ),
+		    .samples        = to_vk_sample_count( att->image->sample_count ),
+		    .loadOp         = to_vk_load_op( att->load_op ),
+		    .storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		    .stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+		    .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		    .initialLayout  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+		    .finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 		};
 
 		depth_reference = ( VkAttachmentReference ) {
-			.attachment = i,
-			.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+		    .attachment = i,
+		    .layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 		};
 
 		attachments_count++;
 	}
 
 	VkSubpassDescription subpass = {
-		.flags                = 0,
-		.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS,
-		.inputAttachmentCount = 0,
-		.pInputAttachments    = NULL,
-		.colorAttachmentCount = info->color_attachment_count,
-		.pColorAttachments    = color_references,
-		.pDepthStencilAttachment =
-		    has_depth_stencil( info ) ? &depth_reference : NULL,
-		.pResolveAttachments     = NULL,
-		.preserveAttachmentCount = 0,
-		.pPreserveAttachments    = NULL,
+	    .flags                = 0,
+	    .pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS,
+	    .inputAttachmentCount = 0,
+	    .pInputAttachments    = NULL,
+	    .colorAttachmentCount = info->color_attachment_count,
+	    .pColorAttachments    = color_references,
+	    .pDepthStencilAttachment =
+	        has_depth_stencil( info ) ? &depth_reference : NULL,
+	    .pResolveAttachments     = NULL,
+	    .preserveAttachmentCount = 0,
+	    .pPreserveAttachments    = NULL,
 	};
 
 	VkRenderPassCreateInfo render_pass_create_info = {
-		.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-		.pNext           = NULL,
-		.flags           = 0,
-		.attachmentCount = attachments_count,
-		.pAttachments    = attachments,
-		.subpassCount    = 1,
-		.pSubpasses      = &subpass,
-		.dependencyCount = 0,
-		.pDependencies   = NULL,
+	    .sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+	    .pNext           = NULL,
+	    .flags           = 0,
+	    .attachmentCount = attachments_count,
+	    .pAttachments    = attachments,
+	    .subpassCount    = 1,
+	    .pSubpasses      = &subpass,
+	    .dependencyCount = 0,
+	    .pDependencies   = NULL,
 	};
 
 	VK_ASSERT( vkCreateRenderPass( device->logical_device,
@@ -264,15 +264,15 @@ vk_create_framebuffer( const struct VulkanDevice*        device,
 	}
 
 	VkFramebufferCreateInfo framebuffer_create_info = {
-		.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-		.pNext           = NULL,
-		.flags           = 0,
-		.renderPass      = render_pass,
-		.attachmentCount = attachment_count,
-		.pAttachments    = image_views,
-		.width           = info->width,
-		.height          = info->height,
-		.layers          = 1,
+	    .sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+	    .pNext           = NULL,
+	    .flags           = 0,
+	    .renderPass      = render_pass,
+	    .attachmentCount = attachment_count,
+	    .pAttachments    = image_views,
+	    .width           = info->width,
+	    .height          = info->height,
+	    .layers          = 1,
 	};
 
 	VK_ASSERT( vkCreateFramebuffer( device->logical_device,

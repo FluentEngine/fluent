@@ -27,7 +27,7 @@ BreakInheritanceList: BeforeComma
 ColumnLimit: '80'
 ConstructorInitializerAllOnOneLineOrOnePerLine: 'false'
 ContinuationIndentWidth: 4
-Cpp11BracedListStyle: 'false'
+Cpp11BracedListStyle: 'true'
 DerivePointerAlignment: 'true'
 FixNamespaceComments: 'true'
 IndentCaseLabels: 'false'
