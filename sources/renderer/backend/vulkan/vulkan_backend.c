@@ -5,155 +5,13 @@
 #include "wsi/wsi.h"
 #include "../renderer_private.h"
 #include "vulkan_backend.h"
+#include "vulkan_pass_hasher.h"
 
 static inline u32
 clamp_u32( u32 d, u32 min, u32 max )
 {
 	return d < min ? min : ( max < d ) ? max : d;
 }
-
-struct RenderPassMapItem
-{
-	struct RenderPassBeginInfo info;
-	VkRenderPass               value;
-};
-
-struct FramebufferMapItem
-{
-	struct RenderPassBeginInfo info;
-	VkFramebuffer              value;
-};
-
-static b32
-compare_pass_info( const void* a, const void* b, void* udata )
-{
-	FT_UNUSED( udata );
-
-	const struct RenderPassBeginInfo* rpa = a;
-	const struct RenderPassBeginInfo* rpb = b;
-	if ( rpa->color_attachment_count != rpb->color_attachment_count )
-		return 0;
-
-	for ( u32 i = 0; i < rpa->color_attachment_count; ++i )
-	{
-		if ( rpa->color_attachments[ i ]->format !=
-		     rpb->color_attachments[ i ]->format )
-		{
-			return 1;
-		}
-
-		if ( rpa->color_attachments[ i ]->sample_count !=
-		     rpb->color_attachments[ i ]->sample_count )
-		{
-			return 1;
-		}
-
-		if ( rpa->color_attachment_load_ops[ i ] !=
-		     rpb->color_attachment_load_ops[ i ] )
-		{
-			return 1;
-		}
-
-		if ( rpa->color_image_states[ i ] != rpb->color_image_states[ i ] )
-		{
-			return 1;
-		}
-	}
-
-	if ( ( rpa->depth_stencil != rpb->depth_stencil ) &&
-	     ( ( rpa->depth_stencil == NULL ) || ( rpb->depth_stencil == NULL ) ) )
-	{
-		return 1;
-	}
-
-	if ( rpa->depth_stencil )
-	{
-		if ( rpa->depth_stencil != rpb->depth_stencil )
-		{
-			return 1;
-		}
-
-		if ( rpa->depth_stencil->sample_count !=
-		     rpb->depth_stencil->sample_count )
-		{
-			return 1;
-		}
-
-		if ( rpa->depth_stencil_load_op != rpb->depth_stencil_load_op )
-		{
-			return 1;
-		}
-
-		if ( rpa->depth_stencil_state != rpb->depth_stencil_state )
-		{
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-static u64
-hash_pass_info( const void* item, u64 seed0, u64 seed1 )
-{
-	FT_UNUSED( item );
-	FT_UNUSED( seed0 );
-	FT_UNUSED( seed1 );
-	// TODO: hash function
-	return 0;
-}
-
-static b32
-compare_framebuffer_info( const void* a, const void* b, void* udata )
-{
-	FT_UNUSED( udata );
-
-	const struct RenderPassBeginInfo* rpa = a;
-	const struct RenderPassBeginInfo* rpb = b;
-
-	if ( rpa->color_attachment_count != rpb->color_attachment_count )
-	{
-		return 1;
-	}
-
-	for ( u32 i = 0; i < rpa->color_attachment_count; ++i )
-	{
-		if ( rpa->color_attachments[ i ] != rpb->color_attachments[ i ] )
-		{
-			return 1;
-		}
-	}
-
-	if ( ( rpa->depth_stencil != rpb->depth_stencil ) &&
-	     ( ( rpa->depth_stencil == NULL ) || ( rpb->depth_stencil == NULL ) ) )
-	{
-		return 1;
-	}
-
-	if ( rpa->depth_stencil )
-	{
-		if ( rpa->depth_stencil != rpb->depth_stencil )
-		{
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-static u64
-hash_framebuffer_info( const void* item, u64 seed0, u64 seed1 )
-{
-	FT_UNUSED( item );
-	FT_UNUSED( seed0 );
-	FT_UNUSED( seed1 );
-	// TODO: hash function
-	return 0;
-}
-
-static struct VulkanDevice* devices[ MAX_DEVICE_COUNT ];
-static struct hashmap*      passes[ MAX_DEVICE_COUNT ]       = { NULL };
-static struct hashmap*      framebuffers[ MAX_DEVICE_COUNT ] = { NULL };
 
 #ifdef FLUENT_DEBUG
 static VKAPI_ATTR VkBool32 VKAPI_CALL
@@ -431,23 +289,6 @@ vk_create_device( const struct RendererBackend* ibackend,
 
 	FT_INIT_INTERNAL( device, *p, VulkanDevice );
 
-	b32 found_device_slot = 0;
-	FT_UNUSED( found_device_slot );
-
-	for ( u32 i = 0; i < MAX_DEVICE_COUNT; ++i )
-	{
-		if ( devices[ i ] == NULL )
-		{
-			device->index     = i;
-			found_device_slot = 1;
-			devices[ i ]      = device;
-			break;
-		}
-	}
-
-	FT_ASSERT( found_device_slot &&
-	           "MAX_DEVICE_COUNT less than created device count" );
-
 	device->vulkan_allocator = backend->vulkan_allocator;
 	device->instance         = backend->instance;
 	device->physical_device  = backend->physical_device;
@@ -651,24 +492,7 @@ vk_create_device( const struct RendererBackend* ibackend,
 	                                   device->vulkan_allocator,
 	                                   &device->descriptor_pool ) );
 
-	passes[ device->index ] = hashmap_new( sizeof( struct RenderPassMapItem ),
-	                                       0,
-	                                       0,
-	                                       0,
-	                                       hash_pass_info,
-	                                       compare_pass_info,
-	                                       NULL,
-	                                       NULL );
-
-	framebuffers[ device->index ] =
-	    hashmap_new( sizeof( struct FramebufferMapItem ),
-	                 0,
-	                 0,
-	                 0,
-	                 hash_framebuffer_info,
-	                 compare_framebuffer_info,
-	                 NULL,
-	                 NULL );
+	vk_pass_hasher_init( device );
 }
 
 static void
@@ -676,37 +500,13 @@ vk_destroy_device( struct Device* idevice )
 {
 	FT_FROM_HANDLE( device, idevice, VulkanDevice );
 
-	size_t iter = 0;
-	void*  item;
-
-	while ( hashmap_iter( framebuffers[ device->index ], &iter, &item ) )
-	{
-		struct FramebufferMapItem* fb = item;
-		vkDestroyFramebuffer( device->logical_device,
-		                      fb->value,
-		                      device->vulkan_allocator );
-	}
-	hashmap_free( framebuffers[ device->index ] );
-
-	iter = 0;
-
-	while ( hashmap_iter( passes[ device->index ], &iter, &item ) )
-	{
-		struct RenderPassMapItem* pass = item;
-		vkDestroyRenderPass( device->logical_device,
-		                     pass->value,
-		                     device->vulkan_allocator );
-	}
-
-	hashmap_free( passes[ device->index ] );
+	vk_pass_hasher_shutdown();
 
 	vkDestroyDescriptorPool( device->logical_device,
 	                         device->descriptor_pool,
 	                         device->vulkan_allocator );
 	vmaDestroyAllocator( device->memory_allocator );
 	vkDestroyDevice( device->logical_device, device->vulkan_allocator );
-
-	devices[ device->index ] = NULL;
 
 	free( device );
 }
@@ -1194,16 +994,7 @@ vk_resize_swapchain( const struct Device* idevice,
 	iswapchain->width  = width;
 	iswapchain->height = height;
 
-	size_t iter = 0;
-	void*  item;
-	while ( hashmap_iter( framebuffers[ device->index ], &iter, &item ) )
-	{
-		struct FramebufferMapItem* fb = item;
-		vkDestroyFramebuffer( device->logical_device,
-		                      fb->value,
-		                      device->vulkan_allocator );
-	}
-	hashmap_clear( framebuffers[ device->index ], 0 );
+	vk_pass_hasher_framebuffers_clear();
 
 	vk_create_configured_swapchain( device, swapchain, 1 );
 }
@@ -1393,189 +1184,6 @@ vk_acquire_next_image( const struct Device*    idevice,
 	    image_index );
 	// TODO: check status
 	( void ) result;
-}
-
-static inline void
-vk_create_framebuffer( const struct VulkanDevice*        device,
-                       const struct RenderPassBeginInfo* info,
-                       VkRenderPass                      render_pass,
-                       VkFramebuffer*                    p )
-{
-	u32 attachment_count = info->color_attachment_count;
-
-	VkImageView image_views[ MAX_ATTACHMENTS_COUNT + 2 ];
-	for ( u32 i = 0; i < attachment_count; ++i )
-	{
-		FT_FROM_HANDLE( image, info->color_attachments[ i ], VulkanImage );
-		image_views[ i ] = image->image_view;
-	}
-
-	if ( info->depth_stencil )
-	{
-		FT_FROM_HANDLE( image, info->depth_stencil, VulkanImage );
-		image_views[ attachment_count++ ] = image->image_view;
-	}
-
-	VkFramebufferCreateInfo framebuffer_create_info = { 0 };
-	framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	framebuffer_create_info.pNext = NULL;
-	framebuffer_create_info.flags = 0;
-	framebuffer_create_info.renderPass      = render_pass;
-	framebuffer_create_info.attachmentCount = attachment_count;
-	framebuffer_create_info.pAttachments    = image_views;
-	framebuffer_create_info.width           = info->width;
-	framebuffer_create_info.height          = info->height;
-	framebuffer_create_info.layers          = 1;
-
-	VK_ASSERT( vkCreateFramebuffer( device->logical_device,
-	                                &framebuffer_create_info,
-	                                device->vulkan_allocator,
-	                                p ) );
-}
-
-static inline void
-vk_create_render_pass( const struct VulkanDevice*        device,
-                       const struct RenderPassBeginInfo* info,
-                       VkRenderPass*                     p )
-{
-	u32 attachments_count = info->color_attachment_count;
-
-	VkAttachmentDescription
-	                      attachment_descriptions[ MAX_ATTACHMENTS_COUNT + 2 ];
-	VkAttachmentReference color_attachment_references[ MAX_ATTACHMENTS_COUNT ];
-	VkAttachmentReference depth_attachment_reference = { 0 };
-
-	for ( u32 i = 0; i < info->color_attachment_count; ++i )
-	{
-		attachment_descriptions[ i ].flags = 0;
-		attachment_descriptions[ i ].format =
-		    to_vk_format( info->color_attachments[ i ]->format );
-		attachment_descriptions[ i ].samples =
-		    to_vk_sample_count( info->color_attachments[ i ]->sample_count );
-		attachment_descriptions[ i ].loadOp =
-		    to_vk_load_op( info->color_attachment_load_ops[ i ] );
-		attachment_descriptions[ i ].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		attachment_descriptions[ i ].stencilLoadOp =
-		    VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		attachment_descriptions[ i ].stencilStoreOp =
-		    VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		attachment_descriptions[ i ].initialLayout =
-		    determine_image_layout( info->color_image_states[ i ] );
-		attachment_descriptions[ i ].finalLayout =
-		    determine_image_layout( info->color_image_states[ i ] );
-
-		color_attachment_references[ i ].attachment = i;
-		color_attachment_references[ i ].layout =
-		    determine_image_layout( info->color_image_states[ i ] );
-	}
-
-	if ( info->depth_stencil )
-	{
-		u32 i                              = attachments_count;
-		attachment_descriptions[ i ].flags = 0;
-		attachment_descriptions[ i ].format =
-		    to_vk_format( info->depth_stencil->format );
-		attachment_descriptions[ i ].samples =
-		    to_vk_sample_count( info->depth_stencil->sample_count );
-		attachment_descriptions[ i ].loadOp =
-		    to_vk_load_op( info->depth_stencil_load_op );
-		attachment_descriptions[ i ].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		attachment_descriptions[ i ].stencilLoadOp =
-		    VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		attachment_descriptions[ i ].stencilStoreOp =
-		    VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		attachment_descriptions[ i ].initialLayout =
-		    determine_image_layout( info->depth_stencil_state );
-		attachment_descriptions[ i ].finalLayout =
-		    determine_image_layout( info->depth_stencil_state );
-
-		depth_attachment_reference.attachment = i;
-		depth_attachment_reference.layout =
-		    attachment_descriptions[ i ].finalLayout;
-
-		attachments_count++;
-	}
-
-	VkSubpassDescription subpass_description = { 0 };
-	subpass_description.flags                = 0;
-	subpass_description.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass_description.inputAttachmentCount = 0;
-	subpass_description.pInputAttachments    = NULL;
-	subpass_description.colorAttachmentCount = info->color_attachment_count;
-	subpass_description.pColorAttachments =
-	    attachments_count ? color_attachment_references : NULL;
-	subpass_description.pDepthStencilAttachment =
-	    info->depth_stencil ? &depth_attachment_reference : NULL;
-	subpass_description.pResolveAttachments     = NULL;
-	subpass_description.preserveAttachmentCount = 0;
-	subpass_description.pPreserveAttachments    = NULL;
-
-	VkRenderPassCreateInfo render_pass_create_info = { 0 };
-	render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	render_pass_create_info.pNext = NULL;
-	render_pass_create_info.flags = 0;
-	render_pass_create_info.attachmentCount = attachments_count;
-	render_pass_create_info.pAttachments =
-	    attachments_count ? attachment_descriptions : NULL;
-	render_pass_create_info.subpassCount    = 1;
-	render_pass_create_info.pSubpasses      = &subpass_description;
-	render_pass_create_info.dependencyCount = 0;
-	render_pass_create_info.pDependencies   = NULL;
-
-	VK_ASSERT( vkCreateRenderPass( device->logical_device,
-	                               &render_pass_create_info,
-	                               device->vulkan_allocator,
-	                               p ) );
-}
-
-static inline VkRenderPass
-get_render_pass( const struct RenderPassBeginInfo* info )
-{
-	FT_FROM_HANDLE( device, info->device, VulkanDevice );
-
-	struct RenderPassMapItem* it =
-	    hashmap_get( passes[ device->index ],
-	                 &( struct RenderPassMapItem ) { .info = *info } );
-
-	if ( it != NULL )
-	{
-		return it->value;
-	}
-	else
-	{
-		VkRenderPass render_pass;
-		vk_create_render_pass( device, info, &render_pass );
-		hashmap_set( passes[ device->index ],
-		             &( struct RenderPassMapItem ) { .info  = *info,
-		                                             .value = render_pass } );
-		return render_pass;
-	}
-}
-
-static inline VkFramebuffer
-get_framebuffer( VkRenderPass                      render_pass,
-                 const struct RenderPassBeginInfo* info )
-{
-	FT_FROM_HANDLE( device, info->device, VulkanDevice );
-
-	struct FramebufferMapItem* it =
-	    hashmap_get( framebuffers[ device->index ],
-	                 &( struct FramebufferMapItem ) { .info = *info } );
-
-	if ( it != NULL )
-	{
-		return it->value;
-	}
-	else
-	{
-		VkFramebuffer framebuffer;
-		vk_create_framebuffer( device, info, render_pass, &framebuffer );
-		hashmap_set( framebuffers[ device->index ],
-		             &( struct FramebufferMapItem ) { .info  = *info,
-		                                              .value = framebuffer } );
-
-		return framebuffer;
-	}
 }
 
 static inline void
@@ -1899,22 +1507,22 @@ vk_create_graphics_pipeline( const struct Device*       idevice,
 	{
 		color_images[ i ].format       = info->color_attachment_formats[ i ];
 		color_images[ i ].sample_count = info->sample_count;
-		render_pass_info.color_attachments[ i ] = &color_images[ i ];
-		render_pass_info.color_attachment_load_ops[ i ] =
+		render_pass_info.color_attachments[ i ].image = &color_images[ i ];
+		render_pass_info.color_attachments[ i ].load_op =
 		    FT_ATTACHMENT_LOAD_OP_DONT_CARE;
-		render_pass_info.color_image_states[ i ] =
+		render_pass_info.color_attachments[ i ].state =
 		    FT_RESOURCE_STATE_COLOR_ATTACHMENT;
 	}
 
 	struct Image depth_image;
 	if ( info->depth_stencil_format != FT_FORMAT_UNDEFINED )
 	{
-		depth_image.format             = info->depth_stencil_format;
-		depth_image.sample_count       = info->sample_count;
-		render_pass_info.depth_stencil = &depth_image;
-		render_pass_info.depth_stencil_load_op =
+		depth_image.format                      = info->depth_stencil_format;
+		depth_image.sample_count                = info->sample_count;
+		render_pass_info.depth_attachment.image = &depth_image;
+		render_pass_info.depth_attachment.load_op =
 		    FT_ATTACHMENT_LOAD_OP_DONT_CARE;
-		render_pass_info.depth_stencil_state =
+		render_pass_info.depth_attachment.state =
 		    FT_RESOURCE_STATE_DEPTH_STENCIL_WRITE;
 	}
 
@@ -2543,8 +2151,9 @@ vk_cmd_begin_render_pass( const struct CommandBuffer*       icmd,
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 
-	VkRenderPass  render_pass = get_render_pass( info );
-	VkFramebuffer framebuffer = get_framebuffer( render_pass, info );
+	VkRenderPass  render_pass = vk_pass_hasher_get_render_pass( info );
+	VkFramebuffer framebuffer =
+	    vk_pass_hasher_get_framebuffer( render_pass, info );
 
 	static VkClearValue clear_values[ MAX_ATTACHMENTS_COUNT + 1 ];
 	u32                 clear_value_count = info->color_attachment_count;
@@ -2554,25 +2163,25 @@ vk_cmd_begin_render_pass( const struct CommandBuffer*       icmd,
 		VkClearValue clear_value = { 0 };
 		clear_values[ i ]        = clear_value;
 		clear_values[ i ].color.float32[ 0 ] =
-		    info->clear_values[ i ].color[ 0 ];
+		    info->color_attachments[ i ].clear_value.color[ 0 ];
 		clear_values[ i ].color.float32[ 1 ] =
-		    info->clear_values[ i ].color[ 1 ];
+		    info->color_attachments[ i ].clear_value.color[ 1 ];
 		clear_values[ i ].color.float32[ 2 ] =
-		    info->clear_values[ i ].color[ 2 ];
+		    info->color_attachments[ i ].clear_value.color[ 2 ];
 		clear_values[ i ].color.float32[ 3 ] =
-		    info->clear_values[ i ].color[ 3 ];
+		    info->color_attachments[ i ].clear_value.color[ 3 ];
 	}
 
-	if ( info->depth_stencil )
+	if ( info->depth_attachment.image )
 	{
 		clear_value_count++;
 		u32          idx         = info->color_attachment_count;
 		VkClearValue clear_value = { 0 };
 		clear_values[ idx ]      = clear_value;
 		clear_values[ idx ].depthStencil.depth =
-		    info->clear_values[ idx ].depth_stencil.depth;
+		    info->depth_attachment.clear_value.depth_stencil.depth;
 		clear_values[ idx ].depthStencil.stencil =
-		    info->clear_values[ idx ].depth_stencil.stencil;
+		    info->depth_attachment.clear_value.depth_stencil.stencil;
 	}
 
 	VkRenderPassBeginInfo render_pass_begin_info = { 0 };

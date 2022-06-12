@@ -226,7 +226,6 @@ project "ft_renderer"
 	}
 	
 	backend_dir = "sources/renderer/backend/"
-	rg_dir = "sources/renderer/render_graph/"
 	nuklear_dir = "sources/renderer/nuklear/"
 	shader_reflection_dir = "sources/renderer/shader_reflection/"
 	scene_dir = "sources/renderer/scene/"
@@ -242,11 +241,6 @@ project "ft_renderer"
 		path.join(backend_dir, "vulkan/vulkan_backend.h"),
 		path.join(backend_dir, "d3d12/d3d12_backend.c"),
 		path.join(backend_dir, "d3d12/d3d12_backend.h"),
-		path.join(backend_dir, "render_graph.h"),
-		path.join(backend_dir, "render_graph.c"),
-		path.join(backend_dir, "render_graph_private.h"),
-		path.join(backend_dir, "vulkan/vulkan_graph.c"),
-		path.join(backend_dir, "vulkan/vulkan_graph.h"),
 		path.join(backend_dir, "vulkan/vulkan_pass_hasher.c"),
 		path.join(backend_dir, "vulkan/vulkan_pass_hasher.h"),
 		path.join(nuklear_dir, "ft_nuklear.h"),

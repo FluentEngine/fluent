@@ -544,7 +544,6 @@ struct VulkanRendererBackend
 
 struct VulkanDevice
 {
-	u32                    index;
 	VkAllocationCallbacks* vulkan_allocator;
 	VkInstance             instance;
 	VkPhysicalDevice       physical_device;

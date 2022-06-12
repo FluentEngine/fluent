@@ -506,16 +506,24 @@ nk_ft_shutdown( void )
 {
 	struct nk_vulkan_adapter *adapter = &ft.adapter;
 
+	if ( adapter->font_tex )
+	{
+		destroy_sampler( adapter->device, adapter->font_tex );
+	}
+	
+	if ( adapter->font_image )
+	{
+		destroy_image( adapter->device, adapter->font_image );
+		nk_font_atlas_clear( &ft.atlas );
+		nk_free( &ft.ctx );
+	}
+
 	destroy_buffer( adapter->device, adapter->vertex_buffer );
 	destroy_buffer( adapter->device, adapter->index_buffer );
 	destroy_buffer( adapter->device, adapter->uniform_buffer );
-	destroy_sampler( adapter->device, adapter->font_tex );
-	destroy_image( adapter->device, adapter->font_image );
 	destroy_pipeline( adapter->device, adapter->pipeline );
 	destroy_descriptor_set_layout( adapter->device, adapter->dsl );
 
-	nk_font_atlas_clear( &ft.atlas );
-	nk_free( &ft.ctx );
 	nk_ft_device_destroy();
 	memset( &ft, 0, sizeof( ft ) );
 }

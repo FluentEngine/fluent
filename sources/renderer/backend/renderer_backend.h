@@ -215,20 +215,21 @@ extern "C"
 		struct DepthStencilClearValue depth_stencil;
 	};
 
+	struct AttachmentInfo
+	{
+		const struct Image*   image;
+		enum AttachmentLoadOp load_op;
+		enum ResourceState    state;
+		struct ClearValue     clear_value;
+	};
+
 	struct RenderPassBeginInfo
 	{
-		const struct Device* device;
-		u32                  width;
-		u32                  height;
-		u32                  color_attachment_count;
-		const struct Image*  color_attachments[ MAX_ATTACHMENTS_COUNT ];
-		enum AttachmentLoadOp
-		                    color_attachment_load_ops[ MAX_ATTACHMENTS_COUNT ];
-		enum ResourceState  color_image_states[ MAX_ATTACHMENTS_COUNT ];
-		const struct Image* depth_stencil;
-		enum AttachmentLoadOp depth_stencil_load_op;
-		enum ResourceState    depth_stencil_state;
-		struct ClearValue     clear_values[ MAX_ATTACHMENTS_COUNT + 1 ];
+		u32                   width;
+		u32                   height;
+		u32                   color_attachment_count;
+		struct AttachmentInfo color_attachments[ MAX_ATTACHMENTS_COUNT ];
+		struct AttachmentInfo depth_attachment;
 	};
 
 	// TODO:

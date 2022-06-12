@@ -478,7 +478,6 @@ cmd_begin_render_pass( const struct CommandBuffer*       cmd,
 {
 	FT_ASSERT( cmd );
 	FT_ASSERT( info );
-	FT_ASSERT( info->device );
 	FT_ASSERT( info->width > 0 );
 	FT_ASSERT( info->height > 0 );
 

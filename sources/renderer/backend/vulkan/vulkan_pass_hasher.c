@@ -1,45 +1,58 @@
 #ifdef VULKAN_BACKEND
 
 #include "log/log.h"
+#include "../renderer_private.h"
 #include "vulkan_pass_hasher.h"
+
+struct VulkanPassHasher
+{
+	const struct VulkanDevice* device;
+	struct hashmap*            render_passes;
+	struct hashmap*            framebuffers;
+};
+
+static struct VulkanPassHasher hasher;
 
 struct RenderPassMapItem
 {
-	struct VulkanRenderPassInfo info;
-	VkRenderPass                render_pass;
+	struct RenderPassBeginInfo info;
+	VkRenderPass               render_pass;
 };
 
 struct FramebufferMapItem
 {
-	struct VulkanFramebufferInfo info;
-	VkFramebuffer                framebuffer;
+	struct RenderPassBeginInfo info;
+	VkFramebuffer              framebuffer;
 };
 
-static inline i32
-compare_attachment_descriptions( const VkAttachmentDescription* a,
-                                 const VkAttachmentDescription* b )
+static inline b32 has_depth_stencil(const struct RenderPassBeginInfo* info)
 {
-	if ( a->format != b->format )
+	return info->depth_attachment.image != NULL;
+}
+
+static inline i32
+compare_attachments( const struct AttachmentInfo* a,
+                     const struct AttachmentInfo* b )
+{
+	const struct Image* ia = a->image;
+	const struct Image* ib = b->image;
+
+	if ( ia->format != ib->format )
 	{
 		return 1;
 	}
 
-	if ( a->samples != b->samples )
+	if ( ia->sample_count != ib->sample_count )
 	{
 		return 1;
 	}
 
-	if ( a->loadOp != b->loadOp )
+	if ( a->load_op != b->load_op )
 	{
 		return 1;
 	}
 
-	if ( a->initialLayout != b->initialLayout )
-	{
-		return 1;
-	}
-
-	if ( a->finalLayout != b->finalLayout )
+	if ( a->state != b->state )
 	{
 		return 1;
 	}
@@ -47,82 +60,34 @@ compare_attachment_descriptions( const VkAttachmentDescription* a,
 	return 0;
 }
 
-static inline i32
-compare_attachment_reference_array(
-    u32                            count,
-    const VkAttachmentDescription* attachments_a,
-    const VkAttachmentReference*   a,
-    const VkAttachmentDescription* attachments_b,
-    const VkAttachmentReference*   b )
-{
-	for ( u32 i = 0; i < count; ++i )
-	{
-		const VkAttachmentReference* ref_a = &a[ i ];
-		const VkAttachmentReference* ref_b = &b[ i ];
-
-		if ( ref_a->layout != ref_b->layout )
-		{
-			return 1;
-		}
-
-		if ( compare_attachment_descriptions(
-		         &attachments_a[ ref_a->attachment ],
-		         &attachments_b[ ref_b->attachment ] ) != 0 )
-		{
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-static int cnt = 0;
-
-static inline i32
+static b32
 compare_pass_info( const void* a, const void* b, void* udata )
 {
 	FT_UNUSED( udata );
 
-	const struct RenderPassMapItem* rpa = a;
-	const struct RenderPassMapItem* rpb = b;
+	const struct RenderPassBeginInfo* rpa = a;
+	const struct RenderPassBeginInfo* rpb = b;
+	if ( rpa->color_attachment_count != rpb->color_attachment_count )
+		return 0;
 
-	if ( rpa->info.subpass_count != rpb->info.subpass_count )
+	if ( has_depth_stencil( rpa ) != has_depth_stencil( rpb ) )
 	{
 		return 1;
 	}
 
-	u32                             subpass_count = rpa->info.subpass_count;
-	const struct VulkanSubpassInfo* sa            = rpa->info.subpasses;
-	const struct VulkanSubpassInfo* sb            = rpb->info.subpasses;
-
-	for ( u32 s = 0; s < subpass_count; ++s )
+	for ( u32 i = 0; i < rpa->color_attachment_count; ++i )
 	{
-		if ( sa[ s ].color_attachment_count != sb[ s ].color_attachment_count )
+		if ( compare_attachments( &rpa->color_attachments[ i ],
+		                          &rpb->color_attachments[ i ] ) )
 		{
 			return 1;
 		}
+	}
 
-		if ( sa[ s ].has_depth_stencil != sb[ s ].has_depth_stencil )
-		{
-			return 1;
-		}
-
-		if ( compare_attachment_reference_array(
-		         sa[ s ].color_attachment_count,
-		         rpa->info.attachments,
-		         sa[ s ].color_attachment_references,
-		         rpb->info.attachments,
-		         sb[ s ].color_attachment_references ) != 0 )
-		{
-			return 1;
-		}
-
-		if ( compare_attachment_reference_array(
-		         sa[ s ].has_depth_stencil,
-		         rpa->info.attachments,
-		         &sa[ s ].depth_attachment_reference,
-		         rpb->info.attachments,
-		         &sb[ s ].depth_attachment_reference ) != 0 )
+	if ( has_depth_stencil( rpa ) )
+	{
+		if ( compare_attachments( &rpa->depth_attachment,
+		                          &rpb->depth_attachment ) )
 		{
 			return 1;
 		}
@@ -131,7 +96,7 @@ compare_pass_info( const void* a, const void* b, void* udata )
 	return 0;
 }
 
-static inline u64
+static u64
 hash_pass_info( const void* item, u64 seed0, u64 seed1 )
 {
 	FT_UNUSED( item );
@@ -141,22 +106,36 @@ hash_pass_info( const void* item, u64 seed0, u64 seed1 )
 	return 0;
 }
 
-static inline b32
+static b32
 compare_framebuffer_info( const void* a, const void* b, void* udata )
 {
 	FT_UNUSED( udata );
 
-	const struct FramebufferMapItem* fba = a;
-	const struct FramebufferMapItem* fbb = b;
+	const struct RenderPassBeginInfo* rpa = a;
+	const struct RenderPassBeginInfo* rpb = b;
 
-	if ( fba->info.attachment_count != fbb->info.attachment_count )
+	if ( rpa->color_attachment_count != rpb->color_attachment_count )
 	{
 		return 1;
 	}
 
-	for ( u32 i = 0; i < fba->info.attachment_count; ++i )
+	for ( u32 i = 0; i < rpa->color_attachment_count; ++i )
 	{
-		if ( fba->info.attachments[ i ] != fbb->info.attachments[ i ] )
+		if ( rpa->color_attachments[ i ].image !=
+		     rpb->color_attachments[ i ].image )
+		{
+			return 1;
+		}
+	}
+
+	if ( has_depth_stencil( rpa ) != has_depth_stencil( rpb ) )
+	{
+		return 1;
+	}
+
+	if ( has_depth_stencil( rpa ) )
+	{
+		if ( rpa->depth_attachment.image != rpb->depth_attachment.image )
 		{
 			return 1;
 		}
@@ -165,7 +144,7 @@ compare_framebuffer_info( const void* a, const void* b, void* udata )
 	return 0;
 }
 
-static inline u64
+static u64
 hash_framebuffer_info( const void* item, u64 seed0, u64 seed1 )
 {
 	FT_UNUSED( item );
@@ -176,78 +155,207 @@ hash_framebuffer_info( const void* item, u64 seed0, u64 seed1 )
 }
 
 void
-vk_pass_hasher_init( struct VulkanPassHasher*   hasher,
-                     const struct VulkanDevice* device )
+vk_create_render_pass( const struct VulkanDevice*        device,
+                       const struct RenderPassBeginInfo* info,
+                       VkRenderPass*                     p )
 {
-	hasher->device = device;
+	u32 attachments_count = info->color_attachment_count;
+	
+	VkAttachmentDescription attachments[ MAX_ATTACHMENTS_COUNT + 2 ];
+	VkAttachmentReference   color_references[ MAX_ATTACHMENTS_COUNT ];
+	VkAttachmentReference   depth_reference = { 0 };
 
-	hasher->render_passes = hashmap_new( sizeof( struct RenderPassMapItem ),
-	                                     0,
-	                                     0,
-	                                     0,
-	                                     hash_pass_info,
-	                                     compare_pass_info,
-	                                     NULL,
-	                                     NULL );
+	for ( u32 i = 0; i < info->color_attachment_count; ++i )
+	{
+		const struct AttachmentInfo* att = &info->color_attachments[ i ];
 
-	hasher->framebuffers = hashmap_new( sizeof( struct FramebufferMapItem ),
-	                                    0,
-	                                    0,
-	                                    0,
-	                                    hash_framebuffer_info,
-	                                    compare_framebuffer_info,
-	                                    NULL,
-	                                    NULL );
+		attachments[ i ] = ( VkAttachmentDescription ) {
+			.flags          = 0,
+			.format         = to_vk_format( att->image->format ),
+			.samples        = to_vk_sample_count( att->image->sample_count ),
+			.loadOp         = to_vk_load_op( att->load_op ),
+			.storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
+			.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			.initialLayout  = determine_image_layout( att->state ),
+			.finalLayout    = determine_image_layout( att->state ),
+		};
+
+		color_references[ i ] = ( VkAttachmentReference ) {
+			.attachment = i,
+			.layout     = determine_image_layout( att->state ),
+		};
+	}
+
+	if ( has_depth_stencil( info ) )
+	{
+		u32                          i   = attachments_count;
+		const struct AttachmentInfo* att = &info->depth_attachment;
+
+		attachments[ i ] = ( VkAttachmentDescription ) {
+			.flags          = 0,
+			.format         = to_vk_format( att->image->format ),
+			.samples        = to_vk_sample_count( att->image->sample_count ),
+			.loadOp         = to_vk_load_op( att->load_op ),
+			.storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			.initialLayout  = determine_image_layout( att->state ),
+			.finalLayout    = determine_image_layout( att->state ),
+		};
+
+		depth_reference = ( VkAttachmentReference ) {
+			.attachment = i,
+			.layout     = determine_image_layout( att->state ),
+		};
+
+		attachments_count++;
+	}
+
+	VkSubpassDescription subpass = {
+		.flags                = 0,
+		.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS,
+		.inputAttachmentCount = 0,
+		.pInputAttachments    = NULL,
+		.colorAttachmentCount = info->color_attachment_count,
+		.pColorAttachments    = color_references,
+		.pDepthStencilAttachment =
+		    has_depth_stencil( info ) ? &depth_reference : NULL,
+		.pResolveAttachments     = NULL,
+		.preserveAttachmentCount = 0,
+		.pPreserveAttachments    = NULL,
+	};
+
+	VkRenderPassCreateInfo render_pass_create_info = {
+		.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+		.pNext           = NULL,
+		.flags           = 0,
+		.attachmentCount = attachments_count,
+		.pAttachments    = attachments,
+		.subpassCount    = 1,
+		.pSubpasses      = &subpass,
+		.dependencyCount = 0,
+		.pDependencies   = NULL,
+	};
+
+	VK_ASSERT( vkCreateRenderPass( device->logical_device,
+	                               &render_pass_create_info,
+	                               device->vulkan_allocator,
+	                               p ) );
+}
+
+static inline void
+vk_create_framebuffer( const struct VulkanDevice*        device,
+                       const struct RenderPassBeginInfo* info,
+                       VkRenderPass                      render_pass,
+                       VkFramebuffer*                    p )
+{
+	u32 attachment_count = info->color_attachment_count;
+
+	VkImageView image_views[ MAX_ATTACHMENTS_COUNT + 2 ];
+	for ( u32 i = 0; i < attachment_count; ++i )
+	{
+		FT_FROM_HANDLE( image,
+		                info->color_attachments[ i ].image,
+		                VulkanImage );
+		image_views[ i ] = image->image_view;
+	}
+
+	if ( info->depth_attachment.image != NULL )
+	{
+		FT_FROM_HANDLE( image, info->depth_attachment.image, VulkanImage );
+		image_views[ attachment_count++ ] = image->image_view;
+	}
+
+	VkFramebufferCreateInfo framebuffer_create_info = {
+		.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+		.pNext           = NULL,
+		.flags           = 0,
+		.renderPass      = render_pass,
+		.attachmentCount = attachment_count,
+		.pAttachments    = image_views,
+		.width           = info->width,
+		.height          = info->height,
+		.layers          = 1,
+	};
+
+	VK_ASSERT( vkCreateFramebuffer( device->logical_device,
+	                                &framebuffer_create_info,
+	                                device->vulkan_allocator,
+	                                p ) );
 }
 
 void
-vk_pass_hasher_shutdown( struct VulkanPassHasher* hasher )
+vk_pass_hasher_init( const struct VulkanDevice* device )
+{
+	hasher.device = device;
+
+	hasher.render_passes = hashmap_new( sizeof( struct RenderPassMapItem ),
+	                                    0,
+	                                    0,
+	                                    0,
+	                                    hash_pass_info,
+	                                    compare_pass_info,
+	                                    NULL,
+	                                    NULL );
+
+	hasher.framebuffers = hashmap_new( sizeof( struct FramebufferMapItem ),
+	                                   0,
+	                                   0,
+	                                   0,
+	                                   hash_framebuffer_info,
+	                                   compare_framebuffer_info,
+	                                   NULL,
+	                                   NULL );
+}
+
+void
+vk_pass_hasher_shutdown()
 {
 	size_t iter = 0;
 	void*  item;
 
-	while ( hashmap_iter( hasher->framebuffers, &iter, &item ) )
+	while ( hashmap_iter( hasher.framebuffers, &iter, &item ) )
 	{
 		struct FramebufferMapItem* it = item;
-		vkDestroyFramebuffer( hasher->device->logical_device,
+		vkDestroyFramebuffer( hasher.device->logical_device,
 		                      it->framebuffer,
-		                      hasher->device->vulkan_allocator );
+		                      hasher.device->vulkan_allocator );
 	}
-	hashmap_free( hasher->framebuffers );
+	hashmap_free( hasher.framebuffers );
 
 	iter = 0;
 
-	while ( hashmap_iter( hasher->render_passes, &iter, &item ) )
+	while ( hashmap_iter( hasher.render_passes, &iter, &item ) )
 	{
 		struct RenderPassMapItem* it = item;
-		vkDestroyRenderPass( hasher->device->logical_device,
+		vkDestroyRenderPass( hasher.device->logical_device,
 		                     it->render_pass,
-		                     hasher->device->vulkan_allocator );
+		                     hasher.device->vulkan_allocator );
 	}
 
-	hashmap_free( hasher->render_passes );
+	hashmap_free( hasher.render_passes );
 }
 
 void
-vk_pass_hasher_framebuffers_clear( struct VulkanPassHasher* hasher )
+vk_pass_hasher_framebuffers_clear()
 {
 	size_t iter = 0;
 	void*  item;
-	while ( hashmap_iter( hasher->framebuffers, &iter, &item ) )
+	while ( hashmap_iter( hasher.framebuffers, &iter, &item ) )
 	{
 		struct FramebufferMapItem* info = item;
-		vkDestroyFramebuffer( hasher->device->logical_device,
+		vkDestroyFramebuffer( hasher.device->logical_device,
 		                      info->framebuffer,
-		                      hasher->device->vulkan_allocator );
+		                      hasher.device->vulkan_allocator );
 	}
-	hashmap_clear( hasher->framebuffers, 0 );
+	hashmap_clear( hasher.framebuffers, 0 );
 }
 
 VkRenderPass
-vk_pass_hasher_get_render_pass( struct VulkanPassHasher*           hasher,
-                                const struct VulkanRenderPassInfo* info )
+vk_pass_hasher_get_render_pass( const struct RenderPassBeginInfo* info )
 {
-	struct RenderPassMapItem* it = hashmap_get( hasher->render_passes,
+	struct RenderPassMapItem* it = hashmap_get( hasher.render_passes,
 	                                            &( struct RenderPassMapItem ) {
 	                                                .info = *info,
 	                                            } );
@@ -258,62 +366,25 @@ vk_pass_hasher_get_render_pass( struct VulkanPassHasher*           hasher,
 	}
 	else
 	{
-		VkSubpassDescription subpasses[ 1 ];
-		memset( subpasses,
-		        0,
-		        sizeof( VkSubpassDescription ) * info->subpass_count );
-
-		for ( u32 i = 0; i < info->subpass_count; ++i )
-		{
-			subpasses[ i ] = ( VkSubpassDescription ) {
-				.flags             = 0,
-				.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-				.colorAttachmentCount =
-				    info->subpasses[ i ].color_attachment_count,
-				.pColorAttachments =
-				    info->subpasses[ i ].color_attachment_references,
-				.pDepthStencilAttachment =
-				    info->subpasses[ i ].has_depth_stencil
-				        ? &info->subpasses[ i ].depth_attachment_reference
-				        : NULL,
-			};
-		}
-
-		VkRenderPassCreateInfo create_info = {
-			.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-			.pNext           = NULL,
-			.flags           = 0,
-			.dependencyCount = 0,
-			.pDependencies   = NULL,
-			.attachmentCount = info->attachment_count,
-			.pAttachments    = info->attachments,
-			.subpassCount    = info->subpass_count,
-			.pSubpasses      = subpasses,
-		};
-
 		VkRenderPass render_pass;
-		VK_ASSERT( vkCreateRenderPass( hasher->device->logical_device,
-		                               &create_info,
-		                               hasher->device->vulkan_allocator,
-		                               &render_pass ) );
+		vk_create_render_pass( hasher.device, info, &render_pass );
 
-		struct RenderPassMapItem item;
-		memset( &item, 0, sizeof( struct RenderPassMapItem ) );
-		item.info        = *info;
-		item.render_pass = render_pass;
-
-		hashmap_set( hasher->render_passes, &item );
+		hashmap_set( hasher.render_passes,
+		             &( struct RenderPassMapItem ) {
+		                 .info        = *info,
+		                 .render_pass = render_pass,
+		             } );
 
 		return render_pass;
 	}
 }
 
 VkFramebuffer
-vk_pass_hasher_get_framebuffer( struct VulkanPassHasher*            hasher,
-                                const struct VulkanFramebufferInfo* info )
+vk_pass_hasher_get_framebuffer( VkRenderPass                      render_pass,
+                                const struct RenderPassBeginInfo* info )
 {
 	struct FramebufferMapItem* it =
-	    hashmap_get( hasher->framebuffers,
+	    hashmap_get( hasher.framebuffers,
 	                 &( struct FramebufferMapItem ) {
 	                     .info = *info,
 	                 } );
@@ -324,30 +395,14 @@ vk_pass_hasher_get_framebuffer( struct VulkanPassHasher*            hasher,
 	}
 	else
 	{
-		VkFramebufferCreateInfo create_info = {
-			.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-			.pNext           = NULL,
-			.flags           = 0,
-			.renderPass      = info->render_pass,
-			.width           = info->width,
-			.height          = info->height,
-			.layers          = info->layers,
-			.attachmentCount = info->attachment_count,
-			.pAttachments    = info->attachments,
-		};
-
 		VkFramebuffer framebuffer;
-		VK_ASSERT( vkCreateFramebuffer( hasher->device->logical_device,
-		                                &create_info,
-		                                hasher->device->vulkan_allocator,
-		                                &framebuffer ) );
+		vk_create_framebuffer( hasher.device, info, render_pass, &framebuffer );
 
-		struct FramebufferMapItem item;
-		memset( &item, 0, sizeof( struct FramebufferMapItem ) );
-		item.info        = *info;
-		item.framebuffer = framebuffer;
-
-		hashmap_set( hasher->framebuffers, &item );
+		hashmap_set( hasher.framebuffers,
+		             &( struct FramebufferMapItem ) {
+		                 .info        = *info,
+		                 .framebuffer = framebuffer,
+		             } );
 
 		return framebuffer;
 	}
