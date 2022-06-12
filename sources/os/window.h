@@ -42,6 +42,12 @@ extern "C"
 	                             u32*                 height );
 
 	u32
+	window_get_framebuffer_width( const struct Window* window );
+
+	u32
+	window_get_framebuffer_height( const struct Window* window );
+
+	u32
 	window_get_width( const struct Window* window );
 	u32
 	window_get_height( const struct Window* window );

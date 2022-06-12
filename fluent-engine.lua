@@ -237,6 +237,8 @@ project "ft_renderer"
 		path.join(backend_dir, "renderer_enums.h"),
 		path.join(backend_dir, "renderer_private.h"),
 		path.join(backend_dir, "resource_loader.c"),
+		path.join(backend_dir, "render_graph.h"),
+		path.join(backend_dir, "render_graph.c"),
 		path.join(backend_dir, "vulkan/vulkan_backend.c"),
 		path.join(backend_dir, "vulkan/vulkan_backend.h"),
 		path.join(backend_dir, "d3d12/d3d12_backend.c"),

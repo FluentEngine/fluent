@@ -108,6 +108,22 @@ window_get_framebuffer_size( const struct Window* window,
 }
 
 u32
+window_get_framebuffer_width( const struct Window* window )
+{
+	u32 w, h;
+	window_get_framebuffer_size( window, &w, &h );
+	return w;
+}
+
+u32
+window_get_framebuffer_height( const struct Window* window )
+{
+	u32 w, h;
+	window_get_framebuffer_size( window, &w, &h );
+	return h;
+}
+
+u32
 window_get_width( const struct Window* window )
 {
 	u32 w, h;
