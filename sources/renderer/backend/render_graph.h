@@ -5,10 +5,10 @@
 struct RenderPass;
 struct RenderGraph;
 
-typedef b32 ( *get_clear_color_cb )( u32, f32* [4] );
-typedef b32 ( *get_clear_depth_stencil_cb )( f32*, u32* );
+typedef b32 ( *get_clear_color_cb )( u32, f32 ( * )[ 4 ] );
+typedef b32 ( *get_clear_depth_stencil_cb )( struct DepthStencilClearValue* );
 typedef void ( *create_cb )( void* );
-typedef void ( *execute_cb )( void* );
+typedef void ( *execute_cb )( struct CommandBuffer*, void* );
 typedef void ( *destroy_cb )( void* );
 
 void
@@ -22,6 +22,9 @@ rg_set_backbuffer_source( struct RenderGraph* graph, const char* name );
 
 void
 rg_build( struct RenderGraph* graph );
+
+void
+rg_set_swapchain_dimensions( struct RenderGraph* graph, u32 width, u32 height );
 
 void
 rg_setup_attachments( struct RenderGraph* graph, struct Image* image );
@@ -39,6 +42,11 @@ rg_add_color_output( struct RenderPass*      pass,
                      const char*             name,
                      const struct ImageInfo* info );
 
+void
+rg_add_depth_stencil_output( struct RenderPass*      pass,
+                             const char*             name,
+                             const struct ImageInfo* info );
+                             
 void
 rg_set_user_data( struct RenderPass* pass, void* data );
 

@@ -1274,9 +1274,10 @@ vk_destroy_shader( const struct Device* idevice, struct Shader* ishader )
 	vk_destroy_module( device, FT_SHADER_STAGE_GEOMETRY, shader );
 	vk_destroy_module( device, FT_SHADER_STAGE_FRAGMENT, shader );
 
+	hashmap_free( shader->interface.reflect_data.binding_map );
+
 	if ( shader->interface.reflect_data.binding_count )
 	{
-		hashmap_free( shader->interface.reflect_data.binding_map );
 		free( shader->interface.reflect_data.bindings );
 	}
 
@@ -1418,9 +1419,10 @@ vk_destroy_descriptor_set_layout( const struct Device*        idevice,
 		}
 	}
 
+	hashmap_free( layout->interface.reflection_data.binding_map );
+
 	if ( layout->interface.reflection_data.binding_count )
 	{
-		hashmap_free( layout->interface.reflection_data.binding_map );
 		free( layout->interface.reflection_data.bindings );
 	}
 
@@ -1891,6 +1893,10 @@ vk_create_image( const struct Device*    idevice,
 	                           &image->image,
 	                           &image->allocation,
 	                           NULL ) );
+
+	image->interface.format          = info->format;
+	image->interface.mip_level_count = info->mip_levels;
+	image->interface.layer_count     = info->layer_count;
 
 	// TODO: fill properly
 	VkImageViewCreateInfo image_view_create_info = {

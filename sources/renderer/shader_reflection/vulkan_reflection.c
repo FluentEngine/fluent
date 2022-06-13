@@ -82,18 +82,12 @@ spirv_reflect_stage( ReflectionData*  reflection,
 
 	u32 i = reflection->binding_count;
 	reflection->binding_count += descriptor_binding_count;
-	struct Binding* bindings =
-	    ( struct Binding* ) calloc( sizeof( struct Binding ),
-	                                reflection->binding_count );
-	if ( reflection->bindings )
+	if ( reflection->binding_count != 0 )
 	{
-		for ( u32 b = 0; b < i; ++b )
-		{
-			bindings[ b ] = reflection->bindings[ b ];
-		}
-		free( reflection->bindings );
+		reflection->bindings =
+		    realloc( reflection->bindings,
+		             sizeof( struct Binding ) * reflection->binding_count );
 	}
-	reflection->bindings = bindings;
 
 	for ( u32 b = 0; b < descriptor_binding_count; ++b )
 	{
