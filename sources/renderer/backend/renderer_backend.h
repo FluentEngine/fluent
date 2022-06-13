@@ -737,3 +737,5 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
+
+#include "renderer_misc.h"

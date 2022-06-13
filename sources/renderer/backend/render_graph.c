@@ -93,29 +93,38 @@ struct RenderGraph
 };
 
 static void
-default_create( void* user_data )
+default_create( const struct Device* device, void* user_data )
 {
+	FT_UNUSED( device );
+	FT_UNUSED( user_data );
 }
 
 static void
 default_execute( struct CommandBuffer* cmd, void* user_data )
 {
+	FT_UNUSED( cmd );
+	FT_UNUSED( user_data );
 }
 
 static void
-default_destroy( void* user_data )
+default_destroy( const struct Device* device, void* user_data )
 {
+	FT_UNUSED( device );
+	FT_UNUSED( user_data );
 }
 
 static b32
 default_clear_color( u32 idx, ColorClearValue* color )
 {
+	FT_UNUSED( idx );
+	FT_UNUSED( color );
 	return 0;
 }
 
 static b32
 default_clear_depth_stencil( struct DepthStencilClearValue* depth_stencil )
 {
+	FT_UNUSED( depth_stencil );
 	return 0;
 }
 
@@ -216,7 +225,7 @@ rg_destroy( struct RenderGraph* graph )
 	for ( u32 i = 0; i < graph->render_pass_count; ++i )
 	{
 		struct RenderPass* pass = &graph->render_passes[ i ];
-		pass->destroy( pass->user_data );
+		pass->destroy( graph->device, pass->user_data );
 	}
 
 	if ( graph->render_passes )
@@ -280,6 +289,11 @@ rg_create_physical_images( struct RenderGraph* graph )
 static void
 rg_build_pass_barriers( struct RenderGraph* graph )
 {
+	if ( graph->render_pass_count == 0 )
+	{
+		return;
+	}
+
 	if ( graph->pass_barriers )
 	{
 		for ( u32 p = 0; p < graph->render_pass_count; ++p )
@@ -301,6 +315,12 @@ rg_build_pass_barriers( struct RenderGraph* graph )
 		struct PassBarriers* barriers = &graph->pass_barriers[ p ];
 		barriers->image_barrier_count =
 		    pass->color_attachment_count + pass->has_depth_stencil;
+
+		if ( barriers->image_barrier_count == 0 )
+		{
+			continue;
+		}
+
 		barriers->image_barriers = calloc( barriers->image_barrier_count,
 		                                   sizeof( struct ImageBarrier ) );
 		for ( u32 a = 0; a < pass->color_attachment_count; ++a )
@@ -380,7 +400,7 @@ rg_build_render_passes( struct RenderGraph* graph )
 		}
 
 		pass->physical_pass_index = p;
-		pass->create( pass->user_data );
+		pass->create( graph->device, pass->user_data );
 	}
 }
 
@@ -404,20 +424,23 @@ rg_setup_attachments( struct RenderGraph* graph, struct Image* image )
 {
 	graph->swapchain_image = image;
 
-	struct RenderPass* pass =
-	    &graph->render_passes[ graph->swapchain_pass_index ];
-	struct RenderPassBeginInfo* info =
-	    &graph->physical_passes[ pass->physical_pass_index ];
-	struct PassBarriers* barriers =
-	    &graph->pass_barriers[ pass->physical_pass_index ];
-
-	for ( u32 i = 0; i < info->color_attachment_count; ++i )
+	if ( graph->render_pass_count != 0 )
 	{
-		struct AttachmentInfo* att = &info->color_attachments[ i ];
-		if ( pass->color_attachments[ i ] == graph->swapchain_image_index )
+		struct RenderPass* pass =
+		    &graph->render_passes[ graph->swapchain_pass_index ];
+		struct RenderPassBeginInfo* info =
+		    &graph->physical_passes[ pass->physical_pass_index ];
+		struct PassBarriers* barriers =
+		    &graph->pass_barriers[ pass->physical_pass_index ];
+
+		for ( u32 i = 0; i < info->color_attachment_count; ++i )
 		{
-			att->image                          = image;
-			barriers->image_barriers[ i ].image = image;
+			struct AttachmentInfo* att = &info->color_attachments[ i ];
+			if ( pass->color_attachments[ i ] == graph->swapchain_image_index )
+			{
+				att->image                          = image;
+				barriers->image_barriers[ i ].image = image;
+			}
 		}
 	}
 }
