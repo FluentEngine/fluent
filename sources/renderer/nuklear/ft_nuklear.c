@@ -126,48 +126,53 @@ prepare_pipeline( struct nk_vulkan_adapter *adapter )
 	};
 	create_descriptor_set( adapter->device, &set_info, &adapter->set );
 
-	struct PipelineInfo pipeline_info   = { 0 };
-	pipeline_info.shader                = shader;
-	pipeline_info.descriptor_set_layout = adapter->dsl;
-	pipeline_info.topology              = FT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	pipeline_info.rasterizer_info.polygon_mode  = FT_POLYGON_MODE_FILL;
-	pipeline_info.rasterizer_info.cull_mode     = FT_CULL_MODE_NONE;
-	pipeline_info.rasterizer_info.front_face    = FT_FRONT_FACE_CLOCKWISE;
-	pipeline_info.depth_state_info.depth_test   = 1;
-	pipeline_info.depth_state_info.depth_write  = 1;
-	pipeline_info.depth_state_info.compare_op   = FT_COMPARE_OP_LESS_OR_EQUAL;
-	pipeline_info.sample_count                  = 1;
-	pipeline_info.color_attachment_count        = 1;
-	pipeline_info.color_attachment_formats[ 0 ] = adapter->color_format;
-	pipeline_info.depth_stencil_format          = adapter->depth_format;
-
-	struct BlendStateInfo *blend        = &pipeline_info.blend_state_info;
-	blend->src_blend_factors[ 0 ]       = FT_BLEND_FACTOR_SRC_ALPHA;
-	blend->dst_blend_factors[ 0 ]       = FT_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-	blend->blend_ops[ 0 ]               = FT_BLEND_OP_ADD;
-	blend->src_alpha_blend_factors[ 0 ] = FT_BLEND_FACTOR_ONE;
-	blend->dst_alpha_blend_factors[ 0 ] = FT_BLEND_FACTOR_ZERO;
-	blend->alpha_blend_ops[ 0 ]         = FT_BLEND_OP_ADD;
-
-	struct VertexLayout *l           = &pipeline_info.vertex_layout;
-	l->binding_info_count            = 1;
-	l->binding_infos[ 0 ].binding    = 0;
-	l->binding_infos[ 0 ].stride     = sizeof( struct nk_ft_vertex );
-	l->binding_infos[ 0 ].input_rate = FT_VERTEX_INPUT_RATE_VERTEX;
-	l->attribute_info_count          = 3;
-	l->attribute_infos[ 0 ].binding  = 0;
-	l->attribute_infos[ 0 ].location = 0;
-	l->attribute_infos[ 0 ].format   = FT_FORMAT_R32G32_SFLOAT;
-	l->attribute_infos[ 0 ].offset =
-	    NK_OFFSETOF( struct nk_ft_vertex, position );
-	l->attribute_infos[ 1 ].binding  = 0;
-	l->attribute_infos[ 1 ].location = 1;
-	l->attribute_infos[ 1 ].format   = FT_FORMAT_R32G32_SFLOAT;
-	l->attribute_infos[ 1 ].offset   = NK_OFFSETOF( struct nk_ft_vertex, uv );
-	l->attribute_infos[ 2 ].binding  = 0;
-	l->attribute_infos[ 2 ].location = 2;
-	l->attribute_infos[ 2 ].format   = FT_FORMAT_R8G8B8A8_UINT;
-	l->attribute_infos[ 2 ].offset   = NK_OFFSETOF( struct nk_ft_vertex, col );
+	struct PipelineInfo pipeline_info = {
+	    .shader                        = shader,
+	    .descriptor_set_layout         = adapter->dsl,
+	    .topology                      = FT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+	    .rasterizer_info.polygon_mode  = FT_POLYGON_MODE_FILL,
+	    .rasterizer_info.cull_mode     = FT_CULL_MODE_NONE,
+	    .rasterizer_info.front_face    = FT_FRONT_FACE_CLOCKWISE,
+	    .depth_state_info.depth_test   = 1,
+	    .depth_state_info.depth_write  = 1,
+	    .depth_state_info.compare_op   = FT_COMPARE_OP_LESS_OR_EQUAL,
+	    .sample_count                  = 1,
+	    .color_attachment_count        = 1,
+	    .color_attachment_formats[ 0 ] = adapter->color_format,
+	    .depth_stencil_format          = adapter->depth_format,
+	    .blend_state_info =
+	        {
+	            .src_blend_factors[ 0 ] = FT_BLEND_FACTOR_SRC_ALPHA,
+	            .dst_blend_factors[ 0 ] = FT_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+	            .blend_ops[ 0 ]         = FT_BLEND_OP_ADD,
+	            .src_alpha_blend_factors[ 0 ] = FT_BLEND_FACTOR_ONE,
+	            .dst_alpha_blend_factors[ 0 ] = FT_BLEND_FACTOR_ZERO,
+	            .alpha_blend_ops[ 0 ]         = FT_BLEND_OP_ADD,
+	        },
+	    .vertex_layout =
+	        {
+	            .binding_info_count            = 1,
+	            .binding_infos[ 0 ].binding    = 0,
+	            .binding_infos[ 0 ].stride     = sizeof( struct nk_ft_vertex ),
+	            .binding_infos[ 0 ].input_rate = FT_VERTEX_INPUT_RATE_VERTEX,
+	            .attribute_info_count          = 3,
+	            .attribute_infos[ 0 ].binding  = 0,
+	            .attribute_infos[ 0 ].location = 0,
+	            .attribute_infos[ 0 ].format   = FT_FORMAT_R32G32_SFLOAT,
+	            .attribute_infos[ 0 ].offset =
+	                NK_OFFSETOF( struct nk_ft_vertex, position ),
+	            .attribute_infos[ 1 ].binding  = 0,
+	            .attribute_infos[ 1 ].location = 1,
+	            .attribute_infos[ 1 ].format   = FT_FORMAT_R32G32_SFLOAT,
+	            .attribute_infos[ 1 ].offset =
+	                NK_OFFSETOF( struct nk_ft_vertex, uv ),
+	            .attribute_infos[ 2 ].binding  = 0,
+	            .attribute_infos[ 2 ].location = 2,
+	            .attribute_infos[ 2 ].format   = FT_FORMAT_R8G8B8A8_UINT,
+	            .attribute_infos[ 2 ].offset =
+	                NK_OFFSETOF( struct nk_ft_vertex, col ),
+	        },
+	};
 
 	create_graphics_pipeline( adapter->device,
 	                          &pipeline_info,
