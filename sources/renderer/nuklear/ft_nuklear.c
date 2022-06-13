@@ -112,11 +112,10 @@ prepare_pipeline( struct nk_vulkan_adapter *adapter )
 {
 	struct Shader *shader;
 
-	struct ShaderInfo shader_info      = { 0 };
-	shader_info.vertex.bytecode        = nuklear_vert;
-	shader_info.vertex.bytecode_size   = sizeof( nuklear_vert );
-	shader_info.fragment.bytecode      = nuklear_frag;
-	shader_info.fragment.bytecode_size = sizeof( nuklear_frag );
+	struct ShaderInfo shader_info = {
+	    .vertex   = get_nuklear_vert_shader( adapter->device->api ),
+	    .fragment = get_nuklear_frag_shader( adapter->device->api ),
+	};
 	create_shader( adapter->device, &shader_info, &shader );
 
 	create_descriptor_set_layout( adapter->device, shader, &adapter->dsl );

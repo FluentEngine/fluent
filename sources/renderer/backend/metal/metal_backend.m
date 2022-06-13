@@ -3,6 +3,7 @@
 #ifndef METAL_BACKEND_INCLUDE_OBJC
 #define METAL_BACKEND_INCLUDE_OBJC
 #endif
+#include <hashmap_c/hashmap_c.h>
 #include <SDL.h>
 #include <tiny_image_format/tinyimageformat_apis.h>
 #include "wsi/wsi.h"
@@ -63,6 +64,10 @@ to_mtl_vertex_format( enum Format format )
 {
 	switch ( format )
 	{
+	case FT_FORMAT_R8G8_UINT: return MTLVertexFormatUChar2;
+	case FT_FORMAT_R8G8B8_UINT: return MTLVertexFormatUChar3;
+	case FT_FORMAT_R8G8B8A8_UINT: return MTLVertexFormatUChar4;
+
 	case FT_FORMAT_R8G8_UNORM: return MTLVertexFormatUChar2Normalized;
 	case FT_FORMAT_R8G8B8_UNORM: return MTLVertexFormatUChar3Normalized;
 	case FT_FORMAT_R8G8B8A8_UNORM: return MTLVertexFormatUChar4Normalized;
@@ -670,7 +675,38 @@ mtl_create_descriptor_set_layout( const struct Device*         idevice,
 {
 	FT_INIT_INTERNAL( layout, *p, MetalDescriptorSetLayout );
 
-	layout->interface.reflection_data = ishader->reflect_data;
+	ReflectionData reflect_data = {
+	    .binding_count = ishader->reflect_data.binding_count,
+	    .binding_map   = hashmap_new( sizeof( struct BindingMapItem ),
+                                    0,
+                                    0,
+                                    0,
+                                    binding_map_hash,
+                                    binding_map_compare,
+                                    NULL,
+                                    NULL ),
+	};
+
+	if ( reflect_data.binding_count != 0 )
+	{
+		size_t iter = 0;
+		void*  item;
+		while (
+		    hashmap_iter( ishader->reflect_data.binding_map, &iter, &item ) )
+		{
+			hashmap_set( reflect_data.binding_map, item );
+		}
+
+		ALLOC_HEAP_ARRAY( struct Binding,
+		                  bindings,
+		                  ishader->reflect_data.binding_count );
+		reflect_data.bindings = bindings;
+		for ( u32 i = 0; i < ishader->reflect_data.binding_count; ++i )
+		{
+			reflect_data.bindings[ i ] = ishader->reflect_data.bindings[ i ];
+		}
+	}
+	layout->interface.reflection_data = reflect_data;
 }
 
 static void
