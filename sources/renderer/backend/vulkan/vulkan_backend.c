@@ -4,8 +4,9 @@
 #include "log/log.h"
 #include "wsi/wsi.h"
 #include "../renderer_private.h"
-#include "vulkan_backend.h"
+#include "vulkan_enum_translators.h"
 #include "vulkan_pass_hasher.h"
+#include "vulkan_backend.h"
 
 static inline u32
 clamp_u32( u32 d, u32 min, u32 max )

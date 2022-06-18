@@ -2,6 +2,7 @@
 
 #include "log/log.h"
 #include "../renderer_private.h"
+#include "vulkan_enum_translators.h"
 #include "vulkan_pass_hasher.h"
 
 struct VulkanPassHasher
