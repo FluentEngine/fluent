@@ -5,7 +5,7 @@
 #include "log/log.h"
 #include "renderer/backend/vulkan/vulkan_backend.h"
 
-i32
+b32
 binding_map_compare( const void* a, const void* b, void* udata )
 {
 	const struct BindingMapItem* bma = a;

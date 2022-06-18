@@ -39,7 +39,7 @@ extern "C"
 		struct hashmap* binding_map;
 	} ReflectionData;
 
-	i32
+	b32
 	binding_map_compare( const void* a, const void* b, void* udata );
 
 	u64
