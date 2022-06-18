@@ -178,13 +178,7 @@ extern "C"
 	                          struct DescriptorSetLayout* layout );
 
 	DECLARE_FUNCTION_POINTER( void,
-	                          create_compute_pipeline,
-	                          const struct Device*       device,
-	                          const struct PipelineInfo* info,
-	                          struct Pipeline**          pipeline );
-
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_graphics_pipeline,
+	                          create_pipeline,
 	                          const struct Device*       device,
 	                          const struct PipelineInfo* info,
 	                          struct Pipeline**          pipeline );
@@ -260,16 +254,11 @@ extern "C"
 	                          const u64                   offset );
 
 	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_bind_index_buffer_u16,
+	                          cmd_bind_index_buffer,
 	                          const struct CommandBuffer* cmd,
 	                          const struct Buffer*        buffer,
-	                          const u64                   offset );
-
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_bind_index_buffer_u32,
-	                          const struct CommandBuffer* cmd,
-	                          const struct Buffer*        buffer,
-	                          const u64                   offset );
+	                          const u64                   offset,
+	                          enum IndexType              index_type );
 
 	DECLARE_FUNCTION_POINTER( void,
 	                          cmd_copy_buffer,

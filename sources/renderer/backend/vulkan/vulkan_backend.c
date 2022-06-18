@@ -1430,7 +1430,7 @@ vk_destroy_descriptor_set_layout( const struct Device*        idevice,
 	free( layout );
 }
 
-static void
+static inline void
 vk_create_compute_pipeline( const struct Device*       idevice,
                             const struct PipelineInfo* info,
                             struct Pipeline**          p )
@@ -1489,7 +1489,7 @@ vk_create_compute_pipeline( const struct Device*       idevice,
 	                                     &pipeline->pipeline ) );
 }
 
-static void
+static inline void
 vk_create_graphics_pipeline( const struct Device*       idevice,
                              const struct PipelineInfo* info,
                              struct Pipeline**          p )
@@ -1736,6 +1736,31 @@ vk_create_graphics_pipeline( const struct Device*       idevice,
 	vkDestroyRenderPass( device->logical_device,
 	                     render_pass,
 	                     device->vulkan_allocator );
+}
+
+static void
+vk_create_pipeline( const struct Device*       idevice,
+                    const struct PipelineInfo* info,
+                    struct Pipeline**          p )
+{
+	switch ( info->type )
+	{
+	case FT_PIPELINE_TYPE_COMPUTE:
+	{
+		vk_create_compute_pipeline( idevice, info, p );
+		break;
+	}
+	case FT_PIPELINE_TYPE_GRAPHICS:
+	{
+		vk_create_graphics_pipeline( idevice, info, p );
+		break;
+	}
+	default:
+	{
+		FT_ASSERT( 0 );
+		break;
+	}
+	}
 }
 
 static void
@@ -2400,9 +2425,10 @@ vk_cmd_bind_vertex_buffer( const struct CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_bind_index_buffer_u16( const struct CommandBuffer* icmd,
-                              const struct Buffer*        ibuffer,
-                              const u64                   offset )
+vk_cmd_bind_index_buffer( const struct CommandBuffer* icmd,
+                          const struct Buffer*        ibuffer,
+                          u64                         offset,
+                          enum IndexType              index_type )
 {
 	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
 	FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
@@ -2410,21 +2436,7 @@ vk_cmd_bind_index_buffer_u16( const struct CommandBuffer* icmd,
 	vkCmdBindIndexBuffer( cmd->command_buffer,
 	                      buffer->buffer,
 	                      offset,
-	                      VK_INDEX_TYPE_UINT16 );
-}
-
-static void
-vk_cmd_bind_index_buffer_u32( const struct CommandBuffer* icmd,
-                              const struct Buffer*        ibuffer,
-                              u64                         offset )
-{
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
-	FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
-
-	vkCmdBindIndexBuffer( cmd->command_buffer,
-	                      buffer->buffer,
-	                      offset,
-	                      VK_INDEX_TYPE_UINT32 );
+	                      to_vk_index_type( index_type ) );
 }
 
 static void
@@ -2615,8 +2627,7 @@ vk_create_renderer_backend( const struct RendererBackendInfo* info,
 	destroy_shader_impl                = vk_destroy_shader;
 	create_descriptor_set_layout_impl  = vk_create_descriptor_set_layout;
 	destroy_descriptor_set_layout_impl = vk_destroy_descriptor_set_layout;
-	create_compute_pipeline_impl       = vk_create_compute_pipeline;
-	create_graphics_pipeline_impl      = vk_create_graphics_pipeline;
+	create_pipeline_impl               = vk_create_pipeline;
 	destroy_pipeline_impl              = vk_destroy_pipeline;
 	create_buffer_impl                 = vk_create_buffer;
 	destroy_buffer_impl                = vk_destroy_buffer;
@@ -2638,8 +2649,7 @@ vk_create_renderer_backend( const struct RendererBackendInfo* info,
 	cmd_draw_impl                      = vk_cmd_draw;
 	cmd_draw_indexed_impl              = vk_cmd_draw_indexed;
 	cmd_bind_vertex_buffer_impl        = vk_cmd_bind_vertex_buffer;
-	cmd_bind_index_buffer_u16_impl     = vk_cmd_bind_index_buffer_u16;
-	cmd_bind_index_buffer_u32_impl     = vk_cmd_bind_index_buffer_u32;
+	cmd_bind_index_buffer_impl         = vk_cmd_bind_index_buffer;
 	cmd_copy_buffer_impl               = vk_cmd_copy_buffer;
 	cmd_copy_buffer_to_image_impl      = vk_cmd_copy_buffer_to_image;
 	cmd_bind_descriptor_set_impl       = vk_cmd_bind_descriptor_set;

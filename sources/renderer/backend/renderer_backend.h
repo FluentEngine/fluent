@@ -335,6 +335,7 @@ extern "C"
 
 	struct PipelineInfo
 	{
+		enum PipelineType           type;
 		struct VertexLayout         vertex_layout;
 		struct RasterizerStateInfo  rasterizer_info;
 		enum PrimitiveTopology      topology;
@@ -556,14 +557,9 @@ extern "C"
 	                               struct DescriptorSetLayout* layout );
 
 	void
-	create_compute_pipeline( const struct Device*       device,
-	                         const struct PipelineInfo* info,
-	                         struct Pipeline**          pipeline );
-
-	void
-	create_graphics_pipeline( const struct Device*       device,
-	                          const struct PipelineInfo* info,
-	                          struct Pipeline**          pipeline );
+	create_pipeline( const struct Device*       device,
+	                 const struct PipelineInfo* info,
+	                 struct Pipeline**          pipeline );
 
 	void
 	destroy_pipeline( const struct Device* device, struct Pipeline* pipeline );
@@ -625,14 +621,10 @@ extern "C"
 	                        const u64                   offset );
 
 	void
-	cmd_bind_index_buffer_u16( const struct CommandBuffer* cmd,
-	                           const struct Buffer*        buffer,
-	                           const u64                   offset );
-
-	void
-	cmd_bind_index_buffer_u32( const struct CommandBuffer* cmd,
-	                           const struct Buffer*        buffer,
-	                           const u64                   offset );
+	cmd_bind_index_buffer( const struct CommandBuffer* cmd,
+	                       const struct Buffer*        buffer,
+	                       const u64                   offset,
+	                       enum IndexType              index_type );
 
 	void
 	cmd_copy_buffer( const struct CommandBuffer* cmd,

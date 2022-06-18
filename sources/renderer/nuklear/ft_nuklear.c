@@ -127,6 +127,7 @@ prepare_pipeline( struct nk_vulkan_adapter *adapter )
 	create_descriptor_set( adapter->device, &set_info, &adapter->set );
 
 	struct PipelineInfo pipeline_info = {
+	    .type                          = FT_PIPELINE_TYPE_GRAPHICS,
 	    .shader                        = shader,
 	    .descriptor_set_layout         = adapter->dsl,
 	    .topology                      = FT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
@@ -174,9 +175,7 @@ prepare_pipeline( struct nk_vulkan_adapter *adapter )
 	        },
 	};
 
-	create_graphics_pipeline( adapter->device,
-	                          &pipeline_info,
-	                          &adapter->pipeline );
+	create_pipeline( adapter->device, &pipeline_info, &adapter->pipeline );
 	destroy_shader( adapter->device, shader );
 }
 
@@ -478,7 +477,10 @@ nk_ft_render( const struct CommandBuffer *cmd, enum nk_anti_aliasing AA )
 
 		/* iterate over and execute each draw command */
 		cmd_bind_vertex_buffer( cmd, adapter->vertex_buffer, 0 );
-		cmd_bind_index_buffer_u16( cmd, adapter->index_buffer, 0 );
+		cmd_bind_index_buffer( cmd,
+		                       adapter->index_buffer,
+		                       0,
+		                       FT_INDEX_TYPE_U16 );
 
 		uint32_t index_offset = 0;
 		nk_draw_foreach( draw_cmd, &ft.ctx, &adapter->cmds )

@@ -288,6 +288,12 @@ enum VertexInputRate
 	FT_VERTEX_INPUT_RATE_INSTANCE
 };
 
+enum IndexType
+{
+	FT_INDEX_TYPE_U16,
+	FT_INDEX_TYPE_U32
+};
+
 enum FrontFace
 {
 	FT_FRONT_FACE_CLOCKWISE,

@@ -34,8 +34,7 @@ create_shader_fun                 create_shader_impl;
 destroy_shader_fun                destroy_shader_impl;
 create_descriptor_set_layout_fun  create_descriptor_set_layout_impl;
 destroy_descriptor_set_layout_fun destroy_descriptor_set_layout_impl;
-create_compute_pipeline_fun       create_compute_pipeline_impl;
-create_graphics_pipeline_fun      create_graphics_pipeline_impl;
+create_pipeline_fun               create_pipeline_impl;
 destroy_pipeline_fun              destroy_pipeline_impl;
 create_buffer_fun                 create_buffer_impl;
 destroy_buffer_fun                destroy_buffer_impl;
@@ -57,8 +56,7 @@ cmd_bind_pipeline_fun             cmd_bind_pipeline_impl;
 cmd_draw_fun                      cmd_draw_impl;
 cmd_draw_indexed_fun              cmd_draw_indexed_impl;
 cmd_bind_vertex_buffer_fun        cmd_bind_vertex_buffer_impl;
-cmd_bind_index_buffer_u16_fun     cmd_bind_index_buffer_u16_impl;
-cmd_bind_index_buffer_u32_fun     cmd_bind_index_buffer_u32_impl;
+cmd_bind_index_buffer_fun         cmd_bind_index_buffer_impl;
 cmd_copy_buffer_fun               cmd_copy_buffer_impl;
 cmd_copy_buffer_to_image_fun      cmd_copy_buffer_to_image_impl;
 cmd_bind_descriptor_set_fun       cmd_bind_descriptor_set_impl;
@@ -439,27 +437,15 @@ destroy_descriptor_set_layout( const struct Device*        device,
 }
 
 void
-create_compute_pipeline( const struct Device*       device,
-                         const struct PipelineInfo* info,
-                         struct Pipeline**          pipeline )
+create_pipeline( const struct Device*       device,
+                 const struct PipelineInfo* info,
+                 struct Pipeline**          pipeline )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( info );
 	FT_ASSERT( pipeline );
 
-	create_compute_pipeline_impl( device, info, pipeline );
-}
-
-void
-create_graphics_pipeline( const struct Device*       device,
-                          const struct PipelineInfo* info,
-                          struct Pipeline**          pipeline )
-{
-	FT_ASSERT( device );
-	FT_ASSERT( info );
-	FT_ASSERT( pipeline );
-
-	create_graphics_pipeline_impl( device, info, pipeline );
+	create_pipeline_impl( device, info, pipeline );
 }
 
 void
@@ -594,27 +580,16 @@ cmd_bind_vertex_buffer( const struct CommandBuffer* cmd,
 }
 
 void
-cmd_bind_index_buffer_u16( const struct CommandBuffer* cmd,
-                           const struct Buffer*        buffer,
-                           const u64                   offset )
-{
-	FT_ASSERT( cmd );
-	FT_ASSERT( buffer );
-	FT_ASSERT( offset < buffer->size );
-
-	cmd_bind_index_buffer_u16_impl( cmd, buffer, offset );
-}
-
-void
-cmd_bind_index_buffer_u32( const struct CommandBuffer* cmd,
-                           const struct Buffer*        buffer,
-                           const u64                   offset )
+cmd_bind_index_buffer( const struct CommandBuffer* cmd,
+                       const struct Buffer*        buffer,
+                       const u64                   offset,
+                       enum IndexType              index_type )
 {
 	FT_ASSERT( cmd );
 	FT_ASSERT( buffer );
 	FT_ASSERT( offset <= buffer->size );
 
-	cmd_bind_index_buffer_u32_impl( cmd, buffer, offset );
+	cmd_bind_index_buffer_impl( cmd, buffer, offset, index_type );
 }
 
 void
