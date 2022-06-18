@@ -6,9 +6,6 @@
 #include "window.h"
 #include "application.h"
 #include "input.h"
-#ifdef FT_MOVED_C
-#include "fs/fs.hpp"
-#endif
 
 #define MAX_INSTANCE_EXTENSION_COUNT 3
 
