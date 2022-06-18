@@ -9,15 +9,12 @@
 		{                                                                      \
 		case FT_RENDERER_API_VULKAN:                                           \
 		{                                                                      \
-			info.bytecode_size = sizeof( shader_##name##_spirv );              \
+			info.bytecode_size = shader_##name##_spirv_len;                    \
 			info.bytecode      = shader_##name##_spirv;                        \
 			break;                                                             \
 		}                                                                      \
 		case FT_RENDERER_API_METAL:                                            \
 		{                                                                      \
-			info.bytecode_size = sizeof( shader_##name##_msl );                \
-			info.bytecode      = shader_##name##_msl;                          \
-			break;                                                             \
 		}                                                                      \
 		case FT_RENDERER_API_D3D12:                                            \
 		{                                                                      \
