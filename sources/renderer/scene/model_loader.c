@@ -1,5 +1,6 @@
-#include <cgltf/cgltf.h>
 #include <stdio.h>
+#include <string.h>
+#include <cgltf/cgltf.h>
 #include <stb/stb_image.h>
 #include "log/log.h"
 #include "model_loader.h"
@@ -8,7 +9,11 @@ void*
 read_file_binary( const char* filename, u64* size )
 {
 	FILE* file = fopen( filename, "rb" );
-	FT_ASSERT( file && "failed to open file" );
+	if ( !file )
+	{
+		FT_WARN( "failed to open file %s", filename );
+		return NULL;
+	}
 	u64 res = fseek( file, 0, SEEK_END );
 	FT_ASSERT( res == 0 );
 	*size = ftell( file );
@@ -27,7 +32,7 @@ free_file_data( void* data )
 	free( data );
 }
 
-static struct ModelTexture
+static inline struct ModelTexture
 load_image_from_cgltf_image( cgltf_image* cgltf_image, const char* filename )
 {
 	struct ModelTexture image = { 0 };
@@ -158,7 +163,7 @@ load_image_from_cgltf_image( cgltf_image* cgltf_image, const char* filename )
 	return image;
 }
 
-void
+static inline void
 gltf_read_float( const float* accessor_data,
                  cgltf_size   accessor_num_components,
                  cgltf_size   index,
@@ -173,16 +178,94 @@ gltf_read_float( const float* accessor_data,
 	}
 }
 
-void
+static inline f32**
+get_mesh_attribute( struct Mesh* mesh, cgltf_attribute_type type )
+{
+	switch ( type )
+	{
+	case cgltf_attribute_type_position:
+	{
+		return &mesh->positions;
+	}
+	case cgltf_attribute_type_normal:
+	{
+		return &mesh->normals;
+	}
+	case cgltf_attribute_type_texcoord:
+	{
+		return &mesh->texcoords;
+	}
+	case cgltf_attribute_type_tangent:
+	{
+		return &mesh->tangents;
+	}
+	case cgltf_attribute_type_joints:
+	{
+		return &mesh->joints;
+	}
+	case cgltf_attribute_type_weights:
+	{
+		return &mesh->weights;
+	}
+	case cgltf_attribute_type_color:
+	{
+		FT_WARN( "gltf color attribute are not supported" );
+		return NULL;
+	}
+	default:
+	{
+		FT_WARN( "invalid gltf attribute" );
+		return NULL;
+	}
+	}
+}
+
+static inline void
+read_attribute( struct Mesh*     mesh,
+                cgltf_attribute* attribute,
+                f32*             accessor_data,
+                cgltf_size       accessor_count,
+                cgltf_size       component_count )
+{
+	if ( attribute->index != 0 )
+	{
+		return;
+	}
+
+	f32** vertices = get_mesh_attribute( mesh, attribute->type );
+
+	if ( vertices == NULL )
+	{
+		return;
+	}
+
+	*vertices =
+	    realloc( *vertices,
+	             ( mesh->vertex_count * component_count ) * sizeof( f32 ) );
+
+	for ( cgltf_size v = 0; v < accessor_count * component_count;
+	      v += component_count )
+	{
+		gltf_read_float( accessor_data,
+		                 component_count,
+		                 v / component_count,
+		                 &( ( *vertices )[ v ] ),
+		                 component_count );
+	}
+}
+
+static inline void
 process_gltf_node( cgltf_node* node, struct Mesh* mesh, const char* filename )
 {
 	cgltf_mesh* gltf_mesh = node->mesh;
 
-	if ( mesh != NULL )
+	if ( gltf_mesh != NULL )
 	{
 		f32 node_to_world[ 16 ];
 		cgltf_node_transform_world( node, node_to_world );
 		memcpy( mesh->world, node_to_world, sizeof( node_to_world ) );
+
+		mesh->has_rotation = node->has_rotation;
 
 		for ( cgltf_size p = 0; p < gltf_mesh->primitives_count; ++p )
 		{
@@ -201,56 +284,15 @@ process_gltf_node( cgltf_node* node, struct Mesh* mesh, const char* filename )
 				                              accessor_data,
 				                              float_count );
 
-				mesh->vertex_count = accessor_count;
+				mesh->vertex_count = ( att == 0 )
+				                         ? mesh->vertex_count + accessor_count
+				                         : mesh->vertex_count;
 
-				cgltf_size component_count =
-				    cgltf_num_components( accessor->type );
-
-				if ( attribute->type == cgltf_attribute_type_position &&
-				     attribute->index == 0 )
-				{
-					mesh->positions =
-					    malloc( sizeof( f32 ) * accessor_count * 3 );
-
-					for ( cgltf_size v = 0; v < accessor_count * 3; v += 3 )
-					{
-						gltf_read_float( accessor_data,
-						                 component_count,
-						                 v / 3,
-						                 &mesh->positions[ v ],
-						                 3 );
-					}
-				}
-				else if ( attribute->type == cgltf_attribute_type_normal &&
-				          attribute->index == 0 )
-				{
-					mesh->normals =
-					    malloc( accessor_count * sizeof( f32 ) * 3 );
-
-					for ( cgltf_size v = 0; v < accessor_count * 3; v += 3 )
-					{
-						gltf_read_float( accessor_data,
-						                 component_count,
-						                 v / 3,
-						                 &mesh->normals[ v ],
-						                 3 );
-					}
-				}
-				else if ( attribute->type == cgltf_attribute_type_texcoord &&
-				          attribute->index == 0 )
-				{
-					mesh->texcoords =
-					    malloc( accessor_count * sizeof( f32 ) * 2 );
-
-					for ( cgltf_size v = 0; v < accessor_count * 2; v += 2 )
-					{
-						gltf_read_float( accessor_data,
-						                 component_count,
-						                 v / 2,
-						                 &mesh->texcoords[ v ],
-						                 2 );
-					}
-				}
+				read_attribute( mesh,
+				                attribute,
+				                accessor_data,
+				                accessor_count,
+				                cgltf_num_components( accessor->type ) );
 
 				free( accessor_data );
 			}
@@ -259,11 +301,13 @@ process_gltf_node( cgltf_node* node, struct Mesh* mesh, const char* filename )
 			{
 				cgltf_accessor* accessor = primitive->indices;
 
-				mesh->index_count = accessor->count;
+				mesh->index_count += accessor->count;
 				if ( accessor->component_type == cgltf_component_type_r_16u )
 				{
-					mesh->indices = malloc( accessor->count * sizeof( u16 ) );
-					u16* indices  = mesh->indices;
+					mesh->indices =
+					    realloc( mesh->indices,
+					             mesh->index_count * sizeof( u16 ) );
+					u16* indices = mesh->indices;
 					for ( cgltf_size v = 0; v < accessor->count; ++v )
 					{
 						indices[ v ] = cgltf_accessor_read_index( accessor, v );
@@ -273,7 +317,9 @@ process_gltf_node( cgltf_node* node, struct Mesh* mesh, const char* filename )
 				          cgltf_component_type_r_32u )
 				{
 					mesh->is_32bit_indices = 1;
-					mesh->indices = malloc( accessor->count * sizeof( u32 ) );
+					mesh->indices =
+					    realloc( mesh->indices,
+					             mesh->index_count * sizeof( u32 ) );
 
 					u32* indices = mesh->indices;
 					for ( cgltf_size v = 0; v < accessor->count; ++v )
@@ -282,24 +328,126 @@ process_gltf_node( cgltf_node* node, struct Mesh* mesh, const char* filename )
 					}
 				}
 			}
+		}
+	}
 
-			if ( primitive->material )
+	for ( cgltf_size child_index = 0; child_index < node->children_count;
+	      ++child_index )
+	{
+		process_gltf_node( node->children[ child_index ], mesh, filename );
+	}
+}
+
+static void
+read_animation_samplers( const cgltf_animation_sampler* src,
+                         struct AnimationSampler*       dst )
+{
+	const cgltf_accessor* timeline_accessor = src->input;
+	const uint8_t* timeline_blob = timeline_accessor->buffer_view->buffer->data;
+	const f32*     timeline_floats =
+	    ( const f32* ) ( timeline_blob + timeline_accessor->offset +
+	                     timeline_accessor->buffer_view->offset );
+
+	dst->time_count = timeline_accessor->count;
+	dst->times = calloc( timeline_accessor->count, sizeof( f32 ) );
+	memcpy( dst->times, timeline_floats, dst->time_count * sizeof( f32 ) );
+
+	// sort
+	for ( u32 i = 0; i < timeline_accessor->count; ++i )
+	{
+		for ( u32 j = 1; j < timeline_accessor->count; ++j )
+		{
+			if ( dst->times[ j ] < dst->times[ i ] )
 			{
-				if ( primitive->material->pbr_metallic_roughness
-				         .base_color_texture.texture )
-				{
-					load_image_from_cgltf_image(
-					    primitive->material->pbr_metallic_roughness
-					        .base_color_texture.texture->image,
-					    filename );
-				}
+				f32 t           = dst->times[ j ];
+				dst->times[ j ] = dst->times[ i ];
+				dst->times[ i ] = t;
 			}
 		}
+	}
 
-		for ( cgltf_size child_index = 0; child_index < node->children_count;
-		      ++child_index )
+	const cgltf_accessor* values_accessor = src->output;
+	switch ( values_accessor->type )
+	{
+	case cgltf_type_scalar:
+	{
+		dst->values =
+		    realloc( dst->values, values_accessor->count * sizeof( f32 ) );
+		cgltf_accessor_unpack_floats( src->output,
+		                              &dst->values[ 0 ],
+		                              values_accessor->count );
+		break;
+	}
+	case cgltf_type_vec3:
+	{
+		dst->values =
+		    realloc( dst->values, values_accessor->count * 3 * sizeof( f32 ) );
+		cgltf_accessor_unpack_floats( src->output,
+		                              &dst->values[ 0 ],
+		                              values_accessor->count * 3 );
+		break;
+	}
+	case cgltf_type_vec4:
+	{
+		dst->values =
+		    realloc( dst->values, values_accessor->count * 4 * sizeof( f32 ) );
+		cgltf_accessor_unpack_floats( src->output,
+		                              &dst->values[ 0 ],
+		                              values_accessor->count * 4 );
+		break;
+	}
+	default: return;
+	}
+
+	switch ( src->interpolation )
+	{
+	case cgltf_interpolation_type_step:
+		dst->interpolation = FT_ANIMATION_INTERPOLATION_STEP;
+		break;
+	case cgltf_interpolation_type_linear:
+		dst->interpolation = FT_ANIMATION_INTERPOLATION_LINEAR;
+		break;
+	case cgltf_interpolation_type_cubic_spline:
+		dst->interpolation = FT_ANIMATION_INTERPOLATION_SPLINE;
+		break;
+	default: break;
+	}
+}
+
+static void
+read_animation_channels( const cgltf_animation* src, struct Animation* dst )
+{
+	cgltf_animation_channel* src_channels = src->channels;
+	cgltf_animation_sampler* src_samplers = src->samplers;
+
+	dst->channel_count = src->channels_count;
+	dst->channels =
+	    calloc( src->channels_count, sizeof( struct AnimationChannel ) );
+
+	for ( cgltf_size j = 0; j < src->channels_count; ++j )
+	{
+		const cgltf_animation_channel* src_channel = &src_channels[ j ];
+		dst->channels[ j ].sampler =
+		    dst->samplers + ( src_channel->sampler - src_samplers );
+
+		struct AnimationChannel* dst_channel = &dst->channels[ j ];
+
+		switch ( src_channel->target_path )
 		{
-			FT_ASSERT( 0 && "child nodes not implemented" );
+		case cgltf_animation_path_type_translation:
+			dst_channel->transform_type = FT_TRANSFORM_TYPE_TRANSLATION;
+			break;
+		case cgltf_animation_path_type_rotation:
+			dst_channel->transform_type = FT_TRANSFORM_TYPE_ROTATION;
+			break;
+		case cgltf_animation_path_type_scale:
+			dst_channel->transform_type = FT_TRANSFORM_TYPE_SCALE;
+			break;
+		case cgltf_animation_path_type_weights:
+			dst_channel->transform_type = FT_TRANSFORM_TYPE_WEIGHTS;
+			break;
+		case cgltf_animation_path_type_max_enum:
+		case cgltf_animation_path_type_invalid: break;
 		}
 	}
 }
@@ -307,12 +455,17 @@ process_gltf_node( cgltf_node* node, struct Mesh* mesh, const char* filename )
 struct Model
 load_gltf( const char* filename )
 {
-	struct Model model = { 0 };
+	struct Model model;
+	memset( &model, 0, sizeof( struct Model ) );
 
 	u64 data_size = 0;
 	u8* file_data = read_file_binary( filename, &data_size );
 
-	FT_ASSERT( file_data != NULL && "failed to load gltf file" );
+	if ( file_data == NULL )
+	{
+		FT_WARN( "failed to read gltf file %s", filename );
+		return model;
+	}
 
 	cgltf_options options = { 0 };
 	cgltf_data*   data    = NULL;
@@ -324,7 +477,12 @@ load_gltf( const char* filename )
 
 		if ( result == cgltf_result_success )
 		{
-			FT_ASSERT( data->scenes_count == 1 );
+			if ( data->scenes_count > 1 )
+			{
+				FT_WARN( "multiple scenes gltf not supported %s", filename );
+				data->scenes_count = 1;
+			}
+
 			for ( cgltf_size s = 0; s < data->scenes_count; ++s )
 			{
 				cgltf_scene* scene = &data->scenes[ s ];
@@ -340,9 +498,46 @@ load_gltf( const char* filename )
 					process_gltf_node( node, &model.meshes[ n ], filename );
 				}
 			}
+
+			model.animations =
+			    calloc( data->animations_count, sizeof( struct Animation ) );
+
+			for ( cgltf_size a = 0; a < data->animations_count; ++a )
+			{
+				cgltf_animation*         animation = &data->animations[ a ];
+				cgltf_animation_sampler* samplers  = animation->samplers;
+
+				model.animations[ a ].samplers =
+				    calloc( animation->samplers_count,
+				            sizeof( struct AnimationSampler ) );
+
+				for ( cgltf_size s = 0; s < animation->samplers_count; ++s )
+				{
+					struct AnimationSampler* sampler =
+					    &model.animations[ a ].samplers[ s ];
+
+					read_animation_samplers( &samplers[ s ], sampler );
+
+					if ( sampler->times[ sampler->time_count - 1 ] > model.animations[ a ].duration )
+					{
+						model.animations[ a ].duration =
+						    sampler->times[ sampler->time_count - 1 ];
+					}
+				}
+
+				read_animation_channels( animation, &model.animations[ a ] );
+			}
+		}
+		else
+		{
+			FT_WARN( "failed to load gltf buffers %s", filename );
 		}
 
 		cgltf_free( data );
+	}
+	else
+	{
+		FT_WARN( "failed to parse gltf %s", filename );
 	}
 
 	free_file_data( file_data );
@@ -373,15 +568,57 @@ free_mesh( struct Mesh* mesh )
 		free( mesh->tangents );
 	}
 
+	if ( mesh->joints )
+	{
+		free( mesh->joints );
+	}
+
 	if ( mesh->indices )
 	{
 		free( mesh->indices );
 	}
 }
 
-void
-free_model( struct Model* model )
+static inline void
+free_animation( struct Animation* animation )
 {
+	for ( u32 i = 0; i < animation->sampler_count; ++i )
+	{
+		if ( animation->samplers[ i ].times )
+		{
+			free( animation->samplers[ i ].times );
+		}
+
+		if ( animation->samplers[ i ].values )
+		{
+			free( animation->samplers[ i ].values );
+		}
+	}
+
+	if ( animation->channels )
+	{
+		free( animation->channels );
+	}
+
+	if ( animation->samplers )
+	{
+		free( animation->samplers );
+	}
+}
+
+void
+free_gltf( struct Model* model )
+{
+	for ( u32 i = 0; i < model->animation_count; ++i )
+	{
+		free_animation( &model->animations[ i ] );
+	}
+
+	if ( model->animations )
+	{
+		free( model->animations );
+	}
+
 	for ( u32 i = 0; i < model->mesh_count; ++i )
 	{
 		free_mesh( &model->meshes[ i ] );
