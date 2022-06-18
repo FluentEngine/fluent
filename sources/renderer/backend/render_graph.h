@@ -10,7 +10,9 @@ struct DepthStencilClearValue;
 typedef b32 ( *get_clear_color_cb )( u32, f32 ( * )[ 4 ] );
 typedef b32 ( *get_clear_depth_stencil_cb )( struct DepthStencilClearValue* );
 typedef void ( *create_cb )( const struct Device*, void* );
-typedef void ( *execute_cb )( struct CommandBuffer*, void* );
+typedef void ( *execute_cb )( const struct Device* device,
+                              struct CommandBuffer*,
+                              void* );
 typedef void ( *destroy_cb )( const struct Device*, void* );
 
 void

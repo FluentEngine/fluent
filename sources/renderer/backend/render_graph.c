@@ -100,8 +100,11 @@ default_create( const struct Device* device, void* user_data )
 }
 
 static void
-default_execute( struct CommandBuffer* cmd, void* user_data )
+default_execute( const struct Device*  device,
+                 struct CommandBuffer* cmd,
+                 void*                 user_data )
 {
+	FT_UNUSED( device );
 	FT_UNUSED( cmd );
 	FT_UNUSED( user_data );
 }
@@ -465,7 +468,7 @@ rg_execute( struct CommandBuffer* cmd, struct RenderGraph* graph )
 		             barriers->image_barriers );
 
 		cmd_begin_render_pass( cmd, info );
-		pass->execute( cmd, pass->user_data );
+		pass->execute( graph->device, cmd, pass->user_data );
 		cmd_end_render_pass( cmd );
 	}
 
