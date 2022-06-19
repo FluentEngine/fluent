@@ -272,6 +272,11 @@ rg_create_physical_images( struct RenderGraph* graph )
 			}
 			else
 			{
+				graph->images[ pass->color_attachments[ i ] ].width =
+				    graph->swapchain_image_width;
+				graph->images[ pass->color_attachments[ i ] ].height =
+				    graph->swapchain_image_height;
+
 				create_image(
 				    graph->device,
 				    &graph->images[ pass->color_attachments[ i ] ],
@@ -281,6 +286,11 @@ rg_create_physical_images( struct RenderGraph* graph )
 
 		if ( pass->has_depth_stencil )
 		{
+			graph->images[ pass->depth_stencil_attachment ].width =
+			    graph->swapchain_image_width;
+			graph->images[ pass->depth_stencil_attachment ].height =
+			    graph->swapchain_image_height;
+
 			create_image(
 			    graph->device,
 			    &graph->images[ pass->depth_stencil_attachment ],
