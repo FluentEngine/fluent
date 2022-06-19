@@ -41,6 +41,13 @@ radians( f32 degree )
 		int i;                                                                 \
 		for ( i = 0; i < n; ++i ) r[ i ] = v[ i ] * s;                         \
 	}                                                                          \
+	LINMATH_H_FUNC void vec##n##_inv_scale( vec##n       r,                    \
+	                                        vec##n const v,                    \
+	                                        float const  s )                   \
+	{                                                                          \
+		int i;                                                                 \
+		for ( i = 0; i < n; ++i ) r[ i ] = v[ i ] / s;                         \
+	}                                                                          \
 	LINMATH_H_FUNC float vec##n##_mul_inner( vec##n const a, vec##n const b )  \
 	{                                                                          \
 		float p = 0.f;                                                         \
@@ -75,6 +82,14 @@ radians( f32 degree )
 	{                                                                          \
 		int i;                                                                 \
 		for ( i = 0; i < n; ++i ) r[ i ] = src[ i ];                           \
+	}                                                                          \
+	LINMATH_H_FUNC void vec##n##_lerp( vec##n       r,                         \
+	                                   vec##n const a,                         \
+	                                   vec##n const b,                         \
+	                                   float        t )                        \
+	{                                                                          \
+		for ( int i = 0; i < n; i++ )                                          \
+			r[ i ] = ( a[ i ] * ( 1.0f - t ) ) + ( b[ i ] * t );               \
 	}
 
 LINMATH_H_DEFINE_VEC( 2 )
@@ -687,4 +702,142 @@ mat4x4_arcball( mat4x4       R,
 
 	float const angle = acos( vec3_mul_inner( a_, b_ ) ) * s;
 	mat4x4_rotate( R, M, c_[ 0 ], c_[ 1 ], c_[ 2 ], angle );
+}
+
+LINMATH_H_FUNC void
+slerp( quat qm, const quat qa, const quat qb, double t )
+{
+	// Calculate angle between them.
+	double cos_half_theta = qa[ 3 ] * qb[ 3 ] + qa[ 0 ] * qb[ 0 ] +
+	                        qa[ 1 ] * qb[ 1 ] + qa[ 2 ] * qb[ 2 ];
+
+	// if qa=qb or qa=-qb then theta = 0 and we can return qa
+	if ( abs( cos_half_theta ) >= 1.0 )
+	{
+		qm[ 3 ] = qa[ 3 ];
+		qm[ 0 ] = qa[ 0 ];
+		qm[ 1 ] = qa[ 1 ];
+		qm[ 2 ] = qa[ 2 ];
+
+		return;
+	}
+
+	// Calculate temporary values.
+	double half_theta     = acos( cos_half_theta );
+	double sin_half_theta = sqrt( 1.0 - cos_half_theta * cos_half_theta );
+
+	// if theta = 180 degrees then result is not fully defined
+	// we could rotate around any axis normal to qa or qb
+	if ( fabs( sin_half_theta ) < 0.001 )
+	{ // fabs is floating point absolute
+		qm[ 3 ] = ( qa[ 3 ] * 0.5 + qb[ 3 ] * 0.5 );
+		qm[ 0 ] = ( qa[ 0 ] * 0.5 + qb[ 0 ] * 0.5 );
+		qm[ 1 ] = ( qa[ 1 ] * 0.5 + qb[ 1 ] * 0.5 );
+		qm[ 2 ] = ( qa[ 2 ] * 0.5 + qb[ 2 ] * 0.5 );
+		return;
+	}
+
+	double ratio_a = sin( ( 1 - t ) * half_theta ) / sin_half_theta;
+	double ratio_b = sin( t * half_theta ) / sin_half_theta;
+	// calculate quaternion.
+	qm[ 3 ] = ( qa[ 3 ] * ratio_a + qb[ 3 ] * ratio_b );
+	qm[ 0 ] = ( qa[ 0 ] * ratio_a + qb[ 0 ] * ratio_b );
+	qm[ 1 ] = ( qa[ 1 ] * ratio_a + qb[ 1 ] * ratio_b );
+	qm[ 2 ] = ( qa[ 2 ] * ratio_a + qb[ 2 ] * ratio_b );
+}
+
+LINMATH_H_FUNC void
+mat4x4_compose( mat4x4     r,
+                const vec3 translation,
+                const quat rotation,
+                const vec3 scale )
+{
+	float tx = translation[ 0 ];
+	float ty = translation[ 1 ];
+	float tz = translation[ 2 ];
+	float qx = rotation[ 0 ];
+	float qy = rotation[ 1 ];
+	float qz = rotation[ 2 ];
+	float qw = rotation[ 3 ];
+	float sx = scale[ 0 ];
+	float sy = scale[ 1 ];
+	float sz = scale[ 2 ];
+
+	r[ 0 ][ 0 ] = ( 1 - 2 * qy * qy - 2 * qz * qz ) * sx;
+	r[ 0 ][ 1 ] = ( 2 * qx * qy + 2 * qz * qw ) * sx;
+	r[ 0 ][ 2 ] = ( 2 * qx * qz - 2 * qy * qw ) * sx;
+	r[ 0 ][ 3 ] = 0.f;
+
+	r[ 1 ][ 0 ] = ( 2 * qx * qy - 2 * qz * qw ) * sy;
+	r[ 1 ][ 1 ] = ( 1 - 2 * qx * qx - 2 * qz * qz ) * sy;
+	r[ 1 ][ 2 ] = ( 2 * qy * qz + 2 * qx * qw ) * sy;
+	r[ 1 ][ 3 ] = 0.f;
+
+	r[ 2 ][ 0 ] = ( 2 * qx * qz + 2 * qy * qw ) * sz;
+	r[ 2 ][ 1 ] = ( 2 * qy * qz - 2 * qx * qw ) * sz;
+	r[ 2 ][ 2 ] = ( 1 - 2 * qx * qx - 2 * qy * qy ) * sz;
+	r[ 2 ][ 3 ] = 0.f;
+
+	r[ 3 ][ 0 ] = tx;
+	r[ 3 ][ 1 ] = ty;
+	r[ 3 ][ 2 ] = tz;
+	r[ 3 ][ 3 ] = 1.f;
+}
+
+LINMATH_H_FUNC void
+decompose_matrix( vec3         translation,
+                  quat         rotation,
+                  vec3         scale,
+                  const mat4x4 mat )
+{
+	// extract translation.
+	memcpy( translation, mat[ 3 ], sizeof( vec3 ) );
+
+	// extract upper-left for determinant computation.
+	const float a = mat[ 0 ][ 0 ];
+	const float b = mat[ 0 ][ 1 ];
+	const float c = mat[ 0 ][ 2 ];
+	const float d = mat[ 1 ][ 0 ];
+	const float e = mat[ 1 ][ 1 ];
+	const float f = mat[ 1 ][ 2 ];
+	const float g = mat[ 2 ][ 0 ];
+	const float h = mat[ 2 ][ 1 ];
+	const float i = mat[ 2 ][ 2 ];
+	const float A = e * i - f * h;
+	const float B = f * g - d * i;
+	const float C = d * h - e * g;
+
+	// extract scale.
+	const float det    = a * A + b * B + c * C;
+	float       scalex = vec3_len( ( vec3 ) { a, b, c } );
+	float       scaley = vec3_len( ( vec3 ) { d, e, f } );
+	float       scalez = vec3_len( ( vec3 ) { g, h, i } );
+	vec3        s      = { scalex, scaley, scalez };
+
+	if ( det < 0 )
+	{
+		vec3_scale( scale, s, -1.0f );
+	}
+	else
+	{
+		vec3_dup( scale, s );
+	}
+
+	// Remove scale from the matrix if it is not close to zero.
+	mat4x4 clone;
+	mat4x4_dup( clone, mat );
+	if ( abs( det ) > 0.00001 )
+	{
+		vec4_inv_scale( clone[ 0 ], clone[ 0 ], s[ 0 ] );
+		vec4_inv_scale( clone[ 1 ], clone[ 1 ], s[ 1 ] );
+		vec4_inv_scale( clone[ 2 ], clone[ 2 ], s[ 2 ] );
+
+		// Extract rotation
+		quat_from_mat4x4( rotation, clone );
+	}
+	else
+	{
+		// Set to identity if close to zero
+		quat_identity( rotation );
+	}
 }
