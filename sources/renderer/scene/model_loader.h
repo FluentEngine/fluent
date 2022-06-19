@@ -3,33 +3,31 @@
 #include "base/base.h"
 #include "math/linear.h"
 
-struct Image;
-
-struct ModelTexture
+struct ft_model_texture
 {
-	u32   width;
-	u32   height;
-	void *data;
+	uint32_t width;
+	uint32_t height;
+	void    *data;
 };
 
-struct PbrMetallicRoughness
+struct ft_pbr_metallic_roughness
 {
-	struct ModelTexture base_color_texture;
+	struct ft_model_texture base_color_texture;
 };
 
-struct Material
+struct ft_material
 {
-	struct PbrMetallicRoughness metallic_roughness;
+	struct ft_pbr_metallic_roughness metallic_roughness;
 };
 
-enum AnimationInterpolation
+enum ft_animation_interpolation
 {
 	FT_ANIMATION_INTERPOLATION_STEP,
 	FT_ANIMATION_INTERPOLATION_LINEAR,
 	FT_ANIMATION_INTERPOLATION_SPLINE,
 };
 
-enum TransformType
+enum ft_transform_type
 {
 	FT_TRANSFORM_TYPE_TRANSLATION,
 	FT_TRANSFORM_TYPE_ROTATION,
@@ -37,56 +35,57 @@ enum TransformType
 	FT_TRANSFORM_TYPE_WEIGHTS,
 };
 
-struct AnimationSampler
+struct ft_animation_sampler
 {
-	u32                         frame_count;
-	f32                        *times;
-	f32                        *values;
-	enum AnimationInterpolation interpolation;
+	uint32_t                        frame_count;
+	float                          *times;
+	float                          *values;
+	enum ft_animation_interpolation interpolation;
 };
 
-struct AnimationChannel
+struct ft_animation_channel
 {
-	struct AnimationSampler *sampler;
-	enum TransformType       transform_type;
+	struct ft_animation_sampler *sampler;
+	enum ft_transform_type       transform_type;
+	uint32_t                     target;
 };
 
-struct Animation
+struct ft_animation
 {
-	f32                      duration;
-	u32                      sampler_count;
-	struct AnimationSampler *samplers;
-	u32                      channel_count;
-	struct AnimationChannel *channels;
+	float                        duration;
+	uint32_t                     sampler_count;
+	struct ft_animation_sampler *samplers;
+	uint32_t                     channel_count;
+	struct ft_animation_channel *channels;
 };
 
-struct Mesh
+struct ft_mesh
 {
-	u32             vertex_count;
-	f32            *positions;
-	f32            *normals;
-	f32            *tangents;
-	f32            *texcoords;
-	f32            *joints;
-	f32            *weights;
-	u32             index_count;
-	b32             is_32bit_indices;
-	void           *indices;
-	mat4x4          world;
-	struct Material material;
-	b32             has_rotation;
+	uint32_t           vertex_count;
+	float             *positions;
+	float             *normals;
+	float             *tangents;
+	float             *texcoords;
+	float             *joints;
+	float             *weights;
+	uint32_t           index_count;
+	bool               is_32bit_indices;
+	void              *indices;
+	float4x4           world;
+	struct ft_material material;
+	bool               has_rotation;
 };
 
-struct Model
+struct ft_model
 {
-	u32               mesh_count;
-	struct Mesh      *meshes;
-	u32               animation_count;
-	struct Animation *animations;
+	uint32_t             mesh_count;
+	struct ft_mesh      *meshes;
+	uint32_t             animation_count;
+	struct ft_animation *animations;
 };
 
-struct Model
-load_gltf( const char *filename );
+FT_API struct ft_model
+ft_load_gltf( const char *filename );
 
-void
-free_gltf( struct Model *model );
+FT_API void
+ft_free_gltf( struct ft_model *model );

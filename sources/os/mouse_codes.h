@@ -2,7 +2,7 @@
 
 #include "base/base.h"
 
-enum Button
+enum ft_button
 {
 	FT_BUTTON_LEFT   = 1,
 	FT_BUTTON_MIDDLE = 2,

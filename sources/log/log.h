@@ -1,58 +1,36 @@
 #pragma once
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif /* __cplusplus */
+#include "base/base.h"
 
 #include <stdio.h>
 #include <string.h>
 
-	enum LogLevel
-	{
-		FT_TRACE,
-		FT_DEBUG,
-		FT_INFO,
-		FT_WARN,
-		FT_ERROR
-	};
+enum ft_log_level
+{
+	FT_TRACE,
+	FT_DEBUG,
+	FT_INFO,
+	FT_WARN,
+	FT_ERROR
+};
 
-	void
-	log_init( enum LogLevel log_level );
+FT_API void
+ft_log_init( enum ft_log_level log_level );
 
-	void
-	log_shutdown( void );
+FT_API void
+ft_log_shutdown( void );
 
-	int
-	logger_initConsoleLogger( FILE* output );
+FT_API void
+ft_log_set_level( enum ft_log_level level );
 
-	void
-	logger_setLevel( enum LogLevel level );
-
-	enum LogLevel
-	logger_getLevel( void );
-
-	int
-	logger_isEnabled( enum LogLevel level );
-
-	void
-	logger_autoFlush( long interval );
-
-	void
-	logger_flush( void );
-
-	void
-	logger_log( enum LogLevel level, const char* fmt, ... );
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif /* __cplusplus */
+FT_API void
+ft_log( enum ft_log_level level, const char* fmt, ... );
 
 #ifdef FLUENT_DEBUG
-#define FT_TRACE( fmt, ... ) logger_log( FT_TRACE, fmt, ##__VA_ARGS__ )
-#define FT_INFO( fmt, ... )  logger_log( FT_INFO, fmt, ##__VA_ARGS__ )
-#define FT_WARN( fmt, ... )  logger_log( FT_WARN, fmt, ##__VA_ARGS__ )
-#define FT_ERROR( fmt, ... ) logger_log( FT_ERROR, fmt, ##__VA_ARGS__ )
+#define FT_TRACE( fmt, ... ) ft_log( FT_TRACE, fmt, ##__VA_ARGS__ )
+#define FT_INFO( fmt, ... )  ft_log( FT_INFO, fmt, ##__VA_ARGS__ )
+#define FT_WARN( fmt, ... )  ft_log( FT_WARN, fmt, ##__VA_ARGS__ )
+#define FT_ERROR( fmt, ... ) ft_log( FT_ERROR, fmt, ##__VA_ARGS__ )
 #else
 #define FT_TRACE( fmt, ... )
 #define FT_INFO( fmt, ... )

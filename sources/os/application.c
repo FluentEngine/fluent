@@ -9,29 +9,29 @@
 
 #define MAX_INSTANCE_EXTENSION_COUNT 3
 
-struct ApplicationState
+struct application_state
 {
-	b32              is_inited;
-	b32              is_running;
-	struct Window    window;
-	InitCallback     on_init;
-	UpdateCallback   on_update;
-	ShutdownCallback on_shutdown;
-	ResizeCallback   on_resize;
-	f32              delta_time;
-	struct WsiInfo   wsi_info;
-	const char*      extensions[ MAX_INSTANCE_EXTENSION_COUNT ];
+	bool                 is_inited;
+	bool                 is_running;
+	struct ft_window     window;
+	ft_init_callback     on_init;
+	ft_update_callback   on_update;
+	ft_shutdown_callback on_shutdown;
+	ft_resize_callback   on_resize;
+	float                delta_time;
+	struct ft_wsi_info   wsi_info;
+	const char*          extensions[ MAX_INSTANCE_EXTENSION_COUNT ];
 };
 
-static struct ApplicationState app_state;
+static struct application_state app_state;
 
 #ifdef VULKAN_BACKEND
 static void
-ft_create_vulkan_surface( void* window, void* instance, void** p )
+create_vulkan_surface( void* window, void* instance, void** p )
 {
 	VkSurfaceKHR surface;
 	SDL_Vulkan_CreateSurface(
-	    ( SDL_Window* ) ( ( struct Window* ) window )->handle,
+	    ( SDL_Window* ) ( ( struct ft_window* ) window )->handle,
 	    ( VkInstance ) instance,
 	    &surface );
 	*p = surface;
@@ -39,19 +39,21 @@ ft_create_vulkan_surface( void* window, void* instance, void** p )
 #endif
 
 static void
-ft_window_get_size( void* window, u32* width, u32* height )
+window_get_size( void* window, uint32_t* width, uint32_t* height )
 {
-	window_get_size( ( struct Window* ) window, width, height );
+	ft_window_get_size( ( struct ft_window* ) window, width, height );
 }
 
 static void
-ft_window_get_framebuffer_size( void* window, u32* width, u32* height )
+window_get_framebuffer_size( void* window, uint32_t* width, uint32_t* height )
 {
-	window_get_framebuffer_size( ( struct Window* ) window, width, height );
+	ft_window_get_framebuffer_size( ( struct ft_window* ) window,
+	                                width,
+	                                height );
 }
 
 void
-app_init( const struct ApplicationConfig* config )
+ft_app_init( const struct ft_application_config* config )
 {
 	FT_ASSERT( config->argv );
 	FT_ASSERT( config->on_init );
@@ -59,15 +61,15 @@ app_init( const struct ApplicationConfig* config )
 	FT_ASSERT( config->on_shutdown );
 	FT_ASSERT( config->on_resize );
 
-	app_state.window = create_window( &config->window_info );
+	app_state.window = ft_create_window( &config->window_info );
 
 	app_state.on_init     = config->on_init;
 	app_state.on_update   = config->on_update;
 	app_state.on_shutdown = config->on_shutdown;
 	app_state.on_resize   = config->on_resize;
 
-	struct WsiInfo* wsi_info = &app_state.wsi_info;
-	wsi_info->window         = &app_state.window;
+	struct ft_wsi_info* wsi_info = &app_state.wsi_info;
+	wsi_info->window             = &app_state.window;
 #ifdef VULKAN_BACKEND
 	SDL_Vulkan_GetInstanceExtensions(
 	    ( SDL_Window* ) app_state.window.handle,
@@ -78,18 +80,18 @@ app_init( const struct ApplicationConfig* config )
 	    &wsi_info->vulkan_instance_extension_count,
 	    app_state.extensions );
 	wsi_info->vulkan_instance_extensions = app_state.extensions;
-	wsi_info->create_vulkan_surface      = ft_create_vulkan_surface;
+	wsi_info->create_vulkan_surface      = create_vulkan_surface;
 #endif
-	wsi_info->get_window_size      = ft_window_get_size;
-	wsi_info->get_framebuffer_size = ft_window_get_framebuffer_size;
+	wsi_info->get_window_size      = window_get_size;
+	wsi_info->get_framebuffer_size = window_get_framebuffer_size;
 
-	log_init( FT_INFO );
+	ft_log_init( FT_INFO );
 
 	app_state.is_inited = 1;
 }
 
 void
-app_run()
+ft_app_run()
 {
 	FT_ASSERT( app_state.is_inited );
 
@@ -99,17 +101,18 @@ app_run()
 
 	SDL_Event e;
 
-	u32 last_frame       = 0.0f;
+	uint32_t last_frame  = 0.0f;
 	app_state.delta_time = 0.0;
 
-	static u32 width, height;
-	window_get_size( &app_state.window, &width, &height );
+	static uint32_t width, height;
+	ft_window_get_size( &app_state.window, &width, &height );
 
 	while ( app_state.is_running )
 	{
-		u32 current_frame    = get_time();
-		app_state.delta_time = ( f32 ) ( current_frame - last_frame ) / 1000.0f;
-		last_frame           = current_frame;
+		uint32_t current_frame = ft_get_time();
+		app_state.delta_time =
+		    ( float ) ( current_frame - last_frame ) / 1000.0f;
+		last_frame = current_frame;
 
 		while ( SDL_PollEvent( &e ) != 0 )
 		{
@@ -124,8 +127,8 @@ app_run()
 			{
 				if ( e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED )
 				{
-					u32 w, h;
-					window_get_size( &app_state.window, &w, &h );
+					uint32_t w, h;
+					ft_window_get_size( &app_state.window, &w, &h );
 					if ( width == w && height == h )
 					{
 						break;
@@ -147,39 +150,39 @@ app_run()
 }
 
 void
-app_shutdown()
+ft_app_shutdown()
 {
 	FT_ASSERT( app_state.is_inited );
-	log_shutdown();
-	destroy_window( &app_state.window );
+	ft_log_shutdown();
+	ft_destroy_window( &app_state.window );
 }
 
 void
-app_request_exit()
+ft_app_request_exit()
 {
 	app_state.is_running = 0;
 }
 
-const struct Window*
-get_app_window()
+const struct ft_window*
+ft_get_app_window()
 {
 	return &app_state.window;
 }
 
-u32
-get_time()
+uint32_t
+ft_get_time()
 {
 	return SDL_GetTicks();
 }
 
-f32
-get_delta_time()
+float
+ft_get_delta_time()
 {
 	return app_state.delta_time;
 }
 
-struct WsiInfo*
-get_ft_wsi_info()
+struct ft_wsi_info*
+ft_get_wsi_info()
 {
 	return &app_state.wsi_info;
 }

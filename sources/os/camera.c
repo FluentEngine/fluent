@@ -1,28 +1,28 @@
 #include "input.h"
 #include "camera.h"
 
-static inline void
-recalculate_projection_matrix( struct Camera* camera )
+FT_INLINE void
+recalculate_projection_matrix( struct ft_camera* camera )
 {
-	mat4x4_identity( camera->projection );
-	mat4x4_perspective( camera->projection,
-	                    camera->fov,
-	                    camera->aspect,
-	                    camera->near,
-	                    camera->far );
+	float4x4_identity( camera->projection );
+	float4x4_perspective( camera->projection,
+	                      camera->fov,
+	                      camera->aspect,
+	                      camera->near,
+	                      camera->far );
 }
 
-static inline void
-recalculate_view_matrix( struct Camera* camera )
+FT_INLINE void
+recalculate_view_matrix( struct ft_camera* camera )
 {
-	vec3 center;
-	vec3_add( center, camera->position, camera->direction );
-	mat4x4_identity( camera->view );
-	mat4x4_look_at( camera->view, camera->position, center, camera->up );
+	float3 center;
+	float3_add( center, camera->position, camera->direction );
+	float4x4_identity( camera->view );
+	float4x4_look_at( camera->view, camera->position, center, camera->up );
 }
 
 void
-camera_init( struct Camera* camera, const struct CameraInfo* info )
+ft_camera_init( struct ft_camera* camera, const struct ft_camera_info* info )
 {
 	camera->fov    = info->fov;
 	camera->aspect = info->aspect;
@@ -31,12 +31,12 @@ camera_init( struct Camera* camera, const struct CameraInfo* info )
 	camera->yaw    = -90.0f;
 	camera->pitch  = 0.0f;
 
-	vec3_dup( camera->position, info->position );
-	vec3_dup( camera->direction, info->direction );
-	vec3_dup( camera->world_up, info->up );
-	vec3_mul_cross( camera->right, info->direction, camera->world_up );
-	vec3_mul_cross( camera->up, camera->right, camera->direction );
-	vec3_norm( camera->up, camera->up );
+	float3_dup( camera->position, info->position );
+	float3_dup( camera->direction, info->direction );
+	float3_dup( camera->world_up, info->up );
+	float3_mul_cross( camera->right, info->direction, camera->world_up );
+	float3_mul_cross( camera->up, camera->right, camera->direction );
+	float3_norm( camera->up, camera->up );
 
 	recalculate_projection_matrix( camera );
 	recalculate_view_matrix( camera );
@@ -46,44 +46,44 @@ camera_init( struct Camera* camera, const struct CameraInfo* info )
 }
 
 void
-camera_on_move( struct Camera*       camera,
-                enum CameraDirection direction,
-                f32                  delta_time )
+ft_camera_on_move( struct ft_camera*        camera,
+                   enum ft_camera_direction direction,
+                   float                    delta_time )
 {
-	f32 velocity = camera->speed * delta_time;
+	float velocity = camera->speed * delta_time;
 
 	switch ( direction )
 	{
 	case FT_CAMERA_DIRECTION_FORWARD:
 	{
-		vec3 p;
-		vec3_dup( p, camera->direction );
-		vec3_scale( p, camera->direction, velocity );
-		vec3_add( camera->position, camera->position, p );
+		float3 p;
+		float3_dup( p, camera->direction );
+		float3_scale( p, camera->direction, velocity );
+		float3_add( camera->position, camera->position, p );
 		break;
 	}
 	case FT_CAMERA_DIRECTION_BACK:
 	{
-		vec3 p;
-		vec3_dup( p, camera->direction );
-		vec3_scale( p, camera->direction, velocity );
-		vec3_sub( camera->position, camera->position, p );
+		float3 p;
+		float3_dup( p, camera->direction );
+		float3_scale( p, camera->direction, velocity );
+		float3_sub( camera->position, camera->position, p );
 		break;
 	}
 	case FT_CAMERA_DIRECTION_LEFT:
 	{
-		vec3 p;
-		vec3_dup( p, camera->right );
-		vec3_scale( p, p, velocity );
-		vec3_sub( camera->position, camera->position, p );
+		float3 p;
+		float3_dup( p, camera->right );
+		float3_scale( p, p, velocity );
+		float3_sub( camera->position, camera->position, p );
 		break;
 	}
 	case FT_CAMERA_DIRECTION_RIGHT:
 	{
-		vec3 p;
-		vec3_dup( p, camera->right );
-		vec3_scale( p, p, velocity );
-		vec3_add( camera->position, camera->position, p );
+		float3 p;
+		float3_dup( p, camera->right );
+		float3_scale( p, p, velocity );
+		float3_add( camera->position, camera->position, p );
 		break;
 	}
 	}
@@ -92,7 +92,7 @@ camera_on_move( struct Camera*       camera,
 }
 
 void
-camera_on_rotate( struct Camera* camera, f32 x_offset, f32 y_offset )
+ft_camera_on_rotate( struct ft_camera* camera, float x_offset, float y_offset )
 {
 	x_offset *= camera->mouse_sensitivity;
 	y_offset *= camera->mouse_sensitivity;
@@ -105,68 +105,69 @@ camera_on_rotate( struct Camera* camera, f32 x_offset, f32 y_offset )
 	if ( camera->pitch < -89.0f )
 		camera->pitch = -89.0f;
 
-	vec3 dir;
+	float3 dir;
 	dir[ 0 ] =
 	    cosf( radians( camera->yaw ) ) * cosf( radians( camera->pitch ) );
 	dir[ 1 ] = sinf( radians( camera->pitch ) );
 	dir[ 2 ] =
 	    sinf( radians( camera->yaw ) ) * cosf( radians( camera->pitch ) );
-	vec3_norm( camera->direction, dir );
+	float3_norm( camera->direction, dir );
 
-	vec3_mul_cross( camera->right, camera->direction, camera->world_up );
-	vec3_norm( camera->right, camera->right );
-	vec3_mul_cross( camera->up, camera->right, camera->direction );
-	vec3_norm( camera->up, camera->up );
+	float3_mul_cross( camera->right, camera->direction, camera->world_up );
+	float3_norm( camera->right, camera->right );
+	float3_mul_cross( camera->up, camera->right, camera->direction );
+	float3_norm( camera->up, camera->up );
 
 	recalculate_view_matrix( camera );
 }
 
 void
-camera_on_resize( struct Camera* camera, u32 width, u32 height )
+ft_camera_on_resize( struct ft_camera* camera, uint32_t width, uint32_t height )
 {
-	camera->aspect = ( f32 ) width / ( f32 ) height;
+	camera->aspect = ( float ) width / ( float ) height;
 	recalculate_projection_matrix( camera );
 }
 
 void
-camera_controller_init( struct CameraController* c, struct Camera* camera )
+ft_camera_controller_init( struct ft_camera_controller* c,
+                           struct ft_camera*            camera )
 {
 	c->camera = camera;
 }
 
 void
-camera_controller_update( struct CameraController* c, f32 delta_time )
+ft_camera_controller_update( struct ft_camera_controller* c, float delta_time )
 {
-	if ( is_key_pressed( FT_KEY_W ) )
+	if ( ft_is_key_pressed( FT_KEY_W ) )
 	{
-		camera_on_move( c->camera, FT_CAMERA_DIRECTION_FORWARD, delta_time );
+		ft_camera_on_move( c->camera, FT_CAMERA_DIRECTION_FORWARD, delta_time );
 	}
-	else if ( is_key_pressed( FT_KEY_S ) )
+	else if ( ft_is_key_pressed( FT_KEY_S ) )
 	{
-		camera_on_move( c->camera, FT_CAMERA_DIRECTION_BACK, delta_time );
-	}
-
-	if ( is_key_pressed( FT_KEY_A ) )
-	{
-		camera_on_move( c->camera, FT_CAMERA_DIRECTION_LEFT, delta_time );
-	}
-	else if ( is_key_pressed( FT_KEY_D ) )
-	{
-		camera_on_move( c->camera, FT_CAMERA_DIRECTION_RIGHT, delta_time );
+		ft_camera_on_move( c->camera, FT_CAMERA_DIRECTION_BACK, delta_time );
 	}
 
-	i32 x, y;
-	get_mouse_position( &x, &y );
-	f32 xoffset = ( f32 ) ( x - c->last_mouse_positon[ 0 ] );
-	f32 yoffset = ( f32 ) ( c->last_mouse_positon[ 1 ] - y );
-	camera_on_rotate( c->camera, xoffset, yoffset );
+	if ( ft_is_key_pressed( FT_KEY_A ) )
+	{
+		ft_camera_on_move( c->camera, FT_CAMERA_DIRECTION_LEFT, delta_time );
+	}
+	else if ( ft_is_key_pressed( FT_KEY_D ) )
+	{
+		ft_camera_on_move( c->camera, FT_CAMERA_DIRECTION_RIGHT, delta_time );
+	}
+
+	int32_t x, y;
+	ft_get_mouse_position( &x, &y );
+	float xoffset = ( float ) ( x - c->last_mouse_positon[ 0 ] );
+	float yoffset = ( float ) ( c->last_mouse_positon[ 1 ] - y );
+	ft_camera_on_rotate( c->camera, xoffset, yoffset );
 	c->last_mouse_positon[ 0 ] = x;
 	c->last_mouse_positon[ 1 ] = y;
 }
 
 void
-camera_controller_reset( struct CameraController* c )
+ft_camera_controller_reset( struct ft_camera_controller* c )
 {
-	get_mouse_position( &c->last_mouse_positon[ 0 ],
-	                    &c->last_mouse_positon[ 1 ] );
+	ft_get_mouse_position( &c->last_mouse_positon[ 0 ],
+	                       &c->last_mouse_positon[ 1 ] );
 }

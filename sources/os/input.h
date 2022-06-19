@@ -4,24 +4,17 @@
 #include "key_codes.h"
 #include "mouse_codes.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-	i32
-	get_mouse_pos_x( void );
+FT_API int32_t
+ft_get_mouse_pos_x( void );
 
-	i32
-	get_mouse_pos_y( void );
+FT_API int32_t
+ft_get_mouse_pos_y( void );
 
-	void
-	get_mouse_position( i32* x, i32* y );
+FT_API void
+ft_get_mouse_position( int32_t* x, int32_t* y );
 
-	b32
-	is_key_pressed( enum KeyCode key );
+FT_API bool
+ft_is_key_pressed( enum ft_key_code key );
 
-	b32
-	is_button_pressed( enum Button button );
-#ifdef __cplusplus
-}
-#endif
+FT_API bool
+ft_is_button_pressed( enum ft_button button );

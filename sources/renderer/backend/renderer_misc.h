@@ -1,10 +1,10 @@
 #pragma once
 
-#define DECLARE_SHADER( name )                                                 \
-	static inline struct ShaderModuleInfo get_##name##_shader(                 \
-	    enum RendererAPI api )                                                 \
+#define FT_DECLARE_SHADER( name )                                              \
+	FT_INLINE struct ft_shader_module_info get_##name##_shader(                \
+	    enum ft_renderer_api api )                                             \
 	{                                                                          \
-		struct ShaderModuleInfo info;                                          \
+		struct ft_shader_module_info info;                                     \
 		switch ( api )                                                         \
 		{                                                                      \
 		case FT_RENDERER_API_VULKAN:                                           \

@@ -19,17 +19,17 @@
 #define VK_ASSERT( x ) x
 #endif
 
-struct VulkanRendererBackend
+struct vk_renderer_backend
 {
-	VkAllocationCallbacks*   vulkan_allocator;
-	VkInstance               instance;
-	VkDebugUtilsMessengerEXT debug_messenger;
-	VkPhysicalDevice         physical_device;
-	u32                      api_version;
-	struct RendererBackend   interface;
+	VkAllocationCallbacks*     vulkan_allocator;
+	VkInstance                 instance;
+	VkDebugUtilsMessengerEXT   debug_messenger;
+	VkPhysicalDevice           physical_device;
+	uint32_t                   api_version;
+	struct ft_renderer_backend interface;
 };
 
-struct VulkanDevice
+struct vk_device
 {
 	VkAllocationCallbacks* vulkan_allocator;
 	VkInstance             instance;
@@ -37,98 +37,98 @@ struct VulkanDevice
 	VkDevice               logical_device;
 	VmaAllocator           memory_allocator;
 	VkDescriptorPool       descriptor_pool;
-	struct Device          interface;
+	struct ft_device       interface;
 };
 
-struct VulkanCommandPool
+struct vk_command_pool
 {
-	VkCommandPool      command_pool;
-	struct CommandPool interface;
+	VkCommandPool          command_pool;
+	struct ft_command_pool interface;
 };
 
-struct VulkanCommandBuffer
+struct vk_command_buffer
 {
-	VkCommandBuffer      command_buffer;
-	struct CommandBuffer interface;
+	VkCommandBuffer          command_buffer;
+	struct ft_command_buffer interface;
 };
 
-struct VulkanQueue
+struct vk_queue
 {
-	VkQueue      queue;
-	struct Queue interface;
+	VkQueue         queue;
+	struct ft_queue interface;
 };
 
-struct VulkanSemaphore
+struct vk_semaphore
 {
-	VkSemaphore      semaphore;
-	struct Semaphore interface;
+	VkSemaphore         semaphore;
+	struct ft_semaphore interface;
 };
 
-struct VulkanFence
+struct vk_fence
 {
-	VkFence      fence;
-	struct Fence interface;
+	VkFence         fence;
+	struct ft_fence interface;
 };
 
-struct VulkanSampler
+struct vk_sampler
 {
-	VkSampler      sampler;
-	struct Sampler interface;
+	VkSampler         sampler;
+	struct ft_sampler interface;
 };
 
-struct VulkanImage
+struct vk_image
 {
-	VkImage       image;
-	VkImageView   image_view;
-	VmaAllocation allocation;
-	struct Image  interface;
+	VkImage         image;
+	VkImageView     image_view;
+	VmaAllocation   allocation;
+	struct ft_image interface;
 };
 
-struct VulkanBuffer
+struct vk_buffer
 {
-	VkBuffer      buffer;
-	VmaAllocation allocation;
-	struct Buffer interface;
+	VkBuffer         buffer;
+	VmaAllocation    allocation;
+	struct ft_buffer interface;
 };
 
-struct VulkanSwapchain
+struct vk_swapchain
 {
 	VkPresentModeKHR              present_mode;
 	VkColorSpaceKHR               color_space;
 	VkSurfaceTransformFlagBitsKHR pre_transform;
 	VkSurfaceKHR                  surface;
 	VkSwapchainKHR                swapchain;
-	struct Swapchain              interface;
+	struct ft_swapchain           interface;
 };
 
-struct VulkanShader
+struct vk_shader
 {
-	VkShaderModule shaders[ FT_SHADER_STAGE_COUNT ];
-	struct Shader  interface;
+	VkShaderModule   shaders[ FT_SHADER_STAGE_COUNT ];
+	struct ft_shader interface;
 };
 
-struct VulkanDescriptorSetLayout
+struct vk_descriptor_set_layout
 {
-	u32                        descriptor_set_layout_count;
-	VkDescriptorSetLayout      descriptor_set_layouts[ MAX_SET_COUNT ];
-	struct DescriptorSetLayout interface;
+	uint32_t                        descriptor_set_layout_count;
+	VkDescriptorSetLayout           descriptor_set_layouts[ FT_MAX_SET_COUNT ];
+	struct ft_descriptor_set_layout interface;
 };
 
-struct VulkanPipeline
+struct vk_pipeline
 {
-	VkPipelineLayout pipeline_layout;
-	VkPipeline       pipeline;
-	struct Pipeline  interface;
+	VkPipelineLayout   pipeline_layout;
+	VkPipeline         pipeline;
+	struct ft_pipeline interface;
 };
 
-struct VulkanDescriptorSet
+struct vk_descriptor_set
 {
-	VkDescriptorSet      descriptor_set;
-	struct DescriptorSet interface;
+	VkDescriptorSet          descriptor_set;
+	struct ft_descriptor_set interface;
 };
 
 void
-vk_create_renderer_backend( const struct RendererBackendInfo* info,
-                            struct RendererBackend**          backend );
+vk_create_renderer_backend( const struct ft_renderer_backend_info* info,
+                            struct ft_renderer_backend**           backend );
 
 #endif

@@ -2,8 +2,6 @@
 
 #include "renderer_backend.h"
 
-#undef MemoryBarrier
-
 #define FT_INIT_INTERNAL( name, ptr, type )                                    \
 	struct type* name      = calloc( 1, sizeof( struct type ) );               \
 	name->interface.handle = name;                                             \
@@ -12,361 +10,354 @@
 #define FT_FROM_HANDLE( name, interface, impl )                                \
 	struct impl* name = interface->handle
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_destroy_renderer_backend,
+                             struct ft_renderer_backend* backend );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_renderer_backend,
-	                          struct RendererBackend* backend );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_create_device,
+                             const struct ft_renderer_backend* backend,
+                             const struct ft_device_info*      info,
+                             struct ft_device**                device );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_device,
-	                          const struct RendererBackend* backend,
-	                          const struct DeviceInfo*      info,
-	                          struct Device**               device );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_destroy_device,
+                             struct ft_device* device );
 
-	DECLARE_FUNCTION_POINTER( void, destroy_device, struct Device* device );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_create_queue,
+                             const struct ft_device*     device,
+                             const struct ft_queue_info* info,
+                             struct ft_queue**           queue );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_queue,
-	                          const struct Device*    device,
-	                          const struct QueueInfo* info,
-	                          struct Queue**          queue );
+FT_DECLARE_FUNCTION_POINTER( void, ft_destroy_queue, struct ft_queue* queue );
 
-	DECLARE_FUNCTION_POINTER( void, destroy_queue, struct Queue* queue );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_queue_wait_idle,
+                             const struct ft_queue* queue );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          queue_wait_idle,
-	                          const struct Queue* queue );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_queue_submit,
+                             const struct ft_queue*             queue,
+                             const struct ft_queue_submit_info* info );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          queue_submit,
-	                          const struct Queue*           queue,
-	                          const struct QueueSubmitInfo* info );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_immediate_submit,
+                             const struct ft_queue*    queue,
+                             struct ft_command_buffer* cmd );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          immediate_submit,
-	                          const struct Queue*   queue,
-	                          struct CommandBuffer* cmd );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_queue_present,
+                             const struct ft_queue*              queue,
+                             const struct ft_queue_present_info* info );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          queue_present,
-	                          const struct Queue*            queue,
-	                          const struct QueuePresentInfo* info );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_create_semaphore,
+                             const struct ft_device* device,
+                             struct ft_semaphore**   semaphore );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_semaphore,
-	                          const struct Device* device,
-	                          struct Semaphore**   semaphore );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_destroy_semaphore,
+                             const struct ft_device* device,
+                             struct ft_semaphore*    semaphore );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_semaphore,
-	                          const struct Device* device,
-	                          struct Semaphore*    semaphore );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_create_fence,
+                             const struct ft_device* device,
+                             struct ft_fence**       fence );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_fence,
-	                          const struct Device* device,
-	                          struct Fence**       fence );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_destroy_fence,
+                             const struct ft_device* device,
+                             struct ft_fence*        fence );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_fence,
-	                          const struct Device* device,
-	                          struct Fence*        fence );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_wait_for_fences,
+                             const struct ft_device* device,
+                             uint32_t                count,
+                             struct ft_fence**       fences );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          wait_for_fences,
-	                          const struct Device* device,
-	                          u32                  count,
-	                          struct Fence**       fences );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_reset_fences,
+                             const struct ft_device* device,
+                             uint32_t                count,
+                             struct ft_fence**       fences );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          reset_fences,
-	                          const struct Device* device,
-	                          u32                  count,
-	                          struct Fence**       fences );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_create_swapchain,
+                             const struct ft_device*         device,
+                             const struct ft_swapchain_info* info,
+                             struct ft_swapchain**           swapchain );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_swapchain,
-	                          const struct Device*        device,
-	                          const struct SwapchainInfo* info,
-	                          struct Swapchain**          swapchain );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_resize_swapchain,
+                             const struct ft_device* device,
+                             struct ft_swapchain*    swapchain,
+                             uint32_t                width,
+                             uint32_t                height );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          resize_swapchain,
-	                          const struct Device* device,
-	                          struct Swapchain*    swapchain,
-	                          u32                  width,
-	                          u32                  height );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_destroy_swapchain,
+                             const struct ft_device* device,
+                             struct ft_swapchain*    swapchain );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_swapchain,
-	                          const struct Device* device,
-	                          struct Swapchain*    swapchain );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_create_command_pool,
+                             const struct ft_device*            device,
+                             const struct ft_command_pool_info* info,
+                             struct ft_command_pool**           command_pool );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_command_pool,
-	                          const struct Device*          device,
-	                          const struct CommandPoolInfo* info,
-	                          struct CommandPool**          command_pool );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_destroy_command_pool,
+                             const struct ft_device* device,
+                             struct ft_command_pool* command_pool );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_command_pool,
-	                          const struct Device* device,
-	                          struct CommandPool*  command_pool );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_create_command_buffers,
+                             const struct ft_device*       device,
+                             const struct ft_command_pool* command_pool,
+                             uint32_t                      count,
+                             struct ft_command_buffer**    command_buffers );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_command_buffers,
-	                          const struct Device*      device,
-	                          const struct CommandPool* command_pool,
-	                          u32                       count,
-	                          struct CommandBuffer**    command_buffers );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_free_command_buffers,
+                             const struct ft_device*       device,
+                             const struct ft_command_pool* command_pool,
+                             uint32_t                      count,
+                             struct ft_command_buffer**    command_buffers );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          free_command_buffers,
-	                          const struct Device*      device,
-	                          const struct CommandPool* command_pool,
-	                          u32                       count,
-	                          struct CommandBuffer**    command_buffers );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_destroy_command_buffers,
+                             const struct ft_device*       device,
+                             const struct ft_command_pool* command_pool,
+                             uint32_t                      count,
+                             struct ft_command_buffer**    command_buffers );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_command_buffers,
-	                          const struct Device*      device,
-	                          const struct CommandPool* command_pool,
-	                          u32                       count,
-	                          struct CommandBuffer**    command_buffers );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_begin_command_buffer,
+                             const struct ft_command_buffer* cmd );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          begin_command_buffer,
-	                          const struct CommandBuffer* cmd );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_end_command_buffer,
+                             const struct ft_command_buffer* cmd );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          end_command_buffer,
-	                          const struct CommandBuffer* cmd );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_acquire_next_image,
+                             const struct ft_device*    device,
+                             const struct ft_swapchain* swapchain,
+                             const struct ft_semaphore* semaphore,
+                             const struct ft_fence*     fence,
+                             uint32_t*                  image_index );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          acquire_next_image,
-	                          const struct Device*    device,
-	                          const struct Swapchain* swapchain,
-	                          const struct Semaphore* semaphore,
-	                          const struct Fence*     fence,
-	                          u32*                    image_index );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_create_shader,
+                             const struct ft_device* device,
+                             struct ft_shader_info*  info,
+                             struct ft_shader**      shader );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_shader,
-	                          const struct Device* device,
-	                          struct ShaderInfo*   info,
-	                          struct Shader**      shader );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_destroy_shader,
+                             const struct ft_device* device,
+                             struct ft_shader*       shader );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_shader,
-	                          const struct Device* device,
-	                          struct Shader*       shader );
+FT_DECLARE_FUNCTION_POINTER(
+    void,
+    ft_create_descriptor_set_layout,
+    const struct ft_device*           device,
+    struct ft_shader*                 shader,
+    struct ft_descriptor_set_layout** descriptor_set_layout );
 
-	DECLARE_FUNCTION_POINTER(
-	    void,
-	    create_descriptor_set_layout,
-	    const struct Device*         device,
-	    struct Shader*               shader,
-	    struct DescriptorSetLayout** descriptor_set_layout );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_destroy_descriptor_set_layout,
+                             const struct ft_device*          device,
+                             struct ft_descriptor_set_layout* layout );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_descriptor_set_layout,
-	                          const struct Device*        device,
-	                          struct DescriptorSetLayout* layout );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_create_pipeline,
+                             const struct ft_device*        device,
+                             const struct ft_pipeline_info* info,
+                             struct ft_pipeline**           pipeline );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_pipeline,
-	                          const struct Device*       device,
-	                          const struct PipelineInfo* info,
-	                          struct Pipeline**          pipeline );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_destroy_pipeline,
+                             const struct ft_device* device,
+                             struct ft_pipeline*     pipeline );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_pipeline,
-	                          const struct Device* device,
-	                          struct Pipeline*     pipeline );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_begin_render_pass,
+                             const struct ft_command_buffer*         cmd,
+                             const struct ft_render_pass_begin_info* info );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_begin_render_pass,
-	                          const struct CommandBuffer*       cmd,
-	                          const struct RenderPassBeginInfo* info );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_end_render_pass,
+                             const struct ft_command_buffer* cmd );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_end_render_pass,
-	                          const struct CommandBuffer* cmd );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_barrier,
+                             const struct ft_command_buffer* cmd,
+                             uint32_t memory_barriers_count,
+                             const struct ft_memory_barrier* memory_barrier,
+                             uint32_t buffer_barriers_count,
+                             const struct ft_buffer_barrier* buffer_barriers,
+                             uint32_t image_barriers_count,
+                             const struct ft_image_barrier* image_barriers );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_barrier,
-	                          const struct CommandBuffer* cmd,
-	                          u32                         memory_barriers_count,
-	                          const struct MemoryBarrier* memory_barrier,
-	                          u32                         buffer_barriers_count,
-	                          const struct BufferBarrier* buffer_barriers,
-	                          u32                         image_barriers_count,
-	                          const struct ImageBarrier*  image_barriers );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_set_scissor,
+                             const struct ft_command_buffer* cmd,
+                             int32_t                         x,
+                             int32_t                         y,
+                             uint32_t                        width,
+                             uint32_t                        height );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_set_scissor,
-	                          const struct CommandBuffer* cmd,
-	                          i32                         x,
-	                          i32                         y,
-	                          u32                         width,
-	                          u32                         height );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_set_viewport,
+                             const struct ft_command_buffer* cmd,
+                             float                           x,
+                             float                           y,
+                             float                           width,
+                             float                           height,
+                             float                           min_depth,
+                             float                           max_depth );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_set_viewport,
-	                          const struct CommandBuffer* cmd,
-	                          f32                         x,
-	                          f32                         y,
-	                          f32                         width,
-	                          f32                         height,
-	                          f32                         min_depth,
-	                          f32                         max_depth );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_bind_pipeline,
+                             const struct ft_command_buffer* cmd,
+                             const struct ft_pipeline*       pipeline );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_bind_pipeline,
-	                          const struct CommandBuffer* cmd,
-	                          const struct Pipeline*      pipeline );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_draw,
+                             const struct ft_command_buffer* cmd,
+                             uint32_t                        vertex_count,
+                             uint32_t                        instance_count,
+                             uint32_t                        first_vertex,
+                             uint32_t                        first_instance );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_draw,
-	                          const struct CommandBuffer* cmd,
-	                          u32                         vertex_count,
-	                          u32                         instance_count,
-	                          u32                         first_vertex,
-	                          u32                         first_instance );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_draw_indexed,
+                             const struct ft_command_buffer* cmd,
+                             uint32_t                        index_count,
+                             uint32_t                        instance_count,
+                             uint32_t                        first_index,
+                             int32_t                         vertex_offset,
+                             uint32_t                        first_instance );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_draw_indexed,
-	                          const struct CommandBuffer* cmd,
-	                          u32                         index_count,
-	                          u32                         instance_count,
-	                          u32                         first_index,
-	                          i32                         vertex_offset,
-	                          u32                         first_instance );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_bind_vertex_buffer,
+                             const struct ft_command_buffer* cmd,
+                             const struct ft_buffer*         buffer,
+                             const uint64_t                  offset );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_bind_vertex_buffer,
-	                          const struct CommandBuffer* cmd,
-	                          const struct Buffer*        buffer,
-	                          const u64                   offset );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_bind_index_buffer,
+                             const struct ft_command_buffer* cmd,
+                             const struct ft_buffer*         buffer,
+                             const uint64_t                  offset,
+                             enum IndexType                  index_type );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_bind_index_buffer,
-	                          const struct CommandBuffer* cmd,
-	                          const struct Buffer*        buffer,
-	                          const u64                   offset,
-	                          enum IndexType              index_type );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_copy_buffer,
+                             const struct ft_command_buffer* cmd,
+                             const struct ft_buffer*         src,
+                             uint64_t                        src_offset,
+                             struct ft_buffer*               dst,
+                             uint64_t                        dst_offset,
+                             uint64_t                        size );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_copy_buffer,
-	                          const struct CommandBuffer* cmd,
-	                          const struct Buffer*        src,
-	                          u64                         src_offset,
-	                          struct Buffer*              dst,
-	                          u64                         dst_offset,
-	                          u64                         size );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_copy_buffer_to_image,
+                             const struct ft_command_buffer* cmd,
+                             const struct ft_buffer*         src,
+                             uint64_t                        src_offset,
+                             struct ft_image*                dst );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_copy_buffer_to_image,
-	                          const struct CommandBuffer* cmd,
-	                          const struct Buffer*        src,
-	                          u64                         src_offset,
-	                          struct Image*               dst );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_bind_descriptor_set,
+                             const struct ft_command_buffer* cmd,
+                             uint32_t                        first_set,
+                             const struct ft_descriptor_set* set,
+                             const struct ft_pipeline*       pipeline );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_bind_descriptor_set,
-	                          const struct CommandBuffer* cmd,
-	                          u32                         first_set,
-	                          const struct DescriptorSet* set,
-	                          const struct Pipeline*      pipeline );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_dispatch,
+                             const struct ft_command_buffer* cmd,
+                             uint32_t                        group_count_x,
+                             uint32_t                        group_count_y,
+                             uint32_t                        group_count_z );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_dispatch,
-	                          const struct CommandBuffer* cmd,
-	                          u32                         group_count_x,
-	                          u32                         group_count_y,
-	                          u32                         group_count_z );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_push_constants,
+                             const struct ft_command_buffer* cmd,
+                             const struct ft_pipeline*       pipeline,
+                             uint32_t                        offset,
+                             uint32_t                        size,
+                             const void*                     data );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_push_constants,
-	                          const struct CommandBuffer* cmd,
-	                          const struct Pipeline*      pipeline,
-	                          u32                         offset,
-	                          u32                         size,
-	                          const void*                 data );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_create_buffer,
+                             const struct ft_device*      device,
+                             const struct ft_buffer_info* info,
+                             struct ft_buffer**           buffer );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_buffer,
-	                          const struct Device*     device,
-	                          const struct BufferInfo* info,
-	                          struct Buffer**          buffer );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_destroy_buffer,
+                             const struct ft_device* device,
+                             struct ft_buffer*       buffer );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_buffer,
-	                          const struct Device* device,
-	                          struct Buffer*       buffer );
+FT_DECLARE_FUNCTION_POINTER( void*,
+                             ft_map_memory,
+                             const struct ft_device* device,
+                             struct ft_buffer*       buffer );
 
-	DECLARE_FUNCTION_POINTER( void*,
-	                          map_memory,
-	                          const struct Device* device,
-	                          struct Buffer*       buffer );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_unmap_memory,
+                             const struct ft_device* device,
+                             struct ft_buffer*       buffer );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          unmap_memory,
-	                          const struct Device* device,
-	                          struct Buffer*       buffer );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_draw_indexed_indirect,
+                             const struct ft_command_buffer* cmd,
+                             const struct ft_buffer*         buffer,
+                             uint64_t                        offset,
+                             uint32_t                        draw_count,
+                             uint32_t                        stride );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          cmd_draw_indexed_indirect,
-	                          const struct CommandBuffer* cmd,
-	                          const struct Buffer*        buffer,
-	                          u64                         offset,
-	                          u32                         draw_count,
-	                          u32                         stride );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_create_sampler,
+                             const struct ft_device*       device,
+                             const struct ft_sampler_info* info,
+                             struct ft_sampler**           sampler );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_sampler,
-	                          const struct Device*      device,
-	                          const struct SamplerInfo* info,
-	                          struct Sampler**          sampler );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_destroy_sampler,
+                             const struct ft_device* device,
+                             struct ft_sampler*      sampler );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_sampler,
-	                          const struct Device* device,
-	                          struct Sampler*      sampler );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_create_image,
+                             const struct ft_device*     device,
+                             const struct ft_image_info* info,
+                             struct ft_image**           image );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_image,
-	                          const struct Device*    device,
-	                          const struct ImageInfo* info,
-	                          struct Image**          image );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_destroy_image,
+                             const struct ft_device* device,
+                             struct ft_image*        image );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_image,
-	                          const struct Device* device,
-	                          struct Image*        image );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_create_descriptor_set,
+                             const struct ft_device*              device,
+                             const struct ft_descriptor_set_info* info,
+                             struct ft_descriptor_set** descriptor_set );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          create_descriptor_set,
-	                          const struct Device*            device,
-	                          const struct DescriptorSetInfo* info,
-	                          struct DescriptorSet**          descriptor_set );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_destroy_descriptor_set,
+                             const struct ft_device*   device,
+                             struct ft_descriptor_set* set );
 
-	DECLARE_FUNCTION_POINTER( void,
-	                          destroy_descriptor_set,
-	                          const struct Device*  device,
-	                          struct DescriptorSet* set );
-
-	DECLARE_FUNCTION_POINTER( void,
-	                          update_descriptor_set,
-	                          const struct Device*          device,
-	                          struct DescriptorSet*         set,
-	                          u32                           count,
-	                          const struct DescriptorWrite* writes );
-
-#ifdef __cplusplus
-}
-#endif
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_update_descriptor_set,
+                             const struct ft_device*           device,
+                             struct ft_descriptor_set*         set,
+                             uint32_t                          count,
+                             const struct ft_descriptor_write* writes );

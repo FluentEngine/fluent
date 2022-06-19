@@ -1,18 +1,17 @@
 #pragma once
 
 #include <tiny_image_format/tinyimageformat_base.h>
-#include "base/base.h"
 
 #define BIT( x ) 1 << x
 
-enum RendererAPI
+enum ft_renderer_api
 {
 	FT_RENDERER_API_VULKAN = 0,
 	FT_RENDERER_API_D3D12  = 1,
 	FT_RENDERER_API_METAL  = 2
 };
 
-enum QueueType
+enum ft_queue_type
 {
 	FT_QUEUE_TYPE_GRAPHICS = 0,
 	FT_QUEUE_TYPE_COMPUTE  = 1,
@@ -20,7 +19,7 @@ enum QueueType
 	FT_QUEUE_TYPE_COUNT
 };
 
-enum Format
+enum ft_format
 {
 	FT_FORMAT_UNDEFINED             = TinyImageFormat_UNDEFINED,
 	FT_FORMAT_R1_UNORM              = TinyImageFormat_R1_UNORM,
@@ -226,14 +225,14 @@ enum Format
 	FT_FORMAT_CLUT_P8A8             = TinyImageFormat_CLUT_P8A8
 };
 
-enum AttachmentLoadOp
+enum ft_attachment_load_op
 {
 	FT_ATTACHMENT_LOAD_OP_LOAD,
 	FT_ATTACHMENT_LOAD_OP_CLEAR     = 1,
 	FT_ATTACHMENT_LOAD_OP_DONT_CARE = 2
 };
 
-enum MemoryUsage
+enum ft_memory_usage
 {
 	FT_MEMORY_USAGE_GPU_ONLY   = 0,
 	FT_MEMORY_USAGE_CPU_ONLY   = 1,
@@ -242,7 +241,7 @@ enum MemoryUsage
 	FT_MEMORY_USAGE_CPU_COPY   = 4
 };
 
-enum ResourceState
+enum ft_resource_state
 {
 	FT_RESOURCE_STATE_UNDEFINED               = BIT( 0 ),
 	FT_RESOURCE_STATE_GENERAL                 = BIT( 1 ),
@@ -255,7 +254,7 @@ enum ResourceState
 	FT_RESOURCE_STATE_PRESENT                 = BIT( 8 )
 };
 
-enum DescriptorType
+enum ft_descriptor_type
 {
 	FT_DESCRIPTOR_TYPE_UNDEFINED                = BIT( 0 ),
 	FT_DESCRIPTOR_TYPE_VERTEX_BUFFER            = BIT( 1 ),
@@ -276,13 +275,13 @@ enum DescriptorType
 	FT_DESCRIPTOR_TYPE_TRANSIENT_ATTACHMENT     = BIT( 16 )
 };
 
-enum PipelineType
+enum ft_pipeline_type
 {
 	FT_PIPELINE_TYPE_COMPUTE,
 	FT_PIPELINE_TYPE_GRAPHICS
 };
 
-enum VertexInputRate
+enum ft_vertex_input_rate
 {
 	FT_VERTEX_INPUT_RATE_VERTEX,
 	FT_VERTEX_INPUT_RATE_INSTANCE
@@ -294,25 +293,25 @@ enum IndexType
 	FT_INDEX_TYPE_U32
 };
 
-enum FrontFace
+enum ft_front_face
 {
 	FT_FRONT_FACE_CLOCKWISE,
 	FT_FRONT_FACE_COUNTER_CLOCKWISE
 };
 
-enum PolygonMode
+enum ft_polygon_mode
 {
 	FT_POLYGON_MODE_FILL,
 	FT_POLYGON_MODE_LINE
 };
 
-enum SamplerMipmapMode
+enum ft_sampler_mipmap_mode
 {
 	FT_SAMPLER_MIPMAP_MODE_NEAREST,
 	FT_SAMPLER_MIPMAP_MODE_LINEAR
 };
 
-enum SamplerAddressMode
+enum ft_sampler_address_mode
 {
 	FT_SAMPLER_ADDRESS_MODE_REPEAT,
 	FT_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
@@ -320,7 +319,7 @@ enum SamplerAddressMode
 	FT_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER
 };
 
-enum CompareOp
+enum ft_compare_op
 {
 	FT_COMPARE_OP_NEVER,
 	FT_COMPARE_OP_LESS,
@@ -332,14 +331,14 @@ enum CompareOp
 	FT_COMPARE_OP_ALWAYS
 };
 
-enum CullMode
+enum ft_cull_mode
 {
 	FT_CULL_MODE_NONE,
 	FT_CULL_MODE_FRONT,
 	FT_CULL_MODE_BACK
 };
 
-enum ShaderStage
+enum ft_shader_stage
 {
 	FT_SHADER_STAGE_VERTEX,
 	FT_SHADER_STAGE_TESSELLATION_CONTROL,
@@ -350,13 +349,13 @@ enum ShaderStage
 	FT_SHADER_STAGE_COUNT
 };
 
-enum Filter
+enum ft_filter
 {
 	FT_FILTER_NEAREST = 0,
 	FT_FILTER_LINEAR  = 1
 };
 
-enum PrimitiveTopology
+enum ft_primitive_topology
 {
 	FT_PRIMITIVE_TOPOLOGY_POINT_LIST,
 	FT_PRIMITIVE_TOPOLOGY_LINE_LIST,
@@ -365,7 +364,7 @@ enum PrimitiveTopology
 	FT_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP
 };
 
-enum BlendFactor
+enum ft_blend_factor
 {
 	FT_BLEND_FACTOR_ZERO,
 	FT_BLEND_FACTOR_ONE,
@@ -380,7 +379,7 @@ enum BlendFactor
 	FT_BLEND_FACTOR_SRC_ALPHA_SATURATE
 };
 
-enum BlendOp
+enum ft_blend_op
 {
 	FT_BLEND_OP_ADD,
 	FT_BLEND_OP_SUBTRACT,

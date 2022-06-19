@@ -4,7 +4,7 @@
 #endif
 #include "../backend/metal/metal_backend.h"
 
-static inline enum DescriptorType
+FT_INLINE enum ft_descriptor_type
 to_descriptor_type( MTLArgumentType type )
 {
 	switch ( type )
@@ -12,12 +12,14 @@ to_descriptor_type( MTLArgumentType type )
 	case MTLArgumentTypeBuffer: return FT_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	case MTLArgumentTypeSampler: return FT_DESCRIPTOR_TYPE_SAMPLER;
 	case MTLArgumentTypeTexture: return FT_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-	default: FT_ASSERT( 0 ); return (enum DescriptorType) -1;
+	default: FT_ASSERT( false ); return ( enum ft_descriptor_type ) - 1;
 	}
 }
 
 void
-mtl_reflect( const struct Device* idevice, const struct ShaderInfo* info, struct Shader* ishader )
+ft_mtl_reflect( const struct ft_device*      idevice,
+                const struct ft_shader_info* info,
+                struct ft_shader*            ishader )
 {
 #if 0
 	@autoreleasepool
@@ -28,7 +30,7 @@ mtl_reflect( const struct Device* idevice, const struct ShaderInfo* info, struct
 		MTLRenderPipelineReflection* reflection;
 
 		MTLVertexDescriptor* vertex_descriptor = [MTLVertexDescriptor new];
-		for ( u32 i = 0; i < 10; ++i )
+		for ( uint32_t i = 0; i < 10; ++i )
 		{
 			vertex_descriptor.attributes[ i ].format = MTLVertexFormatFloat;
 			vertex_descriptor.attributes[ i ].bufferIndex = 0;

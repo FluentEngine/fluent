@@ -4,12 +4,13 @@
 #include "log/log.h"
 #include "wsi/wsi.h"
 #include "../renderer_private.h"
+#include "../shader_reflection.h"
 #include "vulkan_enum_translators.h"
 #include "vulkan_pass_hasher.h"
 #include "vulkan_backend.h"
 
-static inline u32
-clamp_u32( u32 d, u32 min, u32 max )
+FT_INLINE uint32_t
+clamp_uint32_t( uint32_t d, uint32_t min, uint32_t max )
 {
 	return d < min ? min : ( max < d ) ? max : d;
 }
@@ -51,8 +52,8 @@ vulkan_debug_callback(
 	return VK_FALSE;
 }
 
-static inline void
-create_debug_messenger( struct VulkanRendererBackend* backend )
+FT_INLINE void
+create_debug_messenger( struct vk_renderer_backend* backend )
 {
 	VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info = { 0 };
 	debug_messenger_create_info.sType =
@@ -76,22 +77,22 @@ create_debug_messenger( struct VulkanRendererBackend* backend )
 }
 #endif
 
-static inline void
-get_instance_extensions( const struct RendererBackendInfo* info,
-                         u32*         instance_create_flags,
-                         u32*         count,
+FT_INLINE void
+get_instance_extensions( const struct ft_renderer_backend_info* info,
+                         uint32_t*    instance_create_flags,
+                         uint32_t*    count,
                          const char** names )
 {
 	*instance_create_flags = 0;
 
-	struct WsiInfo* wsi = info->wsi_info;
+	struct ft_wsi_info* wsi = info->wsi_info;
 
 	if ( names == NULL )
 	{
 		*count = wsi->vulkan_instance_extension_count;
 	}
 
-	u32 e = 0;
+	uint32_t e = 0;
 	if ( wsi->vulkan_instance_extension_count != 0 && names )
 	{
 		for ( e = 0; e < wsi->vulkan_instance_extension_count; ++e )
@@ -104,16 +105,16 @@ get_instance_extensions( const struct RendererBackendInfo* info,
 		FT_WARN( "Wsi has no instance extensions. Present not supported" );
 	}
 
-	u32 extension_count = 0;
+	uint32_t extension_count = 0;
 	vkEnumerateInstanceExtensionProperties( NULL, &extension_count, NULL );
-	ALLOC_STACK_ARRAY( VkExtensionProperties,
-	                   extension_properties,
-	                   extension_count );
+	FT_ALLOC_STACK_ARRAY( VkExtensionProperties,
+	                      extension_properties,
+	                      extension_count );
 	vkEnumerateInstanceExtensionProperties( NULL,
 	                                        &extension_count,
 	                                        extension_properties );
 
-	for ( u32 i = 0; i < extension_count; ++i )
+	for ( uint32_t i = 0; i < extension_count; ++i )
 	{
 #ifdef VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
 		if ( strcmp( VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
@@ -147,8 +148,8 @@ get_instance_extensions( const struct RendererBackendInfo* info,
 	}
 }
 
-static inline void
-get_instance_layers( u32* count, const char** names )
+FT_INLINE void
+get_instance_layers( uint32_t* count, const char** names )
 {
 	FT_UNUSED( names );
 
@@ -162,19 +163,19 @@ get_instance_layers( u32* count, const char** names )
 #endif
 }
 
-static inline u32
-find_queue_family_index( VkPhysicalDevice physical_device,
-                         enum QueueType   queue_type )
+FT_INLINE uint32_t
+find_queue_family_index( VkPhysicalDevice   physical_device,
+                         enum ft_queue_type queue_type )
 {
-	u32 index = UINT32_MAX;
+	uint32_t index = UINT32_MAX;
 
-	u32 queue_family_count = 0;
+	uint32_t queue_family_count = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties( physical_device,
 	                                          &queue_family_count,
 	                                          NULL );
-	ALLOC_STACK_ARRAY( VkQueueFamilyProperties,
-	                   queue_families,
-	                   queue_family_count );
+	FT_ALLOC_STACK_ARRAY( VkQueueFamilyProperties,
+	                      queue_families,
+	                      queue_family_count );
 	vkGetPhysicalDeviceQueueFamilyProperties( physical_device,
 	                                          &queue_family_count,
 	                                          queue_families );
@@ -182,7 +183,7 @@ find_queue_family_index( VkPhysicalDevice physical_device,
 	VkQueueFlagBits target_queue_type = to_vk_queue_type( queue_type );
 
 	// TODO: Find dedicated queue first
-	for ( u32 i = 0; i < queue_family_count; ++i )
+	for ( uint32_t i = 0; i < queue_family_count; ++i )
 	{
 		if ( queue_families[ i ].queueFlags & target_queue_type )
 		{
@@ -197,8 +198,8 @@ find_queue_family_index( VkPhysicalDevice physical_device,
 	return index;
 }
 
-static inline VkImageAspectFlags
-get_aspect_mask( enum Format format )
+FT_INLINE VkImageAspectFlags
+get_aspect_mask( enum ft_format format )
 {
 	VkImageAspectFlags aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -216,8 +217,8 @@ get_aspect_mask( enum Format format )
 	return aspect_mask;
 }
 
-static inline VkImageSubresourceRange
-get_image_subresource_range( const struct VulkanImage* image )
+FT_INLINE VkImageSubresourceRange
+get_image_subresource_range( const struct vk_image* image )
 {
 	VkImageSubresourceRange image_subresource_range = {
 	    .aspectMask     = get_aspect_mask( image->interface.format ),
@@ -230,8 +231,8 @@ get_image_subresource_range( const struct VulkanImage* image )
 	return image_subresource_range;
 }
 
-static inline VkImageSubresourceLayers
-get_image_subresource_layers( const struct VulkanImage* image )
+FT_INLINE VkImageSubresourceLayers
+get_image_subresource_layers( const struct vk_image* image )
 {
 	VkImageSubresourceRange subresourceRange =
 	    get_image_subresource_range( image );
@@ -247,9 +248,9 @@ get_image_subresource_layers( const struct VulkanImage* image )
 }
 
 static void
-vk_destroy_renderer_backend( struct RendererBackend* ibackend )
+vk_destroy_renderer_backend( struct ft_renderer_backend* ibackend )
 {
-	FT_FROM_HANDLE( backend, ibackend, VulkanRendererBackend );
+	FT_FROM_HANDLE( backend, ibackend, vk_renderer_backend );
 
 #ifdef FLUENT_DEBUG
 	vkDestroyDebugUtilsMessengerEXT( backend->instance,
@@ -261,10 +262,10 @@ vk_destroy_renderer_backend( struct RendererBackend* ibackend )
 }
 
 static void*
-vk_map_memory( const struct Device* idevice, struct Buffer* ibuffer )
+vk_map_memory( const struct ft_device* idevice, struct ft_buffer* ibuffer )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( buffer, ibuffer, vk_buffer );
 
 	vmaMapMemory( device->memory_allocator,
 	              buffer->allocation,
@@ -274,47 +275,47 @@ vk_map_memory( const struct Device* idevice, struct Buffer* ibuffer )
 }
 
 static void
-vk_unmap_memory( const struct Device* idevice, struct Buffer* ibuffer )
+vk_unmap_memory( const struct ft_device* idevice, struct ft_buffer* ibuffer )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( buffer, ibuffer, vk_buffer );
 
 	vmaUnmapMemory( device->memory_allocator, buffer->allocation );
 	buffer->interface.mapped_memory = NULL;
 }
 
 static void
-vk_create_device( const struct RendererBackend* ibackend,
-                  const struct DeviceInfo*      info,
-                  struct Device**               p )
+vk_create_device( const struct ft_renderer_backend* ibackend,
+                  const struct ft_device_info*      info,
+                  struct ft_device**                p )
 {
 	FT_UNUSED( info );
 
-	FT_FROM_HANDLE( backend, ibackend, VulkanRendererBackend );
+	FT_FROM_HANDLE( backend, ibackend, vk_renderer_backend );
 
-	FT_INIT_INTERNAL( device, *p, VulkanDevice );
+	FT_INIT_INTERNAL( device, *p, vk_device );
 
 	device->vulkan_allocator = backend->vulkan_allocator;
 	device->instance         = backend->instance;
 	device->physical_device  = backend->physical_device;
 
-	u32 queue_family_count = 0;
+	uint32_t queue_family_count = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties( device->physical_device,
 	                                          &queue_family_count,
 	                                          NULL );
-	ALLOC_STACK_ARRAY( VkQueueFamilyProperties,
-	                   queue_families,
-	                   queue_family_count );
+	FT_ALLOC_STACK_ARRAY( VkQueueFamilyProperties,
+	                      queue_families,
+	                      queue_family_count );
 	vkGetPhysicalDeviceQueueFamilyProperties( device->physical_device,
 	                                          &queue_family_count,
 	                                          queue_families );
 
-	u32                     queue_create_info_count = 0;
+	uint32_t                queue_create_info_count = 0;
 	VkDeviceQueueCreateInfo queue_create_infos[ FT_QUEUE_TYPE_COUNT ];
-	f32                     queue_priority = 1.0f;
+	float                   queue_priority = 1.0f;
 
 	// TODO: Select queues
-	for ( u32 i = 0; i < queue_family_count; ++i )
+	for ( uint32_t i = 0; i < queue_family_count; ++i )
 	{
 		queue_create_infos[ queue_create_info_count ].sType =
 		    VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -330,21 +331,21 @@ vk_create_device( const struct RendererBackend* ibackend,
 			break;
 	}
 
-	u32 device_extension_count = 0;
+	uint32_t device_extension_count = 0;
 	vkEnumerateDeviceExtensionProperties( device->physical_device,
 	                                      NULL,
 	                                      &device_extension_count,
 	                                      NULL );
-	ALLOC_STACK_ARRAY( VkExtensionProperties,
-	                   supported_device_extensions,
-	                   device_extension_count + 2 ); // TODO:
+	FT_ALLOC_STACK_ARRAY( VkExtensionProperties,
+	                      supported_device_extensions,
+	                      device_extension_count + 2 ); // TODO:
 	vkEnumerateDeviceExtensionProperties( device->physical_device,
 	                                      NULL,
 	                                      &device_extension_count,
 	                                      supported_device_extensions );
 
-	b32 portability_subset = 0;
-	for ( u32 i = 0; i < device_extension_count; ++i )
+	bool portability_subset = 0;
+	for ( uint32_t i = 0; i < device_extension_count; ++i )
 	{
 		if ( !strcmp( supported_device_extensions[ i ].extensionName,
 		              "VK_KHR_portability_subset" ) )
@@ -354,7 +355,9 @@ vk_create_device( const struct RendererBackend* ibackend,
 	}
 
 	device_extension_count = 2 + portability_subset;
-	ALLOC_STACK_ARRAY( const char*, device_extensions, device_extension_count );
+	FT_ALLOC_STACK_ARRAY( const char*,
+	                      device_extensions,
+	                      device_extension_count );
 	device_extensions[ 0 ] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
 	device_extensions[ 1 ] = VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME;
 	if ( portability_subset )
@@ -499,9 +502,9 @@ vk_create_device( const struct RendererBackend* ibackend,
 }
 
 static void
-vk_destroy_device( struct Device* idevice )
+vk_destroy_device( struct ft_device* idevice )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
+	FT_FROM_HANDLE( device, idevice, vk_device );
 
 	vk_pass_hasher_shutdown();
 
@@ -515,15 +518,15 @@ vk_destroy_device( struct Device* idevice )
 }
 
 static void
-vk_create_queue( const struct Device*    idevice,
-                 const struct QueueInfo* info,
-                 struct Queue**          p )
+vk_create_queue( const struct ft_device*     idevice,
+                 const struct ft_queue_info* info,
+                 struct ft_queue**           p )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
+	FT_FROM_HANDLE( device, idevice, vk_device );
 
-	FT_INIT_INTERNAL( queue, *p, VulkanQueue );
+	FT_INIT_INTERNAL( queue, *p, vk_queue );
 
-	u32 index =
+	uint32_t index =
 	    find_queue_family_index( device->physical_device, info->queue_type );
 
 	queue->interface.family_index = index;
@@ -532,57 +535,53 @@ vk_create_queue( const struct Device*    idevice,
 }
 
 static void
-vk_destroy_queue( struct Queue* iqueue )
+vk_destroy_queue( struct ft_queue* iqueue )
 {
-	FT_FROM_HANDLE( queue, iqueue, VulkanQueue );
+	FT_FROM_HANDLE( queue, iqueue, vk_queue );
 	free( queue );
 }
 
 static void
-vk_queue_wait_idle( const struct Queue* iqueue )
+vk_queue_wait_idle( const struct ft_queue* iqueue )
 {
-	FT_FROM_HANDLE( queue, iqueue, VulkanQueue );
+	FT_FROM_HANDLE( queue, iqueue, vk_queue );
 	vkQueueWaitIdle( queue->queue );
 }
 
 static void
-vk_queue_submit( const struct Queue*           iqueue,
-                 const struct QueueSubmitInfo* info )
+vk_queue_submit( const struct ft_queue*             iqueue,
+                 const struct ft_queue_submit_info* info )
 {
-	FT_FROM_HANDLE( queue, iqueue, VulkanQueue );
+	FT_FROM_HANDLE( queue, iqueue, vk_queue );
 
 	VkPipelineStageFlags wait_dst_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT;
 
-	ALLOC_STACK_ARRAY( VkSemaphore,
-	                   wait_semaphores,
-	                   info->wait_semaphore_count );
-	ALLOC_STACK_ARRAY( VkCommandBuffer,
-	                   command_buffers,
-	                   info->command_buffer_count );
-	ALLOC_STACK_ARRAY( VkSemaphore,
-	                   signal_semaphores,
-	                   info->signal_semaphore_count );
+	FT_ALLOC_STACK_ARRAY( VkSemaphore,
+	                      wait_semaphores,
+	                      info->wait_semaphore_count );
+	FT_ALLOC_STACK_ARRAY( VkCommandBuffer,
+	                      command_buffers,
+	                      info->command_buffer_count );
+	FT_ALLOC_STACK_ARRAY( VkSemaphore,
+	                      signal_semaphores,
+	                      info->signal_semaphore_count );
 
-	for ( u32 i = 0; i < info->wait_semaphore_count; ++i )
+	for ( uint32_t i = 0; i < info->wait_semaphore_count; ++i )
 	{
-		FT_FROM_HANDLE( semaphore,
-		                info->wait_semaphores[ i ],
-		                VulkanSemaphore );
+		FT_FROM_HANDLE( semaphore, info->wait_semaphores[ i ], vk_semaphore );
 
 		wait_semaphores[ i ] = semaphore->semaphore;
 	}
 
-	for ( u32 i = 0; i < info->command_buffer_count; ++i )
+	for ( uint32_t i = 0; i < info->command_buffer_count; ++i )
 	{
-		FT_FROM_HANDLE( cmd, info->command_buffers[ i ], VulkanCommandBuffer );
+		FT_FROM_HANDLE( cmd, info->command_buffers[ i ], vk_command_buffer );
 		command_buffers[ i ] = cmd->command_buffer;
 	}
 
-	for ( u32 i = 0; i < info->signal_semaphore_count; ++i )
+	for ( uint32_t i = 0; i < info->signal_semaphore_count; ++i )
 	{
-		FT_FROM_HANDLE( semaphore,
-		                info->signal_semaphores[ i ],
-		                VulkanSemaphore );
+		FT_FROM_HANDLE( semaphore, info->signal_semaphores[ i ], vk_semaphore );
 		signal_semaphores[ i ] = semaphore->semaphore;
 	}
 
@@ -603,38 +602,37 @@ vk_queue_submit( const struct Queue*           iqueue,
 	    1,
 	    &submit_info,
 	    info->signal_fence
-	        ? ( ( struct VulkanFence* ) ( info->signal_fence->handle ) )->fence
+	        ? ( ( struct vk_fence* ) ( info->signal_fence->handle ) )->fence
 	        : VK_NULL_HANDLE );
 }
 
 static void
-vk_immediate_submit( const struct Queue* iqueue, struct CommandBuffer* cmd )
+vk_immediate_submit( const struct ft_queue*    iqueue,
+                     struct ft_command_buffer* cmd )
 {
-	struct QueueSubmitInfo queue_submit_info = {
+	struct ft_queue_submit_info queue_submit_info = {
 	    .command_buffer_count = 1,
 	    .command_buffers      = &cmd,
 	};
 
-	queue_submit( iqueue, &queue_submit_info );
-	queue_wait_idle( iqueue );
+	ft_queue_submit( iqueue, &queue_submit_info );
+	ft_queue_wait_idle( iqueue );
 }
 
 static void
-vk_queue_present( const struct Queue*            iqueue,
-                  const struct QueuePresentInfo* info )
+vk_queue_present( const struct ft_queue*              iqueue,
+                  const struct ft_queue_present_info* info )
 {
-	FT_FROM_HANDLE( swapchain, info->swapchain, VulkanSwapchain );
-	FT_FROM_HANDLE( queue, iqueue, VulkanQueue );
+	FT_FROM_HANDLE( swapchain, info->swapchain, vk_swapchain );
+	FT_FROM_HANDLE( queue, iqueue, vk_queue );
 
-	ALLOC_STACK_ARRAY( VkSemaphore,
-	                   wait_semaphores,
-	                   info->wait_semaphore_count );
+	FT_ALLOC_STACK_ARRAY( VkSemaphore,
+	                      wait_semaphores,
+	                      info->wait_semaphore_count );
 
-	for ( u32 i = 0; i < info->wait_semaphore_count; ++i )
+	for ( uint32_t i = 0; i < info->wait_semaphore_count; ++i )
 	{
-		FT_FROM_HANDLE( semaphore,
-		                info->wait_semaphores[ i ],
-		                VulkanSemaphore );
+		FT_FROM_HANDLE( semaphore, info->wait_semaphores[ i ], vk_semaphore );
 		wait_semaphores[ i ] = semaphore->semaphore;
 	}
 
@@ -652,13 +650,13 @@ vk_queue_present( const struct Queue*            iqueue,
 }
 
 static void
-vk_create_semaphore( const struct Device* idevice, struct Semaphore** p )
+vk_create_semaphore( const struct ft_device* idevice, struct ft_semaphore** p )
 {
 	FT_ASSERT( p );
 
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
+	FT_FROM_HANDLE( device, idevice, vk_device );
 
-	FT_INIT_INTERNAL( semaphore, *p, VulkanSemaphore );
+	FT_INIT_INTERNAL( semaphore, *p, vk_semaphore );
 
 	VkSemaphoreCreateInfo semaphore_create_info = {
 	    .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
@@ -672,13 +670,13 @@ vk_create_semaphore( const struct Device* idevice, struct Semaphore** p )
 }
 
 static void
-vk_destroy_semaphore( const struct Device* idevice,
-                      struct Semaphore*    isemaphore )
+vk_destroy_semaphore( const struct ft_device* idevice,
+                      struct ft_semaphore*    isemaphore )
 {
 	FT_ASSERT( isemaphore );
 
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( semaphore, isemaphore, VulkanSemaphore );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( semaphore, isemaphore, vk_semaphore );
 
 	vkDestroySemaphore( device->logical_device,
 	                    semaphore->semaphore,
@@ -687,11 +685,11 @@ vk_destroy_semaphore( const struct Device* idevice,
 }
 
 static void
-vk_create_fence( const struct Device* idevice, struct Fence** p )
+vk_create_fence( const struct ft_device* idevice, struct ft_fence** p )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
+	FT_FROM_HANDLE( device, idevice, vk_device );
 
-	FT_INIT_INTERNAL( fence, *p, VulkanFence );
+	FT_INIT_INTERNAL( fence, *p, vk_fence );
 
 	VkFenceCreateInfo fence_create_info = {
 	    .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -705,10 +703,10 @@ vk_create_fence( const struct Device* idevice, struct Fence** p )
 }
 
 static void
-vk_destroy_fence( const struct Device* idevice, struct Fence* ifence )
+vk_destroy_fence( const struct ft_device* idevice, struct ft_fence* ifence )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( fence, ifence, VulkanFence );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( fence, ifence, vk_fence );
 
 	vkDestroyFence( device->logical_device,
 	                fence->fence,
@@ -717,17 +715,17 @@ vk_destroy_fence( const struct Device* idevice, struct Fence* ifence )
 }
 
 static void
-vk_wait_for_fences( const struct Device* idevice,
-                    u32                  count,
-                    struct Fence**       ifences )
+vk_wait_for_fences( const struct ft_device* idevice,
+                    uint32_t                count,
+                    struct ft_fence**       ifences )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
+	FT_FROM_HANDLE( device, idevice, vk_device );
 
-	ALLOC_STACK_ARRAY( VkFence, fences, count );
+	FT_ALLOC_STACK_ARRAY( VkFence, fences, count );
 
-	for ( u32 i = 0; i < count; ++i )
+	for ( uint32_t i = 0; i < count; ++i )
 	{
-		FT_FROM_HANDLE( fence, ifences[ i ], VulkanFence );
+		FT_FROM_HANDLE( fence, ifences[ i ], vk_fence );
 		fences[ i ] = fence->fence;
 	}
 
@@ -735,17 +733,17 @@ vk_wait_for_fences( const struct Device* idevice,
 }
 
 static void
-vk_reset_fences( const struct Device* idevice,
-                 u32                  count,
-                 struct Fence**       ifences )
+vk_reset_fences( const struct ft_device* idevice,
+                 uint32_t                count,
+                 struct ft_fence**       ifences )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
+	FT_FROM_HANDLE( device, idevice, vk_device );
 
-	ALLOC_STACK_ARRAY( VkFence, fences, count );
+	FT_ALLOC_STACK_ARRAY( VkFence, fences, count );
 
-	for ( u32 i = 0; i < count; ++i )
+	for ( uint32_t i = 0; i < count; ++i )
 	{
-		FT_FROM_HANDLE( fence, ifences[ i ], VulkanFence );
+		FT_FROM_HANDLE( fence, ifences[ i ], vk_fence );
 		fences[ i ] = fence->fence;
 	}
 
@@ -753,11 +751,11 @@ vk_reset_fences( const struct Device* idevice,
 }
 
 static void
-vk_configure_swapchain( const struct VulkanDevice*  device,
-                        struct VulkanSwapchain*     swapchain,
-                        const struct SwapchainInfo* info )
+vk_configure_swapchain( const struct vk_device*         device,
+                        struct vk_swapchain*            swapchain,
+                        const struct ft_swapchain_info* info )
 {
-	struct WsiInfo* wsi = info->wsi_info;
+	struct ft_wsi_info* wsi = info->wsi_info;
 
 	wsi->create_vulkan_surface( wsi->window,
 	                            device->instance,
@@ -777,7 +775,7 @@ vk_configure_swapchain( const struct VulkanDevice*  device,
 	                                           swapchain->surface,
 	                                           &present_mode_count,
 	                                           NULL );
-	ALLOC_STACK_ARRAY( VkPresentModeKHR, present_modes, present_mode_count );
+	FT_ALLOC_STACK_ARRAY( VkPresentModeKHR, present_modes, present_mode_count );
 	vkGetPhysicalDeviceSurfacePresentModesKHR( device->physical_device,
 	                                           swapchain->surface,
 	                                           &present_mode_count,
@@ -788,7 +786,7 @@ vk_configure_swapchain( const struct VulkanDevice*  device,
 	VkPresentModeKHR preffered_mode =
 	    info->vsync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR;
 
-	for ( u32 i = 0; i < present_mode_count; ++i )
+	for ( uint32_t i = 0; i < present_mode_count; ++i )
 	{
 		if ( present_modes[ i ] == preffered_mode )
 		{
@@ -808,28 +806,28 @@ vk_configure_swapchain( const struct VulkanDevice*  device,
 
 	// determine swapchain size
 	swapchain->interface.width =
-	    clamp_u32( info->width,
-	               surface_capabilities.minImageExtent.width,
-	               surface_capabilities.maxImageExtent.width );
+	    clamp_uint32_t( info->width,
+	                    surface_capabilities.minImageExtent.width,
+	                    surface_capabilities.maxImageExtent.width );
 	swapchain->interface.height =
-	    clamp_u32( info->height,
-	               surface_capabilities.minImageExtent.height,
-	               surface_capabilities.maxImageExtent.height );
+	    clamp_uint32_t( info->height,
+	                    surface_capabilities.minImageExtent.height,
+	                    surface_capabilities.maxImageExtent.height );
 
 	swapchain->interface.min_image_count =
-	    clamp_u32( info->min_image_count,
-	               surface_capabilities.minImageCount,
-	               surface_capabilities.maxImageCount );
+	    clamp_uint32_t( info->min_image_count,
+	                    surface_capabilities.minImageCount,
+	                    surface_capabilities.maxImageCount );
 
 	/// find best surface format
-	u32 surface_format_count = 0;
+	uint32_t surface_format_count = 0;
 	vkGetPhysicalDeviceSurfaceFormatsKHR( device->physical_device,
 	                                      swapchain->surface,
 	                                      &surface_format_count,
 	                                      NULL );
-	ALLOC_STACK_ARRAY( VkSurfaceFormatKHR,
-	                   surface_formats,
-	                   surface_format_count );
+	FT_ALLOC_STACK_ARRAY( VkSurfaceFormatKHR,
+	                      surface_formats,
+	                      surface_format_count );
 	vkGetPhysicalDeviceSurfaceFormatsKHR( device->physical_device,
 	                                      swapchain->surface,
 	                                      &surface_format_count,
@@ -838,7 +836,7 @@ vk_configure_swapchain( const struct VulkanDevice*  device,
 	VkSurfaceFormatKHR surface_format   = surface_formats[ 0 ];
 	VkFormat           preffered_format = to_vk_format( info->format );
 
-	for ( u32 i = 0; i < surface_format_count; ++i )
+	for ( uint32_t i = 0; i < surface_format_count; ++i )
 	{
 		if ( surface_formats[ i ].format == preffered_format )
 			surface_format = surface_formats[ i ];
@@ -863,18 +861,16 @@ vk_configure_swapchain( const struct VulkanDevice*  device,
 }
 
 static void
-vk_create_configured_swapchain( const struct VulkanDevice* device,
-                                struct VulkanSwapchain*    swapchain,
-                                b32                        resize )
+vk_create_configured_swapchain( const struct vk_device* device,
+                                struct vk_swapchain*    swapchain,
+                                bool                    resize )
 {
 	// destroy old resources if it is resize
 	if ( resize )
 	{
-		for ( u32 i = 0; i < swapchain->interface.image_count; ++i )
+		for ( uint32_t i = 0; i < swapchain->interface.image_count; ++i )
 		{
-			FT_FROM_HANDLE( image,
-			                swapchain->interface.images[ i ],
-			                VulkanImage );
+			FT_FROM_HANDLE( image, swapchain->interface.images[ i ], vk_image );
 			vkDestroyImageView( device->logical_device,
 			                    image->image_view,
 			                    device->vulkan_allocator );
@@ -915,9 +911,9 @@ vk_create_configured_swapchain( const struct VulkanDevice* device,
 	                         swapchain->swapchain,
 	                         &swapchain->interface.image_count,
 	                         NULL );
-	ALLOC_STACK_ARRAY( VkImage,
-	                   swapchain_images,
-	                   swapchain->interface.image_count );
+	FT_ALLOC_STACK_ARRAY( VkImage,
+	                      swapchain_images,
+	                      swapchain->interface.image_count );
 	vkGetSwapchainImagesKHR( device->logical_device,
 	                         swapchain->swapchain,
 	                         &swapchain->interface.image_count,
@@ -925,8 +921,8 @@ vk_create_configured_swapchain( const struct VulkanDevice* device,
 
 	if ( !resize )
 	{
-		swapchain->interface.images =
-		    calloc( swapchain->interface.image_count, sizeof( struct Image* ) );
+		swapchain->interface.images = calloc( swapchain->interface.image_count,
+		                                      sizeof( struct ft_image* ) );
 	}
 
 	VkImageViewCreateInfo image_view_create_info = {
@@ -952,11 +948,9 @@ vk_create_configured_swapchain( const struct VulkanDevice* device,
 	        },
 	};
 
-	for ( u32 i = 0; i < swapchain->interface.image_count; ++i )
+	for ( uint32_t i = 0; i < swapchain->interface.image_count; ++i )
 	{
-		FT_INIT_INTERNAL( image,
-		                  swapchain->interface.images[ i ],
-		                  VulkanImage );
+		FT_INIT_INTERNAL( image, swapchain->interface.images[ i ], vk_image );
 
 		image_view_create_info.image = swapchain_images[ i ];
 
@@ -977,28 +971,28 @@ vk_create_configured_swapchain( const struct VulkanDevice* device,
 }
 
 static void
-vk_create_swapchain( const struct Device*        idevice,
-                     const struct SwapchainInfo* info,
-                     struct Swapchain**          p )
+vk_create_swapchain( const struct ft_device*         idevice,
+                     const struct ft_swapchain_info* info,
+                     struct ft_swapchain**           p )
 {
 	FT_ASSERT( info->wsi_info->create_vulkan_surface );
 
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
+	FT_FROM_HANDLE( device, idevice, vk_device );
 
-	FT_INIT_INTERNAL( swapchain, *p, VulkanSwapchain );
+	FT_INIT_INTERNAL( swapchain, *p, vk_swapchain );
 
 	vk_configure_swapchain( device, swapchain, info );
 	vk_create_configured_swapchain( device, swapchain, 0 );
 }
 
 static void
-vk_resize_swapchain( const struct Device* idevice,
-                     struct Swapchain*    iswapchain,
-                     u32                  width,
-                     u32                  height )
+vk_resize_swapchain( const struct ft_device* idevice,
+                     struct ft_swapchain*    iswapchain,
+                     uint32_t                width,
+                     uint32_t                height )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( swapchain, iswapchain, VulkanSwapchain );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( swapchain, iswapchain, vk_swapchain );
 
 	iswapchain->width  = width;
 	iswapchain->height = height;
@@ -1009,15 +1003,15 @@ vk_resize_swapchain( const struct Device* idevice,
 }
 
 static void
-vk_destroy_swapchain( const struct Device* idevice,
-                      struct Swapchain*    iswapchain )
+vk_destroy_swapchain( const struct ft_device* idevice,
+                      struct ft_swapchain*    iswapchain )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( swapchain, iswapchain, VulkanSwapchain );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( swapchain, iswapchain, vk_swapchain );
 
-	for ( u32 i = 0; i < swapchain->interface.image_count; ++i )
+	for ( uint32_t i = 0; i < swapchain->interface.image_count; ++i )
 	{
-		FT_FROM_HANDLE( image, swapchain->interface.images[ i ], VulkanImage );
+		FT_FROM_HANDLE( image, swapchain->interface.images[ i ], vk_image );
 
 		vkDestroyImageView( device->logical_device,
 		                    image->image_view,
@@ -1039,13 +1033,13 @@ vk_destroy_swapchain( const struct Device* idevice,
 }
 
 static void
-vk_create_command_pool( const struct Device*          idevice,
-                        const struct CommandPoolInfo* info,
-                        struct CommandPool**          p )
+vk_create_command_pool( const struct ft_device*            idevice,
+                        const struct ft_command_pool_info* info,
+                        struct ft_command_pool**           p )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
+	FT_FROM_HANDLE( device, idevice, vk_device );
 
-	FT_INIT_INTERNAL( command_pool, *p, VulkanCommandPool );
+	FT_INIT_INTERNAL( command_pool, *p, vk_command_pool );
 
 	command_pool->interface.queue = info->queue;
 
@@ -1063,11 +1057,11 @@ vk_create_command_pool( const struct Device*          idevice,
 }
 
 static void
-vk_destroy_command_pool( const struct Device* idevice,
-                         struct CommandPool*  icommand_pool )
+vk_destroy_command_pool( const struct ft_device* idevice,
+                         struct ft_command_pool* icommand_pool )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( command_pool, icommand_pool, VulkanCommandPool );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( command_pool, icommand_pool, vk_command_pool );
 
 	vkDestroyCommandPool( device->logical_device,
 	                      command_pool->command_pool,
@@ -1076,15 +1070,15 @@ vk_destroy_command_pool( const struct Device* idevice,
 }
 
 static void
-vk_create_command_buffers( const struct Device*      idevice,
-                           const struct CommandPool* icommand_pool,
-                           u32                       count,
-                           struct CommandBuffer**    icommand_buffers )
+vk_create_command_buffers( const struct ft_device*       idevice,
+                           const struct ft_command_pool* icommand_pool,
+                           uint32_t                      count,
+                           struct ft_command_buffer**    icommand_buffers )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( command_pool, icommand_pool, VulkanCommandPool );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( command_pool, icommand_pool, vk_command_pool );
 
-	ALLOC_STACK_ARRAY( VkCommandBuffer, buffers, count );
+	FT_ALLOC_STACK_ARRAY( VkCommandBuffer, buffers, count );
 
 	VkCommandBufferAllocateInfo command_buffer_allocate_info = {
 	    .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -1099,9 +1093,9 @@ vk_create_command_buffers( const struct Device*      idevice,
 	                                     buffers ) );
 
 	// TODO: FIX ME!
-	for ( u32 i = 0; i < count; ++i )
+	for ( uint32_t i = 0; i < count; ++i )
 	{
-		FT_INIT_INTERNAL( cmd, icommand_buffers[ i ], VulkanCommandBuffer );
+		FT_INIT_INTERNAL( cmd, icommand_buffers[ i ], vk_command_buffer );
 
 		cmd->command_buffer  = buffers[ i ];
 		cmd->interface.queue = command_pool->interface.queue;
@@ -1109,49 +1103,48 @@ vk_create_command_buffers( const struct Device*      idevice,
 }
 
 static void
-vk_free_command_buffers( const struct Device*      idevice,
-                         const struct CommandPool* icommand_pool,
-                         u32                       count,
-                         struct CommandBuffer**    icommand_buffers )
+vk_free_command_buffers( const struct ft_device*       idevice,
+                         const struct ft_command_pool* icommand_pool,
+                         uint32_t                      count,
+                         struct ft_command_buffer**    icommand_buffers )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
+	FT_FROM_HANDLE( device, idevice, vk_device );
 
-	ALLOC_STACK_ARRAY( VkCommandBuffer, buffers, count );
+	FT_ALLOC_STACK_ARRAY( VkCommandBuffer, buffers, count );
 
-	for ( u32 i = 0; i < count; ++i )
+	for ( uint32_t i = 0; i < count; ++i )
 	{
-		FT_FROM_HANDLE( cmd, icommand_buffers[ i ], VulkanCommandBuffer );
+		FT_FROM_HANDLE( cmd, icommand_buffers[ i ], vk_command_buffer );
 		buffers[ i ] = cmd->command_buffer;
 	}
 
 	vkFreeCommandBuffers(
 	    device->logical_device,
-	    ( ( struct VulkanCommandPool* ) ( icommand_pool->handle ) )
-	        ->command_pool,
+	    ( ( struct vk_command_pool* ) ( icommand_pool->handle ) )->command_pool,
 	    count,
 	    buffers );
 }
 
 static void
-vk_destroy_command_buffers( const struct Device*      idevice,
-                            const struct CommandPool* icommand_pool,
-                            u32                       count,
-                            struct CommandBuffer**    icommand_buffers )
+vk_destroy_command_buffers( const struct ft_device*       idevice,
+                            const struct ft_command_pool* icommand_pool,
+                            uint32_t                      count,
+                            struct ft_command_buffer**    icommand_buffers )
 {
 	( void ) idevice;
 	( void ) icommand_pool;
 
-	for ( u32 i = 0; i < count; ++i )
+	for ( uint32_t i = 0; i < count; ++i )
 	{
-		FT_FROM_HANDLE( cmd, icommand_buffers[ i ], VulkanCommandBuffer );
+		FT_FROM_HANDLE( cmd, icommand_buffers[ i ], vk_command_buffer );
 		free( cmd );
 	}
 }
 
 static void
-vk_begin_command_buffer( const struct CommandBuffer* icmd )
+vk_begin_command_buffer( const struct ft_command_buffer* icmd )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
 
 	VkCommandBufferBeginInfo command_buffer_begin_info = {
 	    .sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -1165,40 +1158,40 @@ vk_begin_command_buffer( const struct CommandBuffer* icmd )
 }
 
 static void
-vk_end_command_buffer( const struct CommandBuffer* icmd )
+vk_end_command_buffer( const struct ft_command_buffer* icmd )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
 	VK_ASSERT( vkEndCommandBuffer( cmd->command_buffer ) );
 }
 
 static void
-vk_acquire_next_image( const struct Device*    idevice,
-                       const struct Swapchain* iswapchain,
-                       const struct Semaphore* isemaphore,
-                       const struct Fence*     ifence,
-                       u32*                    image_index )
+vk_acquire_next_image( const struct ft_device*    idevice,
+                       const struct ft_swapchain* iswapchain,
+                       const struct ft_semaphore* isemaphore,
+                       const struct ft_fence*     ifence,
+                       uint32_t*                  image_index )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( swapchain, iswapchain, VulkanSwapchain );
-	FT_FROM_HANDLE( semaphore, isemaphore, VulkanSemaphore );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( swapchain, iswapchain, vk_swapchain );
+	FT_FROM_HANDLE( semaphore, isemaphore, vk_semaphore );
 
 	VkResult result = vkAcquireNextImageKHR(
 	    device->logical_device,
 	    swapchain->swapchain,
 	    UINT64_MAX,
 	    semaphore->semaphore,
-	    ifence ? ( ( struct VulkanFence* ) ifence->handle )->fence
+	    ifence ? ( ( struct vk_fence* ) ifence->handle )->fence
 	           : VK_NULL_HANDLE,
 	    image_index );
 	// TODO: check status
 	( void ) result;
 }
 
-static inline void
-vk_create_module( const struct VulkanDevice*     device,
-                  struct VulkanShader*           shader,
-                  enum ShaderStage               stage,
-                  const struct ShaderModuleInfo* info )
+FT_INLINE void
+vk_create_module( const struct vk_device*             device,
+                  struct vk_shader*                   shader,
+                  enum ft_shader_stage                stage,
+                  const struct ft_shader_module_info* info )
 {
 	if ( info->bytecode )
 	{
@@ -1207,7 +1200,7 @@ vk_create_module( const struct VulkanDevice*     device,
 		    .pNext    = NULL,
 		    .flags    = 0,
 		    .codeSize = info->bytecode_size,
-		    .pCode    = ( const u32* ) ( info->bytecode ),
+		    .pCode    = ( const uint32_t* ) ( info->bytecode ),
 		};
 		VK_ASSERT( vkCreateShaderModule( device->logical_device,
 		                                 &shader_create_info,
@@ -1217,13 +1210,13 @@ vk_create_module( const struct VulkanDevice*     device,
 }
 
 static void
-vk_create_shader( const struct Device* idevice,
-                  struct ShaderInfo*   info,
-                  struct Shader**      p )
+vk_create_shader( const struct ft_device* idevice,
+                  struct ft_shader_info*  info,
+                  struct ft_shader**      p )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
+	FT_FROM_HANDLE( device, idevice, vk_device );
 
-	FT_INIT_INTERNAL( shader, *p, VulkanShader );
+	FT_INIT_INTERNAL( shader, *p, vk_shader );
 
 	vk_create_module( device, shader, FT_SHADER_STAGE_COMPUTE, &info->compute );
 	vk_create_module( device, shader, FT_SHADER_STAGE_VERTEX, &info->vertex );
@@ -1247,10 +1240,10 @@ vk_create_shader( const struct Device* idevice,
 	spirv_reflect( idevice, info, &shader->interface );
 }
 
-static inline void
-vk_destroy_module( const struct VulkanDevice* device,
-                   enum ShaderStage           stage,
-                   struct VulkanShader*       shader )
+FT_INLINE void
+vk_destroy_module( const struct vk_device* device,
+                   enum ft_shader_stage    stage,
+                   struct vk_shader*       shader )
 {
 	if ( shader->shaders[ stage ] )
 	{
@@ -1261,10 +1254,10 @@ vk_destroy_module( const struct VulkanDevice* device,
 }
 
 static void
-vk_destroy_shader( const struct Device* idevice, struct Shader* ishader )
+vk_destroy_shader( const struct ft_device* idevice, struct ft_shader* ishader )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( shader, ishader, VulkanShader );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( shader, ishader, vk_shader );
 
 	vk_destroy_module( device, FT_SHADER_STAGE_COMPUTE, shader );
 	vk_destroy_module( device, FT_SHADER_STAGE_VERTEX, shader );
@@ -1286,18 +1279,18 @@ vk_destroy_shader( const struct Device* idevice, struct Shader* ishader )
 }
 
 static void
-vk_create_descriptor_set_layout( const struct Device*         idevice,
-                                 struct Shader*               ishader,
-                                 struct DescriptorSetLayout** p )
+vk_create_descriptor_set_layout( const struct ft_device*           idevice,
+                                 struct ft_shader*                 ishader,
+                                 struct ft_descriptor_set_layout** p )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
+	FT_FROM_HANDLE( device, idevice, vk_device );
 
-	FT_INIT_INTERNAL( descriptor_set_layout, *p, VulkanDescriptorSetLayout );
+	FT_INIT_INTERNAL( descriptor_set_layout, *p, vk_descriptor_set_layout );
 
 	// copy reflection data because shader can be destroyed earlier
-	ReflectionData reflect_data = {
+	struct ft_reflection_data reflect_data = {
 	    .binding_count = ishader->reflect_data.binding_count,
-	    .binding_map   = hashmap_new( sizeof( struct BindingMapItem ),
+	    .binding_map   = hashmap_new( sizeof( struct ft_binding_map_item ),
                                     0,
                                     0,
                                     0,
@@ -1317,11 +1310,11 @@ vk_create_descriptor_set_layout( const struct Device*         idevice,
 			hashmap_set( reflect_data.binding_map, item );
 		}
 
-		ALLOC_HEAP_ARRAY( struct Binding,
-		                  bindings,
-		                  ishader->reflect_data.binding_count );
+		FT_ALLOC_HEAP_ARRAY( struct ft_binding,
+		                     bindings,
+		                     ishader->reflect_data.binding_count );
 		reflect_data.bindings = bindings;
-		for ( u32 i = 0; i < ishader->reflect_data.binding_count; ++i )
+		for ( uint32_t i = 0; i < ishader->reflect_data.binding_count; ++i )
 		{
 			reflect_data.bindings[ i ] = ishader->reflect_data.bindings[ i ];
 		}
@@ -1329,23 +1322,24 @@ vk_create_descriptor_set_layout( const struct Device*         idevice,
 	descriptor_set_layout->interface.reflection_data = reflect_data;
 
 	// count bindings in all shaders
-	u32 binding_counts[ MAX_SET_COUNT ] = { 0 };
+	uint32_t binding_counts[ FT_MAX_SET_COUNT ] = { 0 };
 	VkDescriptorBindingFlags
-	    binding_flags[ MAX_SET_COUNT ][ MAX_DESCRIPTOR_BINDING_COUNT ] = { 0 };
+	    binding_flags[ FT_MAX_SET_COUNT ][ FT_MAX_DESCRIPTOR_BINDING_COUNT ] = {
+	        0 };
 	// collect all bindings
-	VkDescriptorSetLayoutBinding bindings[ MAX_SET_COUNT ]
-	                                     [ MAX_DESCRIPTOR_BINDING_COUNT ];
+	VkDescriptorSetLayoutBinding bindings[ FT_MAX_SET_COUNT ]
+	                                     [ FT_MAX_DESCRIPTOR_BINDING_COUNT ];
 
-	u32 set_count = 0;
+	uint32_t set_count = 0;
 
-	ReflectionData* reflection =
+	struct ft_reflection_data* reflection =
 	    &descriptor_set_layout->interface.reflection_data;
 
-	for ( u32 b = 0; b < reflection->binding_count; ++b )
+	for ( uint32_t b = 0; b < reflection->binding_count; ++b )
 	{
-		struct Binding* binding       = &reflection->bindings[ b ];
-		u32             set           = binding->set;
-		u32             binding_count = binding_counts[ set ];
+		struct ft_binding* binding       = &reflection->bindings[ b ];
+		uint32_t           set           = binding->set;
+		uint32_t           binding_count = binding_counts[ set ];
 
 		bindings[ set ][ binding_count ].binding = binding->binding;
 		bindings[ set ][ binding_count ].descriptorCount =
@@ -1373,7 +1367,7 @@ vk_create_descriptor_set_layout( const struct Device*         idevice,
 		}
 	}
 
-	for ( u32 set = 0; set < set_count; ++set )
+	for ( uint32_t set = 0; set < set_count; ++set )
 	{
 		if ( binding_counts[ set ] > 0 )
 		{
@@ -1404,13 +1398,13 @@ vk_create_descriptor_set_layout( const struct Device*         idevice,
 }
 
 static void
-vk_destroy_descriptor_set_layout( const struct Device*        idevice,
-                                  struct DescriptorSetLayout* ilayout )
+vk_destroy_descriptor_set_layout( const struct ft_device*          idevice,
+                                  struct ft_descriptor_set_layout* ilayout )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( layout, ilayout, VulkanDescriptorSetLayout );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( layout, ilayout, vk_descriptor_set_layout );
 
-	for ( u32 i = 0; i < layout->descriptor_set_layout_count; ++i )
+	for ( uint32_t i = 0; i < layout->descriptor_set_layout_count; ++i )
 	{
 		if ( layout->descriptor_set_layouts[ i ] )
 		{
@@ -1430,18 +1424,18 @@ vk_destroy_descriptor_set_layout( const struct Device*        idevice,
 	free( layout );
 }
 
-static inline void
-vk_create_compute_pipeline( const struct Device*       idevice,
-                            const struct PipelineInfo* info,
-                            struct Pipeline**          p )
+FT_INLINE void
+vk_create_compute_pipeline( const struct ft_device*        idevice,
+                            const struct ft_pipeline_info* info,
+                            struct ft_pipeline**           p )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( shader, info->shader, VulkanShader );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( shader, info->shader, vk_shader );
 	FT_FROM_HANDLE( dsl,
 	                info->descriptor_set_layout,
-	                VulkanDescriptorSetLayout );
+	                vk_descriptor_set_layout );
 
-	FT_INIT_INTERNAL( pipeline, *p, VulkanPipeline );
+	FT_INIT_INTERNAL( pipeline, *p, vk_pipeline );
 
 	pipeline->interface.type = FT_PIPELINE_TYPE_COMPUTE;
 
@@ -1456,7 +1450,7 @@ vk_create_compute_pipeline( const struct Device*       idevice,
 	};
 
 	VkPushConstantRange push_constant_range = {
-	    .size       = MAX_PUSH_CONSTANT_RANGE,
+	    .size       = FT_MAX_PUSH_CONSTANT_RANGE,
 	    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT |
 	                  VK_SHADER_STAGE_FRAGMENT_BIT,
 	};
@@ -1464,7 +1458,7 @@ vk_create_compute_pipeline( const struct Device*       idevice,
 	VkPipelineLayoutCreateInfo pipeline_layout_create_info = {
 	    .sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 	    .setLayoutCount = dsl->descriptor_set_layout_count,
-	    .pSetLayouts    = ( ( struct VulkanDescriptorSetLayout* )
+	    .pSetLayouts    = ( ( struct vk_descriptor_set_layout* )
                              info->descriptor_set_layout->handle )
 	                       ->descriptor_set_layouts,
 	    .pushConstantRangeCount = 1,
@@ -1489,25 +1483,25 @@ vk_create_compute_pipeline( const struct Device*       idevice,
 	                                     &pipeline->pipeline ) );
 }
 
-static inline void
-vk_create_graphics_pipeline( const struct Device*       idevice,
-                             const struct PipelineInfo* info,
-                             struct Pipeline**          p )
+FT_INLINE void
+vk_create_graphics_pipeline( const struct ft_device*        idevice,
+                             const struct ft_pipeline_info* info,
+                             struct ft_pipeline**           p )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( shader, info->shader, VulkanShader );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( shader, info->shader, vk_shader );
 	FT_FROM_HANDLE( dsl,
 	                info->descriptor_set_layout,
-	                VulkanDescriptorSetLayout );
+	                vk_descriptor_set_layout );
 
-	FT_INIT_INTERNAL( pipeline, *p, VulkanPipeline );
+	FT_INIT_INTERNAL( pipeline, *p, vk_pipeline );
 
-	struct RenderPassBeginInfo render_pass_info = { 0 };
-	render_pass_info.color_attachment_count     = info->color_attachment_count;
-	ALLOC_STACK_ARRAY( struct Image,
-	                   color_images,
-	                   info->color_attachment_count );
-	for ( u32 i = 0; i < info->color_attachment_count; ++i )
+	struct ft_render_pass_begin_info render_pass_info = { 0 };
+	render_pass_info.color_attachment_count = info->color_attachment_count;
+	FT_ALLOC_STACK_ARRAY( struct ft_image,
+	                      color_images,
+	                      info->color_attachment_count );
+	for ( uint32_t i = 0; i < info->color_attachment_count; ++i )
 	{
 		color_images[ i ].format       = info->color_attachment_formats[ i ];
 		color_images[ i ].sample_count = info->sample_count;
@@ -1516,7 +1510,7 @@ vk_create_graphics_pipeline( const struct Device*       idevice,
 		    FT_ATTACHMENT_LOAD_OP_DONT_CARE;
 	}
 
-	struct Image depth_image;
+	struct ft_image depth_image;
 	if ( info->depth_stencil_format != FT_FORMAT_UNDEFINED )
 	{
 		depth_image.format                      = info->depth_stencil_format;
@@ -1531,11 +1525,11 @@ vk_create_graphics_pipeline( const struct Device*       idevice,
 
 	pipeline->interface.type = FT_PIPELINE_TYPE_GRAPHICS;
 
-	u32 shader_stage_count = 0;
+	uint32_t shader_stage_count = 0;
 	VkPipelineShaderStageCreateInfo
 	    shader_stage_create_infos[ FT_SHADER_STAGE_COUNT ];
 
-	for ( u32 i = 0; i < FT_SHADER_STAGE_COUNT; ++i )
+	for ( uint32_t i = 0; i < FT_SHADER_STAGE_COUNT; ++i )
 	{
 		if ( shader->shaders[ i ] == VK_NULL_HANDLE )
 		{
@@ -1558,11 +1552,11 @@ vk_create_graphics_pipeline( const struct Device*       idevice,
 
 	FT_ASSERT( shader_stage_count > 0 );
 
-	const struct VertexLayout* vertex_layout = &info->vertex_layout;
+	const struct ft_vertex_layout* vertex_layout = &info->vertex_layout;
 
 	VkVertexInputBindingDescription
-	    binding_descriptions[ MAX_VERTEX_BINDING_COUNT ];
-	for ( u32 i = 0; i < vertex_layout->binding_info_count; ++i )
+	    binding_descriptions[ FT_MAX_VERTEX_BINDING_COUNT ];
+	for ( uint32_t i = 0; i < vertex_layout->binding_info_count; ++i )
 	{
 		binding_descriptions[ i ].binding =
 		    vertex_layout->binding_infos[ i ].binding;
@@ -1573,8 +1567,8 @@ vk_create_graphics_pipeline( const struct Device*       idevice,
 	}
 
 	VkVertexInputAttributeDescription
-	    attribute_descriptions[ MAX_VERTEX_ATTRIBUTE_COUNT ];
-	for ( u32 i = 0; i < vertex_layout->attribute_info_count; ++i )
+	    attribute_descriptions[ FT_MAX_VERTEX_ATTRIBUTE_COUNT ];
+	for ( uint32_t i = 0; i < vertex_layout->attribute_info_count; ++i )
 	{
 		attribute_descriptions[ i ].location =
 		    vertex_layout->attribute_infos[ i ].location;
@@ -1627,11 +1621,11 @@ vk_create_graphics_pipeline( const struct Device*       idevice,
 	    .minSampleShading     = 1.0f,
 	};
 
-	ALLOC_STACK_ARRAY( VkPipelineColorBlendAttachmentState,
-	                   attachment_states,
-	                   info->color_attachment_count );
-	const struct BlendStateInfo* blend = &info->blend_state_info;
-	for ( u32 i = 0; i < info->color_attachment_count; ++i )
+	FT_ALLOC_STACK_ARRAY( VkPipelineColorBlendAttachmentState,
+	                      attachment_states,
+	                      info->color_attachment_count );
+	const struct ft_blend_state_info* blend = &info->blend_state_info;
+	for ( uint32_t i = 0; i < info->color_attachment_count; ++i )
 	{
 		VkPipelineColorBlendAttachmentState attachment_state = { 0 };
 		attachment_states[ i ] = ( VkPipelineColorBlendAttachmentState ) {
@@ -1691,7 +1685,7 @@ vk_create_graphics_pipeline( const struct Device*       idevice,
 	};
 
 	VkPushConstantRange push_constant_range = {
-	    .size       = MAX_PUSH_CONSTANT_RANGE,
+	    .size       = FT_MAX_PUSH_CONSTANT_RANGE,
 	    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT |
 	                  VK_SHADER_STAGE_FRAGMENT_BIT,
 	};
@@ -1699,7 +1693,7 @@ vk_create_graphics_pipeline( const struct Device*       idevice,
 	VkPipelineLayoutCreateInfo pipeline_layout_create_info = {
 	    .sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 	    .setLayoutCount = dsl->descriptor_set_layout_count,
-	    .pSetLayouts    = ( ( struct VulkanDescriptorSetLayout* )
+	    .pSetLayouts    = ( ( struct vk_descriptor_set_layout* )
                              info->descriptor_set_layout->handle )
 	                       ->descriptor_set_layouts,
 	    .pushConstantRangeCount = 1,
@@ -1739,9 +1733,9 @@ vk_create_graphics_pipeline( const struct Device*       idevice,
 }
 
 static void
-vk_create_pipeline( const struct Device*       idevice,
-                    const struct PipelineInfo* info,
-                    struct Pipeline**          p )
+vk_create_pipeline( const struct ft_device*        idevice,
+                    const struct ft_pipeline_info* info,
+                    struct ft_pipeline**           p )
 {
 	switch ( info->type )
 	{
@@ -1757,17 +1751,18 @@ vk_create_pipeline( const struct Device*       idevice,
 	}
 	default:
 	{
-		FT_ASSERT( 0 );
+		FT_ASSERT( false );
 		break;
 	}
 	}
 }
 
 static void
-vk_destroy_pipeline( const struct Device* idevice, struct Pipeline* ipipeline )
+vk_destroy_pipeline( const struct ft_device* idevice,
+                     struct ft_pipeline*     ipipeline )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( pipeline, ipipeline, VulkanPipeline );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( pipeline, ipipeline, vk_pipeline );
 
 	vkDestroyPipelineLayout( device->logical_device,
 	                         pipeline->pipeline_layout,
@@ -1779,13 +1774,13 @@ vk_destroy_pipeline( const struct Device* idevice, struct Pipeline* ipipeline )
 }
 
 static void
-vk_create_buffer( const struct Device*     idevice,
-                  const struct BufferInfo* info,
-                  struct Buffer**          p )
+vk_create_buffer( const struct ft_device*      idevice,
+                  const struct ft_buffer_info* info,
+                  struct ft_buffer**           p )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
+	FT_FROM_HANDLE( device, idevice, vk_device );
 
-	FT_INIT_INTERNAL( buffer, *p, VulkanBuffer );
+	FT_INIT_INTERNAL( buffer, *p, vk_buffer );
 
 	buffer->interface.size            = info->size;
 	buffer->interface.descriptor_type = info->descriptor_type;
@@ -1816,10 +1811,10 @@ vk_create_buffer( const struct Device*     idevice,
 }
 
 static void
-vk_destroy_buffer( const struct Device* idevice, struct Buffer* ibuffer )
+vk_destroy_buffer( const struct ft_device* idevice, struct ft_buffer* ibuffer )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( buffer, ibuffer, vk_buffer );
 
 	vmaDestroyBuffer( device->memory_allocator,
 	                  buffer->buffer,
@@ -1828,13 +1823,13 @@ vk_destroy_buffer( const struct Device* idevice, struct Buffer* ibuffer )
 }
 
 static void
-vk_create_sampler( const struct Device*      idevice,
-                   const struct SamplerInfo* info,
-                   struct Sampler**          p )
+vk_create_sampler( const struct ft_device*       idevice,
+                   const struct ft_sampler_info* info,
+                   struct ft_sampler**           p )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
+	FT_FROM_HANDLE( device, idevice, vk_device );
 
-	FT_INIT_INTERNAL( sampler, *p, VulkanSampler );
+	FT_INIT_INTERNAL( sampler, *p, vk_sampler );
 
 	VkSamplerCreateInfo sampler_create_info = {
 	    .sType            = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -1863,10 +1858,11 @@ vk_create_sampler( const struct Device*      idevice,
 }
 
 static void
-vk_destroy_sampler( const struct Device* idevice, struct Sampler* isampler )
+vk_destroy_sampler( const struct ft_device* idevice,
+                    struct ft_sampler*      isampler )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( sampler, isampler, VulkanSampler );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( sampler, isampler, vk_sampler );
 
 	vkDestroySampler( device->logical_device,
 	                  sampler->sampler,
@@ -1875,13 +1871,13 @@ vk_destroy_sampler( const struct Device* idevice, struct Sampler* isampler )
 }
 
 static void
-vk_create_image( const struct Device*    idevice,
-                 const struct ImageInfo* info,
-                 struct Image**          p )
+vk_create_image( const struct ft_device*     idevice,
+                 const struct ft_image_info* info,
+                 struct ft_image**           p )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
+	FT_FROM_HANDLE( device, idevice, vk_device );
 
-	FT_INIT_INTERNAL( image, *p, VulkanImage );
+	FT_INIT_INTERNAL( image, *p, vk_image );
 
 	VmaAllocationCreateInfo allocation_create_info = {
 	    .usage = VMA_MEMORY_USAGE_GPU_ONLY,
@@ -1954,10 +1950,10 @@ vk_create_image( const struct Device*    idevice,
 }
 
 static void
-vk_destroy_image( const struct Device* idevice, struct Image* iimage )
+vk_destroy_image( const struct ft_device* idevice, struct ft_image* iimage )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( image, iimage, VulkanImage );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( image, iimage, vk_image );
 
 	vkDestroyImageView( device->logical_device,
 	                    image->image_view,
@@ -1969,13 +1965,13 @@ vk_destroy_image( const struct Device* idevice, struct Image* iimage )
 }
 
 static void
-vk_create_descriptor_set( const struct Device*            idevice,
-                          const struct DescriptorSetInfo* info,
-                          struct DescriptorSet**          p )
+vk_create_descriptor_set( const struct ft_device*              idevice,
+                          const struct ft_descriptor_set_info* info,
+                          struct ft_descriptor_set**           p )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
+	FT_FROM_HANDLE( device, idevice, vk_device );
 
-	FT_INIT_INTERNAL( descriptor_set, *p, VulkanDescriptorSet );
+	FT_INIT_INTERNAL( descriptor_set, *p, vk_descriptor_set );
 
 	descriptor_set->interface.layout = info->descriptor_set_layout;
 
@@ -1984,7 +1980,7 @@ vk_create_descriptor_set( const struct Device*            idevice,
 	    .pNext              = NULL,
 	    .descriptorPool     = device->descriptor_pool,
 	    .descriptorSetCount = 1,
-	    .pSetLayouts        = &( ( struct VulkanDescriptorSetLayout* )
+	    .pSetLayouts        = &( ( struct vk_descriptor_set_layout* )
                               info->descriptor_set_layout->handle )
 	                        ->descriptor_set_layouts[ info->set ],
 	};
@@ -1995,11 +1991,11 @@ vk_create_descriptor_set( const struct Device*            idevice,
 }
 
 static void
-vk_destroy_descriptor_set( const struct Device*  idevice,
-                           struct DescriptorSet* iset )
+vk_destroy_descriptor_set( const struct ft_device*   idevice,
+                           struct ft_descriptor_set* iset )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( set, iset, VulkanDescriptorSet );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( set, iset, vk_descriptor_set );
 
 	vkFreeDescriptorSets( device->logical_device,
 	                      device->descriptor_pool,
@@ -2009,38 +2005,39 @@ vk_destroy_descriptor_set( const struct Device*  idevice,
 }
 
 static void
-vk_update_descriptor_set( const struct Device*          idevice,
-                          struct DescriptorSet*         iset,
-                          u32                           count,
-                          const struct DescriptorWrite* writes )
+vk_update_descriptor_set( const struct ft_device*           idevice,
+                          struct ft_descriptor_set*         iset,
+                          uint32_t                          count,
+                          const struct ft_descriptor_write* writes )
 {
-	FT_FROM_HANDLE( device, idevice, VulkanDevice );
-	FT_FROM_HANDLE( set, iset, VulkanDescriptorSet );
+	FT_FROM_HANDLE( device, idevice, vk_device );
+	FT_FROM_HANDLE( set, iset, vk_descriptor_set );
 
 	// TODO: rewrite
-	ALLOC_HEAP_ARRAY( VkDescriptorBufferInfo*, buffer_updates, count );
-	u32 buffer_update_idx = 0;
-	ALLOC_HEAP_ARRAY( VkDescriptorImageInfo*, image_updates, count );
-	u32 image_update_idx = 0;
-	ALLOC_HEAP_ARRAY( VkWriteDescriptorSet, descriptor_writes, count );
+	FT_ALLOC_HEAP_ARRAY( VkDescriptorBufferInfo*, buffer_updates, count );
+	uint32_t buffer_update_idx = 0;
+	FT_ALLOC_HEAP_ARRAY( VkDescriptorImageInfo*, image_updates, count );
+	uint32_t image_update_idx = 0;
+	FT_ALLOC_HEAP_ARRAY( VkWriteDescriptorSet, descriptor_writes, count );
 
-	u32 write = 0;
+	uint32_t write = 0;
 
-	for ( u32 i = 0; i < count; ++i )
+	for ( uint32_t i = 0; i < count; ++i )
 	{
-		const struct DescriptorWrite* descriptor_write = &writes[ i ];
+		const struct ft_descriptor_write* descriptor_write = &writes[ i ];
 
-		ReflectionData* reflection = &set->interface.layout->reflection_data;
+		struct ft_reflection_data* reflection =
+		    &set->interface.layout->reflection_data;
 
-		struct BindingMapItem item;
-		memset( item.name, '\0', MAX_BINDING_NAME_LENGTH );
+		struct ft_binding_map_item item;
+		memset( item.name, '\0', FT_MAX_BINDING_NAME_LENGTH );
 		strcpy( item.name, descriptor_write->descriptor_name );
-		struct BindingMapItem* it =
+		struct ft_binding_map_item* it =
 		    hashmap_get( reflection->binding_map, &item );
 
 		FT_ASSERT( it != NULL );
 
-		const struct Binding* binding = &reflection->bindings[ it->value ];
+		const struct ft_binding* binding = &reflection->bindings[ it->value ];
 
 		VkWriteDescriptorSet* write_descriptor_set =
 		    &descriptor_writes[ write++ ];
@@ -2060,10 +2057,10 @@ vk_update_descriptor_set( const struct Device*          idevice,
 			            descriptor_write->descriptor_count );
 			buffer_updates[ buffer_update_idx++ ] = buffer_infos;
 
-			for ( u32 j = 0; j < descriptor_write->descriptor_count; ++j )
+			for ( uint32_t j = 0; j < descriptor_write->descriptor_count; ++j )
 			{
 				buffer_infos[ j ].buffer =
-				    ( ( struct VulkanBuffer* ) descriptor_write
+				    ( ( struct vk_buffer* ) descriptor_write
 				          ->buffer_descriptors[ j ]
 				          .buffer->handle )
 				        ->buffer;
@@ -2082,9 +2079,9 @@ vk_update_descriptor_set( const struct Device*          idevice,
 			            descriptor_write->descriptor_count );
 			image_updates[ image_update_idx++ ] = image_infos;
 
-			for ( u32 j = 0; j < descriptor_write->descriptor_count; ++j )
+			for ( uint32_t j = 0; j < descriptor_write->descriptor_count; ++j )
 			{
-				struct ImageDescriptor* descriptor =
+				struct ft_image_descriptor* descriptor =
 				    &descriptor_write->image_descriptors[ j ];
 
 				FT_ASSERT( descriptor->image );
@@ -2092,7 +2089,7 @@ vk_update_descriptor_set( const struct Device*          idevice,
 				image_infos[ j ].imageLayout =
 				    determine_image_layout( descriptor->resource_state );
 				image_infos[ j ].imageView =
-				    ( ( struct VulkanImage* ) descriptor->image->handle )
+				    ( ( struct vk_image* ) descriptor->image->handle )
 				        ->image_view;
 				image_infos[ j ].sampler = NULL;
 			}
@@ -2106,15 +2103,15 @@ vk_update_descriptor_set( const struct Device*          idevice,
 			            descriptor_write->descriptor_count );
 			image_updates[ image_update_idx++ ] = image_infos;
 
-			for ( u32 j = 0; j < descriptor_write->descriptor_count; ++j )
+			for ( uint32_t j = 0; j < descriptor_write->descriptor_count; ++j )
 			{
-				struct SamplerDescriptor* descriptor =
+				struct ft_sampler_descriptor* descriptor =
 				    &descriptor_write->sampler_descriptors[ j ];
 
 				FT_ASSERT( descriptor->sampler );
 
 				image_infos[ j ].sampler =
-				    ( ( struct VulkanSampler* ) descriptor->sampler->handle )
+				    ( ( struct vk_sampler* ) descriptor->sampler->handle )
 				        ->sampler;
 			}
 
@@ -2128,7 +2125,7 @@ vk_update_descriptor_set( const struct Device*          idevice,
 	                        0,
 	                        NULL );
 
-	for ( u32 i = 0; i < count; ++i )
+	for ( uint32_t i = 0; i < count; ++i )
 	{
 		if ( buffer_updates[ i ] != NULL )
 		{
@@ -2147,19 +2144,19 @@ vk_update_descriptor_set( const struct Device*          idevice,
 }
 
 static void
-vk_cmd_begin_render_pass( const struct CommandBuffer*       icmd,
-                          const struct RenderPassBeginInfo* info )
+vk_cmd_begin_render_pass( const struct ft_command_buffer*         icmd,
+                          const struct ft_render_pass_begin_info* info )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
 
 	VkRenderPass  render_pass = vk_pass_hasher_get_render_pass( info );
 	VkFramebuffer framebuffer =
 	    vk_pass_hasher_get_framebuffer( render_pass, info );
 
-	static VkClearValue clear_values[ MAX_ATTACHMENTS_COUNT + 1 ];
-	u32                 clear_value_count = info->color_attachment_count;
+	static VkClearValue clear_values[ FT_MAX_ATTACHMENTS_COUNT + 1 ];
+	uint32_t            clear_value_count = info->color_attachment_count;
 
-	for ( u32 i = 0; i < info->color_attachment_count; ++i )
+	for ( uint32_t i = 0; i < info->color_attachment_count; ++i )
 	{
 		VkClearValue clear_value = { 0 };
 		clear_values[ i ]        = clear_value;
@@ -2176,7 +2173,7 @@ vk_cmd_begin_render_pass( const struct CommandBuffer*       icmd,
 	if ( info->depth_attachment.image )
 	{
 		clear_value_count++;
-		u32          idx         = info->color_attachment_count;
+		uint32_t     idx         = info->color_attachment_count;
 		VkClearValue clear_value = { 0 };
 		clear_values[ idx ]      = clear_value;
 		clear_values[ idx ].depthStencil.depth =
@@ -2204,42 +2201,42 @@ vk_cmd_begin_render_pass( const struct CommandBuffer*       icmd,
 }
 
 static void
-vk_cmd_end_render_pass( const struct CommandBuffer* icmd )
+vk_cmd_end_render_pass( const struct ft_command_buffer* icmd )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
 	vkCmdEndRenderPass( cmd->command_buffer );
 }
 
 static void
-vk_cmd_barrier( const struct CommandBuffer* icmd,
-                u32                         memory_barriers_count,
-                const struct MemoryBarrier* memory_barriers,
-                u32                         buffer_barriers_count,
-                const struct BufferBarrier* buffer_barriers,
-                u32                         image_barriers_count,
-                const struct ImageBarrier*  image_barriers )
+vk_cmd_barrier( const struct ft_command_buffer* icmd,
+                uint32_t                        memory_barriers_count,
+                const struct ft_memory_barrier* memory_barriers,
+                uint32_t                        buffer_barriers_count,
+                const struct ft_buffer_barrier* buffer_barriers,
+                uint32_t                        image_barriers_count,
+                const struct ft_image_barrier*  image_barriers )
 {
 	FT_UNUSED( memory_barriers_count );
 	FT_UNUSED( memory_barriers );
 
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
 
-	ALLOC_STACK_ARRAY( VkBufferMemoryBarrier,
-	                   buffer_memory_barriers,
-	                   buffer_barriers_count );
-	ALLOC_STACK_ARRAY( VkImageMemoryBarrier,
-	                   image_memory_barriers,
-	                   image_barriers_count );
+	FT_ALLOC_STACK_ARRAY( VkBufferMemoryBarrier,
+	                      buffer_memory_barriers,
+	                      buffer_barriers_count );
+	FT_ALLOC_STACK_ARRAY( VkImageMemoryBarrier,
+	                      image_memory_barriers,
+	                      image_barriers_count );
 
 	// TODO: Queues
 	VkAccessFlags src_access = ( VkAccessFlags ) 0;
 	VkAccessFlags dst_access = ( VkAccessFlags ) 0;
 
-	for ( u32 i = 0; i < buffer_barriers_count; ++i )
+	for ( uint32_t i = 0; i < buffer_barriers_count; ++i )
 	{
 		FT_ASSERT( buffer_barriers[ i ].buffer );
 
-		FT_FROM_HANDLE( buffer, buffer_barriers[ i ].buffer, VulkanBuffer );
+		FT_FROM_HANDLE( buffer, buffer_barriers[ i ].buffer, vk_buffer );
 
 		VkAccessFlags src_access_mask =
 		    determine_access_flags( buffer_barriers[ i ].old_state );
@@ -2267,11 +2264,11 @@ vk_cmd_barrier( const struct CommandBuffer* icmd,
 		dst_access |= dst_access_mask;
 	}
 
-	for ( u32 i = 0; i < image_barriers_count; ++i )
+	for ( uint32_t i = 0; i < image_barriers_count; ++i )
 	{
 		FT_ASSERT( image_barriers[ i ].image );
 
-		FT_FROM_HANDLE( image, image_barriers[ i ].image, VulkanImage );
+		FT_FROM_HANDLE( image, image_barriers[ i ].image, vk_image );
 
 		VkAccessFlags src_access_mask =
 		    determine_access_flags( image_barriers[ i ].old_state );
@@ -2323,13 +2320,13 @@ vk_cmd_barrier( const struct CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_set_scissor( const struct CommandBuffer* icmd,
-                    i32                         x,
-                    i32                         y,
-                    u32                         width,
-                    u32                         height )
+vk_cmd_set_scissor( const struct ft_command_buffer* icmd,
+                    int32_t                         x,
+                    int32_t                         y,
+                    uint32_t                        width,
+                    uint32_t                        height )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
 
 	VkRect2D scissor = {
 	    .offset.x      = x,
@@ -2341,15 +2338,15 @@ vk_cmd_set_scissor( const struct CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_set_viewport( const struct CommandBuffer* icmd,
-                     f32                         x,
-                     f32                         y,
-                     f32                         width,
-                     f32                         height,
-                     f32                         min_depth,
-                     f32                         max_depth )
+vk_cmd_set_viewport( const struct ft_command_buffer* icmd,
+                     float                           x,
+                     float                           y,
+                     float                           width,
+                     float                           height,
+                     float                           min_depth,
+                     float                           max_depth )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
 
 	VkViewport viewport = {
 	    .x        = x,
@@ -2364,11 +2361,11 @@ vk_cmd_set_viewport( const struct CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_bind_pipeline( const struct CommandBuffer* icmd,
-                      const struct Pipeline*      ipipeline )
+vk_cmd_bind_pipeline( const struct ft_command_buffer* icmd,
+                      const struct ft_pipeline*       ipipeline )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
-	FT_FROM_HANDLE( pipeline, ipipeline, VulkanPipeline );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
+	FT_FROM_HANDLE( pipeline, ipipeline, vk_pipeline );
 
 	vkCmdBindPipeline( cmd->command_buffer,
 	                   to_vk_pipeline_bind_point( pipeline->interface.type ),
@@ -2376,13 +2373,13 @@ vk_cmd_bind_pipeline( const struct CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_draw( const struct CommandBuffer* icmd,
-             u32                         vertex_count,
-             u32                         instance_count,
-             u32                         first_vertex,
-             u32                         first_instance )
+vk_cmd_draw( const struct ft_command_buffer* icmd,
+             uint32_t                        vertex_count,
+             uint32_t                        instance_count,
+             uint32_t                        first_vertex,
+             uint32_t                        first_instance )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
 
 	vkCmdDraw( cmd->command_buffer,
 	           vertex_count,
@@ -2392,14 +2389,14 @@ vk_cmd_draw( const struct CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_draw_indexed( const struct CommandBuffer* icmd,
-                     u32                         index_count,
-                     u32                         instance_count,
-                     u32                         first_index,
-                     i32                         vertex_offset,
-                     u32                         first_instance )
+vk_cmd_draw_indexed( const struct ft_command_buffer* icmd,
+                     uint32_t                        index_count,
+                     uint32_t                        instance_count,
+                     uint32_t                        first_index,
+                     int32_t                         vertex_offset,
+                     uint32_t                        first_instance )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
 
 	vkCmdDrawIndexed( cmd->command_buffer,
 	                  index_count,
@@ -2410,12 +2407,12 @@ vk_cmd_draw_indexed( const struct CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_bind_vertex_buffer( const struct CommandBuffer* icmd,
-                           const struct Buffer*        ibuffer,
-                           const u64                   offset )
+vk_cmd_bind_vertex_buffer( const struct ft_command_buffer* icmd,
+                           const struct ft_buffer*         ibuffer,
+                           const uint64_t                  offset )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
-	FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
+	FT_FROM_HANDLE( buffer, ibuffer, vk_buffer );
 
 	vkCmdBindVertexBuffers( cmd->command_buffer,
 	                        0,
@@ -2425,13 +2422,13 @@ vk_cmd_bind_vertex_buffer( const struct CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_bind_index_buffer( const struct CommandBuffer* icmd,
-                          const struct Buffer*        ibuffer,
-                          u64                         offset,
-                          enum IndexType              index_type )
+vk_cmd_bind_index_buffer( const struct ft_command_buffer* icmd,
+                          const struct ft_buffer*         ibuffer,
+                          uint64_t                        offset,
+                          enum IndexType                  index_type )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
-	FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
+	FT_FROM_HANDLE( buffer, ibuffer, vk_buffer );
 
 	vkCmdBindIndexBuffer( cmd->command_buffer,
 	                      buffer->buffer,
@@ -2440,16 +2437,16 @@ vk_cmd_bind_index_buffer( const struct CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_copy_buffer( const struct CommandBuffer* icmd,
-                    const struct Buffer*        isrc,
-                    u64                         src_offset,
-                    struct Buffer*              idst,
-                    u64                         dst_offset,
-                    u64                         size )
+vk_cmd_copy_buffer( const struct ft_command_buffer* icmd,
+                    const struct ft_buffer*         isrc,
+                    uint64_t                        src_offset,
+                    struct ft_buffer*               idst,
+                    uint64_t                        dst_offset,
+                    uint64_t                        size )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
-	FT_FROM_HANDLE( src, isrc, VulkanBuffer );
-	FT_FROM_HANDLE( dst, idst, VulkanBuffer );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
+	FT_FROM_HANDLE( src, isrc, vk_buffer );
+	FT_FROM_HANDLE( dst, idst, vk_buffer );
 
 	VkBufferCopy buffer_copy = {
 	    .srcOffset = src_offset,
@@ -2465,14 +2462,14 @@ vk_cmd_copy_buffer( const struct CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_copy_buffer_to_image( const struct CommandBuffer* icmd,
-                             const struct Buffer*        isrc,
-                             u64                         src_offset,
-                             struct Image*               idst )
+vk_cmd_copy_buffer_to_image( const struct ft_command_buffer* icmd,
+                             const struct ft_buffer*         isrc,
+                             uint64_t                        src_offset,
+                             struct ft_image*                idst )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
-	FT_FROM_HANDLE( src, isrc, VulkanBuffer );
-	FT_FROM_HANDLE( dst, idst, VulkanImage );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
+	FT_FROM_HANDLE( src, isrc, vk_buffer );
+	FT_FROM_HANDLE( dst, idst, vk_image );
 
 	VkImageSubresourceLayers dst_layers = get_image_subresource_layers( dst );
 
@@ -2498,12 +2495,12 @@ vk_cmd_copy_buffer_to_image( const struct CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_dispatch( const struct CommandBuffer* icmd,
-                 u32                         group_count_x,
-                 u32                         group_count_y,
-                 u32                         group_count_z )
+vk_cmd_dispatch( const struct ft_command_buffer* icmd,
+                 uint32_t                        group_count_x,
+                 uint32_t                        group_count_y,
+                 uint32_t                        group_count_z )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
 
 	vkCmdDispatch( cmd->command_buffer,
 	               group_count_x,
@@ -2512,14 +2509,14 @@ vk_cmd_dispatch( const struct CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_push_constants( const struct CommandBuffer* icmd,
-                       const struct Pipeline*      ipipeline,
-                       u32                         offset,
-                       u32                         size,
-                       const void*                 data )
+vk_cmd_push_constants( const struct ft_command_buffer* icmd,
+                       const struct ft_pipeline*       ipipeline,
+                       uint32_t                        offset,
+                       uint32_t                        size,
+                       const void*                     data )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
-	FT_FROM_HANDLE( pipeline, ipipeline, VulkanPipeline );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
+	FT_FROM_HANDLE( pipeline, ipipeline, vk_pipeline );
 
 	vkCmdPushConstants( cmd->command_buffer,
 	                    pipeline->pipeline_layout,
@@ -2532,12 +2529,12 @@ vk_cmd_push_constants( const struct CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_clear_color_image( const struct CommandBuffer* icmd,
-                          struct Image*               iimage,
-                          float                       color[ 4 ] )
+vk_cmd_clear_color_image( const struct ft_command_buffer* icmd,
+                          struct ft_image*                iimage,
+                          float                           color[ 4 ] )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
-	FT_FROM_HANDLE( image, iimage, VulkanImage );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
+	FT_FROM_HANDLE( image, iimage, vk_image );
 
 	VkClearColorValue clear_color = {
 	    .float32[ 0 ] = color[ 0 ],
@@ -2556,14 +2553,14 @@ vk_cmd_clear_color_image( const struct CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_draw_indexed_indirect( const struct CommandBuffer* icmd,
-                              const struct Buffer*        ibuffer,
-                              u64                         offset,
-                              u32                         draw_count,
-                              u32                         stride )
+vk_cmd_draw_indexed_indirect( const struct ft_command_buffer* icmd,
+                              const struct ft_buffer*         ibuffer,
+                              uint64_t                        offset,
+                              uint32_t                        draw_count,
+                              uint32_t                        stride )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
-	FT_FROM_HANDLE( buffer, ibuffer, VulkanBuffer );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
+	FT_FROM_HANDLE( buffer, ibuffer, vk_buffer );
 
 	vkCmdDrawIndexedIndirect( cmd->command_buffer,
 	                          buffer->buffer,
@@ -2573,14 +2570,14 @@ vk_cmd_draw_indexed_indirect( const struct CommandBuffer* icmd,
 }
 
 static void
-vk_cmd_bind_descriptor_set( const struct CommandBuffer* icmd,
-                            u32                         first_set,
-                            const struct DescriptorSet* iset,
-                            const struct Pipeline*      ipipeline )
+vk_cmd_bind_descriptor_set( const struct ft_command_buffer* icmd,
+                            uint32_t                        first_set,
+                            const struct ft_descriptor_set* iset,
+                            const struct ft_pipeline*       ipipeline )
 {
-	FT_FROM_HANDLE( cmd, icmd, VulkanCommandBuffer );
-	FT_FROM_HANDLE( pipeline, ipipeline, VulkanPipeline );
-	FT_FROM_HANDLE( set, iset, VulkanDescriptorSet );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
+	FT_FROM_HANDLE( pipeline, ipipeline, vk_pipeline );
+	FT_FROM_HANDLE( set, iset, vk_descriptor_set );
 
 	vkCmdBindDescriptorSets(
 	    cmd->command_buffer,
@@ -2594,70 +2591,70 @@ vk_cmd_bind_descriptor_set( const struct CommandBuffer* icmd,
 }
 
 void
-vk_create_renderer_backend( const struct RendererBackendInfo* info,
-                            struct RendererBackend**          p )
+vk_create_renderer_backend( const struct ft_renderer_backend_info* info,
+                            struct ft_renderer_backend**           p )
 {
-	destroy_renderer_backend_impl      = vk_destroy_renderer_backend;
-	create_device_impl                 = vk_create_device;
-	destroy_device_impl                = vk_destroy_device;
-	create_queue_impl                  = vk_create_queue;
-	destroy_queue_impl                 = vk_destroy_queue;
-	queue_wait_idle_impl               = vk_queue_wait_idle;
-	queue_submit_impl                  = vk_queue_submit;
-	immediate_submit_impl              = vk_immediate_submit;
-	queue_present_impl                 = vk_queue_present;
-	create_semaphore_impl              = vk_create_semaphore;
-	destroy_semaphore_impl             = vk_destroy_semaphore;
-	create_fence_impl                  = vk_create_fence;
-	destroy_fence_impl                 = vk_destroy_fence;
-	wait_for_fences_impl               = vk_wait_for_fences;
-	reset_fences_impl                  = vk_reset_fences;
-	create_swapchain_impl              = vk_create_swapchain;
-	resize_swapchain_impl              = vk_resize_swapchain;
-	destroy_swapchain_impl             = vk_destroy_swapchain;
-	create_command_pool_impl           = vk_create_command_pool;
-	destroy_command_pool_impl          = vk_destroy_command_pool;
-	create_command_buffers_impl        = vk_create_command_buffers;
-	free_command_buffers_impl          = vk_free_command_buffers;
-	destroy_command_buffers_impl       = vk_destroy_command_buffers;
-	begin_command_buffer_impl          = vk_begin_command_buffer;
-	end_command_buffer_impl            = vk_end_command_buffer;
-	acquire_next_image_impl            = vk_acquire_next_image;
-	create_shader_impl                 = vk_create_shader;
-	destroy_shader_impl                = vk_destroy_shader;
-	create_descriptor_set_layout_impl  = vk_create_descriptor_set_layout;
-	destroy_descriptor_set_layout_impl = vk_destroy_descriptor_set_layout;
-	create_pipeline_impl               = vk_create_pipeline;
-	destroy_pipeline_impl              = vk_destroy_pipeline;
-	create_buffer_impl                 = vk_create_buffer;
-	destroy_buffer_impl                = vk_destroy_buffer;
-	map_memory_impl                    = vk_map_memory;
-	unmap_memory_impl                  = vk_unmap_memory;
-	create_sampler_impl                = vk_create_sampler;
-	destroy_sampler_impl               = vk_destroy_sampler;
-	create_image_impl                  = vk_create_image;
-	destroy_image_impl                 = vk_destroy_image;
-	create_descriptor_set_impl         = vk_create_descriptor_set;
-	destroy_descriptor_set_impl        = vk_destroy_descriptor_set;
-	update_descriptor_set_impl         = vk_update_descriptor_set;
-	cmd_begin_render_pass_impl         = vk_cmd_begin_render_pass;
-	cmd_end_render_pass_impl           = vk_cmd_end_render_pass;
-	cmd_barrier_impl                   = vk_cmd_barrier;
-	cmd_set_scissor_impl               = vk_cmd_set_scissor;
-	cmd_set_viewport_impl              = vk_cmd_set_viewport;
-	cmd_bind_pipeline_impl             = vk_cmd_bind_pipeline;
-	cmd_draw_impl                      = vk_cmd_draw;
-	cmd_draw_indexed_impl              = vk_cmd_draw_indexed;
-	cmd_bind_vertex_buffer_impl        = vk_cmd_bind_vertex_buffer;
-	cmd_bind_index_buffer_impl         = vk_cmd_bind_index_buffer;
-	cmd_copy_buffer_impl               = vk_cmd_copy_buffer;
-	cmd_copy_buffer_to_image_impl      = vk_cmd_copy_buffer_to_image;
-	cmd_bind_descriptor_set_impl       = vk_cmd_bind_descriptor_set;
-	cmd_dispatch_impl                  = vk_cmd_dispatch;
-	cmd_push_constants_impl            = vk_cmd_push_constants;
-	cmd_draw_indexed_indirect_impl     = vk_cmd_draw_indexed_indirect;
+	ft_destroy_renderer_backend_impl      = vk_destroy_renderer_backend;
+	ft_create_device_impl                 = vk_create_device;
+	ft_destroy_device_impl                = vk_destroy_device;
+	ft_create_queue_impl                  = vk_create_queue;
+	ft_destroy_queue_impl                 = vk_destroy_queue;
+	ft_queue_wait_idle_impl               = vk_queue_wait_idle;
+	ft_queue_submit_impl                  = vk_queue_submit;
+	ft_immediate_submit_impl              = vk_immediate_submit;
+	ft_queue_present_impl                 = vk_queue_present;
+	ft_create_semaphore_impl              = vk_create_semaphore;
+	ft_destroy_semaphore_impl             = vk_destroy_semaphore;
+	ft_create_fence_impl                  = vk_create_fence;
+	ft_destroy_fence_impl                 = vk_destroy_fence;
+	ft_wait_for_fences_impl               = vk_wait_for_fences;
+	ft_reset_fences_impl                  = vk_reset_fences;
+	ft_create_swapchain_impl              = vk_create_swapchain;
+	ft_resize_swapchain_impl              = vk_resize_swapchain;
+	ft_destroy_swapchain_impl             = vk_destroy_swapchain;
+	ft_create_command_pool_impl           = vk_create_command_pool;
+	ft_destroy_command_pool_impl          = vk_destroy_command_pool;
+	ft_create_command_buffers_impl        = vk_create_command_buffers;
+	ft_free_command_buffers_impl          = vk_free_command_buffers;
+	ft_destroy_command_buffers_impl       = vk_destroy_command_buffers;
+	ft_begin_command_buffer_impl          = vk_begin_command_buffer;
+	ft_end_command_buffer_impl            = vk_end_command_buffer;
+	ft_acquire_next_image_impl            = vk_acquire_next_image;
+	ft_create_shader_impl                 = vk_create_shader;
+	ft_destroy_shader_impl                = vk_destroy_shader;
+	ft_create_descriptor_set_layout_impl  = vk_create_descriptor_set_layout;
+	ft_destroy_descriptor_set_layout_impl = vk_destroy_descriptor_set_layout;
+	ft_create_pipeline_impl               = vk_create_pipeline;
+	ft_destroy_pipeline_impl              = vk_destroy_pipeline;
+	ft_create_buffer_impl                 = vk_create_buffer;
+	ft_destroy_buffer_impl                = vk_destroy_buffer;
+	ft_map_memory_impl                    = vk_map_memory;
+	ft_unmap_memory_impl                  = vk_unmap_memory;
+	ft_create_sampler_impl                = vk_create_sampler;
+	ft_destroy_sampler_impl               = vk_destroy_sampler;
+	ft_create_image_impl                  = vk_create_image;
+	ft_destroy_image_impl                 = vk_destroy_image;
+	ft_create_descriptor_set_impl         = vk_create_descriptor_set;
+	ft_destroy_descriptor_set_impl        = vk_destroy_descriptor_set;
+	ft_update_descriptor_set_impl         = vk_update_descriptor_set;
+	ft_cmd_begin_render_pass_impl         = vk_cmd_begin_render_pass;
+	ft_cmd_end_render_pass_impl           = vk_cmd_end_render_pass;
+	ft_cmd_barrier_impl                   = vk_cmd_barrier;
+	ft_cmd_set_scissor_impl               = vk_cmd_set_scissor;
+	ft_cmd_set_viewport_impl              = vk_cmd_set_viewport;
+	ft_cmd_bind_pipeline_impl             = vk_cmd_bind_pipeline;
+	ft_cmd_draw_impl                      = vk_cmd_draw;
+	ft_cmd_draw_indexed_impl              = vk_cmd_draw_indexed;
+	ft_cmd_bind_vertex_buffer_impl        = vk_cmd_bind_vertex_buffer;
+	ft_cmd_bind_index_buffer_impl         = vk_cmd_bind_index_buffer;
+	ft_cmd_copy_buffer_impl               = vk_cmd_copy_buffer;
+	ft_cmd_copy_buffer_to_image_impl      = vk_cmd_copy_buffer_to_image;
+	ft_cmd_bind_descriptor_set_impl       = vk_cmd_bind_descriptor_set;
+	ft_cmd_dispatch_impl                  = vk_cmd_dispatch;
+	ft_cmd_push_constants_impl            = vk_cmd_push_constants;
+	ft_cmd_draw_indexed_indirect_impl     = vk_cmd_draw_indexed_indirect;
 
-	FT_INIT_INTERNAL( backend, *p, VulkanRendererBackend );
+	FT_INIT_INTERNAL( backend, *p, vk_renderer_backend );
 
 	// TODO: provide posibility to set allocator from user code
 	backend->vulkan_allocator = NULL;
@@ -2676,15 +2673,15 @@ vk_create_renderer_backend( const struct RendererBackendInfo* info,
 	    .apiVersion         = backend->api_version,
 	};
 
-	u32 instance_create_flags = 0;
-	u32 extension_count       = 0;
-	u32 layer_count           = 0;
+	uint32_t instance_create_flags = 0;
+	uint32_t extension_count       = 0;
+	uint32_t layer_count           = 0;
 
 	get_instance_extensions( info,
 	                         &instance_create_flags,
 	                         &extension_count,
 	                         NULL );
-	ALLOC_STACK_ARRAY( const char*, extensions, extension_count );
+	FT_ALLOC_STACK_ARRAY( const char*, extensions, extension_count );
 	get_instance_extensions( info,
 	                         &instance_create_flags,
 	                         &extension_count,
@@ -2725,17 +2722,17 @@ vk_create_renderer_backend( const struct RendererBackendInfo* info,
 
 	// pick physical device
 	backend->physical_device = VK_NULL_HANDLE;
-	u32 device_count         = 0;
+	uint32_t device_count    = 0;
 	vkEnumeratePhysicalDevices( backend->instance, &device_count, NULL );
 	FT_ASSERT( device_count != 0 );
-	ALLOC_STACK_ARRAY( VkPhysicalDevice, physical_devices, device_count );
+	FT_ALLOC_STACK_ARRAY( VkPhysicalDevice, physical_devices, device_count );
 	vkEnumeratePhysicalDevices( backend->instance,
 	                            &device_count,
 	                            physical_devices );
 	backend->physical_device = physical_devices[ 0 ];
 
 	// select best physical device
-	for ( u32 i = 0; i < device_count; ++i )
+	for ( uint32_t i = 0; i < device_count; ++i )
 	{
 		VkPhysicalDeviceProperties deviceProperties;
 		VkPhysicalDeviceFeatures   deviceFeatures;

@@ -5,39 +5,39 @@
 #include "vulkan_enum_translators.h"
 #include "vulkan_pass_hasher.h"
 
-struct VulkanPassHasher
+struct vulkan_pass_hasher
 {
-	const struct VulkanDevice* device;
-	struct hashmap*            render_passes;
-	struct hashmap*            framebuffers;
+	const struct vk_device* device;
+	struct hashmap*         render_passes;
+	struct hashmap*         framebuffers;
 };
 
-static struct VulkanPassHasher hasher;
+static struct vulkan_pass_hasher hasher;
 
-struct RenderPassMapItem
+struct render_pass_map_item
 {
-	struct RenderPassBeginInfo info;
-	VkRenderPass               render_pass;
+	struct ft_render_pass_begin_info info;
+	VkRenderPass                     render_pass;
 };
 
-struct FramebufferMapItem
+struct framebuffer_map_item
 {
-	struct RenderPassBeginInfo info;
-	VkFramebuffer              framebuffer;
+	struct ft_render_pass_begin_info info;
+	VkFramebuffer                    framebuffer;
 };
 
-static inline b32
-has_depth_stencil( const struct RenderPassBeginInfo* info )
+FT_INLINE bool
+has_depth_stencil( const struct ft_render_pass_begin_info* info )
 {
 	return info->depth_attachment.image != NULL;
 }
 
-static inline i32
-compare_attachments( const struct AttachmentInfo* a,
-                     const struct AttachmentInfo* b )
+FT_INLINE int32_t
+compare_attachments( const struct ft_attachment_info* a,
+                     const struct ft_attachment_info* b )
 {
-	const struct Image* ia = a->image;
-	const struct Image* ib = b->image;
+	const struct ft_image* ia = a->image;
+	const struct ft_image* ib = b->image;
 
 	if ( ia->format != ib->format )
 	{
@@ -57,13 +57,13 @@ compare_attachments( const struct AttachmentInfo* a,
 	return 0;
 }
 
-static b32
+static int32_t
 compare_pass_info( const void* a, const void* b, void* udata )
 {
 	FT_UNUSED( udata );
 
-	const struct RenderPassBeginInfo* rpa = a;
-	const struct RenderPassBeginInfo* rpb = b;
+	const struct ft_render_pass_begin_info* rpa = a;
+	const struct ft_render_pass_begin_info* rpb = b;
 	if ( rpa->color_attachment_count != rpb->color_attachment_count )
 		return 0;
 
@@ -72,7 +72,7 @@ compare_pass_info( const void* a, const void* b, void* udata )
 		return 1;
 	}
 
-	for ( u32 i = 0; i < rpa->color_attachment_count; ++i )
+	for ( uint32_t i = 0; i < rpa->color_attachment_count; ++i )
 	{
 		if ( compare_attachments( &rpa->color_attachments[ i ],
 		                          &rpb->color_attachments[ i ] ) )
@@ -93,8 +93,8 @@ compare_pass_info( const void* a, const void* b, void* udata )
 	return 0;
 }
 
-static u64
-hash_pass_info( const void* item, u64 seed0, u64 seed1 )
+static uint64_t
+hash_pass_info( const void* item, uint64_t seed0, uint64_t seed1 )
 {
 	FT_UNUSED( item );
 	FT_UNUSED( seed0 );
@@ -103,20 +103,20 @@ hash_pass_info( const void* item, u64 seed0, u64 seed1 )
 	return 0;
 }
 
-static b32
+static int32_t
 compare_framebuffer_info( const void* a, const void* b, void* udata )
 {
 	FT_UNUSED( udata );
 
-	const struct RenderPassBeginInfo* rpa = a;
-	const struct RenderPassBeginInfo* rpb = b;
+	const struct ft_render_pass_begin_info* rpa = a;
+	const struct ft_render_pass_begin_info* rpb = b;
 
 	if ( rpa->color_attachment_count != rpb->color_attachment_count )
 	{
 		return 1;
 	}
 
-	for ( u32 i = 0; i < rpa->color_attachment_count; ++i )
+	for ( uint32_t i = 0; i < rpa->color_attachment_count; ++i )
 	{
 		if ( rpa->color_attachments[ i ].image !=
 		     rpb->color_attachments[ i ].image )
@@ -141,8 +141,8 @@ compare_framebuffer_info( const void* a, const void* b, void* udata )
 	return 0;
 }
 
-static u64
-hash_framebuffer_info( const void* item, u64 seed0, u64 seed1 )
+static uint64_t
+hash_framebuffer_info( const void* item, uint64_t seed0, uint64_t seed1 )
 {
 	FT_UNUSED( item );
 	FT_UNUSED( seed0 );
@@ -152,19 +152,19 @@ hash_framebuffer_info( const void* item, u64 seed0, u64 seed1 )
 }
 
 void
-vk_create_render_pass( const struct VulkanDevice*        device,
-                       const struct RenderPassBeginInfo* info,
-                       VkRenderPass*                     p )
+vk_create_render_pass( const struct vk_device*                 device,
+                       const struct ft_render_pass_begin_info* info,
+                       VkRenderPass*                           p )
 {
-	u32 attachments_count = info->color_attachment_count;
+	uint32_t attachments_count = info->color_attachment_count;
 
-	VkAttachmentDescription attachments[ MAX_ATTACHMENTS_COUNT + 2 ];
-	VkAttachmentReference   color_references[ MAX_ATTACHMENTS_COUNT ];
+	VkAttachmentDescription attachments[ FT_MAX_ATTACHMENTS_COUNT + 2 ];
+	VkAttachmentReference   color_references[ FT_MAX_ATTACHMENTS_COUNT ];
 	VkAttachmentReference   depth_reference = { 0 };
 
-	for ( u32 i = 0; i < info->color_attachment_count; ++i )
+	for ( uint32_t i = 0; i < info->color_attachment_count; ++i )
 	{
-		const struct AttachmentInfo* att = &info->color_attachments[ i ];
+		const struct ft_attachment_info* att = &info->color_attachments[ i ];
 
 		attachments[ i ] = ( VkAttachmentDescription ) {
 		    .flags          = 0,
@@ -186,8 +186,8 @@ vk_create_render_pass( const struct VulkanDevice*        device,
 
 	if ( has_depth_stencil( info ) )
 	{
-		u32                          i   = attachments_count;
-		const struct AttachmentInfo* att = &info->depth_attachment;
+		uint32_t                         i   = attachments_count;
+		const struct ft_attachment_info* att = &info->depth_attachment;
 
 		attachments[ i ] = ( VkAttachmentDescription ) {
 		    .flags          = 0,
@@ -241,26 +241,24 @@ vk_create_render_pass( const struct VulkanDevice*        device,
 	                               p ) );
 }
 
-static inline void
-vk_create_framebuffer( const struct VulkanDevice*        device,
-                       const struct RenderPassBeginInfo* info,
-                       VkRenderPass                      render_pass,
-                       VkFramebuffer*                    p )
+FT_INLINE void
+vk_create_framebuffer( const struct vk_device*                 device,
+                       const struct ft_render_pass_begin_info* info,
+                       VkRenderPass                            render_pass,
+                       VkFramebuffer*                          p )
 {
-	u32 attachment_count = info->color_attachment_count;
+	uint32_t attachment_count = info->color_attachment_count;
 
-	VkImageView image_views[ MAX_ATTACHMENTS_COUNT + 2 ];
-	for ( u32 i = 0; i < attachment_count; ++i )
+	VkImageView image_views[ FT_MAX_ATTACHMENTS_COUNT + 2 ];
+	for ( uint32_t i = 0; i < attachment_count; ++i )
 	{
-		FT_FROM_HANDLE( image,
-		                info->color_attachments[ i ].image,
-		                VulkanImage );
+		FT_FROM_HANDLE( image, info->color_attachments[ i ].image, vk_image );
 		image_views[ i ] = image->image_view;
 	}
 
 	if ( info->depth_attachment.image != NULL )
 	{
-		FT_FROM_HANDLE( image, info->depth_attachment.image, VulkanImage );
+		FT_FROM_HANDLE( image, info->depth_attachment.image, vk_image );
 		image_views[ attachment_count++ ] = image->image_view;
 	}
 
@@ -283,11 +281,11 @@ vk_create_framebuffer( const struct VulkanDevice*        device,
 }
 
 void
-vk_pass_hasher_init( const struct VulkanDevice* device )
+vk_pass_hasher_init( const struct vk_device* device )
 {
 	hasher.device = device;
 
-	hasher.render_passes = hashmap_new( sizeof( struct RenderPassMapItem ),
+	hasher.render_passes = hashmap_new( sizeof( struct render_pass_map_item ),
 	                                    0,
 	                                    0,
 	                                    0,
@@ -296,7 +294,7 @@ vk_pass_hasher_init( const struct VulkanDevice* device )
 	                                    NULL,
 	                                    NULL );
 
-	hasher.framebuffers = hashmap_new( sizeof( struct FramebufferMapItem ),
+	hasher.framebuffers = hashmap_new( sizeof( struct framebuffer_map_item ),
 	                                   0,
 	                                   0,
 	                                   0,
@@ -314,7 +312,7 @@ vk_pass_hasher_shutdown()
 
 	while ( hashmap_iter( hasher.framebuffers, &iter, &item ) )
 	{
-		struct FramebufferMapItem* it = item;
+		struct framebuffer_map_item* it = item;
 		vkDestroyFramebuffer( hasher.device->logical_device,
 		                      it->framebuffer,
 		                      hasher.device->vulkan_allocator );
@@ -325,7 +323,7 @@ vk_pass_hasher_shutdown()
 
 	while ( hashmap_iter( hasher.render_passes, &iter, &item ) )
 	{
-		struct RenderPassMapItem* it = item;
+		struct render_pass_map_item* it = item;
 		vkDestroyRenderPass( hasher.device->logical_device,
 		                     it->render_pass,
 		                     hasher.device->vulkan_allocator );
@@ -341,7 +339,7 @@ vk_pass_hasher_framebuffers_clear()
 	void*  item;
 	while ( hashmap_iter( hasher.framebuffers, &iter, &item ) )
 	{
-		struct FramebufferMapItem* info = item;
+		struct framebuffer_map_item* info = item;
 		vkDestroyFramebuffer( hasher.device->logical_device,
 		                      info->framebuffer,
 		                      hasher.device->vulkan_allocator );
@@ -350,12 +348,13 @@ vk_pass_hasher_framebuffers_clear()
 }
 
 VkRenderPass
-vk_pass_hasher_get_render_pass( const struct RenderPassBeginInfo* info )
+vk_pass_hasher_get_render_pass( const struct ft_render_pass_begin_info* info )
 {
-	struct RenderPassMapItem* it = hashmap_get( hasher.render_passes,
-	                                            &( struct RenderPassMapItem ) {
-	                                                .info = *info,
-	                                            } );
+	struct render_pass_map_item* it =
+	    hashmap_get( hasher.render_passes,
+	                 &( struct render_pass_map_item ) {
+	                     .info = *info,
+	                 } );
 
 	if ( it != NULL )
 	{
@@ -367,7 +366,7 @@ vk_pass_hasher_get_render_pass( const struct RenderPassBeginInfo* info )
 		vk_create_render_pass( hasher.device, info, &render_pass );
 
 		hashmap_set( hasher.render_passes,
-		             &( struct RenderPassMapItem ) {
+		             &( struct render_pass_map_item ) {
 		                 .info        = *info,
 		                 .render_pass = render_pass,
 		             } );
@@ -377,12 +376,12 @@ vk_pass_hasher_get_render_pass( const struct RenderPassBeginInfo* info )
 }
 
 VkFramebuffer
-vk_pass_hasher_get_framebuffer( VkRenderPass                      render_pass,
-                                const struct RenderPassBeginInfo* info )
+vk_pass_hasher_get_framebuffer( VkRenderPass render_pass,
+                                const struct ft_render_pass_begin_info* info )
 {
-	struct FramebufferMapItem* it =
+	struct framebuffer_map_item* it =
 	    hashmap_get( hasher.framebuffers,
-	                 &( struct FramebufferMapItem ) {
+	                 &( struct framebuffer_map_item ) {
 	                     .info = *info,
 	                 } );
 
@@ -396,7 +395,7 @@ vk_pass_hasher_get_framebuffer( VkRenderPass                      render_pass,
 		vk_create_framebuffer( hasher.device, info, render_pass, &framebuffer );
 
 		hashmap_set( hasher.framebuffers,
-		             &( struct FramebufferMapItem ) {
+		             &( struct framebuffer_map_item ) {
 		                 .info        = *info,
 		                 .framebuffer = framebuffer,
 		             } );

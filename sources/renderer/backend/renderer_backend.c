@@ -4,76 +4,77 @@
 #include "d3d12/d3d12_backend.h"
 #include "metal/metal_backend.h"
 
-destroy_renderer_backend_fun      destroy_renderer_backend_impl;
-create_device_fun                 create_device_impl;
-destroy_device_fun                destroy_device_impl;
-create_queue_fun                  create_queue_impl;
-destroy_queue_fun                 destroy_queue_impl;
-queue_wait_idle_fun               queue_wait_idle_impl;
-queue_submit_fun                  queue_submit_impl;
-immediate_submit_fun              immediate_submit_impl;
-queue_present_fun                 queue_present_impl;
-create_semaphore_fun              create_semaphore_impl;
-destroy_semaphore_fun             destroy_semaphore_impl;
-create_fence_fun                  create_fence_impl;
-destroy_fence_fun                 destroy_fence_impl;
-wait_for_fences_fun               wait_for_fences_impl;
-reset_fences_fun                  reset_fences_impl;
-create_swapchain_fun              create_swapchain_impl;
-resize_swapchain_fun              resize_swapchain_impl;
-destroy_swapchain_fun             destroy_swapchain_impl;
-create_command_pool_fun           create_command_pool_impl;
-destroy_command_pool_fun          destroy_command_pool_impl;
-create_command_buffers_fun        create_command_buffers_impl;
-free_command_buffers_fun          free_command_buffers_impl;
-destroy_command_buffers_fun       destroy_command_buffers_impl;
-begin_command_buffer_fun          begin_command_buffer_impl;
-end_command_buffer_fun            end_command_buffer_impl;
-acquire_next_image_fun            acquire_next_image_impl;
-create_shader_fun                 create_shader_impl;
-destroy_shader_fun                destroy_shader_impl;
-create_descriptor_set_layout_fun  create_descriptor_set_layout_impl;
-destroy_descriptor_set_layout_fun destroy_descriptor_set_layout_impl;
-create_pipeline_fun               create_pipeline_impl;
-destroy_pipeline_fun              destroy_pipeline_impl;
-create_buffer_fun                 create_buffer_impl;
-destroy_buffer_fun                destroy_buffer_impl;
-map_memory_fun                    map_memory_impl;
-unmap_memory_fun                  unmap_memory_impl;
-create_sampler_fun                create_sampler_impl;
-destroy_sampler_fun               destroy_sampler_impl;
-create_image_fun                  create_image_impl;
-destroy_image_fun                 destroy_image_impl;
-create_descriptor_set_fun         create_descriptor_set_impl;
-destroy_descriptor_set_fun        destroy_descriptor_set_impl;
-update_descriptor_set_fun         update_descriptor_set_impl;
-cmd_begin_render_pass_fun         cmd_begin_render_pass_impl;
-cmd_end_render_pass_fun           cmd_end_render_pass_impl;
-cmd_barrier_fun                   cmd_barrier_impl;
-cmd_set_scissor_fun               cmd_set_scissor_impl;
-cmd_set_viewport_fun              cmd_set_viewport_impl;
-cmd_bind_pipeline_fun             cmd_bind_pipeline_impl;
-cmd_draw_fun                      cmd_draw_impl;
-cmd_draw_indexed_fun              cmd_draw_indexed_impl;
-cmd_bind_vertex_buffer_fun        cmd_bind_vertex_buffer_impl;
-cmd_bind_index_buffer_fun         cmd_bind_index_buffer_impl;
-cmd_copy_buffer_fun               cmd_copy_buffer_impl;
-cmd_copy_buffer_to_image_fun      cmd_copy_buffer_to_image_impl;
-cmd_bind_descriptor_set_fun       cmd_bind_descriptor_set_impl;
-cmd_dispatch_fun                  cmd_dispatch_impl;
-cmd_push_constants_fun            cmd_push_constants_impl;
-cmd_draw_indexed_indirect_fun     cmd_draw_indexed_indirect_impl;
+ft_destroy_renderer_backend_fun      ft_destroy_renderer_backend_impl;
+ft_create_device_fun                 ft_create_device_impl;
+ft_destroy_device_fun                ft_destroy_device_impl;
+ft_create_queue_fun                  ft_create_queue_impl;
+ft_destroy_queue_fun                 ft_destroy_queue_impl;
+ft_queue_wait_idle_fun               ft_queue_wait_idle_impl;
+ft_queue_submit_fun                  ft_queue_submit_impl;
+ft_immediate_submit_fun              ft_immediate_submit_impl;
+ft_queue_present_fun                 ft_queue_present_impl;
+ft_create_semaphore_fun              ft_create_semaphore_impl;
+ft_destroy_semaphore_fun             ft_destroy_semaphore_impl;
+ft_create_fence_fun                  ft_create_fence_impl;
+ft_destroy_fence_fun                 ft_destroy_fence_impl;
+ft_wait_for_fences_fun               ft_wait_for_fences_impl;
+ft_reset_fences_fun                  ft_reset_fences_impl;
+ft_create_swapchain_fun              ft_create_swapchain_impl;
+ft_resize_swapchain_fun              ft_resize_swapchain_impl;
+ft_destroy_swapchain_fun             ft_destroy_swapchain_impl;
+ft_create_command_pool_fun           ft_create_command_pool_impl;
+ft_destroy_command_pool_fun          ft_destroy_command_pool_impl;
+ft_create_command_buffers_fun        ft_create_command_buffers_impl;
+ft_free_command_buffers_fun          ft_free_command_buffers_impl;
+ft_destroy_command_buffers_fun       ft_destroy_command_buffers_impl;
+ft_begin_command_buffer_fun          ft_begin_command_buffer_impl;
+ft_end_command_buffer_fun            ft_end_command_buffer_impl;
+ft_acquire_next_image_fun            ft_acquire_next_image_impl;
+ft_create_shader_fun                 ft_create_shader_impl;
+ft_destroy_shader_fun                ft_destroy_shader_impl;
+ft_create_descriptor_set_layout_fun  ft_create_descriptor_set_layout_impl;
+ft_destroy_descriptor_set_layout_fun ft_destroy_descriptor_set_layout_impl;
+ft_create_pipeline_fun               ft_create_pipeline_impl;
+ft_destroy_pipeline_fun              ft_destroy_pipeline_impl;
+ft_create_buffer_fun                 ft_create_buffer_impl;
+ft_destroy_buffer_fun                ft_destroy_buffer_impl;
+ft_map_memory_fun                    ft_map_memory_impl;
+ft_unmap_memory_fun                  ft_unmap_memory_impl;
+ft_create_sampler_fun                ft_create_sampler_impl;
+ft_destroy_sampler_fun               ft_destroy_sampler_impl;
+ft_create_image_fun                  ft_create_image_impl;
+ft_destroy_image_fun                 ft_destroy_image_impl;
+ft_create_descriptor_set_fun         ft_create_descriptor_set_impl;
+ft_destroy_descriptor_set_fun        ft_destroy_descriptor_set_impl;
+ft_update_descriptor_set_fun         ft_update_descriptor_set_impl;
+ft_cmd_begin_render_pass_fun         ft_cmd_begin_render_pass_impl;
+ft_cmd_end_render_pass_fun           ft_cmd_end_render_pass_impl;
+ft_cmd_barrier_fun                   ft_cmd_barrier_impl;
+ft_cmd_set_scissor_fun               ft_cmd_set_scissor_impl;
+ft_cmd_set_viewport_fun              ft_cmd_set_viewport_impl;
+ft_cmd_bind_pipeline_fun             ft_cmd_bind_pipeline_impl;
+ft_cmd_draw_fun                      ft_cmd_draw_impl;
+ft_cmd_draw_indexed_fun              ft_cmd_draw_indexed_impl;
+ft_cmd_bind_vertex_buffer_fun        ft_cmd_bind_vertex_buffer_impl;
+ft_cmd_bind_index_buffer_fun         ft_cmd_bind_index_buffer_impl;
+ft_cmd_copy_buffer_fun               ft_cmd_copy_buffer_impl;
+ft_cmd_copy_buffer_to_image_fun      ft_cmd_copy_buffer_to_image_impl;
+ft_cmd_bind_descriptor_set_fun       ft_cmd_bind_descriptor_set_impl;
+ft_cmd_dispatch_fun                  ft_cmd_dispatch_impl;
+ft_cmd_push_constants_fun            ft_cmd_push_constants_impl;
+ft_cmd_draw_indexed_indirect_fun     ft_cmd_draw_indexed_indirect_impl;
 
 // defined in resource_loader.c
 void
-resource_loader_init( const struct Device* device, u64 staging_buffer_size );
+resource_loader_init( const struct ft_device* device,
+                      uint64_t                staging_buffer_size );
 
 void
 resource_loader_shutdown();
 
 void
-create_renderer_backend( const struct RendererBackendInfo* info,
-                         struct RendererBackend**          p )
+ft_create_renderer_backend( const struct ft_renderer_backend_info* info,
+                            struct ft_renderer_backend**           p )
 {
 	FT_ASSERT( info );
 	FT_ASSERT( info->wsi_info );
@@ -105,161 +106,170 @@ create_renderer_backend( const struct RendererBackendInfo* info,
 	default: FT_ASSERT( 0 && "no supported api available" );
 	}
 
-	struct RendererBackend* backend = *p;
-	backend->api                    = info->api;
+	struct ft_renderer_backend* backend = *p;
+	backend->api                        = info->api;
 }
 
 void
-destroy_renderer_backend( struct RendererBackend* backend )
+ft_destroy_renderer_backend( struct ft_renderer_backend* backend )
 {
 	FT_ASSERT( backend );
 
-	destroy_renderer_backend_impl( backend );
+	ft_destroy_renderer_backend_impl( backend );
 }
 
 void
-create_device( const struct RendererBackend* backend,
-               const struct DeviceInfo*      info,
-               struct Device**               p )
+ft_create_device( const struct ft_renderer_backend* backend,
+                  const struct ft_device_info*      info,
+                  struct ft_device**                p )
 {
 	FT_ASSERT( backend );
 	FT_ASSERT( info );
 	FT_ASSERT( info->backend );
 	FT_ASSERT( p );
 
-	create_device_impl( backend, info, p );
-	struct Device* device = *p;
-	device->api           = backend->api;
-	resource_loader_init( device, RESOURCE_LOADER_STAGING_BUFFER_SIZE );
+	ft_create_device_impl( backend, info, p );
+	struct ft_device* device = *p;
+	device->api              = backend->api;
+	resource_loader_init( device, FT_RESOURCE_LOADER_STAGING_BUFFER_SIZE );
 }
 
 void
-destroy_device( struct Device* device )
+ft_destroy_device( struct ft_device* device )
 {
 	FT_ASSERT( device );
 
 	resource_loader_shutdown();
-	destroy_device_impl( device );
+	ft_destroy_device_impl( device );
 }
 
 void
-create_queue( const struct Device*    device,
-              const struct QueueInfo* info,
-              struct Queue**          queue )
+ft_create_queue( const struct ft_device*     device,
+                 const struct ft_queue_info* info,
+                 struct ft_queue**           queue )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( info );
 	FT_ASSERT( queue );
 
-	create_queue_impl( device, info, queue );
+	ft_create_queue_impl( device, info, queue );
 }
 
 void
-destroy_queue( struct Queue* queue )
+ft_destroy_queue( struct ft_queue* queue )
 {
 	FT_ASSERT( queue );
 
-	destroy_queue_impl( queue );
+	ft_destroy_queue_impl( queue );
 }
 
 void
-queue_wait_idle( const struct Queue* queue )
+ft_queue_wait_idle( const struct ft_queue* queue )
 {
 	FT_ASSERT( queue );
 
-	queue_wait_idle_impl( queue );
+	ft_queue_wait_idle_impl( queue );
 }
 
 void
-queue_submit( const struct Queue* queue, const struct QueueSubmitInfo* info )
+ft_queue_submit( const struct ft_queue*             queue,
+                 const struct ft_queue_submit_info* info )
 {
 	FT_ASSERT( queue );
 	FT_ASSERT( info );
 	FT_ASSERT( info->command_buffer_count );
 	FT_ASSERT( info->command_buffers );
 
-	queue_submit_impl( queue, info );
+	ft_queue_submit_impl( queue, info );
 }
 
 void
-immediate_submit( const struct Queue* queue, struct CommandBuffer* cmd )
+ft_immediate_submit( const struct ft_queue*    queue,
+                     struct ft_command_buffer* cmd )
 {
 	FT_ASSERT( queue );
 	FT_ASSERT( cmd );
 
-	immediate_submit_impl( queue, cmd );
+	ft_immediate_submit_impl( queue, cmd );
 }
 
 void
-queue_present( const struct Queue* queue, const struct QueuePresentInfo* info )
+ft_queue_present( const struct ft_queue*              queue,
+                  const struct ft_queue_present_info* info )
 {
 	FT_ASSERT( queue );
 	FT_ASSERT( info );
 	FT_ASSERT( info->swapchain );
 
-	queue_present_impl( queue, info );
+	ft_queue_present_impl( queue, info );
 }
 
 void
-create_semaphore( const struct Device* device, struct Semaphore** semaphore )
+ft_create_semaphore( const struct ft_device* device,
+                     struct ft_semaphore**   semaphore )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( semaphore );
 
-	create_semaphore_impl( device, semaphore );
+	ft_create_semaphore_impl( device, semaphore );
 }
 
 void
-destroy_semaphore( const struct Device* device, struct Semaphore* semaphore )
+ft_destroy_semaphore( const struct ft_device* device,
+                      struct ft_semaphore*    semaphore )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( semaphore );
 
-	destroy_semaphore_impl( device, semaphore );
+	ft_destroy_semaphore_impl( device, semaphore );
 }
 
 void
-create_fence( const struct Device* device, struct Fence** fence )
+ft_create_fence( const struct ft_device* device, struct ft_fence** fence )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( fence );
 
-	create_fence_impl( device, fence );
+	ft_create_fence_impl( device, fence );
 }
 
 void
-destroy_fence( const struct Device* device, struct Fence* fence )
+ft_destroy_fence( const struct ft_device* device, struct ft_fence* fence )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( fence );
 
-	destroy_fence_impl( device, fence );
+	ft_destroy_fence_impl( device, fence );
 }
 
 void
-wait_for_fences( const struct Device* device, u32 count, struct Fence** fences )
+ft_wait_for_fences( const struct ft_device* device,
+                    uint32_t                count,
+                    struct ft_fence**       fences )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( count );
 	FT_ASSERT( fences );
 
-	wait_for_fences_impl( device, count, fences );
+	ft_wait_for_fences_impl( device, count, fences );
 }
 
 void
-reset_fences( const struct Device* device, u32 count, struct Fence** fences )
+ft_reset_fences( const struct ft_device* device,
+                 uint32_t                count,
+                 struct ft_fence**       fences )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( count );
 	FT_ASSERT( fences );
 
-	reset_fences_impl( device, count, fences );
+	ft_reset_fences_impl( device, count, fences );
 }
 
 void
-create_swapchain( const struct Device*        device,
-                  const struct SwapchainInfo* info,
-                  struct Swapchain**          swapchain )
+ft_create_swapchain( const struct ft_device*         device,
+                     const struct ft_swapchain_info* info,
+                     struct ft_swapchain**           swapchain )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( info );
@@ -269,479 +279,497 @@ create_swapchain( const struct Device*        device,
 	FT_ASSERT( info->wsi_info );
 	FT_ASSERT( swapchain );
 
-	create_swapchain_impl( device, info, swapchain );
+	ft_create_swapchain_impl( device, info, swapchain );
 }
 
 void
-resize_swapchain( const struct Device* device,
-                  struct Swapchain*    swapchain,
-                  u32                  width,
-                  u32                  height )
+ft_resize_swapchain( const struct ft_device* device,
+                     struct ft_swapchain*    swapchain,
+                     uint32_t                width,
+                     uint32_t                height )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( swapchain );
 	FT_ASSERT( width > 0 );
 	FT_ASSERT( height > 0 );
 
-	resize_swapchain_impl( device, swapchain, width, height );
+	ft_resize_swapchain_impl( device, swapchain, width, height );
 }
 
 void
-destroy_swapchain( const struct Device* device, struct Swapchain* swapchain )
+ft_destroy_swapchain( const struct ft_device* device,
+                      struct ft_swapchain*    swapchain )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( swapchain );
 
-	destroy_swapchain_impl( device, swapchain );
+	ft_destroy_swapchain_impl( device, swapchain );
 }
 
 void
-create_command_pool( const struct Device*          device,
-                     const struct CommandPoolInfo* info,
-                     struct CommandPool**          command_pool )
+ft_create_command_pool( const struct ft_device*            device,
+                        const struct ft_command_pool_info* info,
+                        struct ft_command_pool**           command_pool )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( info );
 	FT_ASSERT( info->queue );
 	FT_ASSERT( command_pool );
 
-	create_command_pool_impl( device, info, command_pool );
+	ft_create_command_pool_impl( device, info, command_pool );
 }
 
 void
-destroy_command_pool( const struct Device* device,
-                      struct CommandPool*  command_pool )
+ft_destroy_command_pool( const struct ft_device* device,
+                         struct ft_command_pool* command_pool )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( command_pool );
 
-	destroy_command_pool_impl( device, command_pool );
+	ft_destroy_command_pool_impl( device, command_pool );
 }
 
 void
-create_command_buffers( const struct Device*      device,
-                        const struct CommandPool* command_pool,
-                        u32                       count,
-                        struct CommandBuffer**    command_buffers )
-{
-	FT_ASSERT( device );
-	FT_ASSERT( command_pool );
-	FT_ASSERT( count > 0 );
-	FT_ASSERT( command_buffers );
-
-	create_command_buffers_impl( device, command_pool, count, command_buffers );
-}
-
-void
-free_command_buffers( const struct Device*      device,
-                      const struct CommandPool* command_pool,
-                      u32                       count,
-                      struct CommandBuffer**    command_buffers )
+ft_create_command_buffers( const struct ft_device*       device,
+                           const struct ft_command_pool* command_pool,
+                           uint32_t                      count,
+                           struct ft_command_buffer**    command_buffers )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( command_pool );
 	FT_ASSERT( count > 0 );
 	FT_ASSERT( command_buffers );
 
-	free_command_buffers_impl( device, command_pool, count, command_buffers );
+	ft_create_command_buffers_impl( device,
+	                                command_pool,
+	                                count,
+	                                command_buffers );
 }
 
 void
-destroy_command_buffers( const struct Device*      device,
-                         const struct CommandPool* command_pool,
-                         u32                       count,
-                         struct CommandBuffer**    command_buffers )
+ft_free_command_buffers( const struct ft_device*       device,
+                         const struct ft_command_pool* command_pool,
+                         uint32_t                      count,
+                         struct ft_command_buffer**    command_buffers )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( command_pool );
 	FT_ASSERT( count > 0 );
 	FT_ASSERT( command_buffers );
 
-	destroy_command_buffers_impl( device,
+	ft_free_command_buffers_impl( device,
 	                              command_pool,
 	                              count,
 	                              command_buffers );
 }
 
 void
-begin_command_buffer( const struct CommandBuffer* cmd )
+ft_destroy_command_buffers( const struct ft_device*       device,
+                            const struct ft_command_pool* command_pool,
+                            uint32_t                      count,
+                            struct ft_command_buffer**    command_buffers )
 {
-	FT_ASSERT( cmd );
+	FT_ASSERT( device );
+	FT_ASSERT( command_pool );
+	FT_ASSERT( count > 0 );
+	FT_ASSERT( command_buffers );
 
-	begin_command_buffer_impl( cmd );
+	ft_destroy_command_buffers_impl( device,
+	                                 command_pool,
+	                                 count,
+	                                 command_buffers );
 }
 
 void
-end_command_buffer( const struct CommandBuffer* cmd )
+ft_begin_command_buffer( const struct ft_command_buffer* cmd )
 {
 	FT_ASSERT( cmd );
 
-	end_command_buffer_impl( cmd );
+	ft_begin_command_buffer_impl( cmd );
 }
 
 void
-acquire_next_image( const struct Device*    device,
-                    const struct Swapchain* swapchain,
-                    const struct Semaphore* semaphore,
-                    const struct Fence*     fence,
-                    u32*                    image_index )
+ft_end_command_buffer( const struct ft_command_buffer* cmd )
+{
+	FT_ASSERT( cmd );
+
+	ft_end_command_buffer_impl( cmd );
+}
+
+void
+ft_acquire_next_image( const struct ft_device*    device,
+                       const struct ft_swapchain* swapchain,
+                       const struct ft_semaphore* semaphore,
+                       const struct ft_fence*     fence,
+                       uint32_t*                  image_index )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( swapchain );
 
-	acquire_next_image_impl( device, swapchain, semaphore, fence, image_index );
+	ft_acquire_next_image_impl( device,
+	                            swapchain,
+	                            semaphore,
+	                            fence,
+	                            image_index );
 }
 
 void
-create_shader( const struct Device* device,
-               struct ShaderInfo*   info,
-               struct Shader**      shader )
+ft_create_shader( const struct ft_device* device,
+                  struct ft_shader_info*  info,
+                  struct ft_shader**      shader )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( info );
 	FT_ASSERT( shader );
 
-	create_shader_impl( device, info, shader );
+	ft_create_shader_impl( device, info, shader );
 }
 
 void
-destroy_shader( const struct Device* device, struct Shader* shader )
+ft_destroy_shader( const struct ft_device* device, struct ft_shader* shader )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( shader );
 
-	destroy_shader_impl( device, shader );
+	ft_destroy_shader_impl( device, shader );
 }
 
 void
-create_descriptor_set_layout(
-    const struct Device*         device,
-    struct Shader*               shader,
-    struct DescriptorSetLayout** descriptor_set_layout )
+ft_create_descriptor_set_layout(
+    const struct ft_device*           device,
+    struct ft_shader*                 shader,
+    struct ft_descriptor_set_layout** descriptor_set_layout )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( shader );
 	FT_ASSERT( descriptor_set_layout );
 
-	create_descriptor_set_layout_impl( device, shader, descriptor_set_layout );
+	ft_create_descriptor_set_layout_impl( device,
+	                                      shader,
+	                                      descriptor_set_layout );
 }
 
 void
-destroy_descriptor_set_layout( const struct Device*        device,
-                               struct DescriptorSetLayout* layout )
+ft_destroy_descriptor_set_layout( const struct ft_device*          device,
+                                  struct ft_descriptor_set_layout* layout )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( layout );
 
-	destroy_descriptor_set_layout_impl( device, layout );
+	ft_destroy_descriptor_set_layout_impl( device, layout );
 }
 
 void
-create_pipeline( const struct Device*       device,
-                 const struct PipelineInfo* info,
-                 struct Pipeline**          pipeline )
+ft_create_pipeline( const struct ft_device*        device,
+                    const struct ft_pipeline_info* info,
+                    struct ft_pipeline**           pipeline )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( info );
 	FT_ASSERT( pipeline );
 
-	create_pipeline_impl( device, info, pipeline );
+	ft_create_pipeline_impl( device, info, pipeline );
 }
 
 void
-destroy_pipeline( const struct Device* device, struct Pipeline* pipeline )
+ft_destroy_pipeline( const struct ft_device* device,
+                     struct ft_pipeline*     pipeline )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( pipeline );
 
-	destroy_pipeline_impl( device, pipeline );
+	ft_destroy_pipeline_impl( device, pipeline );
 }
 
 void
-cmd_begin_render_pass( const struct CommandBuffer*       cmd,
-                       const struct RenderPassBeginInfo* info )
+ft_cmd_begin_render_pass( const struct ft_command_buffer*         cmd,
+                          const struct ft_render_pass_begin_info* info )
 {
 	FT_ASSERT( cmd );
 	FT_ASSERT( info );
 	FT_ASSERT( info->width > 0 );
 	FT_ASSERT( info->height > 0 );
 
-	cmd_begin_render_pass_impl( cmd, info );
+	ft_cmd_begin_render_pass_impl( cmd, info );
 }
 
 void
-cmd_end_render_pass( const struct CommandBuffer* cmd )
+ft_cmd_end_render_pass( const struct ft_command_buffer* cmd )
 {
 	FT_ASSERT( cmd );
 
-	cmd_end_render_pass_impl( cmd );
+	ft_cmd_end_render_pass_impl( cmd );
 }
 
 void
-cmd_barrier( const struct CommandBuffer* cmd,
-             u32                         memory_barriers_count,
-             const struct MemoryBarrier* memory_barrier,
-             u32                         buffer_barriers_count,
-             const struct BufferBarrier* buffer_barriers,
-             u32                         image_barriers_count,
-             const struct ImageBarrier*  image_barriers )
+ft_cmd_barrier( const struct ft_command_buffer* cmd,
+                uint32_t                        memory_barriers_count,
+                const struct ft_memory_barrier* memory_barrier,
+                uint32_t                        buffer_barriers_count,
+                const struct ft_buffer_barrier* buffer_barriers,
+                uint32_t                        image_barriers_count,
+                const struct ft_image_barrier*  image_barriers )
 {
 	FT_ASSERT( cmd );
 
-	cmd_barrier_impl( cmd,
-	                  memory_barriers_count,
-	                  memory_barrier,
-	                  buffer_barriers_count,
-	                  buffer_barriers,
-	                  image_barriers_count,
-	                  image_barriers );
+	ft_cmd_barrier_impl( cmd,
+	                     memory_barriers_count,
+	                     memory_barrier,
+	                     buffer_barriers_count,
+	                     buffer_barriers,
+	                     image_barriers_count,
+	                     image_barriers );
 }
 
 void
-cmd_set_scissor( const struct CommandBuffer* cmd,
-                 i32                         x,
-                 i32                         y,
-                 u32                         width,
-                 u32                         height )
+ft_cmd_set_scissor( const struct ft_command_buffer* cmd,
+                    int32_t                         x,
+                    int32_t                         y,
+                    uint32_t                        width,
+                    uint32_t                        height )
 {
 	FT_ASSERT( cmd );
 
-	cmd_set_scissor_impl( cmd, x, y, width, height );
+	ft_cmd_set_scissor_impl( cmd, x, y, width, height );
 }
 
 void
-cmd_set_viewport( const struct CommandBuffer* cmd,
-                  f32                         x,
-                  f32                         y,
-                  f32                         width,
-                  f32                         height,
-                  f32                         min_depth,
-                  f32                         max_depth )
+ft_cmd_set_viewport( const struct ft_command_buffer* cmd,
+                     float                           x,
+                     float                           y,
+                     float                           width,
+                     float                           height,
+                     float                           min_depth,
+                     float                           max_depth )
 {
 	FT_ASSERT( cmd );
 
-	cmd_set_viewport_impl( cmd, x, y, width, height, min_depth, max_depth );
+	ft_cmd_set_viewport_impl( cmd, x, y, width, height, min_depth, max_depth );
 }
 
 void
-cmd_bind_pipeline( const struct CommandBuffer* cmd,
-                   const struct Pipeline*      pipeline )
+ft_cmd_bind_pipeline( const struct ft_command_buffer* cmd,
+                      const struct ft_pipeline*       pipeline )
 {
 	FT_ASSERT( cmd );
 	FT_ASSERT( pipeline );
 
-	cmd_bind_pipeline_impl( cmd, pipeline );
+	ft_cmd_bind_pipeline_impl( cmd, pipeline );
 }
 
 void
-cmd_draw( const struct CommandBuffer* cmd,
-          u32                         vertex_count,
-          u32                         instance_count,
-          u32                         first_vertex,
-          u32                         first_instance )
+ft_cmd_draw( const struct ft_command_buffer* cmd,
+             uint32_t                        vertex_count,
+             uint32_t                        instance_count,
+             uint32_t                        first_vertex,
+             uint32_t                        first_instance )
 {
 	FT_ASSERT( cmd );
 
-	cmd_draw_impl( cmd,
-	               vertex_count,
-	               instance_count,
-	               first_vertex,
-	               first_instance );
+	ft_cmd_draw_impl( cmd,
+	                  vertex_count,
+	                  instance_count,
+	                  first_vertex,
+	                  first_instance );
 }
 
 void
-cmd_draw_indexed( const struct CommandBuffer* cmd,
-                  u32                         index_count,
-                  u32                         instance_count,
-                  u32                         first_index,
-                  i32                         vertex_offset,
-                  u32                         first_instance )
+ft_cmd_draw_indexed( const struct ft_command_buffer* cmd,
+                     uint32_t                        index_count,
+                     uint32_t                        instance_count,
+                     uint32_t                        first_index,
+                     int32_t                         vertex_offset,
+                     uint32_t                        first_instance )
 {
 	FT_ASSERT( cmd );
 
-	cmd_draw_indexed_impl( cmd,
-	                       index_count,
-	                       instance_count,
-	                       first_index,
-	                       vertex_offset,
-	                       first_instance );
+	ft_cmd_draw_indexed_impl( cmd,
+	                          index_count,
+	                          instance_count,
+	                          first_index,
+	                          vertex_offset,
+	                          first_instance );
 }
 
 void
-cmd_bind_vertex_buffer( const struct CommandBuffer* cmd,
-                        const struct Buffer*        buffer,
-                        const u64                   offset )
+ft_cmd_bind_vertex_buffer( const struct ft_command_buffer* cmd,
+                           const struct ft_buffer*         buffer,
+                           const uint64_t                  offset )
 {
 	FT_ASSERT( cmd );
 	FT_ASSERT( buffer );
 	FT_ASSERT( offset < buffer->size );
 
-	cmd_bind_vertex_buffer_impl( cmd, buffer, offset );
+	ft_cmd_bind_vertex_buffer_impl( cmd, buffer, offset );
 }
 
 void
-cmd_bind_index_buffer( const struct CommandBuffer* cmd,
-                       const struct Buffer*        buffer,
-                       const u64                   offset,
-                       enum IndexType              index_type )
+ft_cmd_bind_index_buffer( const struct ft_command_buffer* cmd,
+                          const struct ft_buffer*         buffer,
+                          const uint64_t                  offset,
+                          enum IndexType                  index_type )
 {
 	FT_ASSERT( cmd );
 	FT_ASSERT( buffer );
 	FT_ASSERT( offset <= buffer->size );
 
-	cmd_bind_index_buffer_impl( cmd, buffer, offset, index_type );
+	ft_cmd_bind_index_buffer_impl( cmd, buffer, offset, index_type );
 }
 
 void
-cmd_copy_buffer( const struct CommandBuffer* cmd,
-                 const struct Buffer*        src,
-                 u64                         src_offset,
-                 struct Buffer*              dst,
-                 u64                         dst_offset,
-                 u64                         size )
+ft_cmd_copy_buffer( const struct ft_command_buffer* cmd,
+                    const struct ft_buffer*         src,
+                    uint64_t                        src_offset,
+                    struct ft_buffer*               dst,
+                    uint64_t                        dst_offset,
+                    uint64_t                        size )
 {
 	FT_ASSERT( cmd );
 	FT_ASSERT( src );
 	FT_ASSERT( dst );
 	FT_ASSERT( dst_offset + size <= dst->size );
 
-	cmd_copy_buffer_impl( cmd, src, src_offset, dst, dst_offset, size );
+	ft_cmd_copy_buffer_impl( cmd, src, src_offset, dst, dst_offset, size );
 }
 
 void
-cmd_copy_buffer_to_image( const struct CommandBuffer* cmd,
-                          const struct Buffer*        src,
-                          u64                         src_offset,
-                          struct Image*               dst )
+ft_cmd_copy_buffer_to_image( const struct ft_command_buffer* cmd,
+                             const struct ft_buffer*         src,
+                             uint64_t                        src_offset,
+                             struct ft_image*                dst )
 {
 	FT_ASSERT( cmd );
 	FT_ASSERT( src );
 	FT_ASSERT( dst );
 
-	cmd_copy_buffer_to_image_impl( cmd, src, src_offset, dst );
+	ft_cmd_copy_buffer_to_image_impl( cmd, src, src_offset, dst );
 }
 
 void
-cmd_bind_descriptor_set( const struct CommandBuffer* cmd,
-                         u32                         first_set,
-                         const struct DescriptorSet* set,
-                         const struct Pipeline*      pipeline )
+ft_cmd_bind_descriptor_set( const struct ft_command_buffer* cmd,
+                            uint32_t                        first_set,
+                            const struct ft_descriptor_set* set,
+                            const struct ft_pipeline*       pipeline )
 {
 	FT_ASSERT( cmd );
 	FT_ASSERT( set );
 	FT_ASSERT( pipeline );
 
-	cmd_bind_descriptor_set_impl( cmd, first_set, set, pipeline );
+	ft_cmd_bind_descriptor_set_impl( cmd, first_set, set, pipeline );
 }
 
 void
-cmd_dispatch( const struct CommandBuffer* cmd,
-              u32                         group_count_x,
-              u32                         group_count_y,
-              u32                         group_count_z )
+ft_cmd_dispatch( const struct ft_command_buffer* cmd,
+                 uint32_t                        group_count_x,
+                 uint32_t                        group_count_y,
+                 uint32_t                        group_count_z )
 {
 	FT_ASSERT( cmd );
 	FT_ASSERT( group_count_x );
 	FT_ASSERT( group_count_y );
 	FT_ASSERT( group_count_z );
 
-	cmd_dispatch_impl( cmd, group_count_x, group_count_y, group_count_z );
+	ft_cmd_dispatch_impl( cmd, group_count_x, group_count_y, group_count_z );
 }
 
 void
-cmd_push_constants( const struct CommandBuffer* cmd,
-                    const struct Pipeline*      pipeline,
-                    u32                         offset,
-                    u32                         size,
-                    const void*                 data )
+ft_cmd_push_constants( const struct ft_command_buffer* cmd,
+                       const struct ft_pipeline*       pipeline,
+                       uint32_t                        offset,
+                       uint32_t                        size,
+                       const void*                     data )
 {
 	FT_ASSERT( cmd );
 	FT_ASSERT( pipeline );
 	FT_ASSERT( data );
 
-	cmd_push_constants_impl( cmd, pipeline, offset, size, data );
+	ft_cmd_push_constants_impl( cmd, pipeline, offset, size, data );
 }
 
 void
-create_buffer( const struct Device*     device,
-               const struct BufferInfo* info,
-               struct Buffer**          buffer )
+ft_create_buffer( const struct ft_device*      device,
+                  const struct ft_buffer_info* info,
+                  struct ft_buffer**           buffer )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( info );
 	FT_ASSERT( info->size );
 	FT_ASSERT( buffer );
 
-	create_buffer_impl( device, info, buffer );
+	ft_create_buffer_impl( device, info, buffer );
 }
 
 void
-destroy_buffer( const struct Device* device, struct Buffer* buffer )
+ft_destroy_buffer( const struct ft_device* device, struct ft_buffer* buffer )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( buffer );
 
-	destroy_buffer_impl( device, buffer );
+	ft_destroy_buffer_impl( device, buffer );
 }
 
 void*
-map_memory( const struct Device* device, struct Buffer* buffer )
+ft_map_memory( const struct ft_device* device, struct ft_buffer* buffer )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( buffer );
 	FT_ASSERT( buffer->mapped_memory == NULL );
 
-	return map_memory_impl( device, buffer );
+	return ft_map_memory_impl( device, buffer );
 }
 
 void
-unmap_memory( const struct Device* device, struct Buffer* buffer )
+ft_unmap_memory( const struct ft_device* device, struct ft_buffer* buffer )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( buffer );
 	FT_ASSERT( buffer->mapped_memory );
 
-	unmap_memory_impl( device, buffer );
+	ft_unmap_memory_impl( device, buffer );
 }
 
 void
-cmd_draw_indexed_indirect( const struct CommandBuffer* cmd,
-                           const struct Buffer*        buffer,
-                           u64                         offset,
-                           u32                         draw_count,
-                           u32                         stride )
+ft_cmd_draw_indexed_indirect( const struct ft_command_buffer* cmd,
+                              const struct ft_buffer*         buffer,
+                              uint64_t                        offset,
+                              uint32_t                        draw_count,
+                              uint32_t                        stride )
 {
 	FT_ASSERT( cmd );
 	FT_ASSERT( buffer );
 
-	cmd_draw_indexed_indirect_impl( cmd, buffer, offset, draw_count, stride );
+	ft_cmd_draw_indexed_indirect_impl( cmd,
+	                                   buffer,
+	                                   offset,
+	                                   draw_count,
+	                                   stride );
 }
 
 void
-create_sampler( const struct Device*      device,
-                const struct SamplerInfo* info,
-                struct Sampler**          sampler )
+ft_create_sampler( const struct ft_device*       device,
+                   const struct ft_sampler_info* info,
+                   struct ft_sampler**           sampler )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( info );
 	FT_ASSERT( sampler );
 
-	create_sampler_impl( device, info, sampler );
+	ft_create_sampler_impl( device, info, sampler );
 }
 
 void
-destroy_sampler( const struct Device* device, struct Sampler* sampler )
+ft_destroy_sampler( const struct ft_device* device, struct ft_sampler* sampler )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( sampler );
 
-	destroy_sampler_impl( device, sampler );
+	ft_destroy_sampler_impl( device, sampler );
 }
 
 void
-create_image( const struct Device*    device,
-              const struct ImageInfo* info,
-              struct Image**          image )
+ft_create_image( const struct ft_device*     device,
+                 const struct ft_image_info* info,
+                 struct ft_image**           image )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( info );
@@ -752,7 +780,7 @@ create_image( const struct Device*    device,
 	FT_ASSERT( info->sample_count > 0 );
 	FT_ASSERT( image );
 
-	create_image_impl( device, info, image );
+	ft_create_image_impl( device, info, image );
 
 	( *image )->width           = info->width;
 	( *image )->height          = info->height;
@@ -765,46 +793,47 @@ create_image( const struct Device*    device,
 }
 
 void
-destroy_image( const struct Device* device, struct Image* image )
+ft_destroy_image( const struct ft_device* device, struct ft_image* image )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( image );
 
-	destroy_image_impl( device, image );
+	ft_destroy_image_impl( device, image );
 }
 
 void
-create_descriptor_set( const struct Device*            device,
-                       const struct DescriptorSetInfo* info,
-                       struct DescriptorSet**          descriptor_set )
+ft_create_descriptor_set( const struct ft_device*              device,
+                          const struct ft_descriptor_set_info* info,
+                          struct ft_descriptor_set**           descriptor_set )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( info );
 	FT_ASSERT( info->descriptor_set_layout );
 	FT_ASSERT( descriptor_set );
 
-	create_descriptor_set_impl( device, info, descriptor_set );
+	ft_create_descriptor_set_impl( device, info, descriptor_set );
 }
 
 void
-destroy_descriptor_set( const struct Device* device, struct DescriptorSet* set )
+ft_destroy_descriptor_set( const struct ft_device*   device,
+                           struct ft_descriptor_set* set )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( set );
 
-	destroy_descriptor_set_impl( device, set );
+	ft_destroy_descriptor_set_impl( device, set );
 }
 
 void
-update_descriptor_set( const struct Device*          device,
-                       struct DescriptorSet*         set,
-                       u32                           count,
-                       const struct DescriptorWrite* writes )
+ft_update_descriptor_set( const struct ft_device*           device,
+                          struct ft_descriptor_set*         set,
+                          uint32_t                          count,
+                          const struct ft_descriptor_write* writes )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( set );
 	FT_ASSERT( count );
 	FT_ASSERT( writes );
 
-	update_descriptor_set_impl( device, set, count, writes );
+	ft_update_descriptor_set_impl( device, set, count, writes );
 }

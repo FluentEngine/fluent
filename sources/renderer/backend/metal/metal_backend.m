@@ -11,27 +11,27 @@
 #include "../renderer_private.h"
 #include "metal_backend.h"
 
-static inline MTLPixelFormat
-to_mtl_format( enum Format format )
+FT_INLINE MTLPixelFormat
+to_mtl_format( enum ft_format format )
 {
 	return ( MTLPixelFormat ) TinyImageFormat_ToMTLPixelFormat(
 	    ( TinyImageFormat ) format );
 }
 
-static inline MTLLoadAction
-to_mtl_load_action( enum AttachmentLoadOp load_op )
+FT_INLINE MTLLoadAction
+to_mtl_load_action( enum ft_attachment_load_op load_op )
 {
 	switch ( load_op )
 	{
 	case FT_ATTACHMENT_LOAD_OP_LOAD: return MTLLoadActionLoad;
 	case FT_ATTACHMENT_LOAD_OP_CLEAR: return MTLLoadActionClear;
 	case FT_ATTACHMENT_LOAD_OP_DONT_CARE: return MTLLoadActionDontCare;
-	default: FT_ASSERT( 0 ); return ( MTLLoadAction ) -1;
+	default: FT_ASSERT( false ); return ( MTLLoadAction ) -1;
 	}
 }
 
-static inline MTLStorageMode
-to_mtl_storage_mode( enum MemoryUsage usage )
+FT_INLINE MTLStorageMode
+to_mtl_storage_mode( enum ft_memory_usage usage )
 {
 	// TODO:
 	switch ( usage )
@@ -42,25 +42,25 @@ to_mtl_storage_mode( enum MemoryUsage usage )
 	}
 }
 
-static inline MTLTextureUsage
-to_mtl_texture_usage( enum DescriptorType type )
+FT_INLINE MTLTextureUsage
+to_mtl_texture_usage( enum ft_descriptor_type type )
 {
 	MTLTextureUsage usage = 0;
-	if ( ( b32 ) ( type & FT_DESCRIPTOR_TYPE_SAMPLED_IMAGE ) )
+	if ( ( bool ) ( type & FT_DESCRIPTOR_TYPE_SAMPLED_IMAGE ) )
 		usage |= MTLTextureUsageShaderRead;
-	if ( ( b32 ) ( type & FT_DESCRIPTOR_TYPE_STORAGE_IMAGE ) )
+	if ( ( bool ) ( type & FT_DESCRIPTOR_TYPE_STORAGE_IMAGE ) )
 		usage |= MTLTextureUsageShaderWrite;
-	if ( ( b32 ) ( type & FT_DESCRIPTOR_TYPE_COLOR_ATTACHMENT ) )
+	if ( ( bool ) ( type & FT_DESCRIPTOR_TYPE_COLOR_ATTACHMENT ) )
 		usage |= MTLTextureUsageRenderTarget;
-	if ( ( b32 ) ( type & FT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT ) )
+	if ( ( bool ) ( type & FT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT ) )
 		usage |= MTLTextureUsageRenderTarget;
-	if ( ( b32 ) ( type & FT_DESCRIPTOR_TYPE_DEPTH_STENCIL_ATTACHMENT ) )
+	if ( ( bool ) ( type & FT_DESCRIPTOR_TYPE_DEPTH_STENCIL_ATTACHMENT ) )
 		usage |= MTLTextureUsageRenderTarget;
 	return usage;
 }
 
-static inline MTLVertexFormat
-to_mtl_vertex_format( enum Format format )
+FT_INLINE MTLVertexFormat
+to_mtl_vertex_format( enum ft_format format )
 {
 	switch ( format )
 	{
@@ -110,45 +110,45 @@ to_mtl_vertex_format( enum Format format )
 	case FT_FORMAT_R32G32_UINT: return MTLVertexFormatUInt2;
 	case FT_FORMAT_R32G32B32_UINT: return MTLVertexFormatUInt3;
 	case FT_FORMAT_R32G32B32A32_UINT: return MTLVertexFormatUInt4;
-	default: FT_ASSERT( 0 ); return MTLVertexFormatInvalid;
+	default: FT_ASSERT( false ); return MTLVertexFormatInvalid;
 	}
 }
 
-static inline MTLVertexStepFunction
-to_mtl_vertex_step_function( enum VertexInputRate input_rate )
+FT_INLINE MTLVertexStepFunction
+to_mtl_vertex_step_function( enum ft_vertex_input_rate input_rate )
 {
 	switch ( input_rate )
 	{
 	case FT_VERTEX_INPUT_RATE_VERTEX: return MTLVertexStepFunctionPerVertex;
 	case FT_VERTEX_INPUT_RATE_INSTANCE: return MTLVertexStepFunctionPerInstance;
-	default: FT_ASSERT( 0 ); return ( MTLVertexStepFunction ) -1;
+	default: FT_ASSERT( false ); return ( MTLVertexStepFunction ) -1;
 	}
 }
 
-static inline MTLSamplerMinMagFilter
-to_mtl_sampler_min_mag_filter( enum Filter filter )
+FT_INLINE MTLSamplerMinMagFilter
+to_mtl_sampler_min_mag_filter( enum ft_filter filter )
 {
 	switch ( filter )
 	{
 	case FT_FILTER_LINEAR: return MTLSamplerMinMagFilterLinear;
 	case FT_FILTER_NEAREST: return MTLSamplerMinMagFilterNearest;
-	default: FT_ASSERT( 0 ); return ( MTLSamplerMinMagFilter ) -1;
+	default: FT_ASSERT( false ); return ( MTLSamplerMinMagFilter ) -1;
 	}
 }
 
-static inline MTLSamplerMipFilter
-to_mtl_sampler_mip_filter( enum SamplerMipmapMode mode )
+FT_INLINE MTLSamplerMipFilter
+to_mtl_sampler_mip_filter( enum ft_sampler_mipmap_mode mode )
 {
 	switch ( mode )
 	{
 	case FT_SAMPLER_MIPMAP_MODE_LINEAR: return MTLSamplerMipFilterLinear;
 	case FT_SAMPLER_MIPMAP_MODE_NEAREST: return MTLSamplerMipFilterNearest;
-	default: FT_ASSERT( 0 ); return ( MTLSamplerMipFilter ) -1;
+	default: FT_ASSERT( false ); return ( MTLSamplerMipFilter ) -1;
 	}
 }
 
-static inline MTLSamplerAddressMode
-to_mtl_sampler_address_mode( enum SamplerAddressMode mode )
+FT_INLINE MTLSamplerAddressMode
+to_mtl_sampler_address_mode( enum ft_sampler_address_mode mode )
 {
 	switch ( mode )
 	{
@@ -159,12 +159,12 @@ to_mtl_sampler_address_mode( enum SamplerAddressMode mode )
 		return MTLSamplerAddressModeClampToEdge;
 	case FT_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER:
 		return MTLSamplerAddressModeClampToEdge;
-	default: FT_ASSERT( 0 ); return ( MTLSamplerAddressMode ) -1;
+	default: FT_ASSERT( false ); return ( MTLSamplerAddressMode ) -1;
 	}
 }
 
-static inline MTLCompareFunction
-to_mtl_compare_function( enum CompareOp op )
+FT_INLINE MTLCompareFunction
+to_mtl_compare_function( enum ft_compare_op op )
 {
 	switch ( op )
 	{
@@ -176,12 +176,12 @@ to_mtl_compare_function( enum CompareOp op )
 	case FT_COMPARE_OP_NOT_EQUAL: return MTLCompareFunctionNotEqual;
 	case FT_COMPARE_OP_GREATER_OR_EQUAL: return MTLCompareFunctionGreaterEqual;
 	case FT_COMPARE_OP_ALWAYS: return MTLCompareFunctionAlways;
-	default: FT_ASSERT( 0 ); return ( MTLCompareFunction ) -1;
+	default: FT_ASSERT( false ); return ( MTLCompareFunction ) -1;
 	}
 }
 
-static inline MTLPrimitiveType
-to_mtl_primitive_type( enum PrimitiveTopology topology )
+FT_INLINE MTLPrimitiveType
+to_mtl_primitive_type( enum ft_primitive_topology topology )
 {
 	switch ( topology )
 	{
@@ -191,12 +191,12 @@ to_mtl_primitive_type( enum PrimitiveTopology topology )
 	case FT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST: return MTLPrimitiveTypeTriangle;
 	case FT_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP:
 		return MTLPrimitiveTypeTriangleStrip;
-	default: FT_ASSERT( 0 ); return ( MTLPrimitiveType ) -1;
+	default: FT_ASSERT( false ); return ( MTLPrimitiveType ) -1;
 	}
 }
 
 static void
-mtl_destroy_renderer_backend( struct RendererBackend* ibackend )
+mtl_destroy_renderer_backend( struct ft_renderer_backend* ibackend )
 {
 	FT_ASSERT( ibackend );
 	FT_FROM_HANDLE( backend, ibackend, MetalRendererBackend );
@@ -204,9 +204,9 @@ mtl_destroy_renderer_backend( struct RendererBackend* ibackend )
 }
 
 static void
-mtl_create_device( const struct RendererBackend* ibackend,
-                   const struct DeviceInfo*      info,
-                   struct Device**               p )
+mtl_create_device( const struct ft_renderer_backend* ibackend,
+                   const struct ft_device_info*      info,
+                   struct ft_device**                p )
 {
 	@autoreleasepool
 	{
@@ -226,7 +226,7 @@ mtl_create_device( const struct RendererBackend* ibackend,
 }
 
 static void
-mtl_destroy_device( struct Device* idevice )
+mtl_destroy_device( struct ft_device* idevice )
 {
 	@autoreleasepool
 	{
@@ -241,9 +241,9 @@ mtl_destroy_device( struct Device* idevice )
 }
 
 static void
-mtl_create_queue( const struct Device*    idevice,
-                  const struct QueueInfo* info,
-                  struct Queue**          p )
+mtl_create_queue( const struct ft_device*     idevice,
+                  const struct ft_queue_info* info,
+                  struct ft_queue**           p )
 {
 	@autoreleasepool
 	{
@@ -258,7 +258,7 @@ mtl_create_queue( const struct Device*    idevice,
 }
 
 static void
-mtl_destroy_queue( struct Queue* iqueue )
+mtl_destroy_queue( struct ft_queue* iqueue )
 {
 	@autoreleasepool
 	{
@@ -272,7 +272,7 @@ mtl_destroy_queue( struct Queue* iqueue )
 }
 
 static void
-mtl_queue_wait_idle( const struct Queue* iqueue )
+mtl_queue_wait_idle( const struct ft_queue* iqueue )
 {
 	@autoreleasepool
 	{
@@ -290,24 +290,25 @@ mtl_queue_wait_idle( const struct Queue* iqueue )
 }
 
 static void
-mtl_queue_submit( const struct Queue*           iqueue,
-                  const struct QueueSubmitInfo* info )
+mtl_queue_submit( const struct ft_queue*             iqueue,
+                  const struct ft_queue_submit_info* info )
 {
 }
 
 static void
-mtl_immediate_submit( const struct Queue* iqueue, struct CommandBuffer* cmd )
+mtl_immediate_submit( const struct ft_queue*    iqueue,
+                      struct ft_command_buffer* cmd )
 {
-	struct QueueSubmitInfo queue_submit_info = { 0 };
-	queue_submit_info.command_buffer_count   = 1;
-	queue_submit_info.command_buffers        = &cmd;
-	queue_submit( iqueue, &queue_submit_info );
-	queue_wait_idle( iqueue );
+	struct ft_queue_submit_info queue_submit_info = { 0 };
+	queue_submit_info.command_buffer_count        = 1;
+	queue_submit_info.command_buffers             = &cmd;
+	ft_queue_submit( iqueue, &queue_submit_info );
+	ft_queue_wait_idle( iqueue );
 }
 
 static void
-mtl_queue_present( const struct Queue*            iqueue,
-                   const struct QueuePresentInfo* info )
+mtl_queue_present( const struct ft_queue*              iqueue,
+                   const struct ft_queue_present_info* info )
 {
 	@autoreleasepool
 	{
@@ -328,7 +329,7 @@ mtl_queue_present( const struct Queue*            iqueue,
 }
 
 static void
-mtl_create_semaphore( const struct Device* idevice, struct Semaphore** p )
+mtl_create_semaphore( const struct ft_device* idevice, struct ft_semaphore** p )
 {
 	FT_ASSERT( p );
 
@@ -336,8 +337,8 @@ mtl_create_semaphore( const struct Device* idevice, struct Semaphore** p )
 }
 
 static void
-mtl_destroy_semaphore( const struct Device* idevice,
-                       struct Semaphore*    isemaphore )
+mtl_destroy_semaphore( const struct ft_device* idevice,
+                       struct ft_semaphore*    isemaphore )
 {
 	FT_ASSERT( isemaphore );
 	FT_FROM_HANDLE( semaphore, isemaphore, MetalSemaphore );
@@ -345,7 +346,7 @@ mtl_destroy_semaphore( const struct Device* idevice,
 }
 
 static void
-mtl_create_fence( const struct Device* idevice, struct Fence** p )
+mtl_create_fence( const struct ft_device* idevice, struct ft_fence** p )
 {
 	FT_ASSERT( idevice );
 	FT_ASSERT( p );
@@ -354,7 +355,7 @@ mtl_create_fence( const struct Device* idevice, struct Fence** p )
 }
 
 static void
-mtl_destroy_fence( const struct Device* idevice, struct Fence* ifence )
+mtl_destroy_fence( const struct ft_device* idevice, struct ft_fence* ifence )
 {
 	FT_ASSERT( idevice );
 	FT_ASSERT( ifence );
@@ -363,23 +364,23 @@ mtl_destroy_fence( const struct Device* idevice, struct Fence* ifence )
 }
 
 static void
-mtl_wait_for_fences( const struct Device* idevice,
-                     u32                  count,
-                     struct Fence**       ifences )
+mtl_wait_for_fences( const struct ft_device* idevice,
+                     uint32_t                count,
+                     struct ft_fence**       ifences )
 {
 }
 
 static void
-mtl_reset_fences( const struct Device* idevice,
-                  u32                  count,
-                  struct Fence**       ifences )
+mtl_reset_fences( const struct ft_device* idevice,
+                  uint32_t                count,
+                  struct ft_fence**       ifences )
 {
 }
 
 static void
-mtl_create_swapchain( const struct Device*        idevice,
-                      const struct SwapchainInfo* info,
-                      struct Swapchain**          p )
+mtl_create_swapchain( const struct ft_device*         idevice,
+                      const struct ft_swapchain_info* info,
+                      struct ft_swapchain**           p )
 {
 	@autoreleasepool
 	{
@@ -408,10 +409,10 @@ mtl_create_swapchain( const struct Device*        idevice,
 		swapchain->interface.image_count =
 		    swapchain->swapchain.maximumDrawableCount;
 
-		swapchain->interface.images =
-		    calloc( swapchain->interface.image_count, sizeof( struct Image* ) );
+		swapchain->interface.images = calloc( swapchain->interface.image_count,
+		                                      sizeof( struct ft_image* ) );
 
-		for ( u32 i = 0; i < swapchain->interface.image_count; i++ )
+		for ( uint32_t i = 0; i < swapchain->interface.image_count; i++ )
 		{
 			FT_INIT_INTERNAL( image,
 			                  swapchain->interface.images[ i ],
@@ -432,10 +433,10 @@ mtl_create_swapchain( const struct Device*        idevice,
 }
 
 static void
-mtl_resize_swapchain( const struct Device* idevice,
-                      struct Swapchain*    iswapchain,
-                      u32                  width,
-                      u32                  height )
+mtl_resize_swapchain( const struct ft_device* idevice,
+                      struct ft_swapchain*    iswapchain,
+                      uint32_t                width,
+                      uint32_t                height )
 {
 	FT_ASSERT( idevice );
 	FT_ASSERT( iswapchain );
@@ -447,14 +448,14 @@ mtl_resize_swapchain( const struct Device* idevice,
 }
 
 static void
-mtl_destroy_swapchain( const struct Device* idevice,
-                       struct Swapchain*    iswapchain )
+mtl_destroy_swapchain( const struct ft_device* idevice,
+                       struct ft_swapchain*    iswapchain )
 {
 	FT_ASSERT( iswapchain );
 
 	FT_FROM_HANDLE( swapchain, iswapchain, MetalSwapchain );
 
-	for ( u32 i = 0; i < swapchain->interface.image_count; i++ )
+	for ( uint32_t i = 0; i < swapchain->interface.image_count; i++ )
 	{
 		FT_FROM_HANDLE( image, swapchain->interface.images[ i ], MetalImage );
 		free( image );
@@ -465,9 +466,9 @@ mtl_destroy_swapchain( const struct Device* idevice,
 }
 
 static void
-mtl_create_command_pool( const struct Device*          idevice,
-                         const struct CommandPoolInfo* info,
-                         struct CommandPool**          p )
+mtl_create_command_pool( const struct ft_device*            idevice,
+                         const struct ft_command_pool_info* info,
+                         struct ft_command_pool**           p )
 {
 	FT_ASSERT( idevice );
 	FT_ASSERT( info );
@@ -479,8 +480,8 @@ mtl_create_command_pool( const struct Device*          idevice,
 }
 
 static void
-mtl_destroy_command_pool( const struct Device* idevice,
-                          struct CommandPool*  icommand_pool )
+mtl_destroy_command_pool( const struct ft_device* idevice,
+                          struct ft_command_pool* icommand_pool )
 {
 	FT_ASSERT( idevice );
 	FT_ASSERT( icommand_pool );
@@ -491,10 +492,10 @@ mtl_destroy_command_pool( const struct Device* idevice,
 }
 
 static void
-mtl_create_command_buffers( const struct Device*      idevice,
-                            const struct CommandPool* icommand_pool,
-                            u32                       count,
-                            struct CommandBuffer**    p )
+mtl_create_command_buffers( const struct ft_device*       idevice,
+                            const struct ft_command_pool* icommand_pool,
+                            uint32_t                      count,
+                            struct ft_command_buffer**    p )
 {
 	FT_ASSERT( idevice );
 	FT_ASSERT( icommand_pool );
@@ -502,7 +503,7 @@ mtl_create_command_buffers( const struct Device*      idevice,
 
 	FT_FROM_HANDLE( cmd_pool, icommand_pool, MetalCommandPool );
 
-	for ( u32 i = 0; i < count; i++ )
+	for ( uint32_t i = 0; i < count; i++ )
 	{
 		FT_INIT_INTERNAL( cmd, p[ i ], MetalCommandBuffer );
 		cmd->interface.queue = cmd_pool->interface.queue;
@@ -510,23 +511,23 @@ mtl_create_command_buffers( const struct Device*      idevice,
 }
 
 static void
-mtl_free_command_buffers( const struct Device*      idevice,
-                          const struct CommandPool* icommand_pool,
-                          u32                       count,
-                          struct CommandBuffer**    icommand_buffers )
+mtl_free_command_buffers( const struct ft_device*       idevice,
+                          const struct ft_command_pool* icommand_pool,
+                          uint32_t                      count,
+                          struct ft_command_buffer**    icommand_buffers )
 {
 }
 
 static void
-mtl_destroy_command_buffers( const struct Device*      idevice,
-                             const struct CommandPool* icmd_pool,
-                             u32                       count,
-                             struct CommandBuffer**    icommand_buffers )
+mtl_destroy_command_buffers( const struct ft_device*       idevice,
+                             const struct ft_command_pool* icmd_pool,
+                             uint32_t                      count,
+                             struct ft_command_buffer**    icommand_buffers )
 {
 	FT_ASSERT( idevice );
 	FT_ASSERT( icmd_pool );
 
-	for ( u32 i = 0; i < count; i++ )
+	for ( uint32_t i = 0; i < count; i++ )
 	{
 		FT_FROM_HANDLE( cmd, icommand_buffers[ i ], MetalCommandBuffer );
 		free( cmd );
@@ -534,7 +535,7 @@ mtl_destroy_command_buffers( const struct Device*      idevice,
 }
 
 static void
-mtl_begin_command_buffer( const struct CommandBuffer* icmd )
+mtl_begin_command_buffer( const struct ft_command_buffer* icmd )
 {
 	@autoreleasepool
 	{
@@ -547,7 +548,7 @@ mtl_begin_command_buffer( const struct CommandBuffer* icmd )
 }
 
 static void
-mtl_end_command_buffer( const struct CommandBuffer* icmd )
+mtl_end_command_buffer( const struct ft_command_buffer* icmd )
 {
 	@autoreleasepool
 	{
@@ -559,11 +560,11 @@ mtl_end_command_buffer( const struct CommandBuffer* icmd )
 }
 
 static void
-mtl_acquire_next_image( const struct Device*    idevice,
-                        const struct Swapchain* iswapchain,
-                        const struct Semaphore* isemaphore,
-                        const struct Fence*     ifence,
-                        u32*                    image_index )
+mtl_acquire_next_image( const struct ft_device*    idevice,
+                        const struct ft_swapchain* iswapchain,
+                        const struct ft_semaphore* isemaphore,
+                        const struct ft_fence*     ifence,
+                        uint32_t*                  image_index )
 {
 	@autoreleasepool
 	{
@@ -587,10 +588,10 @@ mtl_acquire_next_image( const struct Device*    idevice,
 }
 
 static void
-mtl_create_function( const struct MetalDevice*      device,
-                     struct MetalShader*            shader,
-                     enum ShaderStage               stage,
-                     const struct ShaderModuleInfo* info )
+mtl_create_function( const struct MetalDevice*           device,
+                     struct MetalShader*                 shader,
+                     enum ft_shader_stage                stage,
+                     const struct ft_shader_module_info* info )
 {
 	if ( info->bytecode )
 	{
@@ -607,9 +608,9 @@ mtl_create_function( const struct MetalDevice*      device,
 }
 
 static void
-mtl_create_shader( const struct Device* idevice,
-                   struct ShaderInfo*   info,
-                   struct Shader**      p )
+mtl_create_shader( const struct ft_device* idevice,
+                   struct ft_shader_info*  info,
+                   struct ft_shader**      p )
 {
 	@autoreleasepool
 	{
@@ -642,12 +643,12 @@ mtl_create_shader( const struct Device* idevice,
 		                     FT_SHADER_STAGE_FRAGMENT,
 		                     &info->fragment );
 
-		mtl_reflect( idevice, info, &shader->interface );
+		ft_mtl_reflect( idevice, info, &shader->interface );
 	}
 }
 
 static void
-mtl_destroy_shader( const struct Device* idevice, struct Shader* ishader )
+mtl_destroy_shader( const struct ft_device* idevice, struct ft_shader* ishader )
 {
 	@autoreleasepool
 	{
@@ -656,7 +657,7 @@ mtl_destroy_shader( const struct Device* idevice, struct Shader* ishader )
 
 		FT_FROM_HANDLE( shader, ishader, MetalShader );
 
-		for ( u32 i = 0; i < FT_SHADER_STAGE_COUNT; ++i )
+		for ( uint32_t i = 0; i < FT_SHADER_STAGE_COUNT; ++i )
 		{
 			if ( shader->shaders[ i ] )
 			{
@@ -669,15 +670,15 @@ mtl_destroy_shader( const struct Device* idevice, struct Shader* ishader )
 }
 
 static void
-mtl_create_descriptor_set_layout( const struct Device*         idevice,
-                                  struct Shader*               ishader,
-                                  struct DescriptorSetLayout** p )
+mtl_create_descriptor_set_layout( const struct ft_device*           idevice,
+                                  struct ft_shader*                 ishader,
+                                  struct ft_descriptor_set_layout** p )
 {
 	FT_INIT_INTERNAL( layout, *p, MetalDescriptorSetLayout );
 
-	ReflectionData reflect_data = {
+	struct ft_reflection_data reflect_data = {
 	    .binding_count = ishader->reflect_data.binding_count,
-	    .binding_map   = hashmap_new( sizeof( struct BindingMapItem ),
+	    .binding_map   = hashmap_new( sizeof( struct ft_binding_map_item ),
                                     0,
                                     0,
                                     0,
@@ -697,11 +698,11 @@ mtl_create_descriptor_set_layout( const struct Device*         idevice,
 			hashmap_set( reflect_data.binding_map, item );
 		}
 
-		ALLOC_HEAP_ARRAY( struct Binding,
-		                  bindings,
-		                  ishader->reflect_data.binding_count );
+		FT_ALLOC_HEAP_ARRAY( struct ft_binding,
+		                     bindings,
+		                     ishader->reflect_data.binding_count );
 		reflect_data.bindings = bindings;
-		for ( u32 i = 0; i < ishader->reflect_data.binding_count; ++i )
+		for ( uint32_t i = 0; i < ishader->reflect_data.binding_count; ++i )
 		{
 			reflect_data.bindings[ i ] = ishader->reflect_data.bindings[ i ];
 		}
@@ -710,8 +711,8 @@ mtl_create_descriptor_set_layout( const struct Device*         idevice,
 }
 
 static void
-mtl_destroy_descriptor_set_layout( const struct Device*        idevice,
-                                   struct DescriptorSetLayout* ilayout )
+mtl_destroy_descriptor_set_layout( const struct ft_device*          idevice,
+                                   struct ft_descriptor_set_layout* ilayout )
 {
 	FT_FROM_HANDLE( layout, ilayout, MetalDescriptorSetLayout );
 
@@ -719,16 +720,16 @@ mtl_destroy_descriptor_set_layout( const struct Device*        idevice,
 }
 
 static void
-mtl_create_compute_pipeline( const struct Device*       idevice,
-                             const struct PipelineInfo* info,
-                             struct Pipeline**          p )
+mtl_create_compute_pipeline( const struct ft_device*        idevice,
+                             const struct ft_pipeline_info* info,
+                             struct ft_pipeline**           p )
 {
 }
 
 static void
-mtl_create_graphics_pipeline( const struct Device*       idevice,
-                              const struct PipelineInfo* info,
-                              struct Pipeline**          p )
+mtl_create_graphics_pipeline( const struct ft_device*        idevice,
+                              const struct ft_pipeline_info* info,
+                              struct ft_pipeline**           p )
 {
 	@autoreleasepool
 	{
@@ -744,7 +745,7 @@ mtl_create_graphics_pipeline( const struct Device*       idevice,
 		pipeline->pipeline_descriptor =
 		    [[MTLRenderPipelineDescriptor alloc] init];
 
-		for ( u32 i = 0; i < FT_SHADER_STAGE_COUNT; ++i )
+		for ( uint32_t i = 0; i < FT_SHADER_STAGE_COUNT; ++i )
 		{
 			if ( shader->shaders[ i ] == nil )
 			{
@@ -775,12 +776,12 @@ mtl_create_graphics_pipeline( const struct Device*       idevice,
 		MTLVertexDescriptor* vertex_layout =
 		    [MTLVertexDescriptor vertexDescriptor];
 
-		for ( u32 i = 0; i < info->vertex_layout.binding_info_count; ++i )
+		for ( uint32_t i = 0; i < info->vertex_layout.binding_info_count; ++i )
 		{
 			// TODO: rewrite more elegant? binding should not conflict with
 			// uniform bindings
-			u32 binding = info->vertex_layout.binding_infos[ i ].binding +
-			              MAX_VERTEX_BINDING_COUNT;
+			uint32_t binding = info->vertex_layout.binding_infos[ i ].binding +
+			                   FT_MAX_VERTEX_BINDING_COUNT;
 			vertex_layout.layouts[ binding ].stepFunction =
 			    to_mtl_vertex_step_function(
 			        info->vertex_layout.binding_infos[ i ].input_rate );
@@ -788,21 +789,23 @@ mtl_create_graphics_pipeline( const struct Device*       idevice,
 			    info->vertex_layout.binding_infos[ i ].stride;
 		}
 
-		for ( u32 i = 0; i < info->vertex_layout.attribute_info_count; ++i )
+		for ( uint32_t i = 0; i < info->vertex_layout.attribute_info_count;
+		      ++i )
 		{
-			u32 location = info->vertex_layout.attribute_infos[ i ].location;
+			uint32_t location =
+			    info->vertex_layout.attribute_infos[ i ].location;
 			vertex_layout.attributes[ location ].format = to_mtl_vertex_format(
 			    info->vertex_layout.attribute_infos[ i ].format );
 			vertex_layout.attributes[ location ].offset =
 			    info->vertex_layout.attribute_infos[ i ].offset;
 			vertex_layout.attributes[ location ].bufferIndex =
 			    info->vertex_layout.attribute_infos[ i ].binding +
-			    MAX_VERTEX_BINDING_COUNT;
+			    FT_MAX_VERTEX_BINDING_COUNT;
 		}
 
 		pipeline->pipeline_descriptor.vertexDescriptor = vertex_layout;
 
-		for ( u32 i = 0; i < info->color_attachment_count; ++i )
+		for ( uint32_t i = 0; i < info->color_attachment_count; ++i )
 		{
 			pipeline->pipeline_descriptor.colorAttachments[ i ].pixelFormat =
 			    to_mtl_format( info->color_attachment_formats[ i ] );
@@ -835,7 +838,8 @@ mtl_create_graphics_pipeline( const struct Device*       idevice,
 }
 
 static void
-mtl_destroy_pipeline( const struct Device* idevice, struct Pipeline* ipipeline )
+mtl_destroy_pipeline( const struct ft_device* idevice,
+                      struct ft_pipeline*     ipipeline )
 {
 	@autoreleasepool
 	{
@@ -856,9 +860,9 @@ mtl_destroy_pipeline( const struct Device* idevice, struct Pipeline* ipipeline )
 }
 
 static void
-mtl_create_buffer( const struct Device*     idevice,
-                   const struct BufferInfo* info,
-                   struct Buffer**          p )
+mtl_create_buffer( const struct ft_device*      idevice,
+                   const struct ft_buffer_info* info,
+                   struct ft_buffer**           p )
 {
 	@autoreleasepool
 	{
@@ -882,7 +886,7 @@ mtl_create_buffer( const struct Device*     idevice,
 }
 
 static void
-mtl_destroy_buffer( const struct Device* idevice, struct Buffer* ibuffer )
+mtl_destroy_buffer( const struct ft_device* idevice, struct ft_buffer* ibuffer )
 {
 	@autoreleasepool
 	{
@@ -896,7 +900,7 @@ mtl_destroy_buffer( const struct Device* idevice, struct Buffer* ibuffer )
 }
 
 static void*
-mtl_map_memory( const struct Device* idevice, struct Buffer* ibuffer )
+mtl_map_memory( const struct ft_device* idevice, struct ft_buffer* ibuffer )
 {
 	@autoreleasepool
 	{
@@ -907,15 +911,15 @@ mtl_map_memory( const struct Device* idevice, struct Buffer* ibuffer )
 }
 
 static void
-mtl_unmap_memory( const struct Device* idevice, struct Buffer* ibuffer )
+mtl_unmap_memory( const struct ft_device* idevice, struct ft_buffer* ibuffer )
 {
 	ibuffer->mapped_memory = NULL;
 }
 
 static void
-mtl_create_sampler( const struct Device*      idevice,
-                    const struct SamplerInfo* info,
-                    struct Sampler**          p )
+mtl_create_sampler( const struct ft_device*       idevice,
+                    const struct ft_sampler_info* info,
+                    struct ft_sampler**           p )
 {
 	@autoreleasepool
 	{
@@ -953,7 +957,8 @@ mtl_create_sampler( const struct Device*      idevice,
 }
 
 static void
-mtl_destroy_sampler( const struct Device* idevice, struct Sampler* isampler )
+mtl_destroy_sampler( const struct ft_device* idevice,
+                     struct ft_sampler*      isampler )
 {
 	@autoreleasepool
 	{
@@ -967,9 +972,9 @@ mtl_destroy_sampler( const struct Device* idevice, struct Sampler* isampler )
 }
 
 static void
-mtl_create_image( const struct Device*    idevice,
-                  const struct ImageInfo* info,
-                  struct Image**          p )
+mtl_create_image( const struct ft_device*     idevice,
+                  const struct ft_image_info* info,
+                  struct ft_image**           p )
 {
 	@autoreleasepool
 	{
@@ -1013,7 +1018,7 @@ mtl_create_image( const struct Device*    idevice,
 }
 
 static void
-mtl_destroy_image( const struct Device* idevice, struct Image* iimage )
+mtl_destroy_image( const struct ft_device* idevice, struct ft_image* iimage )
 {
 	@autoreleasepool
 	{
@@ -1027,31 +1032,32 @@ mtl_destroy_image( const struct Device* idevice, struct Image* iimage )
 	}
 }
 
-static inline void
-count_binding_types( const ReflectionData*        reflection,
-                     u32*                         sampler_binding_count,
-                     struct MetalSamplerBinding** sampler_bindings,
-                     u32*                         image_binding_count,
-                     struct MetalImageBinding**   image_bindings,
-                     u32*                         buffer_binding_count,
-                     struct MetalBufferBinding**  buffer_bindings )
+FT_INLINE void
+count_binding_types( const struct ft_reflection_data* reflection,
+                     uint32_t*                        sampler_binding_count,
+                     struct MetalSamplerBinding**     sampler_bindings,
+                     uint32_t*                        image_binding_count,
+                     struct MetalImageBinding**       image_bindings,
+                     uint32_t*                        buffer_binding_count,
+                     struct MetalBufferBinding**      buffer_bindings )
 {
-	u32             binding_count = reflection->binding_count;
-	struct Binding* bindings      = reflection->bindings;
+	uint32_t           binding_count = reflection->binding_count;
+	struct ft_binding* bindings      = reflection->bindings;
 
-	u32 s = 0;
-	u32 i = 0;
-	u32 b = 0;
+	uint32_t s = 0;
+	uint32_t i = 0;
+	uint32_t b = 0;
 
 	sampler_bindings =
 	    calloc( binding_count, sizeof( struct MetalSamplerBinding* ) );
 	image_bindings =
 	    calloc( binding_count, sizeof( struct MetalImageBinding* ) );
-	buffer_bindings = calloc( binding_count, sizeof( struct BufferBinding* ) );
+	buffer_bindings =
+	    calloc( binding_count, sizeof( struct ft_bufferBinding* ) );
 
-	for ( u32 b = 0; b < binding_count; ++b )
+	for ( uint32_t b = 0; b < binding_count; ++b )
 	{
-		struct Binding* binding = &bindings[ b ];
+		struct ft_binding* binding = &bindings[ b ];
 		switch ( binding->descriptor_type )
 		{
 		case FT_DESCRIPTOR_TYPE_SAMPLER:
@@ -1089,9 +1095,9 @@ count_binding_types( const ReflectionData*        reflection,
 }
 
 static void
-mtl_create_descriptor_set( const struct Device*            idevice,
-                           const struct DescriptorSetInfo* info,
-                           struct DescriptorSet**          p )
+mtl_create_descriptor_set( const struct ft_device*              idevice,
+                           const struct ft_descriptor_set_info* info,
+                           struct ft_descriptor_set**           p )
 {
 	FT_ASSERT( idevice );
 	FT_ASSERT( info );
@@ -1111,8 +1117,8 @@ mtl_create_descriptor_set( const struct Device*            idevice,
 }
 
 static void
-mtl_destroy_descriptor_set( const struct Device*  idevice,
-                            struct DescriptorSet* iset )
+mtl_destroy_descriptor_set( const struct ft_device*   idevice,
+                            struct ft_descriptor_set* iset )
 {
 	FT_ASSERT( idevice );
 	FT_ASSERT( iset );
@@ -1138,10 +1144,10 @@ mtl_destroy_descriptor_set( const struct Device*  idevice,
 }
 
 static void
-mtl_update_descriptor_set( const struct Device*          idevice,
-                           struct DescriptorSet*         iset,
-                           u32                           count,
-                           const struct DescriptorWrite* writes )
+mtl_update_descriptor_set( const struct ft_device*           idevice,
+                           struct ft_descriptor_set*         iset,
+                           uint32_t                          count,
+                           const struct ft_descriptor_write* writes )
 {
 #if 0
 	@autoreleasepool
@@ -1152,7 +1158,7 @@ mtl_update_descriptor_set( const struct Device*          idevice,
 		    set->interface.layout->reflection_data.binding_map;
 		const auto& bindings = set->interface.layout->reflection_data.bindings;
 
-		for ( u32 i = 0; i < count; ++i )
+		for ( uint32_t i = 0; i < count; ++i )
 		{
 			FT_ASSERT( binding_map.find( writes[ i ].descriptor_name ) !=
 			           binding_map.cend() );
@@ -1164,7 +1170,7 @@ mtl_update_descriptor_set( const struct Device*          idevice,
 			{
 			case FT_DESCRIPTOR_TYPE_SAMPLER:
 			{
-				for ( u32 j = 0; j < set->sampler_binding_count; ++j )
+				for ( uint32_t j = 0; j < set->sampler_binding_count; ++j )
 				{
 					if ( set->sampler_bindings[ j ].binding ==
 					     binding->binding )
@@ -1181,7 +1187,7 @@ mtl_update_descriptor_set( const struct Device*          idevice,
 			}
 			case FT_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
 			{
-				for ( u32 j = 0; j < set->image_binding_count; ++j )
+				for ( uint32_t j = 0; j < set->image_binding_count; ++j )
 				{
 					if ( set->image_bindings[ j ].binding == binding->binding )
 					{
@@ -1197,7 +1203,7 @@ mtl_update_descriptor_set( const struct Device*          idevice,
 			}
 			case FT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
 			{
-				for ( u32 j = 0; j < set->buffer_binding_count; ++j )
+				for ( uint32_t j = 0; j < set->buffer_binding_count; ++j )
 				{
 					if ( set->buffer_bindings[ i ].binding == binding->binding )
 					{
@@ -1222,8 +1228,8 @@ mtl_update_descriptor_set( const struct Device*          idevice,
 }
 
 static void
-mtl_cmd_begin_render_pass( const struct CommandBuffer*       icmd,
-                           const struct RenderPassBeginInfo* info )
+mtl_cmd_begin_render_pass( const struct ft_command_buffer*         icmd,
+                           const struct ft_render_pass_begin_info* info )
 {
 	@autoreleasepool
 	{
@@ -1233,7 +1239,7 @@ mtl_cmd_begin_render_pass( const struct CommandBuffer*       icmd,
 		MTLRenderPassDescriptor* pass_descriptor =
 		    [MTLRenderPassDescriptor renderPassDescriptor];
 
-		for ( u32 i = 0; i < info->color_attachment_count; ++i )
+		for ( uint32_t i = 0; i < info->color_attachment_count; ++i )
 		{
 			FT_FROM_HANDLE( image,
 			                info->color_attachments[ i ].image,
@@ -1284,7 +1290,7 @@ mtl_cmd_begin_render_pass( const struct CommandBuffer*       icmd,
 }
 
 static void
-mtl_cmd_end_render_pass( const struct CommandBuffer* icmd )
+mtl_cmd_end_render_pass( const struct ft_command_buffer* icmd )
 {
 	@autoreleasepool
 	{
@@ -1296,37 +1302,37 @@ mtl_cmd_end_render_pass( const struct CommandBuffer* icmd )
 }
 
 static void
-mtl_cmd_barrier( const struct CommandBuffer* icmd,
-                 u32                         memory_barrier_count,
-                 const struct MemoryBarrier* memory_barriers,
-                 u32                         buffer_barriers_count,
-                 const struct BufferBarrier* buffer_barriers,
-                 u32                         image_barriers_count,
-                 const struct ImageBarrier*  image_barriers ) {};
+mtl_cmd_barrier( const struct ft_command_buffer* icmd,
+                 uint32_t                        memory_barrier_count,
+                 const struct ft_memory_barrier* memory_barriers,
+                 uint32_t                        buffer_barriers_count,
+                 const struct ft_buffer_barrier* buffer_barriers,
+                 uint32_t                        image_barriers_count,
+                 const struct ft_image_barrier*  image_barriers ) {};
 
 static void
-mtl_cmd_set_scissor( const struct CommandBuffer* icmd,
-                     i32                         x,
-                     i32                         y,
-                     u32                         width,
-                     u32                         height )
+mtl_cmd_set_scissor( const struct ft_command_buffer* icmd,
+                     int32_t                         x,
+                     int32_t                         y,
+                     uint32_t                        width,
+                     uint32_t                        height )
 {
 	FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
 
-	[cmd->encoder setScissorRect:( MTLScissorRect ) { ( u32 ) x,
-	                                                  ( u32 ) y,
+	[cmd->encoder setScissorRect:( MTLScissorRect ) { ( uint32_t ) x,
+	                                                  ( uint32_t ) y,
 	                                                  width,
 	                                                  height }];
 }
 
 static void
-mtl_cmd_set_viewport( const struct CommandBuffer* icmd,
-                      f32                         x,
-                      f32                         y,
-                      f32                         width,
-                      f32                         height,
-                      f32                         min_depth,
-                      f32                         max_depth )
+mtl_cmd_set_viewport( const struct ft_command_buffer* icmd,
+                      float                           x,
+                      float                           y,
+                      float                           width,
+                      float                           height,
+                      float                           min_depth,
+                      float                           max_depth )
 {
 	FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
 
@@ -1339,8 +1345,8 @@ mtl_cmd_set_viewport( const struct CommandBuffer* icmd,
 }
 
 static void
-mtl_cmd_bind_pipeline( const struct CommandBuffer* icmd,
-                       const struct Pipeline*      ipipeline )
+mtl_cmd_bind_pipeline( const struct ft_command_buffer* icmd,
+                       const struct ft_pipeline*       ipipeline )
 {
 	FT_ASSERT( icmd );
 	FT_ASSERT( ipipeline );
@@ -1358,11 +1364,11 @@ mtl_cmd_bind_pipeline( const struct CommandBuffer* icmd,
 }
 
 static void
-mtl_cmd_draw( const struct CommandBuffer* icmd,
-              u32                         vertex_count,
-              u32                         instance_count,
-              u32                         first_vertex,
-              u32                         first_instance )
+mtl_cmd_draw( const struct ft_command_buffer* icmd,
+              uint32_t                        vertex_count,
+              uint32_t                        instance_count,
+              uint32_t                        first_vertex,
+              uint32_t                        first_instance )
 {
 	FT_ASSERT( icmd );
 
@@ -1374,12 +1380,12 @@ mtl_cmd_draw( const struct CommandBuffer* icmd,
 }
 
 static void
-mtl_cmd_draw_indexed( const struct CommandBuffer* icmd,
-                      u32                         index_count,
-                      u32                         instance_count,
-                      u32                         first_index,
-                      i32                         vertex_offset,
-                      u32                         first_instance )
+mtl_cmd_draw_indexed( const struct ft_command_buffer* icmd,
+                      uint32_t                        index_count,
+                      uint32_t                        instance_count,
+                      uint32_t                        first_index,
+                      int32_t                         vertex_offset,
+                      uint32_t                        first_instance )
 {
 	FT_ASSERT( icmd );
 
@@ -1396,9 +1402,9 @@ mtl_cmd_draw_indexed( const struct CommandBuffer* icmd,
 }
 
 static void
-mtl_cmd_bind_vertex_buffer( const struct CommandBuffer* icmd,
-                            const struct Buffer*        ibuffer,
-                            const u64                   offset )
+mtl_cmd_bind_vertex_buffer( const struct ft_command_buffer* icmd,
+                            const struct ft_buffer*         ibuffer,
+                            const uint64_t                  offset )
 {
 	FT_ASSERT( icmd );
 	FT_ASSERT( ibuffer );
@@ -1408,13 +1414,13 @@ mtl_cmd_bind_vertex_buffer( const struct CommandBuffer* icmd,
 
 	[cmd->encoder setVertexBuffer:buffer->buffer
 	                       offset:offset
-	                      atIndex:MAX_VERTEX_BINDING_COUNT];
+	                      atIndex:FT_MAX_VERTEX_BINDING_COUNT];
 }
 
 static void
-mtl_cmd_bind_index_buffer_u16( const struct CommandBuffer* icmd,
-                               const struct Buffer*        ibuffer,
-                               const u64                   offset )
+mtl_cmd_bind_index_buffer_uint16_t( const struct ft_command_buffer* icmd,
+                                    const struct ft_buffer*         ibuffer,
+                                    const uint64_t                  offset )
 {
 	@autoreleasepool
 	{
@@ -1430,9 +1436,9 @@ mtl_cmd_bind_index_buffer_u16( const struct CommandBuffer* icmd,
 }
 
 static void
-mtl_cmd_bind_index_buffer_u32( const struct CommandBuffer* icmd,
-                               const struct Buffer*        ibuffer,
-                               u64                         offset )
+mtl_cmd_bind_index_buffer_uint32_t( const struct ft_command_buffer* icmd,
+                                    const struct ft_buffer*         ibuffer,
+                                    uint64_t                        offset )
 {
 	@autoreleasepool
 	{
@@ -1448,37 +1454,36 @@ mtl_cmd_bind_index_buffer_u32( const struct CommandBuffer* icmd,
 }
 
 static void
-mtl_cmd_copy_buffer( const struct CommandBuffer* icmd,
-                     const struct Buffer*        isrc,
-                     u64                         src_offset,
-                     struct Buffer*              idst,
-                     u64                         dst_offset,
-                     u64                         size )
+mtl_cmd_copy_buffer( const struct ft_command_buffer* icmd,
+                     const struct ft_buffer*         isrc,
+                     uint64_t                        src_offset,
+                     struct ft_buffer*               idst,
+                     uint64_t                        dst_offset,
+                     uint64_t                        size )
 {
 	FT_FROM_HANDLE( src, isrc, MetalBuffer );
 	FT_FROM_HANDLE( dst, idst, MetalBuffer );
 
-	u8* src_ptr = src->buffer.contents;
-	u8* dst_ptr = dst->buffer.contents;
+	uint8_t* src_ptr = src->buffer.contents;
+	uint8_t* dst_ptr = dst->buffer.contents;
 
 	memcpy( dst_ptr + dst_offset, src_ptr + src_offset, size );
 }
 
 static void
-mtl_cmd_copy_buffer_to_image( const struct CommandBuffer* icmd,
-                              const struct Buffer*        isrc,
-                              u64                         src_offset,
-                              struct Image*               idst )
+mtl_cmd_copy_buffer_to_image( const struct ft_command_buffer* icmd,
+                              const struct ft_buffer*         isrc,
+                              uint64_t                        src_offset,
+                              struct ft_image*                idst )
 {
 	FT_FROM_HANDLE( src, isrc, MetalBuffer );
 	FT_FROM_HANDLE( dst, idst, MetalImage );
 
-	u8* src_ptr = src->buffer.contents;
+	uint8_t* src_ptr = src->buffer.contents;
 
 	MTLRegion region = {
-		{ 0, 0, 0 },
-		{ dst->interface.width, dst->interface.height, dst->interface.depth }
-	};
+	    { 0, 0, 0 },
+	    { dst->interface.width, dst->interface.height, dst->interface.depth } };
 
 	NSUInteger bytesPerRow = 4 * dst->interface.width;
 	[dst->texture replaceRegion:region
@@ -1488,51 +1493,51 @@ mtl_cmd_copy_buffer_to_image( const struct CommandBuffer* icmd,
 }
 
 static void
-mtl_cmd_dispatch( const struct CommandBuffer* icmd,
-                  u32                         group_count_x,
-                  u32                         group_count_y,
-                  u32                         group_count_z )
+mtl_cmd_dispatch( const struct ft_command_buffer* icmd,
+                  uint32_t                        group_count_x,
+                  uint32_t                        group_count_y,
+                  uint32_t                        group_count_z )
 {
 }
 
 static void
-mtl_cmd_push_constants( const struct CommandBuffer* icmd,
-                        const struct Pipeline*      ipipeline,
-                        u32                         offset,
-                        u32                         size,
-                        const void*                 data )
+mtl_cmd_push_constants( const struct ft_command_buffer* icmd,
+                        const struct ft_pipeline*       ipipeline,
+                        uint32_t                        offset,
+                        uint32_t                        size,
+                        const void*                     data )
 {
 }
 
 static void
-mtl_cmd_blit_image( const struct CommandBuffer* icmd,
-                    const struct Image*         isrc,
-                    enum ResourceState          src_state,
-                    struct Image*               idst,
-                    enum ResourceState          dst_state,
-                    enum Filter                 filter )
+mtl_cmd_blit_image( const struct ft_command_buffer* icmd,
+                    const struct ft_image*          isrc,
+                    enum ft_resource_state          src_state,
+                    struct ft_image*                idst,
+                    enum ft_resource_state          dst_state,
+                    enum ft_filter                  filter )
 {
 }
 
 static void
-mtl_cmd_draw_indexed_indirect( const struct CommandBuffer* icmd,
-                               const struct Buffer*        ibuffer,
-                               u64                         offset,
-                               u32                         draw_count,
-                               u32                         stride )
+mtl_cmd_draw_indexed_indirect( const struct ft_command_buffer* icmd,
+                               const struct ft_buffer*         ibuffer,
+                               uint64_t                        offset,
+                               uint32_t                        draw_count,
+                               uint32_t                        stride )
 {
 }
 
 static void
-mtl_cmd_bind_descriptor_set( const struct CommandBuffer* icmd,
-                             u32                         first_set,
-                             const struct DescriptorSet* iset,
-                             const struct Pipeline*      ipipeline )
+mtl_cmd_bind_descriptor_set( const struct ft_command_buffer* icmd,
+                             uint32_t                        first_set,
+                             const struct ft_descriptor_set* iset,
+                             const struct ft_pipeline*       ipipeline )
 {
 	FT_FROM_HANDLE( cmd, icmd, MetalCommandBuffer );
 	FT_FROM_HANDLE( set, iset, MetalDescriptorSet );
 
-	for ( u32 i = 0; i < set->sampler_binding_count; ++i )
+	for ( uint32_t i = 0; i < set->sampler_binding_count; ++i )
 	{
 		switch ( set->sampler_bindings[ i ].stage )
 		{
@@ -1557,7 +1562,7 @@ mtl_cmd_bind_descriptor_set( const struct CommandBuffer* icmd,
 		}
 	}
 
-	for ( u32 i = 0; i < set->image_binding_count; ++i )
+	for ( uint32_t i = 0; i < set->image_binding_count; ++i )
 	{
 		switch ( set->image_bindings[ i ].stage )
 		{
@@ -1580,7 +1585,7 @@ mtl_cmd_bind_descriptor_set( const struct CommandBuffer* icmd,
 		}
 	}
 
-	for ( u32 i = 0; i < set->buffer_binding_count; ++i )
+	for ( uint32_t i = 0; i < set->buffer_binding_count; ++i )
 	{
 		switch ( set->buffer_bindings[ i ].stage )
 		{
@@ -1607,76 +1612,76 @@ mtl_cmd_bind_descriptor_set( const struct CommandBuffer* icmd,
 }
 
 void
-mtl_create_renderer_backend( const struct RendererBackendInfo* info,
-                             struct RendererBackend**          p )
+mtl_create_renderer_backend( const struct ft_renderer_backend_info* info,
+                             struct ft_renderer_backend**           p )
 {
 	FT_UNUSED( info );
 	FT_ASSERT( p );
 
-	destroy_renderer_backend_impl      = mtl_destroy_renderer_backend;
-	create_device_impl                 = mtl_create_device;
-	destroy_device_impl                = mtl_destroy_device;
-	create_queue_impl                  = mtl_create_queue;
-	destroy_queue_impl                 = mtl_destroy_queue;
-	queue_wait_idle_impl               = mtl_queue_wait_idle;
-	queue_submit_impl                  = mtl_queue_submit;
-	immediate_submit_impl              = mtl_immediate_submit;
-	queue_present_impl                 = mtl_queue_present;
-	create_semaphore_impl              = mtl_create_semaphore;
-	destroy_semaphore_impl             = mtl_destroy_semaphore;
-	create_fence_impl                  = mtl_create_fence;
-	destroy_fence_impl                 = mtl_destroy_fence;
-	wait_for_fences_impl               = mtl_wait_for_fences;
-	reset_fences_impl                  = mtl_reset_fences;
-	create_swapchain_impl              = mtl_create_swapchain;
-	resize_swapchain_impl              = mtl_resize_swapchain;
-	destroy_swapchain_impl             = mtl_destroy_swapchain;
-	create_command_pool_impl           = mtl_create_command_pool;
-	destroy_command_pool_impl          = mtl_destroy_command_pool;
-	create_command_buffers_impl        = mtl_create_command_buffers;
-	free_command_buffers_impl          = mtl_free_command_buffers;
-	destroy_command_buffers_impl       = mtl_destroy_command_buffers;
-	begin_command_buffer_impl          = mtl_begin_command_buffer;
-	end_command_buffer_impl            = mtl_end_command_buffer;
-	acquire_next_image_impl            = mtl_acquire_next_image;
-	create_shader_impl                 = mtl_create_shader;
-	destroy_shader_impl                = mtl_destroy_shader;
-	create_descriptor_set_layout_impl  = mtl_create_descriptor_set_layout;
-	destroy_descriptor_set_layout_impl = mtl_destroy_descriptor_set_layout;
-	create_compute_pipeline_impl       = mtl_create_compute_pipeline;
-	create_graphics_pipeline_impl      = mtl_create_graphics_pipeline;
-	destroy_pipeline_impl              = mtl_destroy_pipeline;
-	create_buffer_impl                 = mtl_create_buffer;
-	destroy_buffer_impl                = mtl_destroy_buffer;
-	map_memory_impl                    = mtl_map_memory;
-	unmap_memory_impl                  = mtl_unmap_memory;
-	create_sampler_impl                = mtl_create_sampler;
-	destroy_sampler_impl               = mtl_destroy_sampler;
-	create_image_impl                  = mtl_create_image;
-	destroy_image_impl                 = mtl_destroy_image;
-	create_descriptor_set_impl         = mtl_create_descriptor_set;
-	destroy_descriptor_set_impl        = mtl_destroy_descriptor_set;
-	update_descriptor_set_impl         = mtl_update_descriptor_set;
-	cmd_begin_render_pass_impl         = mtl_cmd_begin_render_pass;
-	cmd_end_render_pass_impl           = mtl_cmd_end_render_pass;
-	cmd_barrier_impl                   = mtl_cmd_barrier;
-	cmd_set_scissor_impl               = mtl_cmd_set_scissor;
-	cmd_set_viewport_impl              = mtl_cmd_set_viewport;
-	cmd_bind_pipeline_impl             = mtl_cmd_bind_pipeline;
-	cmd_draw_impl                      = mtl_cmd_draw;
-	cmd_draw_indexed_impl              = mtl_cmd_draw_indexed;
-	cmd_bind_vertex_buffer_impl        = mtl_cmd_bind_vertex_buffer;
-	cmd_bind_index_buffer_u16_impl     = mtl_cmd_bind_index_buffer_u16;
-	cmd_bind_index_buffer_u32_impl     = mtl_cmd_bind_index_buffer_u32;
-	cmd_copy_buffer_impl               = mtl_cmd_copy_buffer;
-	cmd_copy_buffer_to_image_impl      = mtl_cmd_copy_buffer_to_image;
-	cmd_bind_descriptor_set_impl       = mtl_cmd_bind_descriptor_set;
-	cmd_dispatch_impl                  = mtl_cmd_dispatch;
-	cmd_push_constants_impl            = mtl_cmd_push_constants;
-	cmd_draw_indexed_indirect_impl     = mtl_cmd_draw_indexed_indirect;
+	destroy_renderer_backend_impl       = mtl_destroy_renderer_backend;
+	create_device_impl                  = mtl_create_device;
+	destroy_device_impl                 = mtl_destroy_device;
+	create_queue_impl                   = mtl_create_queue;
+	destroy_queue_impl                  = mtl_destroy_queue;
+	queue_wait_idle_impl                = mtl_queue_wait_idle;
+	queue_submit_impl                   = mtl_queue_submit;
+	immediate_submit_impl               = mtl_immediate_submit;
+	queue_present_impl                  = mtl_queue_present;
+	create_semaphore_impl               = mtl_create_semaphore;
+	destroy_semaphore_impl              = mtl_destroy_semaphore;
+	create_fence_impl                   = mtl_create_fence;
+	destroy_fence_impl                  = mtl_destroy_fence;
+	wait_for_fences_impl                = mtl_wait_for_fences;
+	reset_fences_impl                   = mtl_reset_fences;
+	create_swapchain_impl               = mtl_create_swapchain;
+	resize_swapchain_impl               = mtl_resize_swapchain;
+	destroy_swapchain_impl              = mtl_destroy_swapchain;
+	create_command_pool_impl            = mtl_create_command_pool;
+	destroy_command_pool_impl           = mtl_destroy_command_pool;
+	create_command_buffers_impl         = mtl_create_command_buffers;
+	free_command_buffers_impl           = mtl_free_command_buffers;
+	destroy_command_buffers_impl        = mtl_destroy_command_buffers;
+	begin_command_buffer_impl           = mtl_begin_command_buffer;
+	end_command_buffer_impl             = mtl_end_command_buffer;
+	acquire_next_image_impl             = mtl_acquire_next_image;
+	create_shader_impl                  = mtl_create_shader;
+	destroy_shader_impl                 = mtl_destroy_shader;
+	create_descriptor_set_layout_impl   = mtl_create_descriptor_set_layout;
+	destroy_descriptor_set_layout_impl  = mtl_destroy_descriptor_set_layout;
+	create_compute_pipeline_impl        = mtl_create_compute_pipeline;
+	create_graphics_pipeline_impl       = mtl_create_graphics_pipeline;
+	destroy_pipeline_impl               = mtl_destroy_pipeline;
+	create_buffer_impl                  = mtl_create_buffer;
+	destroy_buffer_impl                 = mtl_destroy_buffer;
+	map_memory_impl                     = mtl_map_memory;
+	unmap_memory_impl                   = mtl_unmap_memory;
+	create_sampler_impl                 = mtl_create_sampler;
+	destroy_sampler_impl                = mtl_destroy_sampler;
+	create_image_impl                   = mtl_create_image;
+	destroy_image_impl                  = mtl_destroy_image;
+	create_descriptor_set_impl          = mtl_create_descriptor_set;
+	destroy_descriptor_set_impl         = mtl_destroy_descriptor_set;
+	update_descriptor_set_impl          = mtl_update_descriptor_set;
+	cmd_begin_render_pass_impl          = mtl_cmd_begin_render_pass;
+	cmd_end_render_pass_impl            = mtl_cmd_end_render_pass;
+	cmd_barrier_impl                    = mtl_cmd_barrier;
+	cmd_set_scissor_impl                = mtl_cmd_set_scissor;
+	cmd_set_viewport_impl               = mtl_cmd_set_viewport;
+	cmd_bind_pipeline_impl              = mtl_cmd_bind_pipeline;
+	cmd_draw_impl                       = mtl_cmd_draw;
+	cmd_draw_indexed_impl               = mtl_cmd_draw_indexed;
+	cmd_bind_vertex_buffer_impl         = mtl_cmd_bind_vertex_buffer;
+	cmd_bind_index_buffer_uint16_t_impl = mtl_cmd_bind_index_buffer_uint16_t;
+	cmd_bind_index_buffer_uint32_t_impl = mtl_cmd_bind_index_buffer_uint32_t;
+	cmd_copy_buffer_impl                = mtl_cmd_copy_buffer;
+	cmd_copy_buffer_to_image_impl       = mtl_cmd_copy_buffer_to_image;
+	cmd_bind_descriptor_set_impl        = mtl_cmd_bind_descriptor_set;
+	cmd_dispatch_impl                   = mtl_cmd_dispatch;
+	cmd_push_constants_impl             = mtl_cmd_push_constants;
+	cmd_draw_indexed_indirect_impl      = mtl_cmd_draw_indexed_indirect;
 
 	FT_INIT_INTERNAL( renderer_backend, *p, MetalRendererBackend );
-	struct Window* w         = info->wsi_info->window;
+	struct ft_window* w      = info->wsi_info->window;
 	renderer_backend->window = w->handle;
 }
 

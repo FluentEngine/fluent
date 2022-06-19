@@ -3,59 +3,53 @@
 #include "base/base.h"
 #include "renderer/backend/renderer_enums.h"
 
-#ifdef __cplusplus
-extern "C"
+struct ft_window_info
 {
-#endif
+	const char*          title;
+	uint32_t             x;
+	uint32_t             y;
+	uint32_t             width;
+	uint32_t             height;
+	bool                 resizable;
+	bool                 centered;
+	bool                 fullscreen;
+	bool                 grab_mouse;
+	enum ft_renderer_api renderer_api;
+};
 
-	struct WindowInfo
-	{
-		const char*      title;
-		u32              x;
-		u32              y;
-		u32              width;
-		u32              height;
-		b32              resizable;
-		b32              centered;
-		b32              fullscreen;
-		b32              grab_mouse;
-		enum RendererAPI renderer_api;
-	};
+struct ft_window
+{
+	void* handle;
+};
 
-	struct Window
-	{
-		void* handle;
-	};
+FT_API struct ft_window
+ft_create_window( const struct ft_window_info* info );
 
-	struct Window
-	create_window( const struct WindowInfo* info );
+FT_API void
+ft_destroy_window( struct ft_window* window );
 
-	void
-	destroy_window( struct Window* window );
+FT_API void
+ft_window_get_size( const struct ft_window* window,
+                    uint32_t*               width,
+                    uint32_t*               height );
 
-	void
-	window_get_size( const struct Window* window, u32* width, u32* height );
+FT_API void
+ft_window_get_framebuffer_size( const struct ft_window* window,
+                                uint32_t*               width,
+                                uint32_t*               height );
 
-	void
-	window_get_framebuffer_size( const struct Window* window,
-	                             u32*                 width,
-	                             u32*                 height );
+FT_API uint32_t
+ft_window_get_framebuffer_width( const struct ft_window* window );
 
-	u32
-	window_get_framebuffer_width( const struct Window* window );
+FT_API uint32_t
+ft_window_get_framebuffer_height( const struct ft_window* window );
 
-	u32
-	window_get_framebuffer_height( const struct Window* window );
+FT_API uint32_t
+ft_window_get_width( const struct ft_window* window );
 
-	u32
-	window_get_width( const struct Window* window );
-	u32
-	window_get_height( const struct Window* window );
-	f32
-	window_get_aspect( const struct Window* window );
-	void
-	window_show_cursor( b32 show );
-
-#ifdef __cplusplus
-}
-#endif
+FT_API uint32_t
+ft_window_get_height( const struct ft_window* window );
+FT_API float
+ft_window_get_aspect( const struct ft_window* window );
+FT_API void
+ft_window_show_cursor( bool show );

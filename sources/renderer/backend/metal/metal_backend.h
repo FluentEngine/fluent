@@ -11,8 +11,8 @@
 
 struct MetalRendererBackend
 {
-	void*                  window;
-	struct RendererBackend interface;
+	void*                      window;
+	struct ft_renderer_backend interface;
 };
 
 struct MetalDevice
@@ -20,15 +20,15 @@ struct MetalDevice
 #ifdef METAL_BACKEND_INCLUDE_OBJC
 	id<MTLDevice> device;
 #else
-	void* device;
+	void*    device;
 #endif
-	void*         view;
-	struct Device interface;
+	void*            view;
+	struct ft_device interface;
 };
 
 struct MetalCommandPool
 {
-	struct CommandPool interface;
+	struct ft_command_pool interface;
 };
 
 struct MetalCommandBuffer
@@ -41,14 +41,14 @@ struct MetalCommandBuffer
 	MTLIndexType                index_type;
 	MTLPrimitiveType            primitive_type;
 #else
-	void* cmd;
-	void* encoder;
-	void* pass_descriptor;
-	void* index_buffer;
-	u32   index_type;
-	u32   primitive_type;
+	void*    cmd;
+	void*    encoder;
+	void*    pass_descriptor;
+	void*    index_buffer;
+	uint32_t index_type;
+	uint32_t primitive_type;
 #endif
-	struct CommandBuffer interface;
+	struct ft_command_buffer interface;
 };
 
 struct MetalQueue
@@ -56,19 +56,19 @@ struct MetalQueue
 #ifdef METAL_BACKEND_INCLUDE_OBJC
 	id<MTLCommandQueue> queue;
 #else
-	void* queue;
+	void*    queue;
 #endif
-	struct Queue interface;
+	struct ft_queue interface;
 };
 
 struct MetalSemaphore
 {
-	struct Semaphore interface;
+	struct ft_semaphore interface;
 };
 
 struct MetalFence
 {
-	struct Fence interface;
+	struct ft_fence interface;
 };
 
 struct MetalSampler
@@ -77,10 +77,10 @@ struct MetalSampler
 	MTLSamplerDescriptor* sampler_descriptor;
 	id<MTLSamplerState>   sampler;
 #else
-	void* sampler_descriptor;
-	void* sampler;
+	void*    sampler_descriptor;
+	void*    sampler;
 #endif
-	struct Sampler interface;
+	struct ft_sampler interface;
 };
 
 struct MetalImage
@@ -88,9 +88,9 @@ struct MetalImage
 #ifdef METAL_BACKEND_INCLUDE_OBJC
 	id<MTLTexture> texture;
 #else
-	void* texture;
+	void*    texture;
 #endif
-	struct Image interface;
+	struct ft_image interface;
 };
 
 struct MetalBuffer
@@ -98,9 +98,9 @@ struct MetalBuffer
 #ifdef METAL_BACKEND_INCLUDE_OBJC
 	id<MTLBuffer> buffer;
 #else
-	void* buffer;
+	void*    buffer;
 #endif
-	struct Buffer interface;
+	struct ft_buffer interface;
 };
 
 struct MetalSwapchain
@@ -109,11 +109,11 @@ struct MetalSwapchain
 	CAMetalLayer*       swapchain;
 	id<CAMetalDrawable> drawable;
 #else
-	void* swapchain;
-	void* drawable;
+	void*    swapchain;
+	void*    drawable;
 #endif
-	u32              current_image_index;
-	struct Swapchain interface;
+	uint32_t            current_image_index;
+	struct ft_swapchain interface;
 };
 
 struct MetalRenderPass
@@ -121,10 +121,10 @@ struct MetalRenderPass
 #ifdef METAL_BACKEND_INCLUDE_OBJC
 	MTLRenderPassDescriptor* render_pass;
 #else
-	void* render_pass;
+	void*    render_pass;
 #endif
-	b32                swapchain_render_pass;
-	struct MetalImage* color_attachments[ MAX_ATTACHMENTS_COUNT ];
+	bool               swapchain_render_pass;
+	struct MetalImage* color_attachments[ FT_MAX_ATTACHMENTS_COUNT ];
 	struct MetalImage* depth_attachment;
 };
 
@@ -133,14 +133,14 @@ struct MetalShader
 #ifdef METAL_BACKEND_INCLUDE_OBJC
 	id<MTLFunction> shaders[ FT_SHADER_STAGE_COUNT ];
 #else
-	void* shaders[ FT_SHADER_STAGE_COUNT ];
+	void*    shaders[ FT_SHADER_STAGE_COUNT ];
 #endif
-	struct Shader interface;
+	struct ft_shader interface;
 };
 
 struct MetalDescriptorSetLayout
 {
-	struct DescriptorSetLayout interface;
+	struct ft_descriptor_set_layout interface;
 };
 
 struct MetalPipeline
@@ -151,60 +151,60 @@ struct MetalPipeline
 	id<MTLDepthStencilState>     depth_stencil_state;
 	MTLPrimitiveType             primitive_type;
 #else
-	void* pipeline_descriptor;
-	void* pipeline;
-	void* depth_stencil_state;
-	u32   primitive_type;
+	void*    pipeline_descriptor;
+	void*    pipeline;
+	void*    depth_stencil_state;
+	uint32_t primitive_type;
 #endif
-	struct Pipeline interface;
+	struct ft_pipeline interface;
 };
 
 struct MetalSamplerBinding
 {
-	enum ShaderStage stage;
-	u32              binding;
+	enum ft_shader_stage stage;
+	uint32_t             binding;
 #ifdef METAL_BACKEND_INCLUDE_OBJC
 	id<MTLSamplerState> sampler;
 #else
-	void* sampler;
+	void*    sampler;
 #endif
 };
 
 struct MetalImageBinding
 {
-	enum ShaderStage stage;
-	u32              binding;
+	enum ft_shader_stage stage;
+	uint32_t             binding;
 #ifdef METAL_BACKEND_INCLUDE_OBJC
 	id<MTLTexture> image;
 #else
-	void* image;
+	void*    image;
 #endif
 };
 
 struct MetalBufferBinding
 {
-	enum ShaderStage stage;
-	u32              binding;
+	enum ft_shader_stage stage;
+	uint32_t             binding;
 #ifdef METAL_BACKEND_INCLUDE_OBJC
 	id<MTLBuffer> buffer;
 #else
-	void* buffer;
+	void*    buffer;
 #endif
 };
 
 struct MetalDescriptorSet
 {
-	u32                         sampler_binding_count;
+	uint32_t                    sampler_binding_count;
 	struct MetalSamplerBinding* sampler_bindings;
-	u32                         image_binding_count;
+	uint32_t                    image_binding_count;
 	struct MetalImageBinding*   image_bindings;
-	u32                         buffer_binding_count;
+	uint32_t                    buffer_binding_count;
 	struct MetalBufferBinding*  buffer_bindings;
-	struct DescriptorSet        interface;
+	struct ft_descriptor_set    interface;
 };
 
 void
-mtl_create_renderer_backend( const struct RendererBackendInfo*,
-                             struct RendererBackend** p );
+mtl_create_renderer_backend( const struct ft_renderer_backend_info*,
+                             struct ft_renderer_backend** p );
 
 #endif

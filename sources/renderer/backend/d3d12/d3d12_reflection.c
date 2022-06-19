@@ -7,7 +7,7 @@
 namespace fluent
 {
 
-DescriptorType
+FT_INLINE enum ft_descriptor_type
 to_descriptor_type( D3D_SHADER_INPUT_TYPE shader_input_type )
 {
 	switch ( shader_input_type )
@@ -23,10 +23,10 @@ to_descriptor_type( D3D_SHADER_INPUT_TYPE shader_input_type )
 }
 
 void
-dxil_reflect_stage( ReflectionData* reflection_data,
-                    ShaderStage     stage,
-                    u32             byte_code_size,
-                    const void*     byte_code )
+ft_dxil_reflect_stage( struct ft_reflection_data* reflection_data,
+                       ShaderStage                stage,
+                       uint32_t                   byte_code_size,
+                       const void*                byte_code )
 {
 #define DXIL_FOURCC( ch0, ch1, ch2, ch3 )                                      \
 	( ( uint32_t ) ( uint8_t ) ( ch0 ) |                                       \
@@ -45,7 +45,7 @@ dxil_reflect_stage( ReflectionData* reflection_data,
 	                                           &blob );
 	IDxcContainerReflection* container_reflection;
 	ID3D12ShaderReflection*  reflection;
-	u32                      shader_idx;
+	uint32_t                 shader_idx;
 	DxcCreateInstance( CLSID_DxcContainerReflection,
 	                   IID_PPV_ARGS( &container_reflection ) );
 
@@ -65,7 +65,7 @@ dxil_reflect_stage( ReflectionData* reflection_data,
 	reflection_data->binding_count += info.BoundResources;
 	reflection_data->bindings.resize( reflection_data->binding_count );
 
-	for ( u32 i = 0; i < info.BoundResources; ++i )
+	for ( uint32_t i = 0; i < info.BoundResources; ++i )
 	{
 		D3D12_SHADER_INPUT_BIND_DESC binding;
 		reflection->GetResourceBindingDesc( i, &binding );
@@ -82,56 +82,56 @@ dxil_reflect_stage( ReflectionData* reflection_data,
 }
 
 void
-dxil_reflect( const struct Device*     device,
-              const struct ShaderInfo* info,
-              struct Shader*           shader )
+ft_dxil_reflect( const struct ft_device*      device,
+                 const struct ft_shader_info* info,
+                 struct ft_shader*            shader )
 {
 	if ( info->vertex.bytecode )
 	{
-		dxil_reflect_stage( &shader->reflect_data,
-		                    FT_SHADER_STAGE_VERTEX,
-		                    info->vertex.bytecode_size,
-		                    info->vertex.bytecode );
+		ft_dxil_reflect_stage( &shader->reflect_data,
+		                       FT_SHADER_STAGE_VERTEX,
+		                       info->vertex.bytecode_size,
+		                       info->vertex.bytecode );
 	}
 
 	if ( info->fragment.bytecode )
 	{
-		dxil_reflect_stage( &shader->reflect_data,
-		                    FT_SHADER_STAGE_FRAGMENT,
-		                    info->fragment.bytecode_size,
-		                    info->fragment.bytecode );
+		ft_dxil_reflect_stage( &shader->reflect_data,
+		                       FT_SHADER_STAGE_FRAGMENT,
+		                       info->fragment.bytecode_size,
+		                       info->fragment.bytecode );
 	}
 
 	if ( info->compute.bytecode )
 	{
-		dxil_reflect_stage( &shader->reflect_data,
-		                    FT_SHADER_STAGE_COMPUTE,
-		                    info->compute.bytecode_size,
-		                    info->compute.bytecode );
+		ft_dxil_reflect_stage( &shader->reflect_data,
+		                       FT_SHADER_STAGE_COMPUTE,
+		                       info->compute.bytecode_size,
+		                       info->compute.bytecode );
 	}
 
 	if ( info->tessellation_control.bytecode )
 	{
-		dxil_reflect_stage( &shader->reflect_data,
-		                    FT_SHADER_STAGE_TESSELLATION_CONTROL,
-		                    info->tessellation_control.bytecode_size,
-		                    info->tessellation_control.bytecode );
+		ft_dxil_reflect_stage( &shader->reflect_data,
+		                       FT_SHADER_STAGE_TESSELLATION_CONTROL,
+		                       info->tessellation_control.bytecode_size,
+		                       info->tessellation_control.bytecode );
 	}
 
 	if ( info->tessellation_evaluation.bytecode )
 	{
-		dxil_reflect_stage( &shader->reflect_data,
-		                    FT_SHADER_STAGE_TESSELLATION_EVALUATION,
-		                    info->tessellation_evaluation.bytecode_size,
-		                    info->tessellation_evaluation.bytecode );
+		ft_dxil_reflect_stage( &shader->reflect_data,
+		                       FT_SHADER_STAGE_TESSELLATION_EVALUATION,
+		                       info->tessellation_evaluation.bytecode_size,
+		                       info->tessellation_evaluation.bytecode );
 	}
 
 	if ( info->geometry.bytecode )
 	{
-		dxil_reflect_stage( &shader->reflect_data,
-		                    FT_SHADER_STAGE_GEOMETRY,
-		                    info->geometry.bytecode_size,
-		                    info->geometry.bytecode );
+		ft_dxil_reflect_stage( &shader->reflect_data,
+		                       FT_SHADER_STAGE_GEOMETRY,
+		                       info->geometry.bytecode_size,
+		                       info->geometry.bytecode );
 	}
 }
 

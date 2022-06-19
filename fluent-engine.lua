@@ -239,8 +239,11 @@ project "ft_renderer"
 		path.join(backend_dir, "resource_loader.c"),
 		path.join(backend_dir, "render_graph.h"),
 		path.join(backend_dir, "render_graph.c"),
+		path.join(backend_dir, "shader_reflection.h"),
+		path.join(backend_dir, "vulkan/vulkan_reflection.c"),
 		path.join(backend_dir, "vulkan/vulkan_backend.c"),
 		path.join(backend_dir, "vulkan/vulkan_backend.h"),
+		path.join(backend_dir, "d3d12/d3d12_reflection.c"),
 		path.join(backend_dir, "d3d12/d3d12_backend.c"),
 		path.join(backend_dir, "d3d12/d3d12_backend.h"),
 		path.join(backend_dir, "vulkan/vulkan_pass_hasher.c"),
@@ -249,8 +252,6 @@ project "ft_renderer"
 		path.join(nuklear_dir, "ft_nuklear.c"),
 		path.join(nuklear_dir, "shaders/shader_nuklear_vert_spirv.c"),
 		path.join(nuklear_dir, "shaders/shader_nuklear_frag_spirv.c"),
-		path.join(shader_reflection_dir, "shader_reflection.h"),
-		path.join(shader_reflection_dir, "vulkan_reflection.c"),
 		path.join(scene_dir, "model_loader.h"),
 		path.join(scene_dir, "model_loader.c")
     }
@@ -260,7 +261,7 @@ project "ft_renderer"
 		{
 			path.join(backend_dir, "metal/metal_backend.h"),
 			path.join(backend_dir, "metal/metal_backend.m"),
-			path.join(shader_reflection_dir, "metal_reflection.m"),
+			path.join(backend_dir, "metal/metal_reflection.m")
 		}
 	end
 	

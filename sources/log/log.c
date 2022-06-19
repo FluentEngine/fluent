@@ -41,10 +41,10 @@ static struct
 	unsigned long long flushedTime;
 } s_flog;
 
-static volatile int           s_logger;
-static volatile enum LogLevel s_logLevel = FT_INFO;
-static volatile long s_flushInterval     = 0; /* msec, 0 is auto flush off */
-static volatile int  s_initialized       = 0; /* false */
+static volatile int               s_logger;
+static volatile enum ft_log_level s_logLevel = FT_INFO;
+static volatile long s_flushInterval = 0; /* msec, 0 is auto flush off */
+static volatile int  s_initialized   = 0; /* false */
 #if defined( _WIN32 ) || defined( _WIN64 )
 static CRITICAL_SECTION s_mutex;
 #else
@@ -117,7 +117,7 @@ localtime_r( const time_t* timep, struct tm* result )
 #endif /* defined(_WIN32) || defined(_WIN64) */
 
 int
-logger_initConsoleLogger( FILE* output )
+ft_log_init_console_logger( FILE* output )
 {
 	output = ( output != NULL ) ? output : stdout;
 	if ( output != stdout && output != stderr )
@@ -195,25 +195,25 @@ cleanup:
 }
 
 void
-logger_setLevel( enum LogLevel level )
+ft_log_set_level( enum ft_log_level level )
 {
 	s_logLevel = level;
 }
 
-enum LogLevel
-logger_getLevel( void )
+enum ft_log_level
+ft_log_get_level( void )
 {
 	return s_logLevel;
 }
 
 int
-logger_isEnabled( enum LogLevel level )
+ft_log_is_enabled( enum ft_log_level level )
 {
 	return s_logLevel <= level;
 }
 
 void
-logger_autoFlush( long interval )
+ft_log_auto_flush( long interval )
 {
 	s_flushInterval = interval > 0 ? interval : 0;
 }
@@ -225,7 +225,7 @@ hasFlag( int flags, int flag )
 }
 
 void
-logger_flush()
+ft_log_flush()
 {
 	if ( s_logger == 0 || !s_initialized )
 	{
@@ -244,7 +244,7 @@ logger_flush()
 }
 
 static const char*
-getLevelChar( enum LogLevel level )
+getLevelChar( enum ft_log_level level )
 {
 	switch ( level )
 	{
@@ -375,7 +375,7 @@ vflog( FILE*               fp,
 }
 
 void
-logger_log( enum LogLevel level, const char* fmt, ... )
+ft_log( enum ft_log_level level, const char* fmt, ... )
 {
 	struct timeval     now;
 	unsigned long long currentTime; /* milliseconds */
@@ -388,7 +388,7 @@ logger_log( enum LogLevel level, const char* fmt, ... )
 		return;
 	}
 
-	if ( !logger_isEnabled( level ) )
+	if ( !ft_log_is_enabled( level ) )
 	{
 		return;
 	}
@@ -425,16 +425,16 @@ logger_log( enum LogLevel level, const char* fmt, ... )
 }
 
 void
-log_init( enum LogLevel log_level )
+ft_log_init( enum ft_log_level log_level )
 {
-	int result = logger_initConsoleLogger( NULL );
+	int result = ft_log_init_console_logger( NULL );
 	FT_ASSERT( result );
-	logger_autoFlush( 1000 );
-	logger_setLevel( log_level );
+	ft_log_auto_flush( 1000 );
+	ft_log_set_level( log_level );
 }
 
 void
-log_shutdown( )
+ft_log_shutdown()
 {
-	logger_flush();
+	ft_log_flush();
 }

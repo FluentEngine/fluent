@@ -3,7 +3,7 @@
 #include "base/base.h"
 #include "math/linear.h"
 
-enum CameraDirection
+enum ft_camera_direction
 {
 	FT_CAMERA_DIRECTION_FORWARD,
 	FT_CAMERA_DIRECTION_BACK,
@@ -11,65 +11,65 @@ enum CameraDirection
 	FT_CAMERA_DIRECTION_RIGHT
 };
 
-struct CameraInfo
+struct ft_camera_info
 {
-	vec3 position;
-	vec3 direction;
-	vec3 up;
-	f32  aspect;
-	f32  fov;
-	f32  near;
-	f32  far;
-	f32  speed;
-	f32  sensitivity;
+	float3 position;
+	float3 direction;
+	float3 up;
+	float  aspect;
+	float  fov;
+	float  near;
+	float  far;
+	float  speed;
+	float  sensitivity;
 };
 
-struct Camera
+struct ft_camera
 {
-	f32 fov;
-	f32 aspect;
-	f32 near;
-	f32 far;
-	f32 yaw;
-	f32 pitch;
+	float fov;
+	float aspect;
+	float near;
+	float far;
+	float yaw;
+	float pitch;
 
-	vec3   position;
-	vec3   direction;
-	vec3   up;
-	vec3   world_up;
-	vec3   right;
-	mat4x4 projection;
-	mat4x4 view;
+	float3   position;
+	float3   direction;
+	float3   up;
+	float3   world_up;
+	float3   right;
+	float4x4 projection;
+	float4x4 view;
 
-	f32 speed;
-	f32 mouse_sensitivity;
+	float speed;
+	float mouse_sensitivity;
 };
 
-void
-camera_init( struct Camera*, const struct CameraInfo* info );
+FT_API void
+ft_camera_init( struct ft_camera*, const struct ft_camera_info* info );
 
-void
-camera_on_move( struct Camera*,
-                enum CameraDirection direction,
-                f32                  delta_time );
+FT_API void
+ft_camera_on_move( struct ft_camera*,
+                   enum ft_camera_direction direction,
+                   float                    delta_time );
 
-void
-camera_on_rotate( struct Camera*, f32 x_offset, f32 y_offset );
+FT_API void
+ft_camera_on_rotate( struct ft_camera*, float x_offset, float y_offset );
 
-void
-camera_on_resize( struct Camera*, u32 width, u32 height );
+FT_API void
+ft_camera_on_resize( struct ft_camera*, uint32_t width, uint32_t height );
 
-struct CameraController
+struct ft_camera_controller
 {
-	struct Camera* camera;
-	i32            last_mouse_positon[ 2 ];
+	struct ft_camera* camera;
+	int32_t           last_mouse_positon[ 2 ];
 };
 
-void
-camera_controller_init( struct CameraController*, struct Camera* );
+FT_API void
+ft_camera_controller_init( struct ft_camera_controller*, struct ft_camera* );
 
-void
-camera_controller_update( struct CameraController*, f32 delta_time );
+FT_API void
+ft_camera_controller_update( struct ft_camera_controller*, float delta_time );
 
-void
-camera_controller_reset( struct CameraController* );
+FT_API void
+ft_camera_controller_reset( struct ft_camera_controller* );

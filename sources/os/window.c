@@ -2,8 +2,8 @@
 #include <SDL_vulkan.h>
 #include "window.h"
 
-struct Window
-create_window( const struct WindowInfo* info )
+struct ft_window
+ft_create_window( const struct ft_window_info* info )
 {
 	int init_result = SDL_Init( SDL_INIT_VIDEO );
 	FT_ASSERT( init_result == 0 && "SDL Init failed" );
@@ -11,9 +11,9 @@ create_window( const struct WindowInfo* info )
 	FT_ASSERT( info->width > 0 && info->height > 0 &&
 	           "Width, height should be greater than zero" );
 
-	u32 window_flags = 0;
-	u32 x            = info->x;
-	u32 y            = info->y;
+	uint32_t window_flags = 0;
+	uint32_t x            = info->x;
+	uint32_t y            = info->y;
 
 	//	window_flags |= SDL_WINDOW_ALLOW_HIGHDPI;
 
@@ -64,14 +64,14 @@ create_window( const struct WindowInfo* info )
 
 	FT_ASSERT( window && "Failed to create window" );
 
-	struct Window result = { 0 };
-	result.handle        = window;
+	struct ft_window result = { 0 };
+	result.handle           = window;
 
 	return result;
 }
 
 void
-destroy_window( struct Window* window )
+ft_destroy_window( struct ft_window* window )
 {
 	FT_ASSERT( window->handle && "Window is nullptr" );
 	SDL_DestroyWindow( ( SDL_Window* ) window->handle );
@@ -79,76 +79,78 @@ destroy_window( struct Window* window )
 }
 
 void
-window_get_size( const struct Window* window, u32* width, u32* height )
+ft_window_get_size( const struct ft_window* window,
+                    uint32_t*               width,
+                    uint32_t*               height )
 {
 	SDL_Window* handle = ( SDL_Window* ) ( window->handle );
-	i32         w, h;
+	int32_t     w, h;
 
 	SDL_GetWindowSize( handle, &w, &h );
 
-	*width  = ( u32 ) w;
-	*height = ( u32 ) h;
+	*width  = ( uint32_t ) w;
+	*height = ( uint32_t ) h;
 }
 
 void
-window_get_framebuffer_size( const struct Window* window,
-                             u32*                 width,
-                             u32*                 height )
+ft_window_get_framebuffer_size( const struct ft_window* window,
+                                uint32_t*               width,
+                                uint32_t*               height )
 {
 	SDL_Window* handle = ( SDL_Window* ) ( window->handle );
-	i32         w, h;
+	int32_t     w, h;
 #if defined( METAL_BACKEND )
 	SDL_Metal_GetDrawableSize( handle, &w, &h );
 #elif defined( VULKAN_BACKEND )
 	SDL_Vulkan_GetDrawableSize( handle, &w, &h );
 #endif
 
-	*width  = ( u32 ) w;
-	*height = ( u32 ) h;
+	*width  = ( uint32_t ) w;
+	*height = ( uint32_t ) h;
 }
 
-u32
-window_get_framebuffer_width( const struct Window* window )
+uint32_t
+ft_window_get_framebuffer_width( const struct ft_window* window )
 {
-	u32 w, h;
-	window_get_framebuffer_size( window, &w, &h );
+	uint32_t w, h;
+	ft_window_get_framebuffer_size( window, &w, &h );
 	return w;
 }
 
-u32
-window_get_framebuffer_height( const struct Window* window )
+uint32_t
+ft_window_get_framebuffer_height( const struct ft_window* window )
 {
-	u32 w, h;
-	window_get_framebuffer_size( window, &w, &h );
+	uint32_t w, h;
+	ft_window_get_framebuffer_size( window, &w, &h );
 	return h;
 }
 
-u32
-window_get_width( const struct Window* window )
+uint32_t
+ft_window_get_width( const struct ft_window* window )
 {
-	u32 w, h;
-	window_get_size( window, &w, &h );
+	uint32_t w, h;
+	ft_window_get_size( window, &w, &h );
 	return w;
 }
 
-u32
-window_get_height( const struct Window* window )
+uint32_t
+ft_window_get_height( const struct ft_window* window )
 {
-	u32 w, h;
-	window_get_size( window, &w, &h );
+	uint32_t w, h;
+	ft_window_get_size( window, &w, &h );
 	return h;
 }
 
-f32
-window_get_aspect( const struct Window* window )
+float
+ft_window_get_aspect( const struct ft_window* window )
 {
-	u32 w, h;
-	window_get_size( window, &w, &h );
-	return ( f32 ) ( w ) / ( f32 ) ( h );
+	uint32_t w, h;
+	ft_window_get_size( window, &w, &h );
+	return ( float ) ( w ) / ( float ) ( h );
 }
 
 void
-window_show_cursor( b32 show )
+ft_window_show_cursor( bool show )
 {
 	SDL_SetRelativeMouseMode( show ? SDL_FALSE : SDL_TRUE );
 }

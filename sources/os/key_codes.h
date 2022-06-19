@@ -2,7 +2,7 @@
 
 #include "base/base.h"
 
-enum KeyCode
+enum ft_key_code
 {
 	FT_KEY_SPACE      = 44,
 	FT_KEY_APOSTROPHE = 52, /* ' */

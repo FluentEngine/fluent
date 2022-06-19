@@ -23,22 +23,22 @@ struct Mat4f
 
 struct nk_vulkan_adapter
 {
-	struct nk_buffer            cmds;
-	struct nk_draw_null_texture null;
-	struct Device              *device;
-	struct Queue               *queue;
-	enum Format                 color_format;
-	enum Format                 depth_format;
-	struct Sampler             *font_tex;
-	struct Image               *font_image;
-	struct Pipeline            *pipeline;
-	struct Buffer              *vertex_buffer;
-	struct Buffer              *index_buffer;
-	struct Buffer              *uniform_buffer;
-	struct CommandPool         *command_pool;
-	struct CommandBuffer       *command_buffer;
-	struct DescriptorSetLayout *dsl;
-	struct DescriptorSet       *set;
+	struct nk_buffer                 cmds;
+	struct nk_draw_null_texture      null;
+	struct ft_device                *device;
+	struct ft_queue                 *queue;
+	enum ft_format                   color_format;
+	enum ft_format                   depth_format;
+	struct ft_sampler               *font_tex;
+	struct ft_image                 *font_image;
+	struct ft_pipeline              *pipeline;
+	struct ft_buffer                *vertex_buffer;
+	struct ft_buffer                *index_buffer;
+	struct ft_buffer                *uniform_buffer;
+	struct ft_command_pool          *command_pool;
+	struct ft_command_buffer        *command_buffer;
+	struct ft_descriptor_set_layout *dsl;
+	struct ft_descriptor_set        *set;
 };
 
 struct nk_ft_vertex
@@ -50,9 +50,9 @@ struct nk_ft_vertex
 
 static struct nk_ft
 {
-	struct WsiInfo          *wsi;
-	u32                      width, height;
-	u32                      display_width, display_height;
+	struct ft_wsi_info      *wsi;
+	uint32_t                 width, height;
+	uint32_t                 display_width, display_height;
 	struct nk_vulkan_adapter adapter;
 	struct nk_context        ctx;
 	struct nk_font_atlas     atlas;
@@ -68,21 +68,21 @@ static struct nk_ft
 static void
 update_write_descriptor_sets( struct nk_vulkan_adapter *adapter )
 {
-	struct BufferDescriptor buffer_descriptor = {
+	struct ft_buffer_descriptor buffer_descriptor = {
 	    .buffer = adapter->uniform_buffer,
 	    .offset = 0,
 	    .range  = sizeof( struct Mat4f ),
 	};
 
-	struct SamplerDescriptor sampler_descriptor = {
+	struct ft_sampler_descriptor sampler_descriptor = {
 	    .sampler = adapter->font_tex,
 	};
 
-	struct ImageDescriptor image_descriptor = {
+	struct ft_image_descriptor image_descriptor = {
 	    .image          = adapter->font_image,
 	    .resource_state = FT_RESOURCE_STATE_SHADER_READ_ONLY };
 
-	struct DescriptorWrite descriptor_writes[ 3 ];
+	struct ft_descriptor_write descriptor_writes[ 3 ];
 	memset( descriptor_writes, 0, sizeof( descriptor_writes ) );
 	descriptor_writes[ 0 ].buffer_descriptors = &buffer_descriptor;
 	descriptor_writes[ 0 ].descriptor_count   = 1;
@@ -101,31 +101,31 @@ update_write_descriptor_sets( struct nk_vulkan_adapter *adapter )
 	{
 		descriptor_write_count += 2;
 	}
-	update_descriptor_set( adapter->device,
-	                       adapter->set,
-	                       descriptor_write_count,
-	                       descriptor_writes );
+	ft_update_descriptor_set( adapter->device,
+	                          adapter->set,
+	                          descriptor_write_count,
+	                          descriptor_writes );
 }
 
 static void
 prepare_pipeline( struct nk_vulkan_adapter *adapter )
 {
-	struct Shader *shader;
+	struct ft_shader *shader;
 
-	struct ShaderInfo shader_info = {
+	struct ft_shader_info shader_info = {
 	    .vertex   = get_nuklear_vert_shader( adapter->device->api ),
 	    .fragment = get_nuklear_frag_shader( adapter->device->api ),
 	};
-	create_shader( adapter->device, &shader_info, &shader );
+	ft_create_shader( adapter->device, &shader_info, &shader );
 
-	create_descriptor_set_layout( adapter->device, shader, &adapter->dsl );
-	struct DescriptorSetInfo set_info = {
+	ft_create_descriptor_set_layout( adapter->device, shader, &adapter->dsl );
+	struct ft_descriptor_set_info set_info = {
 	    .set                   = 0,
 	    .descriptor_set_layout = adapter->dsl,
 	};
-	create_descriptor_set( adapter->device, &set_info, &adapter->set );
+	ft_create_descriptor_set( adapter->device, &set_info, &adapter->set );
 
-	struct PipelineInfo pipeline_info = {
+	struct ft_pipeline_info pipeline_info = {
 	    .type                          = FT_PIPELINE_TYPE_GRAPHICS,
 	    .shader                        = shader,
 	    .descriptor_set_layout         = adapter->dsl,
@@ -174,15 +174,15 @@ prepare_pipeline( struct nk_vulkan_adapter *adapter )
 	        },
 	};
 
-	create_pipeline( adapter->device, &pipeline_info, &adapter->pipeline );
-	destroy_shader( adapter->device, shader );
+	ft_create_pipeline( adapter->device, &pipeline_info, &adapter->pipeline );
+	ft_destroy_shader( adapter->device, shader );
 }
 
 NK_API void
-nk_ft_device_create( struct Device *device,
-                     struct Queue  *graphics_queue,
-                     enum Format    color_format,
-                     enum Format    depth_format )
+nk_ft_device_create( struct ft_device *device,
+                     struct ft_queue  *graphics_queue,
+                     enum ft_format    color_format,
+                     enum ft_format    depth_format )
 {
 	struct nk_vulkan_adapter *adapter = &ft.adapter;
 	nk_buffer_init_default( &adapter->cmds );
@@ -191,17 +191,17 @@ nk_ft_device_create( struct Device *device,
 	adapter->color_format = color_format;
 	adapter->depth_format = depth_format;
 
-	struct BufferInfo buffer_info = { 0 };
-	buffer_info.memory_usage      = FT_MEMORY_USAGE_CPU_TO_GPU;
-	buffer_info.descriptor_type   = FT_DESCRIPTOR_TYPE_VERTEX_BUFFER;
-	buffer_info.size              = MAX_VERTEX_BUFFER;
-	create_buffer( adapter->device, &buffer_info, &adapter->vertex_buffer );
+	struct ft_buffer_info buffer_info = { 0 };
+	buffer_info.memory_usage          = FT_MEMORY_USAGE_CPU_TO_GPU;
+	buffer_info.descriptor_type       = FT_DESCRIPTOR_TYPE_VERTEX_BUFFER;
+	buffer_info.size                  = MAX_VERTEX_BUFFER;
+	ft_create_buffer( adapter->device, &buffer_info, &adapter->vertex_buffer );
 	buffer_info.descriptor_type = FT_DESCRIPTOR_TYPE_INDEX_BUFFER;
 	buffer_info.size            = MAX_INDEX_BUFFER;
-	create_buffer( adapter->device, &buffer_info, &adapter->index_buffer );
+	ft_create_buffer( adapter->device, &buffer_info, &adapter->index_buffer );
 	buffer_info.descriptor_type = FT_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	buffer_info.size            = sizeof( struct Mat4f );
-	create_buffer( adapter->device, &buffer_info, &adapter->uniform_buffer );
+	ft_create_buffer( adapter->device, &buffer_info, &adapter->uniform_buffer );
 
 	prepare_pipeline( adapter );
 }
@@ -214,11 +214,11 @@ nk_ft_device_destroy( void )
 }
 
 NK_API struct nk_context *
-nk_ft_init( struct WsiInfo *wsi,
-            struct Device  *device,
-            struct Queue   *queue,
-            enum Format     color_format,
-            enum Format     depth_format )
+nk_ft_init( struct ft_wsi_info *wsi,
+            struct ft_device   *device,
+            struct ft_queue    *queue,
+            enum ft_format      color_format,
+            enum ft_format      depth_format )
 {
 	ft.wsi = wsi;
 
@@ -240,9 +240,9 @@ nk_ft_device_upload_atlas( const void *image, int width, int height )
 {
 	struct nk_vulkan_adapter *adapter = &ft.adapter;
 
-	struct ImageInfo image_info = {
-	    .width           = ( u32 ) width,
-	    .height          = ( u32 ) height,
+	struct ft_image_info image_info = {
+	    .width           = ( uint32_t ) width,
+	    .height          = ( uint32_t ) height,
 	    .depth           = 1,
 	    .format          = FT_FORMAT_R8G8B8A8_UNORM,
 	    .sample_count    = 1,
@@ -251,11 +251,11 @@ nk_ft_device_upload_atlas( const void *image, int width, int height )
 	    .descriptor_type = FT_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
 	};
 
-	create_image( adapter->device, &image_info, &adapter->font_image );
+	ft_create_image( adapter->device, &image_info, &adapter->font_image );
 
-	upload_image( adapter->font_image, width * height * 4, image );
+	ft_upload_image( adapter->font_image, width * height * 4, image );
 
-	struct SamplerInfo sampler_info = {
+	struct ft_sampler_info sampler_info = {
 	    .mag_filter     = FT_FILTER_LINEAR,
 	    .min_filter     = FT_FILTER_LINEAR,
 	    .max_anisotropy = 1.0,
@@ -269,7 +269,7 @@ nk_ft_device_upload_atlas( const void *image, int width, int height )
 	    .min_lod        = 0.0f,
 	    .max_lod        = 0.0f };
 
-	create_sampler( adapter->device, &sampler_info, &adapter->font_tex );
+	ft_create_sampler( adapter->device, &sampler_info, &adapter->font_tex );
 }
 
 NK_API void
@@ -305,62 +305,70 @@ nk_ft_new_frame()
 {
 	struct nk_context *ctx = &ft.ctx;
 
-	struct WsiInfo *wsi = ft.wsi;
-	void           *win = wsi->window;
+	struct ft_wsi_info *wsi = ft.wsi;
+	void               *win = wsi->window;
 	wsi->get_window_size( win, &ft.width, &ft.height );
 	wsi->get_framebuffer_size( win, &ft.display_width, &ft.display_height );
 
-	ft.fb_scale.x = ( f32 ) ( ft.display_width / ft.width );
-	ft.fb_scale.y = ( f32 ) ( ft.display_height / ft.height );
+	ft.fb_scale.x = ( float ) ( ft.display_width / ft.width );
+	ft.fb_scale.y = ( float ) ( ft.display_height / ft.height );
 
 	nk_input_begin( ctx );
 
-	nk_input_key( ctx, NK_KEY_DEL, is_key_pressed( FT_KEY_DELETE ) );
-	nk_input_key( ctx, NK_KEY_ENTER, is_key_pressed( FT_KEY_ENTER ) );
-	nk_input_key( ctx, NK_KEY_TAB, is_key_pressed( FT_KEY_TAB ) );
-	nk_input_key( ctx, NK_KEY_BACKSPACE, is_key_pressed( FT_KEY_BACKSPACE ) );
-	nk_input_key( ctx, NK_KEY_UP, is_key_pressed( FT_KEY_UP ) );
-	nk_input_key( ctx, NK_KEY_DOWN, is_key_pressed( FT_KEY_DOWN ) );
-	nk_input_key( ctx, NK_KEY_TEXT_START, is_key_pressed( FT_KEY_HOME ) );
-	nk_input_key( ctx, NK_KEY_TEXT_END, is_key_pressed( FT_KEY_END ) );
-	nk_input_key( ctx, NK_KEY_SCROLL_START, is_key_pressed( FT_KEY_HOME ) );
-	nk_input_key( ctx, NK_KEY_SCROLL_END, is_key_pressed( FT_KEY_END ) );
-	nk_input_key( ctx, NK_KEY_SCROLL_DOWN, is_key_pressed( FT_KEY_PAGE_DOWN ) );
-	nk_input_key( ctx, NK_KEY_SCROLL_UP, is_key_pressed( FT_KEY_PAGE_UP ) );
+	nk_input_key( ctx, NK_KEY_DEL, ft_is_key_pressed( FT_KEY_DELETE ) );
+	nk_input_key( ctx, NK_KEY_ENTER, ft_is_key_pressed( FT_KEY_ENTER ) );
+	nk_input_key( ctx, NK_KEY_TAB, ft_is_key_pressed( FT_KEY_TAB ) );
+	nk_input_key( ctx,
+	              NK_KEY_BACKSPACE,
+	              ft_is_key_pressed( FT_KEY_BACKSPACE ) );
+	nk_input_key( ctx, NK_KEY_UP, ft_is_key_pressed( FT_KEY_UP ) );
+	nk_input_key( ctx, NK_KEY_DOWN, ft_is_key_pressed( FT_KEY_DOWN ) );
+	nk_input_key( ctx, NK_KEY_TEXT_START, ft_is_key_pressed( FT_KEY_HOME ) );
+	nk_input_key( ctx, NK_KEY_TEXT_END, ft_is_key_pressed( FT_KEY_END ) );
+	nk_input_key( ctx, NK_KEY_SCROLL_START, ft_is_key_pressed( FT_KEY_HOME ) );
+	nk_input_key( ctx, NK_KEY_SCROLL_END, ft_is_key_pressed( FT_KEY_END ) );
+	nk_input_key( ctx,
+	              NK_KEY_SCROLL_DOWN,
+	              ft_is_key_pressed( FT_KEY_PAGE_DOWN ) );
+	nk_input_key( ctx, NK_KEY_SCROLL_UP, ft_is_key_pressed( FT_KEY_PAGE_UP ) );
 	nk_input_key( ctx,
 	              NK_KEY_SHIFT,
-	              is_key_pressed( FT_KEY_LEFT_SHIFT ) ||
-	                  is_key_pressed( FT_KEY_RIGHT_SHIFT ) );
+	              ft_is_key_pressed( FT_KEY_LEFT_SHIFT ) ||
+	                  ft_is_key_pressed( FT_KEY_RIGHT_SHIFT ) );
 
-	if ( is_key_pressed( FT_KEY_LEFT_CONTROL ) ||
-	     is_key_pressed( FT_KEY_RIGHT_CONTROL ) )
+	if ( ft_is_key_pressed( FT_KEY_LEFT_CONTROL ) ||
+	     ft_is_key_pressed( FT_KEY_RIGHT_CONTROL ) )
 	{
-		nk_input_key( ctx, NK_KEY_COPY, is_key_pressed( FT_KEY_C ) );
-		nk_input_key( ctx, NK_KEY_PASTE, is_key_pressed( FT_KEY_V ) );
-		nk_input_key( ctx, NK_KEY_CUT, is_key_pressed( FT_KEY_X ) );
-		nk_input_key( ctx, NK_KEY_TEXT_UNDO, is_key_pressed( FT_KEY_Z ) );
-		nk_input_key( ctx, NK_KEY_TEXT_REDO, is_key_pressed( FT_KEY_R ) );
+		nk_input_key( ctx, NK_KEY_COPY, ft_is_key_pressed( FT_KEY_C ) );
+		nk_input_key( ctx, NK_KEY_PASTE, ft_is_key_pressed( FT_KEY_V ) );
+		nk_input_key( ctx, NK_KEY_CUT, ft_is_key_pressed( FT_KEY_X ) );
+		nk_input_key( ctx, NK_KEY_TEXT_UNDO, ft_is_key_pressed( FT_KEY_Z ) );
+		nk_input_key( ctx, NK_KEY_TEXT_REDO, ft_is_key_pressed( FT_KEY_R ) );
 		nk_input_key( ctx,
 		              NK_KEY_TEXT_WORD_LEFT,
-		              is_key_pressed( FT_KEY_LEFT ) );
+		              ft_is_key_pressed( FT_KEY_LEFT ) );
 		nk_input_key( ctx,
 		              NK_KEY_TEXT_WORD_RIGHT,
-		              is_key_pressed( FT_KEY_RIGHT ) );
-		nk_input_key( ctx, NK_KEY_TEXT_LINE_START, is_key_pressed( FT_KEY_B ) );
-		nk_input_key( ctx, NK_KEY_TEXT_LINE_END, is_key_pressed( FT_KEY_E ) );
+		              ft_is_key_pressed( FT_KEY_RIGHT ) );
+		nk_input_key( ctx,
+		              NK_KEY_TEXT_LINE_START,
+		              ft_is_key_pressed( FT_KEY_B ) );
+		nk_input_key( ctx,
+		              NK_KEY_TEXT_LINE_END,
+		              ft_is_key_pressed( FT_KEY_E ) );
 	}
 	else
 	{
-		nk_input_key( ctx, NK_KEY_LEFT, is_key_pressed( FT_KEY_LEFT ) );
-		nk_input_key( ctx, NK_KEY_RIGHT, is_key_pressed( FT_KEY_RIGHT ) );
+		nk_input_key( ctx, NK_KEY_LEFT, ft_is_key_pressed( FT_KEY_LEFT ) );
+		nk_input_key( ctx, NK_KEY_RIGHT, ft_is_key_pressed( FT_KEY_RIGHT ) );
 		nk_input_key( ctx, NK_KEY_COPY, 0 );
 		nk_input_key( ctx, NK_KEY_PASTE, 0 );
 		nk_input_key( ctx, NK_KEY_CUT, 0 );
 		nk_input_key( ctx, NK_KEY_SHIFT, 0 );
 	}
 
-	i32 x, y;
-	get_mouse_position( &x, &y );
+	int32_t x, y;
+	ft_get_mouse_position( &x, &y );
 
 	nk_input_motion( ctx, ( int ) x, ( int ) y );
 
@@ -368,24 +376,24 @@ nk_ft_new_frame()
 	                 NK_BUTTON_LEFT,
 	                 ( int ) x,
 	                 ( int ) y,
-	                 is_button_pressed( FT_BUTTON_LEFT ) );
+	                 ft_is_button_pressed( FT_BUTTON_LEFT ) );
 
 	nk_input_button( ctx,
 	                 NK_BUTTON_MIDDLE,
 	                 x,
 	                 y,
-	                 is_button_pressed( FT_BUTTON_MIDDLE ) );
+	                 ft_is_button_pressed( FT_BUTTON_MIDDLE ) );
 
 	nk_input_button( ctx,
 	                 NK_BUTTON_RIGHT,
 	                 x,
 	                 y,
-	                 is_button_pressed( FT_BUTTON_RIGHT ) );
+	                 ft_is_button_pressed( FT_BUTTON_RIGHT ) );
 
 	nk_input_button( ctx,
 	                 NK_BUTTON_DOUBLE,
-	                 ( i32 ) ft.double_click_pos.x,
-	                 ( i32 ) ft.double_click_pos.y,
+	                 ( int32_t ) ft.double_click_pos.x,
+	                 ( int32_t ) ft.double_click_pos.y,
 	                 ft.is_double_click_down );
 
 	nk_input_scroll( ctx, ft.scroll );
@@ -395,42 +403,44 @@ nk_ft_new_frame()
 
 NK_API
 void
-nk_ft_render( const struct CommandBuffer *cmd, enum nk_anti_aliasing AA )
+nk_ft_render( const struct ft_command_buffer *cmd, enum nk_anti_aliasing AA )
 {
 	struct nk_vulkan_adapter *adapter = &ft.adapter;
 	struct nk_buffer          vbuf, ebuf;
 
 	// clang-format off
 	struct Mat4f projection = {
-		.m = { 2.0f, 0.0f, 0.0f, 0.0f, 
-			0.0f, -2.0f, 0.0f, 0.0f, 
+		.m = { 2.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, -2.0f, 0.0f, 0.0f,
 			0.0f, 0.0f, -1.0f, 0.0f,
 			-1.0f, 1.0f, 0.0f, 1.0f },
 	};
 	// clang-format on
 
-	projection.m[ 0 ] /= ( f32 ) ft.width;
-	projection.m[ 5 ] /= ( f32 ) ft.height;
+	projection.m[ 0 ] /= ( float ) ft.width;
+	projection.m[ 5 ] /= ( float ) ft.height;
 
-	void *data = map_memory( adapter->device, adapter->uniform_buffer );
+	void *data = ft_map_memory( adapter->device, adapter->uniform_buffer );
 	memcpy( data, &projection, sizeof( projection ) );
-	unmap_memory( adapter->device, adapter->uniform_buffer );
+	ft_unmap_memory( adapter->device, adapter->uniform_buffer );
 
-	cmd_set_viewport( cmd,
-	                  0,
-	                  0,
-	                  ( f32 ) ft.display_width,
-	                  ( f32 ) ft.display_height,
-	                  0.0f,
-	                  1.0f );
-	cmd_bind_pipeline( cmd, adapter->pipeline );
-	cmd_bind_descriptor_set( cmd, 0, adapter->set, adapter->pipeline );
+	ft_cmd_set_viewport( cmd,
+	                     0,
+	                     0,
+	                     ( float ) ft.display_width,
+	                     ( float ) ft.display_height,
+	                     0.0f,
+	                     1.0f );
+	ft_cmd_bind_pipeline( cmd, adapter->pipeline );
+	ft_cmd_bind_descriptor_set( cmd, 0, adapter->set, adapter->pipeline );
 
 	{
 		/* convert from command queue into draw list and draw to screen */
 		const struct nk_draw_command *draw_cmd;
-		void *vertices = map_memory( adapter->device, adapter->vertex_buffer );
-		void *elements = map_memory( adapter->device, adapter->index_buffer );
+		void                         *vertices =
+		    ft_map_memory( adapter->device, adapter->vertex_buffer );
+		void *elements =
+		    ft_map_memory( adapter->device, adapter->index_buffer );
 
 		/* load draw vertices & elements directly into vertex + element buffer
 		 */
@@ -469,15 +479,15 @@ nk_ft_render( const struct CommandBuffer *cmd, enum nk_anti_aliasing AA )
 			                      ( size_t ) MAX_INDEX_BUFFER );
 			nk_convert( &ft.ctx, &adapter->cmds, &vbuf, &ebuf, &config );
 		}
-		unmap_memory( adapter->device, adapter->vertex_buffer );
-		unmap_memory( adapter->device, adapter->index_buffer );
+		ft_unmap_memory( adapter->device, adapter->vertex_buffer );
+		ft_unmap_memory( adapter->device, adapter->index_buffer );
 
 		/* iterate over and execute each draw command */
-		cmd_bind_vertex_buffer( cmd, adapter->vertex_buffer, 0 );
-		cmd_bind_index_buffer( cmd,
-		                       adapter->index_buffer,
-		                       0,
-		                       FT_INDEX_TYPE_U16 );
+		ft_cmd_bind_vertex_buffer( cmd, adapter->vertex_buffer, 0 );
+		ft_cmd_bind_index_buffer( cmd,
+		                          adapter->index_buffer,
+		                          0,
+		                          FT_INDEX_TYPE_U16 );
 
 		uint32_t index_offset = 0;
 		nk_draw_foreach( draw_cmd, &ft.ctx, &adapter->cmds )
@@ -485,19 +495,19 @@ nk_ft_render( const struct CommandBuffer *cmd, enum nk_anti_aliasing AA )
 			if ( !draw_cmd->elem_count )
 				continue;
 
-			cmd_set_scissor(
+			ft_cmd_set_scissor(
 			    cmd,
-			    MAX( ( i32 ) ( draw_cmd->clip_rect.x * ft.fb_scale.x ), 0 ),
-			    MAX( ( i32 ) ( draw_cmd->clip_rect.y * ft.fb_scale.y ), 0 ),
-			    ( u32 ) ( draw_cmd->clip_rect.w * ft.fb_scale.x ),
-			    ( u32 ) ( draw_cmd->clip_rect.h * ft.fb_scale.y ) );
+			    MAX( ( int32_t ) ( draw_cmd->clip_rect.x * ft.fb_scale.x ), 0 ),
+			    MAX( ( int32_t ) ( draw_cmd->clip_rect.y * ft.fb_scale.y ), 0 ),
+			    ( uint32_t ) ( draw_cmd->clip_rect.w * ft.fb_scale.x ),
+			    ( uint32_t ) ( draw_cmd->clip_rect.h * ft.fb_scale.y ) );
 
-			cmd_draw_indexed( cmd,
-			                  draw_cmd->elem_count,
-			                  1,
-			                  index_offset,
-			                  0,
-			                  0 );
+			ft_cmd_draw_indexed( cmd,
+			                     draw_cmd->elem_count,
+			                     1,
+			                     index_offset,
+			                     0,
+			                     0 );
 			index_offset += draw_cmd->elem_count;
 		}
 		nk_clear( &ft.ctx );
@@ -512,22 +522,22 @@ nk_ft_shutdown( void )
 
 	if ( adapter->font_tex )
 	{
-		destroy_sampler( adapter->device, adapter->font_tex );
+		ft_destroy_sampler( adapter->device, adapter->font_tex );
 	}
 
 	if ( adapter->font_image )
 	{
-		destroy_image( adapter->device, adapter->font_image );
+		ft_destroy_image( adapter->device, adapter->font_image );
 		nk_font_atlas_clear( &ft.atlas );
 		nk_free( &ft.ctx );
 	}
 
-	destroy_buffer( adapter->device, adapter->vertex_buffer );
-	destroy_buffer( adapter->device, adapter->index_buffer );
-	destroy_buffer( adapter->device, adapter->uniform_buffer );
-	destroy_pipeline( adapter->device, adapter->pipeline );
-	destroy_descriptor_set( adapter->device, adapter->set );
-	destroy_descriptor_set_layout( adapter->device, adapter->dsl );
+	ft_destroy_buffer( adapter->device, adapter->vertex_buffer );
+	ft_destroy_buffer( adapter->device, adapter->index_buffer );
+	ft_destroy_buffer( adapter->device, adapter->uniform_buffer );
+	ft_destroy_pipeline( adapter->device, adapter->pipeline );
+	ft_destroy_descriptor_set( adapter->device, adapter->set );
+	ft_destroy_descriptor_set_layout( adapter->device, adapter->dsl );
 
 	nk_ft_device_destroy();
 	memset( &ft, 0, sizeof( ft ) );

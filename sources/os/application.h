@@ -4,51 +4,42 @@
 #include "log/log.h"
 #include "window.h"
 
-#ifdef __cplusplus
-extern "C"
+typedef void ( *ft_init_callback )( void );
+typedef void ( *ft_update_callback )( float deltaTime );
+typedef void ( *ft_shutdown_callback )( void );
+typedef void ( *ft_resize_callback )( uint32_t width, uint32_t height );
+
+struct ft_application_config
 {
-#endif
+	uint32_t              argc;
+	char**                argv;
+	struct ft_window_info window_info;
+	enum ft_log_level     log_level;
+	ft_init_callback      on_init;
+	ft_update_callback    on_update;
+	ft_shutdown_callback  on_shutdown;
+	ft_resize_callback    on_resize;
+};
 
-	typedef void ( *InitCallback )( void );
-	typedef void ( *UpdateCallback )( f32 deltaTime );
-	typedef void ( *ShutdownCallback )( void );
-	typedef void ( *ResizeCallback )( u32 width, u32 height );
+FT_API void
+ft_app_init( const struct ft_application_config* state );
 
-	struct ApplicationConfig
-	{
-		u32               argc;
-		char**            argv;
-		struct WindowInfo window_info;
-		enum LogLevel     log_level;
-		InitCallback      on_init;
-		UpdateCallback    on_update;
-		ShutdownCallback  on_shutdown;
-		ResizeCallback    on_resize;
-	};
+FT_API void
+ft_app_run( void );
 
-	void
-	app_init( const struct ApplicationConfig* state );
+FT_API void
+ft_app_shutdown( void );
 
-	void
-	app_run( void );
+FT_API void
+ft_app_request_exit( void );
 
-	void
-	app_shutdown( void );
+FT_API const struct ft_window*
+ft_get_app_window( void );
 
-	void
-	app_request_exit( void );
+FT_API uint32_t
+ft_get_time( void );
+FT_API float
+ft_get_delta_time( void );
 
-	const struct Window*
-	get_app_window( void );
-
-	u32
-	get_time( void );
-	f32
-	get_delta_time( void );
-
-	struct WsiInfo*
-	get_ft_wsi_info( void );
-
-#ifdef __cplusplus
-}
-#endif
+FT_API struct ft_wsi_info*
+ft_get_wsi_info( void );

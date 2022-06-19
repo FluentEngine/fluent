@@ -3,30 +3,31 @@
 #include <volk/volk.h>
 #include <tiny_image_format/tinyimageformat_apis.h>
 #include <vk_mem_alloc/vk_mem_alloc.h>
+#include "base/base.h"
 
-static inline VkFormat
-to_vk_format( enum Format format )
+FT_INLINE VkFormat
+to_vk_format( enum ft_format format )
 {
 	return ( VkFormat ) TinyImageFormat_ToVkFormat(
 	    ( TinyImageFormat ) format );
 }
 
-static inline enum Format
+FT_INLINE enum ft_format
 from_vk_format( VkFormat format )
 {
-	return ( enum Format ) TinyImageFormat_FromVkFormat(
+	return ( enum ft_format ) TinyImageFormat_FromVkFormat(
 	    ( TinyImageFormat_VkFormat ) format );
 }
 
-static inline VkSampleCountFlagBits
-to_vk_sample_count( u32 sample_count )
+FT_INLINE VkSampleCountFlagBits
+to_vk_sample_count( uint32_t sample_count )
 {
 	// TODO: assert?
 	return ( VkSampleCountFlagBits ) sample_count;
 }
 
-static inline VkAttachmentLoadOp
-to_vk_load_op( enum AttachmentLoadOp load_op )
+FT_INLINE VkAttachmentLoadOp
+to_vk_load_op( enum ft_attachment_load_op load_op )
 {
 	switch ( load_op )
 	{
@@ -34,70 +35,70 @@ to_vk_load_op( enum AttachmentLoadOp load_op )
 	case FT_ATTACHMENT_LOAD_OP_DONT_CARE:
 		return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	case FT_ATTACHMENT_LOAD_OP_LOAD: return VK_ATTACHMENT_LOAD_OP_LOAD;
-	default: FT_ASSERT( 0 ); return ( VkAttachmentLoadOp ) -1;
+	default: FT_ASSERT( false ); return ( VkAttachmentLoadOp ) -1;
 	}
 }
 
-static inline VkQueueFlagBits
-to_vk_queue_type( enum QueueType type )
+FT_INLINE VkQueueFlagBits
+to_vk_queue_type( enum ft_queue_type type )
 {
 	switch ( type )
 	{
 	case FT_QUEUE_TYPE_GRAPHICS: return VK_QUEUE_GRAPHICS_BIT;
 	case FT_QUEUE_TYPE_COMPUTE: return VK_QUEUE_COMPUTE_BIT;
 	case FT_QUEUE_TYPE_TRANSFER: return VK_QUEUE_TRANSFER_BIT;
-	default: FT_ASSERT( 0 ); return ( VkQueueFlagBits ) -1;
+	default: FT_ASSERT( false ); return ( VkQueueFlagBits ) -1;
 	}
 }
 
-static inline VkVertexInputRate
-to_vk_vertex_input_rate( enum VertexInputRate input_rate )
+FT_INLINE VkVertexInputRate
+to_vk_vertex_input_rate( enum ft_vertex_input_rate input_rate )
 {
 	switch ( input_rate )
 	{
 	case FT_VERTEX_INPUT_RATE_VERTEX: return VK_VERTEX_INPUT_RATE_VERTEX;
 	case FT_VERTEX_INPUT_RATE_INSTANCE: return VK_VERTEX_INPUT_RATE_INSTANCE;
-	default: FT_ASSERT( 0 ); return ( VkVertexInputRate ) -1;
+	default: FT_ASSERT( false ); return ( VkVertexInputRate ) -1;
 	}
 }
 
-static inline VkIndexType
+FT_INLINE VkIndexType
 to_vk_index_type( enum IndexType index_type )
 {
 	switch ( index_type )
 	{
 	case FT_INDEX_TYPE_U16: return VK_INDEX_TYPE_UINT16;
 	case FT_INDEX_TYPE_U32: return VK_INDEX_TYPE_UINT32;
-	default: FT_ASSERT( 0 ); return ( VkIndexType ) -1;
+	default: FT_ASSERT( false ); return ( VkIndexType ) -1;
 	}
 }
 
-static inline VkCullModeFlagBits
-to_vk_cull_mode( enum CullMode cull_mode )
+FT_INLINE VkCullModeFlagBits
+to_vk_cull_mode( enum ft_cull_mode cull_mode )
 {
 	switch ( cull_mode )
 	{
 	case FT_CULL_MODE_BACK: return VK_CULL_MODE_BACK_BIT;
 	case FT_CULL_MODE_FRONT: return VK_CULL_MODE_FRONT_BIT;
 	case FT_CULL_MODE_NONE: return VK_CULL_MODE_NONE;
-	default: FT_ASSERT( 0 ); return ( VkCullModeFlagBits ) -1;
+	default: FT_ASSERT( false ); return ( VkCullModeFlagBits ) -1;
 	}
 }
 
-static inline VkFrontFace
-to_vk_front_face( enum FrontFace front_face )
+FT_INLINE VkFrontFace
+to_vk_front_face( enum ft_front_face front_face )
 {
 	switch ( front_face )
 	{
 	case FT_FRONT_FACE_CLOCKWISE: return VK_FRONT_FACE_CLOCKWISE;
 	case FT_FRONT_FACE_COUNTER_CLOCKWISE:
 		return VK_FRONT_FACE_COUNTER_CLOCKWISE;
-	default: FT_ASSERT( 0 ); return ( VkFrontFace ) -1;
+	default: FT_ASSERT( false ); return ( VkFrontFace ) -1;
 	}
 }
 
-static inline VkCompareOp
-to_vk_compare_op( enum CompareOp op )
+FT_INLINE VkCompareOp
+to_vk_compare_op( enum ft_compare_op op )
 {
 	switch ( op )
 	{
@@ -109,12 +110,12 @@ to_vk_compare_op( enum CompareOp op )
 	case FT_COMPARE_OP_NOT_EQUAL: return VK_COMPARE_OP_NOT_EQUAL;
 	case FT_COMPARE_OP_GREATER_OR_EQUAL: return VK_COMPARE_OP_GREATER_OR_EQUAL;
 	case FT_COMPARE_OP_ALWAYS: return VK_COMPARE_OP_ALWAYS;
-	default: FT_ASSERT( 0 ); return ( VkCompareOp ) -1;
+	default: FT_ASSERT( false ); return ( VkCompareOp ) -1;
 	}
 }
 
-static inline VkShaderStageFlagBits
-to_vk_shader_stage( enum ShaderStage shader_stage )
+FT_INLINE VkShaderStageFlagBits
+to_vk_shader_stage( enum ft_shader_stage shader_stage )
 {
 	switch ( shader_stage )
 	{
@@ -126,23 +127,23 @@ to_vk_shader_stage( enum ShaderStage shader_stage )
 	case FT_SHADER_STAGE_GEOMETRY: return VK_SHADER_STAGE_GEOMETRY_BIT;
 	case FT_SHADER_STAGE_FRAGMENT: return VK_SHADER_STAGE_FRAGMENT_BIT;
 	case FT_SHADER_STAGE_COMPUTE: return VK_SHADER_STAGE_COMPUTE_BIT;
-	default: FT_ASSERT( 0 ); return ( VkShaderStageFlagBits ) -1;
+	default: FT_ASSERT( false ); return ( VkShaderStageFlagBits ) -1;
 	}
 }
 
-static inline VkPipelineBindPoint
-to_vk_pipeline_bind_point( enum PipelineType type )
+FT_INLINE VkPipelineBindPoint
+to_vk_pipeline_bind_point( enum ft_pipeline_type type )
 {
 	switch ( type )
 	{
 	case FT_PIPELINE_TYPE_COMPUTE: return VK_PIPELINE_BIND_POINT_COMPUTE;
 	case FT_PIPELINE_TYPE_GRAPHICS: return VK_PIPELINE_BIND_POINT_GRAPHICS;
-	default: FT_ASSERT( 0 ); return ( VkPipelineBindPoint ) -1;
+	default: FT_ASSERT( false ); return ( VkPipelineBindPoint ) -1;
 	}
 }
 
-static inline VkDescriptorType
-to_vk_descriptor_type( enum DescriptorType descriptor_type )
+FT_INLINE VkDescriptorType
+to_vk_descriptor_type( enum ft_descriptor_type descriptor_type )
 {
 	switch ( descriptor_type )
 	{
@@ -165,34 +166,34 @@ to_vk_descriptor_type( enum DescriptorType descriptor_type )
 		return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
 	case FT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
 		return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-	default: FT_ASSERT( 0 ); return ( VkDescriptorType ) -1;
+	default: FT_ASSERT( false ); return ( VkDescriptorType ) -1;
 	}
 }
 
-static inline VkFilter
-to_vk_filter( enum Filter filter )
+FT_INLINE VkFilter
+to_vk_filter( enum ft_filter filter )
 {
 	switch ( filter )
 	{
 	case FT_FILTER_LINEAR: return VK_FILTER_LINEAR;
 	case FT_FILTER_NEAREST: return VK_FILTER_NEAREST;
-	default: FT_ASSERT( 0 ); return ( VkFilter ) -1;
+	default: FT_ASSERT( false ); return ( VkFilter ) -1;
 	}
 }
 
-static inline VkSamplerMipmapMode
-to_vk_sampler_mipmap_mode( enum SamplerMipmapMode mode )
+FT_INLINE VkSamplerMipmapMode
+to_vk_sampler_mipmap_mode( enum ft_sampler_mipmap_mode mode )
 {
 	switch ( mode )
 	{
 	case FT_SAMPLER_MIPMAP_MODE_NEAREST: return VK_SAMPLER_MIPMAP_MODE_NEAREST;
 	case FT_SAMPLER_MIPMAP_MODE_LINEAR: return VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	default: FT_ASSERT( 0 ); return ( VkSamplerMipmapMode ) -1;
+	default: FT_ASSERT( false ); return ( VkSamplerMipmapMode ) -1;
 	}
 }
 
-static inline VkSamplerAddressMode
-to_vk_sampler_address_mode( enum SamplerAddressMode mode )
+FT_INLINE VkSamplerAddressMode
+to_vk_sampler_address_mode( enum ft_sampler_address_mode mode )
 {
 	switch ( mode )
 	{
@@ -203,23 +204,23 @@ to_vk_sampler_address_mode( enum SamplerAddressMode mode )
 		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	case FT_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER:
 		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-	default: FT_ASSERT( 0 ); return ( VkSamplerAddressMode ) -1;
+	default: FT_ASSERT( false ); return ( VkSamplerAddressMode ) -1;
 	}
 }
 
-static inline VkPolygonMode
-to_vk_polygon_mode( enum PolygonMode mode )
+FT_INLINE VkPolygonMode
+to_vk_polygon_mode( enum ft_polygon_mode mode )
 {
 	switch ( mode )
 	{
 	case FT_POLYGON_MODE_FILL: return VK_POLYGON_MODE_FILL;
 	case FT_POLYGON_MODE_LINE: return VK_POLYGON_MODE_LINE;
-	default: FT_ASSERT( 0 ); return ( VkPolygonMode ) -1;
+	default: FT_ASSERT( false ); return ( VkPolygonMode ) -1;
 	}
 }
 
-static inline VkPrimitiveTopology
-to_vk_primitive_topology( enum PrimitiveTopology topology )
+FT_INLINE VkPrimitiveTopology
+to_vk_primitive_topology( enum ft_primitive_topology topology )
 {
 	switch ( topology )
 	{
@@ -233,12 +234,12 @@ to_vk_primitive_topology( enum PrimitiveTopology topology )
 		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 	case FT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:
 		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	default: FT_ASSERT( 0 ); return ( VkPrimitiveTopology ) -1;
+	default: FT_ASSERT( false ); return ( VkPrimitiveTopology ) -1;
 	}
 }
 
-static inline VkBlendFactor
-to_vk_blend_factor( enum BlendFactor factor )
+FT_INLINE VkBlendFactor
+to_vk_blend_factor( enum ft_blend_factor factor )
 {
 	switch ( factor )
 	{
@@ -258,12 +259,12 @@ to_vk_blend_factor( enum BlendFactor factor )
 		return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
 	case FT_BLEND_FACTOR_SRC_ALPHA_SATURATE:
 		return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
-	default: FT_ASSERT( 0 ); return ( VkBlendFactor ) -1;
+	default: FT_ASSERT( false ); return ( VkBlendFactor ) -1;
 	}
 }
 
-static inline VkBlendOp
-to_vk_blend_op( enum BlendOp op )
+FT_INLINE VkBlendOp
+to_vk_blend_op( enum ft_blend_op op )
 {
 	switch ( op )
 	{
@@ -272,12 +273,12 @@ to_vk_blend_op( enum BlendOp op )
 	case FT_BLEND_OP_REVERSE_SUBTRACT: return VK_BLEND_OP_REVERSE_SUBTRACT;
 	case FT_BLEND_OP_MIN: return VK_BLEND_OP_MIN;
 	case FT_BLEND_OP_MAX: return VK_BLEND_OP_MAX;
-	default: FT_ASSERT( 0 ); return ( VkBlendOp ) -1;
+	default: FT_ASSERT( false ); return ( VkBlendOp ) -1;
 	}
 }
 
-static inline VkAccessFlags
-determine_access_flags( enum ResourceState resource_state )
+FT_INLINE VkAccessFlags
+determine_access_flags( enum ft_resource_state resource_state )
 {
 	VkAccessFlags access_flags = 0;
 
@@ -310,9 +311,9 @@ determine_access_flags( enum ResourceState resource_state )
 	return access_flags;
 }
 
-static inline VkPipelineStageFlags
-determine_pipeline_stage_flags( VkAccessFlags  access_flags,
-                                enum QueueType queue_type )
+FT_INLINE VkPipelineStageFlags
+determine_pipeline_stage_flags( VkAccessFlags      access_flags,
+                                enum ft_queue_type queue_type )
 {
 	// TODO: FIX THIS
 	VkPipelineStageFlags flags = 0;
@@ -393,8 +394,8 @@ determine_pipeline_stage_flags( VkAccessFlags  access_flags,
 	return flags;
 }
 
-static inline VkImageLayout
-determine_image_layout( enum ResourceState resource_state )
+FT_INLINE VkImageLayout
+determine_image_layout( enum ft_resource_state resource_state )
 {
 	if ( resource_state & FT_RESOURCE_STATE_GENERAL )
 		return VK_IMAGE_LAYOUT_GENERAL;
@@ -423,8 +424,8 @@ determine_image_layout( enum ResourceState resource_state )
 	return VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
-static inline VmaMemoryUsage
-determine_vma_memory_usage( enum MemoryUsage usage )
+FT_INLINE VmaMemoryUsage
+determine_vma_memory_usage( enum ft_memory_usage usage )
 {
 	switch ( usage )
 	{
@@ -435,13 +436,13 @@ determine_vma_memory_usage( enum MemoryUsage usage )
 	case FT_MEMORY_USAGE_GPU_TO_CPU: return VMA_MEMORY_USAGE_GPU_TO_CPU;
 	default: break;
 	}
-	FT_ASSERT( 0 );
+	FT_ASSERT( false );
 	return ( VmaMemoryUsage ) -1;
 }
 
-static inline VkBufferUsageFlags
-determine_vk_buffer_usage( enum DescriptorType descriptor_type,
-                           enum MemoryUsage    memory_usage )
+FT_INLINE VkBufferUsageFlags
+determine_vk_buffer_usage( enum ft_descriptor_type descriptor_type,
+                           enum ft_memory_usage    memory_usage )
 {
 	// TODO: determine buffer usage flags
 	VkBufferUsageFlags buffer_usage = ( VkBufferUsageFlags ) 0;
@@ -485,8 +486,8 @@ determine_vk_buffer_usage( enum DescriptorType descriptor_type,
 	return buffer_usage;
 }
 
-static inline VkImageUsageFlags
-determine_vk_image_usage( enum DescriptorType descriptor_type )
+FT_INLINE VkImageUsageFlags
+determine_vk_image_usage( enum ft_descriptor_type descriptor_type )
 {
 	VkImageUsageFlags image_usage = ( VkImageUsageFlags ) 0;
 

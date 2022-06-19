@@ -1,733 +1,747 @@
 #pragma once
 
 #include "base/base.h"
-
 #include "renderer/backend/renderer_enums.h"
-#include "renderer/shader_reflection/shader_reflection.h"
 
-#undef MemoryBarrier
+#define FT_MAX_DEVICE_COUNT                    1
+#define FT_MAX_ATTACHMENTS_COUNT               10
+#define FT_MAX_PUSH_CONSTANT_RANGE             128
+#define FT_MAX_VERTEX_BINDING_COUNT            15
+#define FT_MAX_VERTEX_ATTRIBUTE_COUNT          15
+#define FT_MAX_DESCRIPTOR_BINDING_COUNT        15
+#define FT_MAX_SET_COUNT                       10
+#define FT_RESOURCE_LOADER_STAGING_BUFFER_SIZE 25 * 1024 * 1024 * 8
+#define FT_MAX_BINDING_NAME_LENGTH             20
 
-#define MAX_DEVICE_COUNT                    1
-#define MAX_ATTACHMENTS_COUNT               10
-#define MAX_PUSH_CONSTANT_RANGE             128
-#define MAX_VERTEX_BINDING_COUNT            15
-#define MAX_VERTEX_ATTRIBUTE_COUNT          15
-#define MAX_DESCRIPTOR_BINDING_COUNT        15
-#define MAX_SET_COUNT                       10
-#define RESOURCE_LOADER_STAGING_BUFFER_SIZE 25 * 1024 * 1024 * 8
+struct ft_wsi_info;
 
-#ifdef __cplusplus
-extern "C"
+// Forward declares
+struct ft_window;
+struct ft_buffer;
+struct ft_image;
+struct ft_queue;
+struct ft_command_buffer;
+struct ft_command_pool;
+
+struct ft_renderer_backend_info
 {
-#endif
+	enum ft_renderer_api api;
+	struct ft_wsi_info*  wsi_info;
+};
 
-	struct WsiInfo;
+struct ft_renderer_backend
+{
+	enum ft_renderer_api api;
+	ft_handle            handle;
+};
 
-	// Forward declares
-	struct Window;
-	struct Buffer;
-	struct StagingBuffer;
-	struct Image;
-	struct Queue;
-	struct CommandBuffer;
-	struct CommandPool;
+struct ft_device_info
+{
+	struct ft_renderer_backend* backend;
+};
 
-	struct RendererBackendInfo
+struct ft_device
+{
+	enum ft_renderer_api api;
+	ft_handle            handle;
+};
+
+struct ft_command_pool_info
+{
+	struct ft_queue* queue;
+};
+
+struct ft_command_pool
+{
+	struct ft_queue* queue;
+	ft_handle        handle;
+};
+
+struct ft_command_buffer
+{
+	struct ft_queue* queue;
+	ft_handle        handle;
+};
+
+struct ft_queue_info
+{
+	enum ft_queue_type queue_type;
+};
+
+struct ft_queue
+{
+	uint32_t           family_index;
+	enum ft_queue_type type;
+	ft_handle          handle;
+};
+
+struct ft_semaphore
+{
+	ft_handle handle;
+};
+
+struct ft_fence
+{
+	ft_handle handle;
+};
+
+struct ft_sampler_info
+{
+	enum ft_filter               mag_filter;
+	enum ft_filter               min_filter;
+	enum ft_sampler_mipmap_mode  mipmap_mode;
+	enum ft_sampler_address_mode address_mode_u;
+	enum ft_sampler_address_mode address_mode_v;
+	enum ft_sampler_address_mode address_mode_w;
+	float                        mip_lod_bias;
+	bool                         anisotropy_enable;
+	float                        max_anisotropy;
+	bool                         compare_enable;
+	enum ft_compare_op           compare_op;
+	float                        min_lod;
+	float                        max_lod;
+};
+
+struct ft_sampler
+{
+	ft_handle handle;
+};
+
+struct ft_image_info
+{
+	uint32_t                width;
+	uint32_t                height;
+	uint32_t                depth;
+	enum ft_format          format;
+	uint32_t                sample_count;
+	uint32_t                layer_count;
+	uint32_t                mip_levels;
+	enum ft_descriptor_type descriptor_type;
+};
+
+struct ft_image
+{
+	uint32_t                width;
+	uint32_t                height;
+	uint32_t                depth;
+	enum ft_format          format;
+	uint32_t                sample_count;
+	uint32_t                mip_level_count;
+	uint32_t                layer_count;
+	enum ft_descriptor_type descriptor_type;
+	ft_handle               handle;
+};
+
+struct ft_buffer_info
+{
+	uint64_t                size;
+	enum ft_descriptor_type descriptor_type;
+	enum ft_memory_usage    memory_usage;
+};
+
+struct ft_buffer
+{
+	uint64_t                size;
+	enum ft_resource_state  resource_state;
+	enum ft_descriptor_type descriptor_type;
+	enum ft_memory_usage    memory_usage;
+	void*                   mapped_memory;
+	ft_handle               handle;
+};
+
+struct ft_swapchain_info
+{
+	struct ft_queue*    queue;
+	uint32_t            width;
+	uint32_t            height;
+	enum ft_format      format;
+	bool                vsync;
+	uint32_t            min_image_count;
+	struct ft_wsi_info* wsi_info;
+};
+
+struct ft_swapchain
+{
+	uint32_t          min_image_count;
+	uint32_t          image_count;
+	uint32_t          width;
+	uint32_t          height;
+	enum ft_format    format;
+	struct ft_image** images;
+	struct ft_queue*  queue;
+	bool              vsync;
+	ft_handle         handle;
+};
+
+struct ft_queue_submit_info
+{
+	uint32_t                   wait_semaphore_count;
+	struct ft_semaphore**      wait_semaphores;
+	uint32_t                   command_buffer_count;
+	struct ft_command_buffer** command_buffers;
+	uint32_t                   signal_semaphore_count;
+	struct ft_semaphore**      signal_semaphores;
+	struct ft_fence*           signal_fence;
+};
+
+struct ft_queue_present_info
+{
+	uint32_t              wait_semaphore_count;
+	struct ft_semaphore** wait_semaphores;
+	struct ft_swapchain*  swapchain;
+	uint32_t              image_index;
+};
+
+typedef float ft_color_clear_value[ 4 ];
+
+struct ft_depth_stencil_clear_value
+{
+	float    depth;
+	uint32_t stencil;
+};
+
+struct ft_clear_value
+{
+	ft_color_clear_value                color;
+	struct ft_depth_stencil_clear_value depth_stencil;
+};
+
+struct ft_attachment_info
+{
+	const struct ft_image*     image;
+	enum ft_attachment_load_op load_op;
+	struct ft_clear_value      clear_value;
+};
+
+struct ft_render_pass_begin_info
+{
+	uint32_t                  width;
+	uint32_t                  height;
+	uint32_t                  color_attachment_count;
+	struct ft_attachment_info color_attachments[ FT_MAX_ATTACHMENTS_COUNT ];
+	struct ft_attachment_info depth_attachment;
+};
+
+// TODO:
+struct ft_memory_barrier
+{
+	void* allocation;
+};
+
+struct ft_buffer_barrier
+{
+	enum ft_resource_state old_state;
+	enum ft_resource_state new_state;
+	struct ft_buffer*      buffer;
+	struct ft_queue*       src_queue;
+	struct ft_queue*       dst_queue;
+	uint32_t               size;
+	uint32_t               offset;
+};
+
+struct ft_image_barrier
+{
+	enum ft_resource_state old_state;
+	enum ft_resource_state new_state;
+	const struct ft_image* image;
+	const struct ft_queue* src_queue;
+	const struct ft_queue* dst_queue;
+};
+
+struct ft_shader_module_info
+{
+	uint32_t    bytecode_size;
+	const void* bytecode;
+};
+
+struct ft_shader_info
+{
+	struct ft_shader_module_info compute;
+	struct ft_shader_module_info vertex;
+	struct ft_shader_module_info tessellation_control;
+	struct ft_shader_module_info tessellation_evaluation;
+	struct ft_shader_module_info geometry;
+	struct ft_shader_module_info fragment;
+};
+
+struct ft_binding
+{
+	uint32_t                set;
+	uint32_t                binding;
+	uint32_t                descriptor_count;
+	enum ft_descriptor_type descriptor_type;
+	enum ft_shader_stage    stage;
+};
+
+typedef struct ft_binding* ft_bindings;
+
+struct ft_binding_map_item
+{
+	char     name[ FT_MAX_BINDING_NAME_LENGTH ];
+	uint32_t value;
+};
+
+struct ft_reflection_data
+{
+	uint32_t        binding_count;
+	ft_bindings     bindings;
+	struct hashmap* binding_map;
+};
+
+struct ft_shader
+{
+	struct ft_reflection_data reflect_data;
+	ft_handle                 handle;
+};
+
+struct ft_descriptor_set_layout
+{
+	struct ft_reflection_data reflection_data;
+	ft_handle                 handle;
+};
+
+struct ft_vertex_binding_info
+{
+	uint32_t                  binding;
+	uint32_t                  stride;
+	enum ft_vertex_input_rate input_rate;
+};
+
+struct ft_vertex_attribute_info
+{
+	uint32_t       location;
+	uint32_t       binding;
+	enum ft_format format;
+	uint32_t       offset;
+};
+
+struct ft_vertex_layout
+{
+	uint32_t                      binding_info_count;
+	struct ft_vertex_binding_info binding_infos[ FT_MAX_VERTEX_BINDING_COUNT ];
+	uint32_t                      attribute_info_count;
+	struct ft_vertex_attribute_info
+	    attribute_infos[ FT_MAX_VERTEX_ATTRIBUTE_COUNT ];
+};
+
+struct ft_rasterizer_state_info
+{
+	enum ft_cull_mode    cull_mode;
+	enum ft_front_face   front_face;
+	enum ft_polygon_mode polygon_mode;
+};
+
+struct ft_depth_state_info
+{
+	bool               depth_test;
+	bool               depth_write;
+	enum ft_compare_op compare_op;
+};
+
+struct ft_blend_state_info
+{
+	enum ft_blend_factor src_blend_factors[ FT_MAX_ATTACHMENTS_COUNT ];
+	enum ft_blend_factor dst_blend_factors[ FT_MAX_ATTACHMENTS_COUNT ];
+	enum ft_blend_factor src_alpha_blend_factors[ FT_MAX_ATTACHMENTS_COUNT ];
+	enum ft_blend_factor dst_alpha_blend_factors[ FT_MAX_ATTACHMENTS_COUNT ];
+	enum ft_blend_op     blend_ops[ FT_MAX_ATTACHMENTS_COUNT ];
+	enum ft_blend_op     alpha_blend_ops[ FT_MAX_ATTACHMENTS_COUNT ];
+};
+
+struct ft_pipeline_info
+{
+	enum ft_pipeline_type            type;
+	struct ft_vertex_layout          vertex_layout;
+	struct ft_rasterizer_state_info  rasterizer_info;
+	enum ft_primitive_topology       topology;
+	struct ft_depth_state_info       depth_state_info;
+	struct ft_shader*                shader;
+	struct ft_descriptor_set_layout* descriptor_set_layout;
+	uint32_t                         sample_count;
+	uint32_t                         color_attachment_count;
+	enum ft_format color_attachment_formats[ FT_MAX_ATTACHMENTS_COUNT ];
+	enum ft_format depth_stencil_format;
+	struct ft_blend_state_info blend_state_info;
+};
+
+struct ft_pipeline
+{
+	enum ft_pipeline_type type;
+	ft_handle             handle;
+};
+
+struct ft_descriptor_set_info
+{
+	uint32_t                         set;
+	struct ft_descriptor_set_layout* descriptor_set_layout;
+};
+
+struct ft_descriptor_set
+{
+	struct ft_descriptor_set_layout* layout;
+	ft_handle                        handle;
+};
+
+struct ft_buffer_descriptor
+{
+	struct ft_buffer* buffer;
+	uint64_t          offset;
+	uint64_t          range;
+};
+
+struct ft_image_descriptor
+{
+	struct ft_image*       image;
+	enum ft_resource_state resource_state;
+};
+
+struct ft_sampler_descriptor
+{
+	struct ft_sampler* sampler;
+};
+
+struct ft_descriptor_write
+{
+	uint32_t                      descriptor_count;
+	const char*                   descriptor_name;
+	struct ft_sampler_descriptor* sampler_descriptors;
+	struct ft_image_descriptor*   image_descriptors;
+	struct ft_buffer_descriptor*  buffer_descriptors;
+};
+
+FT_INLINE bool
+format_has_depth_aspect( enum ft_format format )
+{
+	switch ( format )
 	{
-		enum RendererAPI api;
-		struct WsiInfo*  wsi_info;
-	};
-
-	struct RendererBackend
-	{
-		enum RendererAPI api;
-		ft_handle        handle;
-	};
-
-	struct DeviceInfo
-	{
-		struct RendererBackend* backend;
-	};
-
-	struct Device
-	{
-		enum RendererAPI api;
-		ft_handle        handle;
-	};
-
-	struct CommandPoolInfo
-	{
-		struct Queue* queue;
-	};
-
-	struct CommandPool
-	{
-		struct Queue* queue;
-		ft_handle     handle;
-	};
-
-	struct CommandBuffer
-	{
-		struct Queue* queue;
-		ft_handle     handle;
-	};
-
-	struct QueueInfo
-	{
-		enum QueueType queue_type;
-	};
-
-	struct Queue
-	{
-		u32            family_index;
-		enum QueueType type;
-		ft_handle      handle;
-	};
-
-	struct Semaphore
-	{
-		ft_handle handle;
-	};
-
-	struct Fence
-	{
-		ft_handle handle;
-	};
-
-	struct SamplerInfo
-	{
-		enum Filter             mag_filter;
-		enum Filter             min_filter;
-		enum SamplerMipmapMode  mipmap_mode;
-		enum SamplerAddressMode address_mode_u;
-		enum SamplerAddressMode address_mode_v;
-		enum SamplerAddressMode address_mode_w;
-		f32                     mip_lod_bias;
-		b32                     anisotropy_enable;
-		f32                     max_anisotropy;
-		b32                     compare_enable;
-		enum CompareOp          compare_op;
-		f32                     min_lod;
-		f32                     max_lod;
-	};
-
-	struct Sampler
-	{
-		ft_handle handle;
-	};
-
-	struct ImageInfo
-	{
-		u32                 width;
-		u32                 height;
-		u32                 depth;
-		enum Format         format;
-		u32                 sample_count;
-		u32                 layer_count;
-		u32                 mip_levels;
-		enum DescriptorType descriptor_type;
-	};
-
-	struct Image
-	{
-		u32                 width;
-		u32                 height;
-		u32                 depth;
-		enum Format         format;
-		u32                 sample_count;
-		u32                 mip_level_count;
-		u32                 layer_count;
-		enum DescriptorType descriptor_type;
-		ft_handle           handle;
-	};
-
-	struct BufferInfo
-	{
-		u64                 size;
-		enum DescriptorType descriptor_type;
-		enum MemoryUsage    memory_usage;
-	};
-
-	struct Buffer
-	{
-		u64                 size;
-		enum ResourceState  resource_state;
-		enum DescriptorType descriptor_type;
-		enum MemoryUsage    memory_usage;
-		void*               mapped_memory;
-		ft_handle           handle;
-	};
-
-	struct SwapchainInfo
-	{
-		struct Queue*   queue;
-		u32             width;
-		u32             height;
-		enum Format     format;
-		b32             vsync;
-		u32             min_image_count;
-		struct WsiInfo* wsi_info;
-	};
-
-	struct Swapchain
-	{
-		u32            min_image_count;
-		u32            image_count;
-		u32            width;
-		u32            height;
-		enum Format    format;
-		struct Image** images;
-		struct Queue*  queue;
-		b32            vsync;
-		ft_handle      handle;
-	};
-
-	struct QueueSubmitInfo
-	{
-		u32                    wait_semaphore_count;
-		struct Semaphore**     wait_semaphores;
-		u32                    command_buffer_count;
-		struct CommandBuffer** command_buffers;
-		u32                    signal_semaphore_count;
-		struct Semaphore**     signal_semaphores;
-		struct Fence*          signal_fence;
-	};
-
-	struct QueuePresentInfo
-	{
-		u32                wait_semaphore_count;
-		struct Semaphore** wait_semaphores;
-		struct Swapchain*  swapchain;
-		u32                image_index;
-	};
-
-	typedef f32 ColorClearValue[ 4 ];
-
-	struct DepthStencilClearValue
-	{
-		f32 depth;
-		u32 stencil;
-	};
-
-	struct ClearValue
-	{
-		ColorClearValue               color;
-		struct DepthStencilClearValue depth_stencil;
-	};
-
-	struct AttachmentInfo
-	{
-		const struct Image*   image;
-		enum AttachmentLoadOp load_op;
-		struct ClearValue     clear_value;
-	};
-
-	struct RenderPassBeginInfo
-	{
-		u32                   width;
-		u32                   height;
-		u32                   color_attachment_count;
-		struct AttachmentInfo color_attachments[ MAX_ATTACHMENTS_COUNT ];
-		struct AttachmentInfo depth_attachment;
-	};
-
-	// TODO:
-	struct MemoryBarrier
-	{
-		void* allocation;
-	};
-
-	struct BufferBarrier
-	{
-		enum ResourceState old_state;
-		enum ResourceState new_state;
-		struct Buffer*     buffer;
-		struct Queue*      src_queue;
-		struct Queue*      dst_queue;
-		u32                size;
-		u32                offset;
-	};
-
-	struct ImageBarrier
-	{
-		enum ResourceState  old_state;
-		enum ResourceState  new_state;
-		const struct Image* image;
-		const struct Queue* src_queue;
-		const struct Queue* dst_queue;
-	};
-
-	struct ShaderModuleInfo
-	{
-		u32         bytecode_size;
-		const void* bytecode;
-	};
-
-	struct ShaderInfo
-	{
-		struct ShaderModuleInfo compute;
-		struct ShaderModuleInfo vertex;
-		struct ShaderModuleInfo tessellation_control;
-		struct ShaderModuleInfo tessellation_evaluation;
-		struct ShaderModuleInfo geometry;
-		struct ShaderModuleInfo fragment;
-	};
-
-	struct Shader
-	{
-		ReflectionData reflect_data;
-		ft_handle      handle;
-	};
-
-	struct DescriptorSetLayout
-	{
-		ReflectionData reflection_data;
-		ft_handle      handle;
-	};
-
-	struct VertexBindingInfo
-	{
-		u32                  binding;
-		u32                  stride;
-		enum VertexInputRate input_rate;
-	};
-
-	struct VertexAttributeInfo
-	{
-		u32         location;
-		u32         binding;
-		enum Format format;
-		u32         offset;
-	};
-
-	struct VertexLayout
-	{
-		u32                      binding_info_count;
-		struct VertexBindingInfo binding_infos[ MAX_VERTEX_BINDING_COUNT ];
-		u32                      attribute_info_count;
-		struct VertexAttributeInfo
-		    attribute_infos[ MAX_VERTEX_ATTRIBUTE_COUNT ];
-	};
-
-	struct RasterizerStateInfo
-	{
-		enum CullMode    cull_mode;
-		enum FrontFace   front_face;
-		enum PolygonMode polygon_mode;
-	};
-
-	struct DepthStateInfo
-	{
-		b32            depth_test;
-		b32            depth_write;
-		enum CompareOp compare_op;
-	};
-
-	struct BlendStateInfo
-	{
-		enum BlendFactor src_blend_factors[ MAX_ATTACHMENTS_COUNT ];
-		enum BlendFactor dst_blend_factors[ MAX_ATTACHMENTS_COUNT ];
-		enum BlendFactor src_alpha_blend_factors[ MAX_ATTACHMENTS_COUNT ];
-		enum BlendFactor dst_alpha_blend_factors[ MAX_ATTACHMENTS_COUNT ];
-		enum BlendOp     blend_ops[ MAX_ATTACHMENTS_COUNT ];
-		enum BlendOp     alpha_blend_ops[ MAX_ATTACHMENTS_COUNT ];
-	};
-
-	struct PipelineInfo
-	{
-		enum PipelineType           type;
-		struct VertexLayout         vertex_layout;
-		struct RasterizerStateInfo  rasterizer_info;
-		enum PrimitiveTopology      topology;
-		struct DepthStateInfo       depth_state_info;
-		struct Shader*              shader;
-		struct DescriptorSetLayout* descriptor_set_layout;
-		u32                         sample_count;
-		u32                         color_attachment_count;
-		enum Format           color_attachment_formats[ MAX_ATTACHMENTS_COUNT ];
-		enum Format           depth_stencil_format;
-		struct BlendStateInfo blend_state_info;
-	};
-
-	struct Pipeline
-	{
-		enum PipelineType type;
-		ft_handle         handle;
-	};
-
-	struct DescriptorSetInfo
-	{
-		u32                         set;
-		struct DescriptorSetLayout* descriptor_set_layout;
-	};
-
-	struct DescriptorSet
-	{
-		struct DescriptorSetLayout* layout;
-		ft_handle                   handle;
-	};
-
-	struct BufferDescriptor
-	{
-		struct Buffer* buffer;
-		u64            offset;
-		u64            range;
-	};
-
-	struct ImageDescriptor
-	{
-		struct Image*      image;
-		enum ResourceState resource_state;
-	};
-
-	struct SamplerDescriptor
-	{
-		struct Sampler* sampler;
-	};
-
-	struct DescriptorWrite
-	{
-		u32                       descriptor_count;
-		const char*               descriptor_name;
-		struct SamplerDescriptor* sampler_descriptors;
-		struct ImageDescriptor*   image_descriptors;
-		struct BufferDescriptor*  buffer_descriptors;
-	};
-
-	static inline b32
-	format_has_depth_aspect( enum Format format )
-	{
-		switch ( format )
-		{
-		case FT_FORMAT_D16_UNORM:
-		case FT_FORMAT_D16_UNORMS8_UINT:
-		case FT_FORMAT_D24_UNORMS8_UINT:
-		case FT_FORMAT_D32_SFLOAT:
-		case FT_FORMAT_X8D24_UNORM:
-		case FT_FORMAT_D32_SFLOATS8_UINT: return 1;
-		default: return 0;
-		}
+	case FT_FORMAT_D16_UNORM:
+	case FT_FORMAT_D16_UNORMS8_UINT:
+	case FT_FORMAT_D24_UNORMS8_UINT:
+	case FT_FORMAT_D32_SFLOAT:
+	case FT_FORMAT_X8D24_UNORM:
+	case FT_FORMAT_D32_SFLOATS8_UINT: return true;
+	default: return false;
 	}
-
-	static inline b32
-	format_has_stencil_aspect( enum Format format )
-	{
-		switch ( format )
-		{
-		case FT_FORMAT_D16_UNORMS8_UINT:
-		case FT_FORMAT_D24_UNORMS8_UINT:
-		case FT_FORMAT_D32_SFLOATS8_UINT:
-		case FT_FORMAT_S8_UINT: return 1;
-		default: return 0;
-		}
-	}
-
-	void
-	create_renderer_backend( const struct RendererBackendInfo* info,
-	                         struct RendererBackend**          backend );
-
-	void
-	destroy_renderer_backend( struct RendererBackend* backend );
-
-	void
-	create_device( const struct RendererBackend* backend,
-	               const struct DeviceInfo*      info,
-	               struct Device**               device );
-
-	void
-	destroy_device( struct Device* device );
-
-	void
-	create_queue( const struct Device*    device,
-	              const struct QueueInfo* info,
-	              struct Queue**          queue );
-
-	void
-	destroy_queue( struct Queue* queue );
-
-	void
-	queue_wait_idle( const struct Queue* queue );
-
-	void
-	queue_submit( const struct Queue*           queue,
-	              const struct QueueSubmitInfo* info );
-
-	void
-	immediate_submit( const struct Queue* queue, struct CommandBuffer* cmd );
-
-	void
-	queue_present( const struct Queue*            queue,
-	               const struct QueuePresentInfo* info );
-
-	void
-	create_semaphore( const struct Device* device,
-	                  struct Semaphore**   semaphore );
-
-	void
-	destroy_semaphore( const struct Device* device,
-	                   struct Semaphore*    semaphore );
-
-	void
-	create_fence( const struct Device* device, struct Fence** fence );
-
-	void
-	destroy_fence( const struct Device* device, struct Fence* fence );
-
-	void
-	wait_for_fences( const struct Device* device,
-	                 u32                  count,
-	                 struct Fence**       fences );
-
-	void
-	reset_fences( const struct Device* device,
-	              u32                  count,
-	              struct Fence**       fences );
-
-	void
-	create_swapchain( const struct Device*        device,
-	                  const struct SwapchainInfo* info,
-	                  struct Swapchain**          swapchain );
-
-	void
-	resize_swapchain( const struct Device* device,
-	                  struct Swapchain*    swapchain,
-	                  u32                  width,
-	                  u32                  height );
-
-	void
-	destroy_swapchain( const struct Device* device,
-	                   struct Swapchain*    swapchain );
-
-	void
-	create_command_pool( const struct Device*          device,
-	                     const struct CommandPoolInfo* info,
-	                     struct CommandPool**          command_pool );
-
-	void
-	destroy_command_pool( const struct Device* device,
-	                      struct CommandPool*  command_pool );
-
-	void
-	create_command_buffers( const struct Device*      device,
-	                        const struct CommandPool* command_pool,
-	                        u32                       count,
-	                        struct CommandBuffer**    command_buffers );
-
-	void
-	free_command_buffers( const struct Device*      device,
-	                      const struct CommandPool* command_pool,
-	                      u32                       count,
-	                      struct CommandBuffer**    command_buffers );
-
-	void
-	destroy_command_buffers( const struct Device*      device,
-	                         const struct CommandPool* command_pool,
-	                         u32                       count,
-	                         struct CommandBuffer**    command_buffers );
-
-	void
-	begin_command_buffer( const struct CommandBuffer* cmd );
-
-	void
-	end_command_buffer( const struct CommandBuffer* cmd );
-
-	void
-	acquire_next_image( const struct Device*    device,
-	                    const struct Swapchain* swapchain,
-	                    const struct Semaphore* semaphore,
-	                    const struct Fence*     fence,
-	                    u32*                    image_index );
-
-	void
-	create_shader( const struct Device* device,
-	               struct ShaderInfo*   info,
-	               struct Shader**      shader );
-
-	void
-	destroy_shader( const struct Device* device, struct Shader* shader );
-
-	void
-	create_descriptor_set_layout(
-	    const struct Device*         device,
-	    struct Shader*               shader,
-	    struct DescriptorSetLayout** descriptor_set_layout );
-
-	void
-	destroy_descriptor_set_layout( const struct Device*        device,
-	                               struct DescriptorSetLayout* layout );
-
-	void
-	create_pipeline( const struct Device*       device,
-	                 const struct PipelineInfo* info,
-	                 struct Pipeline**          pipeline );
-
-	void
-	destroy_pipeline( const struct Device* device, struct Pipeline* pipeline );
-
-	void
-	cmd_begin_render_pass( const struct CommandBuffer*       cmd,
-	                       const struct RenderPassBeginInfo* info );
-
-	void
-	cmd_end_render_pass( const struct CommandBuffer* cmd );
-
-	void
-	cmd_barrier( const struct CommandBuffer* cmd,
-	             u32                         memory_barriers_count,
-	             const struct MemoryBarrier* memory_barrier,
-	             u32                         buffer_barriers_count,
-	             const struct BufferBarrier* buffer_barriers,
-	             u32                         image_barriers_count,
-	             const struct ImageBarrier*  image_barriers );
-
-	void
-	cmd_set_scissor( const struct CommandBuffer* cmd,
-	                 i32                         x,
-	                 i32                         y,
-	                 u32                         width,
-	                 u32                         height );
-
-	void
-	cmd_set_viewport( const struct CommandBuffer* cmd,
-	                  f32                         x,
-	                  f32                         y,
-	                  f32                         width,
-	                  f32                         height,
-	                  f32                         min_depth,
-	                  f32                         max_depth );
-
-	void
-	cmd_bind_pipeline( const struct CommandBuffer* cmd,
-	                   const struct Pipeline*      pipeline );
-
-	void
-	cmd_draw( const struct CommandBuffer* cmd,
-	          u32                         vertex_count,
-	          u32                         instance_count,
-	          u32                         first_vertex,
-	          u32                         first_instance );
-
-	void
-	cmd_draw_indexed( const struct CommandBuffer* cmd,
-	                  u32                         index_count,
-	                  u32                         instance_count,
-	                  u32                         first_index,
-	                  i32                         vertex_offset,
-	                  u32                         first_instance );
-
-	void
-	cmd_bind_vertex_buffer( const struct CommandBuffer* cmd,
-	                        const struct Buffer*        buffer,
-	                        const u64                   offset );
-
-	void
-	cmd_bind_index_buffer( const struct CommandBuffer* cmd,
-	                       const struct Buffer*        buffer,
-	                       const u64                   offset,
-	                       enum IndexType              index_type );
-
-	void
-	cmd_copy_buffer( const struct CommandBuffer* cmd,
-	                 const struct Buffer*        src,
-	                 u64                         src_offset,
-	                 struct Buffer*              dst,
-	                 u64                         dst_offset,
-	                 u64                         size );
-
-	void
-	cmd_copy_buffer_to_image( const struct CommandBuffer* cmd,
-	                          const struct Buffer*        src,
-	                          u64                         src_offset,
-	                          struct Image*               dst );
-
-	void
-	cmd_bind_descriptor_set( const struct CommandBuffer* cmd,
-	                         u32                         first_set,
-	                         const struct DescriptorSet* set,
-	                         const struct Pipeline*      pipeline );
-
-	void
-	cmd_dispatch( const struct CommandBuffer* cmd,
-	              u32                         group_count_x,
-	              u32                         group_count_y,
-	              u32                         group_count_z );
-
-	void
-	cmd_push_constants( const struct CommandBuffer* cmd,
-	                    const struct Pipeline*      pipeline,
-	                    u32                         offset,
-	                    u32                         size,
-	                    const void*                 data );
-
-	void
-	create_buffer( const struct Device*     device,
-	               const struct BufferInfo* info,
-	               struct Buffer**          buffer );
-
-	void
-	destroy_buffer( const struct Device* device, struct Buffer* buffer );
-
-	void*
-	map_memory( const struct Device* device, struct Buffer* buffer );
-
-	void
-	unmap_memory( const struct Device* device, struct Buffer* buffer );
-
-	void
-	cmd_draw_indexed_indirect( const struct CommandBuffer* cmd,
-	                           const struct Buffer*        buffer,
-	                           u64                         offset,
-	                           u32                         draw_count,
-	                           u32                         stride );
-
-	void
-	create_sampler( const struct Device*      device,
-	                const struct SamplerInfo* info,
-	                struct Sampler**          sampler );
-
-	void
-	destroy_sampler( const struct Device* device, struct Sampler* sampler );
-
-	void
-	create_image( const struct Device*    device,
-	              const struct ImageInfo* info,
-	              struct Image**          image );
-
-	void
-	destroy_image( const struct Device* device, struct Image* image );
-
-	void
-	create_descriptor_set( const struct Device*            device,
-	                       const struct DescriptorSetInfo* info,
-	                       struct DescriptorSet**          descriptor_set );
-
-	void
-	destroy_descriptor_set( const struct Device*  device,
-	                        struct DescriptorSet* set );
-
-	void
-	update_descriptor_set( const struct Device*          device,
-	                       struct DescriptorSet*         set,
-	                       u32                           count,
-	                       const struct DescriptorWrite* writes );
-
-	void
-	begin_upload_batch( void );
-
-	void
-	end_upload_batch( void );
-
-	void
-	upload_buffer( struct Buffer* buffer,
-	               u64            offset,
-	               u64            size,
-	               const void*    data );
-
-	void
-	upload_image( struct Image* image, u64 size, const void* data );
-
-#ifdef __cplusplus
 }
-#endif
+
+FT_INLINE bool
+format_has_stencil_aspect( enum ft_format format )
+{
+	switch ( format )
+	{
+	case FT_FORMAT_D16_UNORMS8_UINT:
+	case FT_FORMAT_D24_UNORMS8_UINT:
+	case FT_FORMAT_D32_SFLOATS8_UINT:
+	case FT_FORMAT_S8_UINT: return true;
+	default: return false;
+	}
+}
+
+FT_API void
+ft_create_renderer_backend( const struct ft_renderer_backend_info* info,
+                            struct ft_renderer_backend**           backend );
+
+FT_API void
+ft_destroy_renderer_backend( struct ft_renderer_backend* backend );
+
+FT_API void
+ft_create_device( const struct ft_renderer_backend* backend,
+                  const struct ft_device_info*      info,
+                  struct ft_device**                device );
+
+FT_API void
+ft_destroy_device( struct ft_device* device );
+
+FT_API void
+ft_create_queue( const struct ft_device*     device,
+                 const struct ft_queue_info* info,
+                 struct ft_queue**           queue );
+
+FT_API void
+ft_destroy_queue( struct ft_queue* queue );
+
+FT_API void
+ft_queue_wait_idle( const struct ft_queue* queue );
+
+FT_API void
+ft_queue_submit( const struct ft_queue*             queue,
+                 const struct ft_queue_submit_info* info );
+
+FT_API void
+ft_immediate_submit( const struct ft_queue*    queue,
+                     struct ft_command_buffer* cmd );
+
+FT_API void
+ft_queue_present( const struct ft_queue*              queue,
+                  const struct ft_queue_present_info* info );
+
+FT_API void
+ft_create_semaphore( const struct ft_device* device,
+                     struct ft_semaphore**   semaphore );
+
+FT_API void
+ft_destroy_semaphore( const struct ft_device* device,
+                      struct ft_semaphore*    semaphore );
+
+FT_API void
+ft_create_fence( const struct ft_device* device, struct ft_fence** fence );
+
+FT_API void
+ft_destroy_fence( const struct ft_device* device, struct ft_fence* fence );
+
+FT_API void
+ft_wait_for_fences( const struct ft_device* device,
+                    uint32_t                count,
+                    struct ft_fence**       fences );
+
+FT_API void
+ft_reset_fences( const struct ft_device* device,
+                 uint32_t                count,
+                 struct ft_fence**       fences );
+
+FT_API void
+ft_create_swapchain( const struct ft_device*         device,
+                     const struct ft_swapchain_info* info,
+                     struct ft_swapchain**           swapchain );
+
+FT_API void
+ft_resize_swapchain( const struct ft_device* device,
+                     struct ft_swapchain*    swapchain,
+                     uint32_t                width,
+                     uint32_t                height );
+
+FT_API void
+ft_destroy_swapchain( const struct ft_device* device,
+                      struct ft_swapchain*    swapchain );
+
+FT_API void
+ft_create_command_pool( const struct ft_device*            device,
+                        const struct ft_command_pool_info* info,
+                        struct ft_command_pool**           command_pool );
+
+FT_API void
+ft_destroy_command_pool( const struct ft_device* device,
+                         struct ft_command_pool* command_pool );
+
+FT_API void
+ft_create_command_buffers( const struct ft_device*       device,
+                           const struct ft_command_pool* command_pool,
+                           uint32_t                      count,
+                           struct ft_command_buffer**    command_buffers );
+
+FT_API void
+ft_free_command_buffers( const struct ft_device*       device,
+                         const struct ft_command_pool* command_pool,
+                         uint32_t                      count,
+                         struct ft_command_buffer**    command_buffers );
+
+FT_API void
+ft_destroy_command_buffers( const struct ft_device*       device,
+                            const struct ft_command_pool* command_pool,
+                            uint32_t                      count,
+                            struct ft_command_buffer**    command_buffers );
+
+FT_API void
+ft_begin_command_buffer( const struct ft_command_buffer* cmd );
+
+FT_API void
+ft_end_command_buffer( const struct ft_command_buffer* cmd );
+
+FT_API void
+ft_acquire_next_image( const struct ft_device*    device,
+                       const struct ft_swapchain* swapchain,
+                       const struct ft_semaphore* semaphore,
+                       const struct ft_fence*     fence,
+                       uint32_t*                  image_index );
+
+FT_API void
+ft_create_shader( const struct ft_device* device,
+                  struct ft_shader_info*  info,
+                  struct ft_shader**      shader );
+
+FT_API void
+ft_destroy_shader( const struct ft_device* device, struct ft_shader* shader );
+
+FT_API void
+ft_create_descriptor_set_layout(
+    const struct ft_device*           device,
+    struct ft_shader*                 shader,
+    struct ft_descriptor_set_layout** descriptor_set_layout );
+
+FT_API void
+ft_destroy_descriptor_set_layout( const struct ft_device*          device,
+                                  struct ft_descriptor_set_layout* layout );
+
+FT_API void
+ft_create_pipeline( const struct ft_device*        device,
+                    const struct ft_pipeline_info* info,
+                    struct ft_pipeline**           pipeline );
+
+FT_API void
+ft_destroy_pipeline( const struct ft_device* device,
+                     struct ft_pipeline*     pipeline );
+
+FT_API void
+ft_cmd_begin_render_pass( const struct ft_command_buffer*         cmd,
+                          const struct ft_render_pass_begin_info* info );
+
+FT_API void
+ft_cmd_end_render_pass( const struct ft_command_buffer* cmd );
+
+FT_API void
+ft_cmd_barrier( const struct ft_command_buffer* cmd,
+                uint32_t                        memory_barriers_count,
+                const struct ft_memory_barrier* memory_barrier,
+                uint32_t                        buffer_barriers_count,
+                const struct ft_buffer_barrier* buffer_barriers,
+                uint32_t                        image_barriers_count,
+                const struct ft_image_barrier*  image_barriers );
+
+FT_API void
+ft_cmd_set_scissor( const struct ft_command_buffer* cmd,
+                    int32_t                         x,
+                    int32_t                         y,
+                    uint32_t                        width,
+                    uint32_t                        height );
+
+FT_API void
+ft_cmd_set_viewport( const struct ft_command_buffer* cmd,
+                     float                           x,
+                     float                           y,
+                     float                           width,
+                     float                           height,
+                     float                           min_depth,
+                     float                           max_depth );
+
+FT_API void
+ft_cmd_bind_pipeline( const struct ft_command_buffer* cmd,
+                      const struct ft_pipeline*       pipeline );
+
+FT_API void
+ft_cmd_draw( const struct ft_command_buffer* cmd,
+             uint32_t                        vertex_count,
+             uint32_t                        instance_count,
+             uint32_t                        first_vertex,
+             uint32_t                        first_instance );
+
+FT_API void
+ft_cmd_draw_indexed( const struct ft_command_buffer* cmd,
+                     uint32_t                        index_count,
+                     uint32_t                        instance_count,
+                     uint32_t                        first_index,
+                     int32_t                         vertex_offset,
+                     uint32_t                        first_instance );
+
+FT_API void
+ft_cmd_bind_vertex_buffer( const struct ft_command_buffer* cmd,
+                           const struct ft_buffer*         buffer,
+                           const uint64_t                  offset );
+
+FT_API void
+ft_cmd_bind_index_buffer( const struct ft_command_buffer* cmd,
+                          const struct ft_buffer*         buffer,
+                          const uint64_t                  offset,
+                          enum IndexType                  index_type );
+
+FT_API void
+ft_cmd_copy_buffer( const struct ft_command_buffer* cmd,
+                    const struct ft_buffer*         src,
+                    uint64_t                        src_offset,
+                    struct ft_buffer*               dst,
+                    uint64_t                        dst_offset,
+                    uint64_t                        size );
+
+FT_API void
+ft_cmd_copy_buffer_to_image( const struct ft_command_buffer* cmd,
+                             const struct ft_buffer*         src,
+                             uint64_t                        src_offset,
+                             struct ft_image*                dst );
+
+FT_API void
+ft_cmd_bind_descriptor_set( const struct ft_command_buffer* cmd,
+                            uint32_t                        first_set,
+                            const struct ft_descriptor_set* set,
+                            const struct ft_pipeline*       pipeline );
+
+FT_API void
+ft_cmd_dispatch( const struct ft_command_buffer* cmd,
+                 uint32_t                        group_count_x,
+                 uint32_t                        group_count_y,
+                 uint32_t                        group_count_z );
+
+FT_API void
+ft_cmd_push_constants( const struct ft_command_buffer* cmd,
+                       const struct ft_pipeline*       pipeline,
+                       uint32_t                        offset,
+                       uint32_t                        size,
+                       const void*                     data );
+
+FT_API void
+ft_create_buffer( const struct ft_device*      device,
+                  const struct ft_buffer_info* info,
+                  struct ft_buffer**           buffer );
+
+FT_API void
+ft_destroy_buffer( const struct ft_device* device, struct ft_buffer* buffer );
+
+FT_API void*
+ft_map_memory( const struct ft_device* device, struct ft_buffer* buffer );
+
+FT_API void
+ft_unmap_memory( const struct ft_device* device, struct ft_buffer* buffer );
+
+FT_API void
+ft_cmd_draw_indexed_indirect( const struct ft_command_buffer* cmd,
+                              const struct ft_buffer*         buffer,
+                              uint64_t                        offset,
+                              uint32_t                        draw_count,
+                              uint32_t                        stride );
+
+FT_API void
+ft_create_sampler( const struct ft_device*       device,
+                   const struct ft_sampler_info* info,
+                   struct ft_sampler**           sampler );
+
+FT_API void
+ft_destroy_sampler( const struct ft_device* device,
+                    struct ft_sampler*      sampler );
+
+FT_API void
+ft_create_image( const struct ft_device*     device,
+                 const struct ft_image_info* info,
+                 struct ft_image**           image );
+
+FT_API void
+ft_destroy_image( const struct ft_device* device, struct ft_image* image );
+
+FT_API void
+ft_create_descriptor_set( const struct ft_device*              device,
+                          const struct ft_descriptor_set_info* info,
+                          struct ft_descriptor_set**           descriptor_set );
+
+FT_API void
+ft_destroy_descriptor_set( const struct ft_device*   device,
+                           struct ft_descriptor_set* set );
+
+FT_API void
+ft_update_descriptor_set( const struct ft_device*           device,
+                          struct ft_descriptor_set*         set,
+                          uint32_t                          count,
+                          const struct ft_descriptor_write* writes );
+
+FT_API void
+ft_begin_upload_batch( void );
+
+FT_API void
+ft_end_upload_batch( void );
+
+FT_API void
+ft_upload_buffer( struct ft_buffer* buffer,
+                  uint64_t          offset,
+                  uint64_t          size,
+                  const void*       data );
+
+FT_API void
+ft_upload_image( struct ft_image* image, uint64_t size, const void* data );
 
 #include "renderer_misc.h"
