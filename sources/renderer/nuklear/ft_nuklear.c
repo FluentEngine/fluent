@@ -3,8 +3,9 @@
 #define NK_IMPLEMENTATION
 #include "ft_nuklear.h"
 
-#include "shaders/nuklear.frag.h"
-#include "shaders/nuklear.vert.h"
+#include "shaders/shader_nuklear_frag.h"
+#include "shaders/shader_nuklear_vert.h"
+#include "shaders/shader_nuklear_frag.h"
 
 #ifndef NK_FT_TEXT_MAX
 #define NK_FT_TEXT_MAX 256
@@ -68,19 +69,18 @@ static void
 update_write_descriptor_sets( struct nk_vulkan_adapter *adapter )
 {
 	struct BufferDescriptor buffer_descriptor = {
-		.buffer = adapter->uniform_buffer,
-		.offset = 0,
-		.range  = sizeof( struct Mat4f ),
+	    .buffer = adapter->uniform_buffer,
+	    .offset = 0,
+	    .range  = sizeof( struct Mat4f ),
 	};
 
 	struct SamplerDescriptor sampler_descriptor = {
-		.sampler = adapter->font_tex,
+	    .sampler = adapter->font_tex,
 	};
 
 	struct ImageDescriptor image_descriptor = {
-		.image          = adapter->font_image,
-		.resource_state = FT_RESOURCE_STATE_SHADER_READ_ONLY
-	};
+	    .image          = adapter->font_image,
+	    .resource_state = FT_RESOURCE_STATE_SHADER_READ_ONLY };
 
 	struct DescriptorWrite descriptor_writes[ 3 ];
 	memset( descriptor_writes, 0, sizeof( descriptor_writes ) );
@@ -120,8 +120,8 @@ prepare_pipeline( struct nk_vulkan_adapter *adapter )
 
 	create_descriptor_set_layout( adapter->device, shader, &adapter->dsl );
 	struct DescriptorSetInfo set_info = {
-		.set                   = 0,
-		.descriptor_set_layout = adapter->dsl,
+	    .set                   = 0,
+	    .descriptor_set_layout = adapter->dsl,
 	};
 	create_descriptor_set( adapter->device, &set_info, &adapter->set );
 
@@ -135,7 +135,7 @@ prepare_pipeline( struct nk_vulkan_adapter *adapter )
 	    .rasterizer_info.front_face    = FT_FRONT_FACE_CLOCKWISE,
 	    .depth_state_info.depth_test   = 1,
 	    .depth_state_info.depth_write  = 1,
-	    .depth_state_info.compare_op   = FT_COMPARE_OP_LESS_OR_EQUAL,
+	    .depth_state_info.compare_op   = FT_COMPARE_OP_ALWAYS,
 	    .sample_count                  = 1,
 	    .color_attachment_count        = 1,
 	    .color_attachment_formats[ 0 ] = adapter->color_format,
@@ -241,14 +241,14 @@ nk_ft_device_upload_atlas( const void *image, int width, int height )
 	struct nk_vulkan_adapter *adapter = &ft.adapter;
 
 	struct ImageInfo image_info = {
-		.width           = ( u32 ) width,
-		.height          = ( u32 ) height,
-		.depth           = 1,
-		.format          = FT_FORMAT_R8G8B8A8_UNORM,
-		.sample_count    = 1,
-		.layer_count     = 1,
-		.mip_levels      = 1,
-		.descriptor_type = FT_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+	    .width           = ( u32 ) width,
+	    .height          = ( u32 ) height,
+	    .depth           = 1,
+	    .format          = FT_FORMAT_R8G8B8A8_UNORM,
+	    .sample_count    = 1,
+	    .layer_count     = 1,
+	    .mip_levels      = 1,
+	    .descriptor_type = FT_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
 	};
 
 	create_image( adapter->device, &image_info, &adapter->font_image );
@@ -256,19 +256,18 @@ nk_ft_device_upload_atlas( const void *image, int width, int height )
 	upload_image( adapter->font_image, width * height * 4, image );
 
 	struct SamplerInfo sampler_info = {
-		.mag_filter     = FT_FILTER_LINEAR,
-		.min_filter     = FT_FILTER_LINEAR,
-		.max_anisotropy = 1.0,
-		.mipmap_mode    = FT_SAMPLER_MIPMAP_MODE_LINEAR,
-		.address_mode_u = FT_SAMPLER_ADDRESS_MODE_REPEAT,
-		.address_mode_v = FT_SAMPLER_ADDRESS_MODE_REPEAT,
-		.address_mode_w = FT_SAMPLER_ADDRESS_MODE_REPEAT,
-		.mip_lod_bias   = 0.0f,
-		.compare_enable = 0,
-		.compare_op     = FT_COMPARE_OP_ALWAYS,
-		.min_lod        = 0.0f,
-		.max_lod        = 0.0f
-	};
+	    .mag_filter     = FT_FILTER_LINEAR,
+	    .min_filter     = FT_FILTER_LINEAR,
+	    .max_anisotropy = 1.0,
+	    .mipmap_mode    = FT_SAMPLER_MIPMAP_MODE_LINEAR,
+	    .address_mode_u = FT_SAMPLER_ADDRESS_MODE_REPEAT,
+	    .address_mode_v = FT_SAMPLER_ADDRESS_MODE_REPEAT,
+	    .address_mode_w = FT_SAMPLER_ADDRESS_MODE_REPEAT,
+	    .mip_lod_bias   = 0.0f,
+	    .compare_enable = 0,
+	    .compare_op     = FT_COMPARE_OP_ALWAYS,
+	    .min_lod        = 0.0f,
+	    .max_lod        = 0.0f };
 
 	create_sampler( adapter->device, &sampler_info, &adapter->font_tex );
 }
@@ -307,7 +306,7 @@ nk_ft_new_frame()
 	struct nk_context *ctx = &ft.ctx;
 
 	struct WsiInfo *wsi = ft.wsi;
-	void	       *win = wsi->window;
+	void           *win = wsi->window;
 	wsi->get_window_size( win, &ft.width, &ft.height );
 	wsi->get_framebuffer_size( win, &ft.display_width, &ft.display_height );
 
@@ -437,19 +436,18 @@ nk_ft_render( const struct CommandBuffer *cmd, enum nk_anti_aliasing AA )
 		 */
 		{
 			/* fill convert configuration */
-			struct nk_convert_config config;
-			static const struct nk_draw_vertex_layout_element
-			    vertex_layout[] = { { NK_VERTEX_POSITION,
-				                      NK_FORMAT_FLOAT,
-				                      NK_OFFSETOF( struct nk_ft_vertex,
-				                                   position ) },
-				                    { NK_VERTEX_TEXCOORD,
-				                      NK_FORMAT_FLOAT,
-				                      NK_OFFSETOF( struct nk_ft_vertex, uv ) },
-				                    { NK_VERTEX_COLOR,
-				                      NK_FORMAT_R8G8B8A8,
-				                      NK_OFFSETOF( struct nk_ft_vertex, col ) },
-				                    { NK_VERTEX_LAYOUT_END } };
+			struct nk_convert_config                          config;
+			static const struct nk_draw_vertex_layout_element vertex_layout[] =
+			    { { NK_VERTEX_POSITION,
+			        NK_FORMAT_FLOAT,
+			        NK_OFFSETOF( struct nk_ft_vertex, position ) },
+			      { NK_VERTEX_TEXCOORD,
+			        NK_FORMAT_FLOAT,
+			        NK_OFFSETOF( struct nk_ft_vertex, uv ) },
+			      { NK_VERTEX_COLOR,
+			        NK_FORMAT_R8G8B8A8,
+			        NK_OFFSETOF( struct nk_ft_vertex, col ) },
+			      { NK_VERTEX_LAYOUT_END } };
 			NK_MEMSET( &config, 0, sizeof( config ) );
 			config.vertex_layout        = vertex_layout;
 			config.vertex_size          = sizeof( struct nk_ft_vertex );
@@ -516,7 +514,7 @@ nk_ft_shutdown( void )
 	{
 		destroy_sampler( adapter->device, adapter->font_tex );
 	}
-	
+
 	if ( adapter->font_image )
 	{
 		destroy_image( adapter->device, adapter->font_image );

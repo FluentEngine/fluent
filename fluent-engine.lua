@@ -247,6 +247,8 @@ project "ft_renderer"
 		path.join(backend_dir, "vulkan/vulkan_pass_hasher.h"),
 		path.join(nuklear_dir, "ft_nuklear.h"),
 		path.join(nuklear_dir, "ft_nuklear.c"),
+		path.join(nuklear_dir, "shaders/shader_nuklear_vert_spirv.c"),
+		path.join(nuklear_dir, "shaders/shader_nuklear_frag_spirv.c"),
 		path.join(shader_reflection_dir, "shader_reflection.h"),
 		path.join(shader_reflection_dir, "vulkan_reflection.c"),
 		path.join(scene_dir, "model_loader.h"),
