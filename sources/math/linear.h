@@ -261,9 +261,9 @@ mat4x4_rotate( mat4x4       R,
 		mat4x4_from_vec3_mul_outer( T, u, u );
 
 		mat4x4 S = { { 0, u[ 2 ], -u[ 1 ], 0 },
-			         { -u[ 2 ], 0, u[ 0 ], 0 },
-			         { u[ 1 ], -u[ 0 ], 0, 0 },
-			         { 0, 0, 0, 0 } };
+		             { -u[ 2 ], 0, u[ 0 ], 0 },
+		             { u[ 1 ], -u[ 0 ], 0, 0 },
+		             { 0, 0, 0, 0 } };
 		mat4x4_scale( S, S, s );
 
 		mat4x4 C;
@@ -289,9 +289,9 @@ mat4x4_rotate_X( mat4x4 Q, mat4x4 const M, float angle )
 	float  s = sinf( angle );
 	float  c = cosf( angle );
 	mat4x4 R = { { 1.f, 0.f, 0.f, 0.f },
-		         { 0.f, c, s, 0.f },
-		         { 0.f, -s, c, 0.f },
-		         { 0.f, 0.f, 0.f, 1.f } };
+	             { 0.f, c, s, 0.f },
+	             { 0.f, -s, c, 0.f },
+	             { 0.f, 0.f, 0.f, 1.f } };
 	mat4x4_mul( Q, M, R );
 }
 LINMATH_H_FUNC void
@@ -300,9 +300,9 @@ mat4x4_rotate_Y( mat4x4 Q, mat4x4 const M, float angle )
 	float  s = sinf( angle );
 	float  c = cosf( angle );
 	mat4x4 R = { { c, 0.f, -s, 0.f },
-		         { 0.f, 1.f, 0.f, 0.f },
-		         { s, 0.f, c, 0.f },
-		         { 0.f, 0.f, 0.f, 1.f } };
+	             { 0.f, 1.f, 0.f, 0.f },
+	             { s, 0.f, c, 0.f },
+	             { 0.f, 0.f, 0.f, 1.f } };
 	mat4x4_mul( Q, M, R );
 }
 LINMATH_H_FUNC void
@@ -311,9 +311,9 @@ mat4x4_rotate_Z( mat4x4 Q, mat4x4 const M, float angle )
 	float  s = sinf( angle );
 	float  c = cosf( angle );
 	mat4x4 R = { { c, s, 0.f, 0.f },
-		         { -s, c, 0.f, 0.f },
-		         { 0.f, 0.f, 1.f, 0.f },
-		         { 0.f, 0.f, 0.f, 1.f } };
+	             { -s, c, 0.f, 0.f },
+	             { 0.f, 0.f, 1.f, 0.f },
+	             { 0.f, 0.f, 0.f, 1.f } };
 	mat4x4_mul( Q, M, R );
 }
 LINMATH_H_FUNC void
