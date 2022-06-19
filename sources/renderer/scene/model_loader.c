@@ -350,6 +350,7 @@ read_animation_samplers( const cgltf_animation_sampler* src,
 
 	dst->frame_count = timeline_accessor->count;
 
+	FT_ASSERT( dst->times == NULL );
 	dst->times = calloc( dst->frame_count, sizeof( f32 ) );
 
 	for ( u32 i = 0; i < dst->frame_count; ++i )
@@ -361,11 +362,13 @@ read_animation_samplers( const cgltf_animation_sampler* src,
 
 	const cgltf_accessor* values_accessor = src->output;
 
+	FT_ASSERT( dst->values == NULL );
+
 	switch ( values_accessor->type )
 	{
 	case cgltf_type_scalar:
 	{
-		dst->values = realloc( dst->values, dst->frame_count * sizeof( f32 ) );
+		dst->values = calloc( dst->frame_count, sizeof( f32 ) );
 		cgltf_accessor_unpack_floats( src->output,
 		                              &dst->values[ 0 ],
 		                              dst->frame_count );
@@ -373,8 +376,7 @@ read_animation_samplers( const cgltf_animation_sampler* src,
 	}
 	case cgltf_type_vec3:
 	{
-		dst->values =
-		    realloc( dst->values, dst->frame_count * 3 * sizeof( f32 ) );
+		dst->values = calloc( dst->frame_count, 3 * sizeof( f32 ) );
 		cgltf_accessor_unpack_floats( src->output,
 		                              &dst->values[ 0 ],
 		                              dst->frame_count * 3 );
@@ -382,8 +384,7 @@ read_animation_samplers( const cgltf_animation_sampler* src,
 	}
 	case cgltf_type_vec4:
 	{
-		dst->values =
-		    realloc( dst->values, dst->frame_count * 4 * sizeof( f32 ) );
+		dst->values = calloc( dst->frame_count, 4 * sizeof( f32 ) );
 		cgltf_accessor_unpack_floats( src->output,
 		                              &dst->values[ 0 ],
 		                              dst->frame_count * 4 );
@@ -503,6 +504,7 @@ load_gltf( const char* filename )
 				model.animations[ a ].samplers =
 				    calloc( animation->samplers_count,
 				            sizeof( struct AnimationSampler ) );
+				model.animations[ a ].sampler_count = animation->samplers_count;
 
 				for ( cgltf_size s = 0; s < animation->samplers_count; ++s )
 				{
@@ -578,25 +580,26 @@ free_animation( struct Animation* animation )
 {
 	for ( u32 i = 0; i < animation->sampler_count; ++i )
 	{
-		if ( animation->samplers[ i ].times )
+		struct AnimationSampler* sampler = &animation->samplers[ i ];
+		if ( sampler->times )
 		{
-			free( animation->samplers[ i ].times );
+			free( sampler->times );
 		}
 
-		if ( animation->samplers[ i ].values )
+		if ( sampler->values )
 		{
-			free( animation->samplers[ i ].values );
+			free( sampler->values );
 		}
-	}
-
-	if ( animation->channels )
-	{
-		free( animation->channels );
 	}
 
 	if ( animation->samplers )
 	{
 		free( animation->samplers );
+	}
+
+	if ( animation->channels )
+	{
+		free( animation->channels );
 	}
 }
 
