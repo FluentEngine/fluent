@@ -348,52 +348,45 @@ read_animation_samplers( const cgltf_animation_sampler* src,
 	    ( const f32* ) ( timeline_blob + timeline_accessor->offset +
 	                     timeline_accessor->buffer_view->offset );
 
-	dst->time_count = timeline_accessor->count;
-	dst->times = calloc( timeline_accessor->count, sizeof( f32 ) );
-	memcpy( dst->times, timeline_floats, dst->time_count * sizeof( f32 ) );
+	dst->frame_count = timeline_accessor->count;
 
-	// sort
-	for ( u32 i = 0; i < timeline_accessor->count; ++i )
+	dst->times = calloc( dst->frame_count, sizeof( f32 ) );
+
+	for ( u32 i = 0; i < dst->frame_count; ++i )
 	{
-		for ( u32 j = 1; j < timeline_accessor->count; ++j )
-		{
-			if ( dst->times[ j ] < dst->times[ i ] )
-			{
-				f32 t           = dst->times[ j ];
-				dst->times[ j ] = dst->times[ i ];
-				dst->times[ i ] = t;
-			}
-		}
+		dst->times[ i ] = timeline_floats[ i ];
 	}
 
+	// TODO: sort times
+
 	const cgltf_accessor* values_accessor = src->output;
+
 	switch ( values_accessor->type )
 	{
 	case cgltf_type_scalar:
 	{
-		dst->values =
-		    realloc( dst->values, values_accessor->count * sizeof( f32 ) );
+		dst->values = realloc( dst->values, dst->frame_count * sizeof( f32 ) );
 		cgltf_accessor_unpack_floats( src->output,
 		                              &dst->values[ 0 ],
-		                              values_accessor->count );
+		                              dst->frame_count );
 		break;
 	}
 	case cgltf_type_vec3:
 	{
 		dst->values =
-		    realloc( dst->values, values_accessor->count * 3 * sizeof( f32 ) );
+		    realloc( dst->values, dst->frame_count * 3 * sizeof( f32 ) );
 		cgltf_accessor_unpack_floats( src->output,
 		                              &dst->values[ 0 ],
-		                              values_accessor->count * 3 );
+		                              dst->frame_count * 3 );
 		break;
 	}
 	case cgltf_type_vec4:
 	{
 		dst->values =
-		    realloc( dst->values, values_accessor->count * 4 * sizeof( f32 ) );
+		    realloc( dst->values, dst->frame_count * 4 * sizeof( f32 ) );
 		cgltf_accessor_unpack_floats( src->output,
 		                              &dst->values[ 0 ],
-		                              values_accessor->count * 4 );
+		                              dst->frame_count * 4 );
 		break;
 	}
 	default: return;
@@ -446,8 +439,7 @@ read_animation_channels( const cgltf_animation* src, struct Animation* dst )
 		case cgltf_animation_path_type_weights:
 			dst_channel->transform_type = FT_TRANSFORM_TYPE_WEIGHTS;
 			break;
-		case cgltf_animation_path_type_max_enum:
-		case cgltf_animation_path_type_invalid: break;
+		default: break;
 		}
 	}
 }
@@ -499,10 +491,11 @@ load_gltf( const char* filename )
 				}
 			}
 
+			model.animation_count = data->animations_count;
 			model.animations =
-			    calloc( data->animations_count, sizeof( struct Animation ) );
+			    calloc( model.animation_count, sizeof( struct Animation ) );
 
-			for ( cgltf_size a = 0; a < data->animations_count; ++a )
+			for ( cgltf_size a = 0; a < model.animation_count; ++a )
 			{
 				cgltf_animation*         animation = &data->animations[ a ];
 				cgltf_animation_sampler* samplers  = animation->samplers;
@@ -518,10 +511,11 @@ load_gltf( const char* filename )
 
 					read_animation_samplers( &samplers[ s ], sampler );
 
-					if ( sampler->times[ sampler->time_count - 1 ] > model.animations[ a ].duration )
+					if ( sampler->times[ sampler->frame_count - 1 ] >
+					     model.animations[ a ].duration )
 					{
 						model.animations[ a ].duration =
-						    sampler->times[ sampler->time_count - 1 ];
+						    sampler->times[ sampler->frame_count - 1 ];
 					}
 				}
 

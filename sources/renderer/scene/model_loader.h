@@ -39,7 +39,7 @@ enum TransformType
 
 struct AnimationSampler
 {
-	u32                         time_count;
+	u32                         frame_count;
 	f32                        *times;
 	f32                        *values;
 	enum AnimationInterpolation interpolation;
