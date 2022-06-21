@@ -100,7 +100,7 @@ ft_camera_on_rotate( struct ft_camera* camera, float x_offset, float y_offset )
 	camera->yaw += x_offset;
 	camera->pitch += y_offset;
 
-	if ( camera->pitch > 89.0f )
+	if ( camera->pitch > 150.0f )
 		camera->pitch = 89.0f;
 	if ( camera->pitch < -89.0f )
 		camera->pitch = -89.0f;
@@ -157,10 +157,9 @@ ft_camera_controller_update( struct ft_camera_controller* c, float delta_time )
 	}
 
 	int32_t x, y;
-	ft_get_mouse_position( &x, &y );
-	float xoffset = ( float ) ( x - c->last_mouse_positon[ 0 ] );
-	float yoffset = ( float ) ( c->last_mouse_positon[ 1 ] - y );
-	ft_camera_on_rotate( c->camera, xoffset, yoffset );
+	ft_get_mouse_offset( &x, &y );
+	y = -y;
+	ft_camera_on_rotate( c->camera, ( float ) x, ( float ) y );
 	c->last_mouse_positon[ 0 ] = x;
 	c->last_mouse_positon[ 1 ] = y;
 }
