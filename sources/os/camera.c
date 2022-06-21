@@ -167,6 +167,7 @@ ft_camera_controller_update( struct ft_camera_controller* c, float delta_time )
 void
 ft_camera_controller_reset( struct ft_camera_controller* c )
 {
-	ft_get_mouse_position( &c->last_mouse_positon[ 0 ],
-	                       &c->last_mouse_positon[ 1 ] );
+	int32_t x, y;
+	ft_get_mouse_offset( &c->last_mouse_positon[ 0 ],
+	                     &c->last_mouse_positon[ 1 ] );
 }
