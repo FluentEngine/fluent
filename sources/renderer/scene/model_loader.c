@@ -3,34 +3,8 @@
 #include <cgltf/cgltf.h>
 #include <stb/stb_image.h>
 #include "log/log.h"
+#include "fs/fs.h"
 #include "model_loader.h"
-
-void*
-read_file_binary( const char* filename, uint64_t* size )
-{
-	FILE* file = fopen( filename, "rb" );
-	if ( !file )
-	{
-		FT_WARN( "failed to open file %s", filename );
-		return NULL;
-	}
-	uint64_t res = fseek( file, 0, SEEK_END );
-	FT_ASSERT( res == 0 );
-	*size = ftell( file );
-	res   = fseek( file, 0, SEEK_SET );
-	FT_ASSERT( res == 0 );
-	void* file_data = malloc( *size );
-	fread( file_data, *size, 1, file );
-	res = fclose( file );
-	FT_ASSERT( res == 0 );
-	return file_data;
-}
-
-void
-free_file_data( void* data )
-{
-	free( data );
-}
 
 FT_INLINE struct ft_model_texture
 load_image_from_cgltf_image( cgltf_image* cgltf_image, const char* filename )
@@ -456,7 +430,7 @@ ft_load_gltf( const char* filename )
 	memset( &model, 0, sizeof( struct ft_model ) );
 
 	uint64_t data_size = 0;
-	uint8_t* file_data = read_file_binary( filename, &data_size );
+	uint8_t* file_data = ft_read_file_binary( filename, &data_size );
 
 	if ( file_data == NULL )
 	{
@@ -540,7 +514,7 @@ ft_load_gltf( const char* filename )
 		FT_WARN( "failed to parse gltf %s", filename );
 	}
 
-	free_file_data( file_data );
+	ft_free_file_data( file_data );
 
 	return model;
 }

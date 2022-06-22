@@ -9,3 +9,5 @@
 #include "os/timer.h"
 
 #include "math/linear.h"
+
+#include "fs/fs.h"
