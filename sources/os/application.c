@@ -25,6 +25,9 @@ struct application_state
 
 static struct application_state app_state;
 
+void
+ft_input_update( int32_t wheel );
+
 #ifdef VULKAN_BACKEND
 static void
 create_vulkan_surface( void* window, void* instance, void** p )
@@ -114,6 +117,8 @@ ft_app_run()
 		    ( float ) ( current_frame - last_frame ) / 1000.0f;
 		last_frame = current_frame;
 
+		ft_input_update( 0 );
+
 		while ( SDL_PollEvent( &e ) != 0 )
 		{
 			switch ( e.type )
@@ -134,6 +139,18 @@ ft_app_run()
 						break;
 					}
 					app_state.on_resize( w, h );
+				}
+				break;
+			}
+			case SDL_MOUSEWHEEL:
+			{
+				if ( e.wheel.direction == SDL_MOUSEWHEEL_FLIPPED )
+				{
+					ft_input_update( e.wheel.y );
+				}
+				else
+				{
+					ft_input_update( e.wheel.y );
 				}
 				break;
 			}

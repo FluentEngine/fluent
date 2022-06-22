@@ -6,7 +6,7 @@ function toboolean(str)
     return bool
 end
 
-newoption 
+newoption
 {
    trigger			= "sdl2_include_directory",
    description		= "SDL2 include directory"
@@ -19,7 +19,7 @@ newoption
 }
 
 newoption
-{	
+{
 	trigger			= "vulkan_include_directory",
 	description		= "Vulkan include directory",
 }
@@ -54,7 +54,7 @@ commons.opts = function()
 	filter { "configurations:release" }
 		optimize "Speed"
 	filter {}
-	
+
 	filter "system:windows"
 		defines("NOMINMAX")
 	filter {}
@@ -123,18 +123,18 @@ if (renderer_backend_vulkan) then
 end
 
 function declare_backend_defines()
-	if (renderer_backend_vulkan) 
+	if (renderer_backend_vulkan)
 	then
 		defines { "VULKAN_BACKEND" }
 	end
-	
-	if (renderer_backend_d3d12) 
-	then 
+
+	if (renderer_backend_d3d12)
+	then
 		defines { "D3D12_BACKEND" }
 	end
-	
-	if (renderer_backend_metal) 
-	then 
+
+	if (renderer_backend_metal)
+	then
 		defines { "METAL_BACKEND" }
 		buildoptions { "-fobjc-arc", "-fmodules" }
 	end
@@ -158,15 +158,15 @@ include("sources/third_party/stb/premake5.lua")
 project "ft_log"
 	kind "StaticLib"
 	language "C"
-	
+
 	commons.opts()
-	
-	includedirs 
+
+	includedirs
 	{
 		"sources"
 	}
 
-	files 
+	files
 	{
 		"sources/log/log.h",
 		"sources/log/log.c"
@@ -175,25 +175,25 @@ project "ft_log"
 project "ft_os"
     kind "StaticLib"
     language "C"
-	
+
 	commons.opts()
 
 	declare_backend_defines()
-	
-    includedirs 
+
+    includedirs
     {
         "sources",
     }
-	
+
 	sysincludedirs
-	{	
+	{
 		sdl2_include_directory,
 		"sources/third_party"
 	}
-	
-    files 
+
+    files
     {
-        "sources/os/application.c", 
+        "sources/os/application.c",
         "sources/os/application.h",
         "sources/os/camera.h",
         "sources/os/camera.c",
@@ -201,36 +201,38 @@ project "ft_os"
         "sources/os/input.h",
         "sources/os/key_codes.h",
         "sources/os/mouse_codes.h",
-        "sources/os/window.c", 
-        "sources/os/window.h", 
+        "sources/os/window.c",
+        "sources/os/window.h",
+        "sources/fs/fs.c",
+        "sources/fs/fs.h"
     }
 
 project "ft_renderer"
     kind "StaticLib"
     language "C"
-	
+
 	commons.opts()
-	
+
 	declare_backend_defines()
-	
-    includedirs 
+
+    includedirs
     {
         "sources",
     }
-	
+
 	sysincludedirs
-	{	
+	{
 		sdl2_include_directory,
 		vulkan_include_directory,
 		"sources/third_party"
 	}
-	
+
 	backend_dir = "sources/renderer/backend/"
 	nuklear_dir = "sources/renderer/nuklear/"
 	shader_reflection_dir = "sources/renderer/shader_reflection/"
 	scene_dir = "sources/renderer/scene/"
-	
-    files 
+
+    files
     {
 		path.join(backend_dir, "renderer_backend.c"),
 		path.join(backend_dir, "renderer_backend.h"),
@@ -255,7 +257,7 @@ project "ft_renderer"
 		path.join(scene_dir, "model_loader.h"),
 		path.join(scene_dir, "model_loader.c")
     }
-	
+
 	if (renderer_backend_metal) then
 		files
 		{
@@ -264,21 +266,21 @@ project "ft_renderer"
 			path.join(backend_dir, "metal/metal_reflection.m")
 		}
 	end
-	
+
 	fluent_engine = {}
 
 	fluent_engine.link = function()
-		sysincludedirs 
+		sysincludedirs
 		{
 			sdl2_include_directory
 		}
-		
-		syslibdirs 
+
+		syslibdirs
 		{
 			sdl2_library_directory
 		}
-		
-		links 
+
+		links
 		{
 			"hashmap_c",
 			"cgltf",
@@ -298,7 +300,7 @@ project "ft_renderer"
 		if (renderer_backend_d3d12) then
 			links
 			{
-				"d3d12", 
+				"d3d12",
 				"dxgi",
 				"dxguid",
 			}

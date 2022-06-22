@@ -27,3 +27,6 @@ ft_is_key_pressed( enum ft_key_code key );
 
 FT_API bool
 ft_is_button_pressed( enum ft_button button );
+
+FT_API int32_t
+ft_get_mouse_wheel( void );

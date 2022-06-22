@@ -74,7 +74,7 @@ void
 ft_destroy_window( struct ft_window* window )
 {
 	FT_ASSERT( window->handle && "Window is nullptr" );
-	SDL_DestroyWindow( ( SDL_Window* ) window->handle );
+	SDL_DestroyWindow( window->handle );
 	SDL_Quit();
 }
 
@@ -83,7 +83,7 @@ ft_window_get_size( const struct ft_window* window,
                     uint32_t*               width,
                     uint32_t*               height )
 {
-	SDL_Window* handle = ( SDL_Window* ) ( window->handle );
+	SDL_Window* handle = window->handle;
 	int32_t     w, h;
 
 	SDL_GetWindowSize( handle, &w, &h );
@@ -97,7 +97,7 @@ ft_window_get_framebuffer_size( const struct ft_window* window,
                                 uint32_t*               width,
                                 uint32_t*               height )
 {
-	SDL_Window* handle = ( SDL_Window* ) ( window->handle );
+	SDL_Window* handle = window->handle;
 	int32_t     w, h;
 #if defined( METAL_BACKEND )
 	SDL_Metal_GetDrawableSize( handle, &w, &h );
@@ -146,7 +146,7 @@ ft_window_get_aspect( const struct ft_window* window )
 {
 	uint32_t w, h;
 	ft_window_get_size( window, &w, &h );
-	return ( float ) ( w ) / ( float ) ( h );
+	return ( float ) w / ( float ) h;
 }
 
 void

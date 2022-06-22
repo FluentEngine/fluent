@@ -409,7 +409,7 @@ struct ft_descriptor_write
 	struct ft_buffer_descriptor*  buffer_descriptors;
 };
 
-FT_API FT_INLINE bool
+FT_INLINE bool
 ft_format_has_depth_aspect( enum ft_format format )
 {
 	switch ( format )
@@ -424,7 +424,7 @@ ft_format_has_depth_aspect( enum ft_format format )
 	}
 }
 
-FT_API FT_INLINE bool
+FT_INLINE bool
 ft_format_has_stencil_aspect( enum ft_format format )
 {
 	switch ( format )
@@ -437,7 +437,7 @@ ft_format_has_stencil_aspect( enum ft_format format )
 	}
 }
 
-FT_API FT_INLINE bool
+FT_INLINE bool
 ft_is_srgb( enum ft_format format )
 {
 	switch ( format )
