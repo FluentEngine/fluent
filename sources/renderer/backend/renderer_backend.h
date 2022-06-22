@@ -409,8 +409,8 @@ struct ft_descriptor_write
 	struct ft_buffer_descriptor*  buffer_descriptors;
 };
 
-FT_INLINE bool
-format_has_depth_aspect( enum ft_format format )
+FT_API FT_INLINE bool
+ft_format_has_depth_aspect( enum ft_format format )
 {
 	switch ( format )
 	{
@@ -424,8 +424,8 @@ format_has_depth_aspect( enum ft_format format )
 	}
 }
 
-FT_INLINE bool
-format_has_stencil_aspect( enum ft_format format )
+FT_API FT_INLINE bool
+ft_format_has_stencil_aspect( enum ft_format format )
 {
 	switch ( format )
 	{
@@ -433,6 +433,24 @@ format_has_stencil_aspect( enum ft_format format )
 	case FT_FORMAT_D24_UNORMS8_UINT:
 	case FT_FORMAT_D32_SFLOATS8_UINT:
 	case FT_FORMAT_S8_UINT: return true;
+	default: return false;
+	}
+}
+
+FT_API FT_INLINE bool
+ft_is_srgb( enum ft_format format )
+{
+	switch ( format )
+	{
+	case FT_FORMAT_B8G8R8A8_SRGB:
+	case FT_FORMAT_B8G8R8_SRGB:
+	case FT_FORMAT_DXBC2_SRGB:
+	case FT_FORMAT_DXBC3_SRGB:
+	case FT_FORMAT_DXBC7_SRGB:
+	case FT_FORMAT_R8G8B8A8_SRGB:
+	case FT_FORMAT_R8G8B8_SRGB:
+	case FT_FORMAT_R8G8_SRGB:
+	case FT_FORMAT_R8_SRGB: return true;
 	default: return false;
 	}
 }

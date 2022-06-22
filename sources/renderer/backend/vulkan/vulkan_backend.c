@@ -203,12 +203,12 @@ get_aspect_mask( enum ft_format format )
 {
 	VkImageAspectFlags aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-	if ( format_has_depth_aspect( format ) )
+	if ( ft_format_has_depth_aspect( format ) )
 	{
 		aspect_mask &= ~VK_IMAGE_ASPECT_COLOR_BIT;
 		aspect_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
 	}
-	else if ( format_has_stencil_aspect( format ) )
+	else if ( ft_format_has_stencil_aspect( format ) )
 	{
 		aspect_mask &= ~VK_IMAGE_ASPECT_COLOR_BIT;
 		aspect_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
@@ -839,7 +839,10 @@ vk_configure_swapchain( const struct vk_device*         device,
 	for ( uint32_t i = 0; i < surface_format_count; ++i )
 	{
 		if ( surface_formats[ i ].format == preffered_format )
+		{
 			surface_format = surface_formats[ i ];
+			break;
+		}
 	}
 
 	swapchain->interface.queue  = info->queue;
