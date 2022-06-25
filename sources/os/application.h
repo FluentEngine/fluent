@@ -5,7 +5,7 @@
 #include "window.h"
 
 typedef void ( *ft_init_callback )( void );
-typedef void ( *ft_update_callback )( float deltaTime );
+typedef void ( *ft_update_callback )( float delta_time );
 typedef void ( *ft_shutdown_callback )( void );
 typedef void ( *ft_resize_callback )( uint32_t width, uint32_t height );
 
