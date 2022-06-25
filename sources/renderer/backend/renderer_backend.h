@@ -338,14 +338,20 @@ struct ft_depth_state_info
 	enum ft_compare_op compare_op;
 };
 
+struct ft_blend_attachment_state
+{
+	enum ft_blend_factor src_factor;
+	enum ft_blend_factor dst_factor;
+	enum ft_blend_factor src_alpha_factor;
+	enum ft_blend_factor dst_alpha_factor;
+	enum ft_blend_op     op;
+	enum ft_blend_op     alpha_op;
+};
+
 struct ft_blend_state_info
 {
-	enum ft_blend_factor src_blend_factors[ FT_MAX_ATTACHMENTS_COUNT ];
-	enum ft_blend_factor dst_blend_factors[ FT_MAX_ATTACHMENTS_COUNT ];
-	enum ft_blend_factor src_alpha_blend_factors[ FT_MAX_ATTACHMENTS_COUNT ];
-	enum ft_blend_factor dst_alpha_blend_factors[ FT_MAX_ATTACHMENTS_COUNT ];
-	enum ft_blend_op     blend_ops[ FT_MAX_ATTACHMENTS_COUNT ];
-	enum ft_blend_op     alpha_blend_ops[ FT_MAX_ATTACHMENTS_COUNT ];
+	struct ft_blend_attachment_state
+	    attachment_states[ FT_MAX_ATTACHMENTS_COUNT ];
 };
 
 struct ft_pipeline_info

@@ -1632,18 +1632,19 @@ vk_create_graphics_pipeline( const struct ft_device*        idevice,
 	{
 		VkPipelineColorBlendAttachmentState attachment_state = { 0 };
 		attachment_states[ i ] = ( VkPipelineColorBlendAttachmentState ) {
-		    .blendEnable =
-		        blend->src_blend_factors[ i ] != FT_BLEND_FACTOR_ZERO,
+		    .blendEnable = blend->attachment_states[ i ].src_factor !=
+		                   FT_BLEND_FACTOR_ZERO,
 		    .srcColorBlendFactor =
-		        to_vk_blend_factor( blend->src_blend_factors[ i ] ),
+		        to_vk_blend_factor( blend->attachment_states[ i ].src_factor ),
 		    .dstColorBlendFactor =
-		        to_vk_blend_factor( blend->dst_blend_factors[ i ] ),
-		    .colorBlendOp = to_vk_blend_op( blend->blend_ops[ i ] ),
-		    .srcAlphaBlendFactor =
-		        to_vk_blend_factor( blend->src_alpha_blend_factors[ i ] ),
-		    .dstAlphaBlendFactor =
-		        to_vk_blend_factor( blend->dst_alpha_blend_factors[ i ] ),
-		    .alphaBlendOp = to_vk_blend_op( blend->alpha_blend_ops[ i ] ),
+		        to_vk_blend_factor( blend->attachment_states[ i ].dst_factor ),
+		    .colorBlendOp = to_vk_blend_op( blend->attachment_states[ i ].op ),
+		    .srcAlphaBlendFactor = to_vk_blend_factor(
+		        blend->attachment_states[ i ].src_alpha_factor ),
+		    .dstAlphaBlendFactor = to_vk_blend_factor(
+		        blend->attachment_states[ i ].dst_alpha_factor ),
+		    .alphaBlendOp =
+		        to_vk_blend_op( blend->attachment_states[ i ].alpha_op ),
 		    .colorWriteMask =
 		        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
 		        VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,

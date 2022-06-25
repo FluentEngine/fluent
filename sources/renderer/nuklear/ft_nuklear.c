@@ -140,14 +140,14 @@ prepare_pipeline( struct nk_vulkan_adapter *adapter )
 	    .color_attachment_count        = 1,
 	    .color_attachment_formats[ 0 ] = adapter->color_format,
 	    .depth_stencil_format          = adapter->depth_format,
-	    .blend_state_info =
+	    .blend_state_info.attachment_states[ 0 ] =
 	        {
-	            .src_blend_factors[ 0 ] = FT_BLEND_FACTOR_SRC_ALPHA,
-	            .dst_blend_factors[ 0 ] = FT_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-	            .blend_ops[ 0 ]         = FT_BLEND_OP_ADD,
-	            .src_alpha_blend_factors[ 0 ] = FT_BLEND_FACTOR_ONE,
-	            .dst_alpha_blend_factors[ 0 ] = FT_BLEND_FACTOR_ZERO,
-	            .alpha_blend_ops[ 0 ]         = FT_BLEND_OP_ADD,
+	            .src_factor       = FT_BLEND_FACTOR_SRC_ALPHA,
+	            .dst_factor       = FT_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+	            .op               = FT_BLEND_OP_ADD,
+	            .src_alpha_factor = FT_BLEND_FACTOR_ONE,
+	            .dst_alpha_factor = FT_BLEND_FACTOR_ZERO,
+	            .alpha_op         = FT_BLEND_OP_ADD,
 	        },
 	    .vertex_layout =
 	        {
