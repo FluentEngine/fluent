@@ -665,7 +665,7 @@ FT_API void
 ft_cmd_bind_index_buffer( const struct ft_command_buffer* cmd,
                           const struct ft_buffer*         buffer,
                           const uint64_t                  offset,
-                          enum IndexType                  index_type );
+                          enum ft_index_type              index_type );
 
 FT_API void
 ft_cmd_copy_buffer( const struct ft_command_buffer* cmd,

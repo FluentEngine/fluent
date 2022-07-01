@@ -64,6 +64,8 @@ ft_app_init( const struct ft_application_config* config )
 	FT_ASSERT( config->on_shutdown );
 	FT_ASSERT( config->on_resize );
 
+	ft_log_init( config->log_level );
+
 	app_state.window = ft_create_window( &config->window_info );
 
 	app_state.on_init     = config->on_init;
@@ -87,8 +89,6 @@ ft_app_init( const struct ft_application_config* config )
 #endif
 	wsi_info->get_window_size      = window_get_size;
 	wsi_info->get_framebuffer_size = window_get_framebuffer_size;
-
-	ft_log_init( FT_INFO );
 
 	app_state.is_inited = 1;
 }

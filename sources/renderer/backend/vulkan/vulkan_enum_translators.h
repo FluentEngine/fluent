@@ -63,7 +63,7 @@ to_vk_vertex_input_rate( enum ft_vertex_input_rate input_rate )
 }
 
 FT_INLINE VkIndexType
-to_vk_index_type( enum IndexType index_type )
+to_vk_index_type( enum ft_index_type index_type )
 {
 	switch ( index_type )
 	{

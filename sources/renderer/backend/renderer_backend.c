@@ -1,8 +1,10 @@
+#include "log/log.h"
 #include "renderer_private.h"
-#include "renderer_backend.h"
+#include "renderer_enums_stringifier.h"
 #include "vulkan/vulkan_backend.h"
 #include "d3d12/d3d12_backend.h"
 #include "metal/metal_backend.h"
+#include "renderer_backend.h"
 
 ft_destroy_renderer_backend_fun      ft_destroy_renderer_backend_impl;
 ft_create_device_fun                 ft_create_device_impl;
@@ -108,6 +110,10 @@ ft_create_renderer_backend( const struct ft_renderer_backend_info* info,
 
 	struct ft_renderer_backend* backend = *p;
 	backend->api                        = info->api;
+
+	FT_INFO( "created renderer backend"
+	         "\n\t %s",
+	         ft_renderer_api_to_string( backend->api ) );
 }
 
 void
@@ -269,7 +275,7 @@ ft_reset_fences( const struct ft_device* device,
 void
 ft_create_swapchain( const struct ft_device*         device,
                      const struct ft_swapchain_info* info,
-                     struct ft_swapchain**           swapchain )
+                     struct ft_swapchain**           p )
 {
 	FT_ASSERT( device );
 	FT_ASSERT( info );
@@ -277,9 +283,23 @@ ft_create_swapchain( const struct ft_device*         device,
 	FT_ASSERT( info->width > 0 );
 	FT_ASSERT( info->height > 0 );
 	FT_ASSERT( info->wsi_info );
-	FT_ASSERT( swapchain );
+	FT_ASSERT( p );
 
-	ft_create_swapchain_impl( device, info, swapchain );
+	ft_create_swapchain_impl( device, info, p );
+
+	struct ft_swapchain* swapchain = *p;
+	FT_UNUSED( swapchain );
+
+	FT_INFO( "created swapchain"
+	         "\n\t width: %d height: %d"
+	         "\n\t image count: %d"
+	         "\n\t format: %s"
+	         "\n\t vsync: %s",
+	         swapchain->width,
+	         swapchain->height,
+	         swapchain->image_count,
+	         ft_format_to_string( swapchain->format ),
+	         swapchain->vsync ? "enabled" : "disabled" );
 }
 
 void
@@ -294,6 +314,15 @@ ft_resize_swapchain( const struct ft_device* device,
 	FT_ASSERT( height > 0 );
 
 	ft_resize_swapchain_impl( device, swapchain, width, height );
+
+	FT_INFO( "resized swapchain"
+	         "\n\t width: %d height: %d"
+	         "\n\t image count: %d"
+	         "\n\t vsync: %s",
+	         swapchain->width,
+	         swapchain->height,
+	         swapchain->image_count,
+	         swapchain->vsync ? "enabled" : "disabled" );
 }
 
 void
@@ -607,7 +636,7 @@ void
 ft_cmd_bind_index_buffer( const struct ft_command_buffer* cmd,
                           const struct ft_buffer*         buffer,
                           const uint64_t                  offset,
-                          enum IndexType                  index_type )
+                          enum ft_index_type              index_type )
 {
 	FT_ASSERT( cmd );
 	FT_ASSERT( buffer );

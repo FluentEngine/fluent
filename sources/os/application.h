@@ -38,6 +38,7 @@ ft_get_app_window( void );
 
 FT_API uint32_t
 ft_get_time( void );
+
 FT_API float
 ft_get_delta_time( void );
 

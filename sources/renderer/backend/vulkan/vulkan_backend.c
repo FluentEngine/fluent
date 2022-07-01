@@ -2429,7 +2429,7 @@ static void
 vk_cmd_bind_index_buffer( const struct ft_command_buffer* icmd,
                           const struct ft_buffer*         ibuffer,
                           uint64_t                        offset,
-                          enum IndexType                  index_type )
+                          enum ft_index_type              index_type )
 {
 	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
 	FT_FROM_HANDLE( buffer, ibuffer, vk_buffer );

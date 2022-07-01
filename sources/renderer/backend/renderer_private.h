@@ -253,7 +253,7 @@ FT_DECLARE_FUNCTION_POINTER( void,
                              const struct ft_command_buffer* cmd,
                              const struct ft_buffer*         buffer,
                              const uint64_t                  offset,
-                             enum IndexType                  index_type );
+                             enum ft_index_type              index_type );
 
 FT_DECLARE_FUNCTION_POINTER( void,
                              ft_cmd_copy_buffer,

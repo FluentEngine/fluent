@@ -287,7 +287,7 @@ enum ft_vertex_input_rate
 	FT_VERTEX_INPUT_RATE_INSTANCE
 };
 
-enum IndexType
+enum ft_index_type
 {
 	FT_INDEX_TYPE_U16,
 	FT_INDEX_TYPE_U32
