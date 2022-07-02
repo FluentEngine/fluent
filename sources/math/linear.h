@@ -854,10 +854,10 @@ float4x4_compose( float4x4     r,
 }
 
 FT_INLINE void
-decompose_matrix( float3         translation,
-                  quat           rotation,
-                  float3         scale,
-                  const float4x4 mat )
+float4x4_decompose( float3         translation,
+                    quat           rotation,
+                    float3         scale,
+                    const float4x4 mat )
 {
 	// extract translation.
 	memcpy( translation, mat[ 3 ], sizeof( float3 ) );
