@@ -3,7 +3,7 @@
 #include "base/base.h"
 #include "math/linear.h"
 
-struct ft_model_texture
+struct ft_texture
 {
 	uint32_t width;
 	uint32_t height;
@@ -12,12 +12,16 @@ struct ft_model_texture
 
 struct ft_pbr_metallic_roughness
 {
-	struct ft_model_texture base_color_texture;
+	uint32_t                base_color_texture;
+	float4                  base_color_factor;
+	float                   metallic_factor;
+	float                   roughness_factor;
 };
 
 struct ft_material
 {
 	struct ft_pbr_metallic_roughness metallic_roughness;
+	uint32_t                         normal_texture;
 };
 
 enum ft_animation_interpolation
@@ -81,6 +85,8 @@ struct ft_model
 	struct ft_mesh      *meshes;
 	uint32_t             animation_count;
 	struct ft_animation *animations;
+	uint32_t             texture_count;
+	struct ft_texture   *textures;
 };
 
 FT_API struct ft_model

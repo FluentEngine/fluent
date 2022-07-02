@@ -21,7 +21,7 @@ compare_node_map_item( const void* a, const void* b, void* udata )
 	const struct node_map_item* nma = a;
 	const struct node_map_item* nmb = b;
 
-	return nma->node == nmb->node;
+	return !( nma->node == nmb->node );
 }
 
 static uint64_t
@@ -34,10 +34,38 @@ hash_node_map_item( const void* item, uint64_t seed0, uint64_t seed1 )
 	return 0;
 }
 
-FT_INLINE struct ft_model_texture
+struct image_map_item
+{
+	cgltf_image* image;
+	uint32_t     index;
+};
+
+static int
+compare_image_map_item( const void* a, const void* b, void* udata )
+{
+	FT_UNUSED( udata );
+
+	const struct image_map_item* ia = a;
+	const struct image_map_item* ib = b;
+
+	return !( ia->image == ib->image );
+}
+
+static uint64_t
+hash_image_map_item( const void* item, uint64_t seed0, uint64_t seed1 )
+{
+	FT_UNUSED( item );
+	FT_UNUSED( seed0 );
+	FT_UNUSED( seed1 );
+	// TODO: hash function
+	return 0;
+}
+
+FT_INLINE struct ft_texture
 load_image_from_cgltf_image( cgltf_image* cgltf_image, const char* filename )
 {
-	struct ft_model_texture image = { 0 };
+	struct ft_texture image;
+	memset( &image, 0, sizeof( image ) );
 
 	if ( cgltf_image->uri !=
 	     NULL ) // Check if image data is provided as a uri (base64 or path)
@@ -260,6 +288,7 @@ read_attribute( struct ft_mesh*  mesh,
 
 static uint32_t
 process_gltf_node( struct hashmap* node_map,
+                   struct hashmap* image_map,
                    uint32_t        index,
                    cgltf_node*     node,
                    struct ft_mesh* meshes,
@@ -343,6 +372,30 @@ process_gltf_node( struct hashmap* node_map,
 					}
 				}
 			}
+
+			mesh->material.metallic_roughness.base_color_texture = UINT32_MAX;
+
+			if ( primitive->material )
+			{
+				cgltf_material* material = primitive->material;
+
+				cgltf_texture* base_color_texture =
+				    material->pbr_metallic_roughness.base_color_texture.texture;
+
+				if ( base_color_texture )
+				{
+					struct image_map_item* it =
+					    hashmap_get( image_map,
+					                 &( struct image_map_item ) {
+					                     .image = base_color_texture->image,
+					                 } );
+
+					FT_ASSERT( it );
+
+					mesh->material.metallic_roughness.base_color_texture =
+					    it->index;
+				}
+			}
 		}
 		mesh_index = gltf_mesh->primitives_count;
 	}
@@ -351,6 +404,7 @@ process_gltf_node( struct hashmap* node_map,
 	      ++child_index )
 	{
 		mesh_index += process_gltf_node( node_map,
+		                                 image_map,
 		                                 index,
 		                                 node->children[ child_index ],
 		                                 &meshes[ mesh_index ],
@@ -449,10 +503,11 @@ read_animation_channels( struct hashmap*        node_map,
 		dst_channel->sampler =
 		    dst->samplers + ( src_channel->sampler - src_samplers );
 
+		// FIXME:
 		struct node_map_item* it =
 		    hashmap_get( node_map,
 		                 &( struct node_map_item ) {
-		                     .node = src_channel->target_node->parent,
+		                     .node = src_channel->target_node,
 		                 } );
 
 		if ( it != NULL )
@@ -461,12 +516,11 @@ read_animation_channels( struct hashmap*        node_map,
 		}
 		else
 		{
-			FT_WARN( "no scene root contains node %s"
-			         "for animation %s"
-			         "in channel %d",
-			         src_channel->target_node->parent->name,
-			         src->name,
-			         j );
+			FT_WARN(
+			    "no scene root contains node %s for animation %s in channel %d",
+			    src_channel->target_node->name,
+			    src->name,
+			    j );
 		}
 
 		switch ( src_channel->target_path )
@@ -529,6 +583,33 @@ ft_load_gltf( const char* filename )
 			                 NULL,
 			                 NULL );
 
+			struct hashmap* image_map =
+			    hashmap_new( sizeof( struct image_map_item ),
+			                 0,
+			                 0,
+			                 0,
+			                 hash_image_map_item,
+			                 compare_image_map_item,
+			                 NULL,
+			                 NULL );
+
+			model.texture_count = data->textures_count;
+			model.textures =
+			    calloc( model.texture_count, sizeof( struct ft_texture ) );
+
+			for ( cgltf_size t = 0; t < data->textures_count; ++t )
+			{
+				cgltf_texture* texture = &data->textures[ t ];
+				model.textures[ t ] =
+				    load_image_from_cgltf_image( texture->image, filename );
+
+				hashmap_set( image_map,
+				             &( struct image_map_item ) {
+				                 .image = texture->image,
+				                 .index = t,
+				             } );
+			}
+
 			for ( cgltf_size s = 0; s < data->scenes_count; ++s )
 			{
 				cgltf_scene* scene = &data->scenes[ s ];
@@ -548,6 +629,7 @@ ft_load_gltf( const char* filename )
 
 					mesh_index +=
 					    process_gltf_node( node_map,
+					                       image_map,
 					                       n,
 					                       node,
 					                       &model.meshes[ mesh_index ],
@@ -589,6 +671,7 @@ ft_load_gltf( const char* filename )
 				                         &model.animations[ a ] );
 			}
 
+			hashmap_free( image_map );
 			hashmap_free( node_map );
 		}
 		else
@@ -648,5 +731,11 @@ ft_free_gltf( struct ft_model* model )
 		free_mesh( &model->meshes[ i ] );
 	}
 
+	for ( uint32_t i = 0; i < model->texture_count; ++i )
+	{
+		ft_safe_free( model->textures[ i ].data );
+	}
+
+	ft_safe_free( model->textures );
 	ft_safe_free( model->meshes );
 }
