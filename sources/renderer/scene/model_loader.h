@@ -73,7 +73,6 @@ struct ft_mesh
 	void              *indices;
 	float4x4           world;
 	struct ft_material material;
-	bool               has_rotation;
 };
 
 struct ft_model

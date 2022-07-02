@@ -258,14 +258,15 @@ read_attribute( struct ft_mesh*  mesh,
 	}
 }
 
-static void
+static uint32_t
 process_gltf_node( struct hashmap* node_map,
                    uint32_t        index,
                    cgltf_node*     node,
-                   struct ft_mesh* mesh,
+                   struct ft_mesh* meshes,
                    const char*     filename )
 {
-	cgltf_mesh* gltf_mesh = node->mesh;
+	uint32_t    mesh_index = 0;
+	cgltf_mesh* gltf_mesh  = node->mesh;
 
 	if ( gltf_mesh != NULL )
 	{
@@ -275,14 +276,14 @@ process_gltf_node( struct hashmap* node_map,
 		                 .index = index,
 		             } );
 
-		float node_to_world[ 16 ];
-		cgltf_node_transform_world( node, node_to_world );
-		memcpy( mesh->world, node_to_world, sizeof( node_to_world ) );
-
-		mesh->has_rotation = node->has_rotation;
-
 		for ( cgltf_size p = 0; p < gltf_mesh->primitives_count; ++p )
 		{
+			struct ft_mesh* mesh = &meshes[ p ];
+			float           node_to_world[ 16 ];
+			memset( node_to_world, 0, sizeof( node_to_world ) );
+			cgltf_node_transform_world( node, node_to_world );
+			memcpy( mesh->world, node_to_world, sizeof( node_to_world ) );
+
 			cgltf_primitive* primitive = &gltf_mesh->primitives[ p ];
 
 			for ( cgltf_size att = 0; att < primitive->attributes_count; ++att )
@@ -343,17 +344,20 @@ process_gltf_node( struct hashmap* node_map,
 				}
 			}
 		}
+		mesh_index = gltf_mesh->primitives_count;
 	}
 
 	for ( cgltf_size child_index = 0; child_index < node->children_count;
 	      ++child_index )
 	{
-		process_gltf_node( node_map,
-		                   index,
-		                   node->children[ child_index ],
-		                   mesh,
-		                   filename );
+		mesh_index += process_gltf_node( node_map,
+		                                 index,
+		                                 node->children[ child_index ],
+		                                 &meshes[ mesh_index ],
+		                                 filename );
 	}
+
+	return mesh_index;
 }
 
 static void
@@ -529,19 +533,25 @@ ft_load_gltf( const char* filename )
 			{
 				cgltf_scene* scene = &data->scenes[ s ];
 
-				model.mesh_count = data->meshes_count;
+				model.mesh_count = 0;
+
+				for ( uint32_t m = 0; m < data->meshes_count; m++ )
+					model.mesh_count += data->meshes[ m ].primitives_count;
+
 				model.meshes =
 				    calloc( model.mesh_count, sizeof( struct ft_mesh ) );
 
+				uint32_t mesh_index = 0;
 				for ( cgltf_size n = 0; n < scene->nodes_count; ++n )
 				{
 					cgltf_node* node = scene->nodes[ n ];
 
-					process_gltf_node( node_map,
-					                   n,
-					                   node,
-					                   &model.meshes[ n ],
-					                   filename );
+					mesh_index +=
+					    process_gltf_node( node_map,
+					                       n,
+					                       node,
+					                       &model.meshes[ mesh_index ],
+					                       filename );
 				}
 			}
 
