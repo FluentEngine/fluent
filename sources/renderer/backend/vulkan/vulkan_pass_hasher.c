@@ -57,7 +57,7 @@ compare_attachments( const struct ft_attachment_info* a,
 	return 0;
 }
 
-static int32_t
+static int
 compare_pass_info( const void* a, const void* b, void* udata )
 {
 	FT_UNUSED( udata );
@@ -103,7 +103,7 @@ hash_pass_info( const void* item, uint64_t seed0, uint64_t seed1 )
 	return 0;
 }
 
-static int32_t
+static int
 compare_framebuffer_info( const void* a, const void* b, void* udata )
 {
 	FT_UNUSED( udata );
