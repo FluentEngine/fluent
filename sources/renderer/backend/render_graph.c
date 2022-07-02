@@ -82,7 +82,6 @@ struct ft_render_graph
 
 	struct ft_image* swapchain_image;
 	uint32_t         swapchain_image_index;
-	uint32_t         swapchain_pass_index;
 	uint32_t         swapchain_image_width;
 	uint32_t         swapchain_image_height;
 
@@ -257,11 +256,7 @@ ft_rg_create_physical_images( struct ft_render_graph* graph )
 		struct ft_render_pass* pass = &graph->render_passes[ p ];
 		for ( uint32_t i = 0; i < pass->color_attachment_count; ++i )
 		{
-			if ( pass->color_attachments[ i ] == graph->swapchain_image_index )
-			{
-				graph->swapchain_pass_index = p;
-			}
-			else
+			if ( pass->color_attachments[ i ] != graph->swapchain_image_index )
 			{
 				graph->images[ pass->color_attachments[ i ] ].width =
 				    graph->swapchain_image_width;
@@ -367,7 +362,9 @@ ft_rg_build_render_passes( struct ft_render_graph* graph )
 			}
 			else
 			{
-				att->load_op = FT_ATTACHMENT_LOAD_OP_DONT_CARE;
+				// TODO:
+				// att->load_op = FT_ATTACHMENT_LOAD_OP_DONT_CARE;
+				att->load_op = FT_ATTACHMENT_LOAD_OP_LOAD;
 			}
 		}
 
@@ -418,20 +415,23 @@ ft_rg_setup_attachments( struct ft_render_graph* graph, struct ft_image* image )
 
 	if ( graph->render_pass_count != 0 )
 	{
-		struct ft_render_pass* pass =
-		    &graph->render_passes[ graph->swapchain_pass_index ];
-		struct ft_render_pass_begin_info* info =
-		    &graph->physical_passes[ pass->physical_pass_index ];
-		struct pass_barriers* barriers =
-		    &graph->pass_barriers[ pass->physical_pass_index ];
-
-		for ( uint32_t i = 0; i < info->color_attachment_count; ++i )
+		for ( uint32_t p = 0; p < graph->physical_pass_count; ++p )
 		{
-			struct ft_attachment_info* att = &info->color_attachments[ i ];
-			if ( pass->color_attachments[ i ] == graph->swapchain_image_index )
+			struct ft_render_pass*            pass = &graph->render_passes[ p ];
+			struct ft_render_pass_begin_info* info =
+			    &graph->physical_passes[ pass->physical_pass_index ];
+			struct pass_barriers* barriers =
+			    &graph->pass_barriers[ pass->physical_pass_index ];
+
+			for ( uint32_t i = 0; i < info->color_attachment_count; ++i )
 			{
-				att->image                          = image;
-				barriers->image_barriers[ i ].image = image;
+				struct ft_attachment_info* att = &info->color_attachments[ i ];
+				if ( pass->color_attachments[ i ] ==
+				     graph->swapchain_image_index )
+				{
+					att->image                          = image;
+					barriers->image_barriers[ i ].image = image;
+				}
 			}
 		}
 	}
