@@ -2,9 +2,37 @@
 #include <string.h>
 #include <cgltf/cgltf.h>
 #include <stb/stb_image.h>
+#include <hashmap_c/hashmap_c.h>
 #include "log/log.h"
 #include "fs/fs.h"
 #include "model_loader.h"
+
+struct node_map_item
+{
+	cgltf_node* node;
+	uint32_t    index;
+};
+
+static int
+compare_node_map_item( const void* a, const void* b, void* udata )
+{
+	FT_UNUSED( udata );
+
+	const struct node_map_item* nma = a;
+	const struct node_map_item* nmb = b;
+
+	return nma->node == nmb->node;
+}
+
+static uint64_t
+hash_node_map_item( const void* item, uint64_t seed0, uint64_t seed1 )
+{
+	FT_UNUSED( item );
+	FT_UNUSED( seed0 );
+	FT_UNUSED( seed1 );
+	// TODO: hash function
+	return 0;
+}
 
 FT_INLINE struct ft_model_texture
 load_image_from_cgltf_image( cgltf_image* cgltf_image, const char* filename )
@@ -231,7 +259,9 @@ read_attribute( struct ft_mesh*  mesh,
 }
 
 static void
-process_gltf_node( cgltf_node*     node,
+process_gltf_node( struct hashmap* node_map,
+                   uint32_t        index,
+                   cgltf_node*     node,
                    struct ft_mesh* mesh,
                    const char*     filename )
 {
@@ -239,6 +269,12 @@ process_gltf_node( cgltf_node*     node,
 
 	if ( gltf_mesh != NULL )
 	{
+		hashmap_set( node_map,
+		             &( struct node_map_item ) {
+		                 .node  = node,
+		                 .index = index,
+		             } );
+
 		float node_to_world[ 16 ];
 		cgltf_node_transform_world( node, node_to_world );
 		memcpy( mesh->world, node_to_world, sizeof( node_to_world ) );
@@ -312,7 +348,11 @@ process_gltf_node( cgltf_node*     node,
 	for ( cgltf_size child_index = 0; child_index < node->children_count;
 	      ++child_index )
 	{
-		process_gltf_node( node->children[ child_index ], mesh, filename );
+		process_gltf_node( node_map,
+		                   index,
+		                   node->children[ child_index ],
+		                   mesh,
+		                   filename );
 	}
 }
 
@@ -387,7 +427,9 @@ read_animation_samplers( const cgltf_animation_sampler* src,
 }
 
 static void
-read_animation_channels( const cgltf_animation* src, struct ft_animation* dst )
+read_animation_channels( struct hashmap*        node_map,
+                         const cgltf_animation* src,
+                         struct ft_animation*   dst )
 {
 	cgltf_animation_channel* src_channels = src->channels;
 	cgltf_animation_sampler* src_samplers = src->samplers;
@@ -402,7 +444,26 @@ read_animation_channels( const cgltf_animation* src, struct ft_animation* dst )
 		struct ft_animation_channel*   dst_channel = &dst->channels[ j ];
 		dst_channel->sampler =
 		    dst->samplers + ( src_channel->sampler - src_samplers );
-		dst_channel->target = 1; // TODO:
+
+		struct node_map_item* it =
+		    hashmap_get( node_map,
+		                 &( struct node_map_item ) {
+		                     .node = src_channel->target_node->parent,
+		                 } );
+
+		if ( it != NULL )
+		{
+			dst_channel->target = it->index;
+		}
+		else
+		{
+			FT_WARN( "no scene root contains node %s"
+			         "for animation %s"
+			         "in channel %d",
+			         src_channel->target_node->parent->name,
+			         src->name,
+			         j );
+		}
 
 		switch ( src_channel->target_path )
 		{
@@ -454,6 +515,16 @@ ft_load_gltf( const char* filename )
 				data->scenes_count = 1;
 			}
 
+			struct hashmap* node_map =
+			    hashmap_new( sizeof( struct node_map_item ),
+			                 0,
+			                 0,
+			                 0,
+			                 hash_node_map_item,
+			                 compare_node_map_item,
+			                 NULL,
+			                 NULL );
+
 			for ( cgltf_size s = 0; s < data->scenes_count; ++s )
 			{
 				cgltf_scene* scene = &data->scenes[ s ];
@@ -466,7 +537,11 @@ ft_load_gltf( const char* filename )
 				{
 					cgltf_node* node = scene->nodes[ n ];
 
-					process_gltf_node( node, &model.meshes[ n ], filename );
+					process_gltf_node( node_map,
+					                   n,
+					                   node,
+					                   &model.meshes[ n ],
+					                   filename );
 				}
 			}
 
@@ -499,8 +574,12 @@ ft_load_gltf( const char* filename )
 					}
 				}
 
-				read_animation_channels( animation, &model.animations[ a ] );
+				read_animation_channels( node_map,
+				                         animation,
+				                         &model.animations[ a ] );
 			}
+
+			hashmap_free( node_map );
 		}
 		else
 		{
