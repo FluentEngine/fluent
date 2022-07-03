@@ -373,7 +373,10 @@ process_gltf_node( struct hashmap* node_map,
 				}
 			}
 
-			mesh->material.metallic_roughness.base_color_texture = UINT32_MAX;
+			for ( uint32_t i = 0; i < FT_TEXTURE_TYPE_COUNT; ++i )
+			{
+				mesh->material.textures[ i ] = -1;
+			}
 
 			if ( primitive->material )
 			{
@@ -381,6 +384,13 @@ process_gltf_node( struct hashmap* node_map,
 
 				cgltf_texture* base_color_texture =
 				    material->pbr_metallic_roughness.base_color_texture.texture;
+
+				cgltf_texture* normal_texture =
+				    material->normal_texture.texture;
+
+				memcpy( mesh->material.base_color_factor,
+				        material->pbr_metallic_roughness.base_color_factor,
+				        sizeof( mesh->material.base_color_factor ) );
 
 				if ( base_color_texture )
 				{
@@ -392,7 +402,21 @@ process_gltf_node( struct hashmap* node_map,
 
 					FT_ASSERT( it );
 
-					mesh->material.metallic_roughness.base_color_texture =
+					mesh->material.textures[ FT_TEXTURE_TYPE_BASE_COLOR ] =
+					    it->index;
+				}
+
+				if ( normal_texture )
+				{
+					struct image_map_item* it =
+					    hashmap_get( image_map,
+					                 &( struct image_map_item ) {
+					                     .image = normal_texture->image,
+					                 } );
+
+					FT_ASSERT( it );
+
+					mesh->material.textures[ FT_TEXTURE_TYPE_NORMAL ] =
 					    it->index;
 				}
 			}

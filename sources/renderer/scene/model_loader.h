@@ -10,18 +10,19 @@ struct ft_texture
 	void    *data;
 };
 
-struct ft_pbr_metallic_roughness
+enum ft_texture_type
 {
-	uint32_t                base_color_texture;
-	float4                  base_color_factor;
-	float                   metallic_factor;
-	float                   roughness_factor;
+	FT_TEXTURE_TYPE_BASE_COLOR,
+	FT_TEXTURE_TYPE_NORMAL,
+	FT_TEXTURE_TYPE_COUNT
 };
 
 struct ft_material
 {
-	struct ft_pbr_metallic_roughness metallic_roughness;
-	uint32_t                         normal_texture;
+	int32_t textures[ FT_TEXTURE_TYPE_COUNT ];
+	float4  base_color_factor;
+	float   metallic_factor;
+	float   roughness_factor;
 };
 
 enum ft_animation_interpolation
