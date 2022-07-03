@@ -565,6 +565,90 @@ read_animation_channels( struct hashmap*        node_map,
 	}
 }
 
+FT_INLINE void
+generate_tangents( struct ft_model* model )
+{
+	for ( uint32_t m = 0; m < model->mesh_count; ++m )
+	{
+		struct ft_mesh* mesh = &model->meshes[ m ];
+
+		if ( mesh->tangents )
+		{
+			continue;
+		}
+
+		if ( !mesh->texcoords )
+		{
+			FT_WARN( "mesh %d does not contain texture coordinates. cannot "
+			         "generate tangents" );
+			continue;
+		}
+
+		mesh->tangents = malloc( mesh->vertex_count * 3 * sizeof( float ) );
+
+		for ( uint32_t i = 0; i < mesh->index_count; i += 3 )
+		{
+			uint16_t i0 = mesh->indices[ i ];
+			uint16_t i1 = mesh->indices[ i + 1 ];
+			uint16_t i2 = mesh->indices[ i + 2 ];
+
+			float* p0 = &mesh->positions[ i0 * 3 ];
+			float* p1 = &mesh->positions[ i1 * 3 ];
+			float* p2 = &mesh->positions[ i2 * 3 ];
+
+			float* uv0 = &mesh->texcoords[ i0 * 2 ];
+			float* uv1 = &mesh->texcoords[ i1 * 2 ];
+			float* uv2 = &mesh->texcoords[ i2 * 2 ];
+
+			float3 edge0 = {
+			    p1[ 0 ] - p0[ 0 ],
+			    p1[ 1 ] - p0[ 1 ],
+			    p1[ 2 ] - p0[ 2 ],
+			};
+
+			float3 edge1 = {
+			    p2[ 0 ] - p1[ 0 ],
+			    p2[ 1 ] - p1[ 1 ],
+			    p2[ 2 ] - p1[ 2 ],
+			};
+
+			float2 delta_uv0 = {
+			    uv1[ 0 ] - uv0[ 0 ],
+			    uv1[ 1 ] - uv0[ 1 ],
+			};
+
+			float2 delta_uv1 = {
+			    uv2[ 0 ] - uv1[ 0 ],
+			    uv2[ 1 ] - uv1[ 1 ],
+			};
+
+			float denominator = ( delta_uv0[ 0 ] * delta_uv1[ 1 ] -
+			                      delta_uv1[ 0 ] * delta_uv0[ 1 ] );
+			if ( denominator == 0 )
+			{
+				denominator = 0.0001;
+			}
+
+			float f = 1.0f / denominator;
+
+			float3 tangent = {
+			    f * ( delta_uv1[ 1 ] * edge0[ 0 ] -
+			          delta_uv0[ 1 ] * edge1[ 0 ] ),
+			    f * ( delta_uv1[ 1 ] * edge0[ 1 ] -
+			          delta_uv0[ 1 ] * edge1[ 1 ] ),
+			    f * ( delta_uv1[ 1 ] * edge0[ 2 ] -
+			          delta_uv0[ 1 ] * edge1[ 2 ] ),
+			};
+
+			float3_norm( tangent, tangent );
+
+			float3_dup( &mesh->tangents[ i0 * 3 ], tangent );
+			float3_dup( &mesh->tangents[ i1 * 3 ], tangent );
+			float3_dup( &mesh->tangents[ i2 * 3 ], tangent );
+		}
+	}
+}
+
 struct ft_model
 ft_load_gltf( const char* filename )
 {
@@ -696,6 +780,11 @@ ft_load_gltf( const char* filename )
 
 			hashmap_free( image_map );
 			hashmap_free( node_map );
+
+			if ( load_flags & FT_MODEL_GENERATE_TANGENTS )
+			{
+				generate_tangents( &model );
+			}
 		}
 		else
 		{

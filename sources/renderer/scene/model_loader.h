@@ -90,8 +90,13 @@ struct ft_model
 	struct ft_texture   *textures;
 };
 
+enum ft_model_flags
+{
+	FT_MODEL_GENERATE_TANGENTS = 1 << 0,
+};
+
 FT_API struct ft_model
-ft_load_gltf( const char *filename );
+ft_load_gltf( const char *filename, enum ft_model_flags load_flags );
 
 FT_API void
 ft_free_gltf( struct ft_model *model );
