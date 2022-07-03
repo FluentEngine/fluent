@@ -360,64 +360,49 @@ process_gltf_node( struct hashmap* node_map,
 				else if ( accessor->component_type ==
 				          cgltf_component_type_r_32u )
 				{
-					mesh->is_32bit_indices = 1;
-					mesh->indices =
-					    realloc( mesh->indices,
-					             mesh->index_count * sizeof( uint32_t ) );
-
-					uint32_t* indices = mesh->indices;
-					for ( cgltf_size v = 0; v < accessor->count; ++v )
-					{
-						indices[ v ] = cgltf_accessor_read_index( accessor, v );
-					}
+					FT_WARN( "32 bit indices are not supported" );
 				}
-			}
-
-			for ( uint32_t i = 0; i < FT_TEXTURE_TYPE_COUNT; ++i )
-			{
-				mesh->material.textures[ i ] = -1;
 			}
 
 			if ( primitive->material )
 			{
 				cgltf_material* material = primitive->material;
 
-				cgltf_texture* base_color_texture =
-				    material->pbr_metallic_roughness.base_color_texture.texture;
-
-				cgltf_texture* normal_texture =
-				    material->normal_texture.texture;
-
 				memcpy( mesh->material.base_color_factor,
 				        material->pbr_metallic_roughness.base_color_factor,
 				        sizeof( mesh->material.base_color_factor ) );
 
-				if ( base_color_texture )
+				cgltf_texture* textures[ FT_TEXTURE_TYPE_COUNT ];
+				textures[ FT_TEXTURE_TYPE_BASE_COLOR ] =
+				    material->pbr_metallic_roughness.base_color_texture.texture;
+				textures[ FT_TEXTURE_TYPE_NORMAL ] =
+				    material->normal_texture.texture;
+				textures[ FT_TEXTURE_TYPE_METAL_ROUGHNESS ] =
+				    material->pbr_metallic_roughness.metallic_roughness_texture
+				        .texture;
+				textures[ FT_TEXTURE_TYPE_AMBIENT_OCCLUSION ] =
+				    material->occlusion_texture.texture;
+				textures[ FT_TEXTURE_TYPE_EMISSIVE ] =
+				    material->emissive_texture.texture;
+
+				for ( uint32_t t = 0; t < FT_TEXTURE_TYPE_COUNT; ++t )
 				{
-					struct image_map_item* it =
-					    hashmap_get( image_map,
-					                 &( struct image_map_item ) {
-					                     .image = base_color_texture->image,
-					                 } );
+					if ( textures[ t ] )
+					{
+						struct image_map_item* it =
+						    hashmap_get( image_map,
+						                 &( struct image_map_item ) {
+						                     .image = textures[ t ]->image,
+						                 } );
 
-					FT_ASSERT( it );
+						FT_ASSERT( it );
 
-					mesh->material.textures[ FT_TEXTURE_TYPE_BASE_COLOR ] =
-					    it->index;
-				}
-
-				if ( normal_texture )
-				{
-					struct image_map_item* it =
-					    hashmap_get( image_map,
-					                 &( struct image_map_item ) {
-					                     .image = normal_texture->image,
-					                 } );
-
-					FT_ASSERT( it );
-
-					mesh->material.textures[ FT_TEXTURE_TYPE_NORMAL ] =
-					    it->index;
+						mesh->material.textures[ t ] = it->index;
+					}
+					else
+					{
+						mesh->material.textures[ t ] = -1;
+					}
 				}
 			}
 		}
@@ -438,7 +423,7 @@ process_gltf_node( struct hashmap* node_map,
 	return mesh_index;
 }
 
-static void
+FT_INLINE void
 read_animation_samplers( const cgltf_animation_sampler* src,
                          struct ft_animation_sampler*   dst )
 {
@@ -508,7 +493,7 @@ read_animation_samplers( const cgltf_animation_sampler* src,
 	}
 }
 
-static void
+FT_INLINE void
 read_animation_channels( struct hashmap*        node_map,
                          const cgltf_animation* src,
                          struct ft_animation*   dst )
@@ -650,7 +635,7 @@ generate_tangents( struct ft_model* model )
 }
 
 struct ft_model
-ft_load_gltf( const char* filename )
+ft_load_gltf( const char* filename, enum ft_model_flags load_flags )
 {
 	struct ft_model model;
 	memset( &model, 0, sizeof( struct ft_model ) );
@@ -803,7 +788,7 @@ ft_load_gltf( const char* filename )
 	return model;
 }
 
-void
+FT_INLINE void
 free_mesh( struct ft_mesh* mesh )
 {
 	ft_safe_free( mesh->positions );

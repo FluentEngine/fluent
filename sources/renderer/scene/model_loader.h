@@ -3,18 +3,22 @@
 #include "base/base.h"
 #include "math/linear.h"
 
-struct ft_texture
-{
-	uint32_t width;
-	uint32_t height;
-	void    *data;
-};
-
 enum ft_texture_type
 {
 	FT_TEXTURE_TYPE_BASE_COLOR,
 	FT_TEXTURE_TYPE_NORMAL,
+	FT_TEXTURE_TYPE_AMBIENT_OCCLUSION,
+	FT_TEXTURE_TYPE_METAL_ROUGHNESS,
+	FT_TEXTURE_TYPE_EMISSIVE,
 	FT_TEXTURE_TYPE_COUNT
+};
+
+struct ft_texture
+{
+	uint32_t             width;
+	uint32_t             height;
+	void                *data;
+	enum ft_texture_type texture_type;
 };
 
 struct ft_material
@@ -74,8 +78,7 @@ struct ft_mesh
 	float             *joints;
 	float             *weights;
 	uint32_t           index_count;
-	bool               is_32bit_indices;
-	void              *indices;
+	uint16_t          *indices;
 	float4x4           world;
 	struct ft_material material;
 };
