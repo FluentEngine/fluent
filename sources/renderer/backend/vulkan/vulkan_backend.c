@@ -2466,10 +2466,11 @@ vk_cmd_copy_buffer( const struct ft_command_buffer* icmd,
 }
 
 static void
-vk_cmd_copy_buffer_to_image( const struct ft_command_buffer* icmd,
-                             const struct ft_buffer*         isrc,
-                             uint64_t                        src_offset,
-                             struct ft_image*                idst )
+vk_cmd_copy_buffer_to_image( const struct ft_command_buffer*    icmd,
+                             const struct ft_buffer*            isrc,
+                             struct ft_image*                   idst,
+                             uint32_t                           region_count,
+                             const struct ft_buffer_image_copy* regions )
 {
 	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
 	FT_FROM_HANDLE( src, isrc, vk_buffer );
@@ -2480,22 +2481,29 @@ vk_cmd_copy_buffer_to_image( const struct ft_command_buffer* icmd,
 	VkOffset3D offset = { 0, 0, 0 };
 	VkExtent3D extent = { dst->interface.width, dst->interface.height, 1 };
 
-	VkBufferImageCopy buffer_to_image_copy_info = {
-	    .bufferOffset      = src_offset,
-	    .bufferImageHeight = 0,
-	    .bufferRowLength   = 0,
-	    .imageSubresource  = dst_layers,
-	    .imageOffset       = offset,
-	    .imageExtent       = extent,
-	};
+	FT_ALLOC_STACK_ARRAY( VkBufferImageCopy, copy_infos, region_count );
 
-	vkCmdCopyBufferToImage(
-	    cmd->command_buffer,
-	    src->buffer,
-	    dst->image,
-	    determine_image_layout( FT_RESOURCE_STATE_TRANSFER_DST ),
-	    1,
-	    &buffer_to_image_copy_info );
+	for ( uint32_t i = 0; i < region_count; ++i )
+	{
+		copy_infos[ i ].bufferOffset      = regions[ i ].buffer_offset;
+		copy_infos[ i ].bufferImageHeight = 0;
+		copy_infos[ i ].bufferRowLength   = 0;
+		copy_infos[ i ].imageSubresource  = ( VkImageSubresourceLayers ) {
+		     .aspectMask     = get_aspect_mask( idst->format ),
+		     .mipLevel       = regions[ i ].mip_level,
+		     .baseArrayLayer = 0,
+		     .layerCount     = idst->layer_count,
+        };
+		copy_infos[ i ].imageOffset = offset;
+		copy_infos[ i ].imageExtent = extent;
+	}
+
+	vkCmdCopyBufferToImage( cmd->command_buffer,
+	                        src->buffer,
+	                        dst->image,
+	                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+	                        region_count,
+	                        copy_infos );
 }
 
 static void

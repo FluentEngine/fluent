@@ -122,15 +122,18 @@ ft_upload_buffer( struct ft_buffer* buffer,
 }
 
 void
-ft_upload_image( struct ft_image* image, uint64_t size, const void* data )
+ft_upload_image( struct ft_image*                   image,
+                 const struct ft_upload_image_info* info )
 {
-	FT_ASSERT( loader.staging_buffer.offset + size <=
+	FT_ASSERT( info );
+	FT_ASSERT( info->data );
+	FT_ASSERT( loader.staging_buffer.offset + info->size <=
 	           loader.staging_buffer.buffer->size );
 
-	memcpy( ( uint8_t* ) loader.staging_buffer.buffer->mapped_memory +
+	memcpy( loader.staging_buffer.buffer->mapped_memory +
 	            loader.staging_buffer.offset,
-	        data,
-	        size );
+	        info->data,
+	        info->size );
 
 	bool need_end_record = !loader.is_recording;
 	if ( need_end_record )
@@ -144,26 +147,32 @@ ft_upload_image( struct ft_image* image, uint64_t size, const void* data )
 	barrier.new_state               = FT_RESOURCE_STATE_TRANSFER_DST;
 	ft_cmd_barrier( loader.cmd, 0, NULL, 0, NULL, 1, &barrier );
 
+	struct ft_buffer_image_copy copy = {
+	    .buffer_offset = loader.staging_buffer.offset,
+	    .mip_level     = info->mip_level,
+	};
+
 	ft_cmd_copy_buffer_to_image( loader.cmd,
 	                             loader.staging_buffer.buffer,
-	                             loader.staging_buffer.offset,
-	                             image );
+	                             image,
+	                             1,
+	                             &copy );
 
 	barrier.old_state = FT_RESOURCE_STATE_TRANSFER_DST;
 	barrier.new_state = FT_RESOURCE_STATE_SHADER_READ_ONLY;
 	ft_cmd_barrier( loader.cmd, 0, NULL, 0, NULL, 1, &barrier );
 
-	loader.staging_buffer.offset += size;
+	loader.staging_buffer.offset += info->size;
 
 	if ( need_end_record )
 	{
 		ft_end_command_buffer( loader.cmd );
 		ft_immediate_submit( loader.queue, loader.cmd );
-		loader.staging_buffer.offset -= size;
+		loader.staging_buffer.offset -= info->size;
 	}
 	else
 	{
-		loader.last_batch_write_size += size;
+		loader.last_batch_write_size += info->size;
 	}
 }
 

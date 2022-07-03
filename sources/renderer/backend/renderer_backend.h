@@ -415,6 +415,19 @@ struct ft_descriptor_write
 	struct ft_buffer_descriptor*  buffer_descriptors;
 };
 
+struct ft_buffer_image_copy
+{
+	uint64_t buffer_offset;
+	uint32_t mip_level;
+};
+
+struct ft_upload_image_info
+{
+	uint64_t    size;
+	const void* data;
+	uint32_t    mip_level;
+};
+
 FT_INLINE bool
 ft_format_has_depth_aspect( enum ft_format format )
 {
@@ -676,10 +689,11 @@ ft_cmd_copy_buffer( const struct ft_command_buffer* cmd,
                     uint64_t                        size );
 
 FT_API void
-ft_cmd_copy_buffer_to_image( const struct ft_command_buffer* cmd,
-                             const struct ft_buffer*         src,
-                             uint64_t                        src_offset,
-                             struct ft_image*                dst );
+ft_cmd_copy_buffer_to_image( const struct ft_command_buffer*    cmd,
+                             const struct ft_buffer*            src,
+                             struct ft_image*                   dst,
+                             uint32_t                           region_count,
+                             const struct ft_buffer_image_copy* regions );
 
 FT_API void
 ft_cmd_bind_descriptor_set( const struct ft_command_buffer* cmd,
@@ -766,6 +780,7 @@ ft_upload_buffer( struct ft_buffer* buffer,
                   const void*       data );
 
 FT_API void
-ft_upload_image( struct ft_image* image, uint64_t size, const void* data );
+ft_upload_image( struct ft_image*                   image,
+                 const struct ft_upload_image_info* info );
 
 #include "renderer_misc.h"

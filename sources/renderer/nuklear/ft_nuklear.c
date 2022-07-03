@@ -253,7 +253,13 @@ nk_ft_device_upload_atlas( const void *image, int width, int height )
 
 	ft_create_image( adapter->device, &image_info, &adapter->font_image );
 
-	ft_upload_image( adapter->font_image, width * height * 4, image );
+	struct ft_upload_image_info upload_info = {
+		.size = width * height * 4,
+		.data = image,
+		.mip_level = 0,
+	};
+
+	ft_upload_image( adapter->font_image, &upload_info );
 
 	struct ft_sampler_info sampler_info = {
 	    .mag_filter     = FT_FILTER_LINEAR,

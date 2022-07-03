@@ -662,16 +662,19 @@ ft_cmd_copy_buffer( const struct ft_command_buffer* cmd,
 }
 
 void
-ft_cmd_copy_buffer_to_image( const struct ft_command_buffer* cmd,
-                             const struct ft_buffer*         src,
-                             uint64_t                        src_offset,
-                             struct ft_image*                dst )
+ft_cmd_copy_buffer_to_image( const struct ft_command_buffer*    cmd,
+                             const struct ft_buffer*            src,
+                             struct ft_image*                   dst,
+                             uint32_t                           region_count,
+                             const struct ft_buffer_image_copy* regions )
 {
 	FT_ASSERT( cmd );
 	FT_ASSERT( src );
 	FT_ASSERT( dst );
+	FT_ASSERT( region_count > 0 );
+	FT_ASSERT( regions );
 
-	ft_cmd_copy_buffer_to_image_impl( cmd, src, src_offset, dst );
+	ft_cmd_copy_buffer_to_image_impl( cmd, src, dst, region_count, regions );
 }
 
 void
