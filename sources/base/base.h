@@ -24,6 +24,13 @@ typedef void* ft_handle;
 #define FT_ASSERT( x ) ( void ) ( x )
 #endif
 
+#define FT_STATIC_ASSERT_IMPL( COND, MSG )                                     \
+	typedef char static_assertion_##MSG[ ( !!( COND ) ) * 2 - 1 ]
+#define FT_STATIC_ASSERT_LINE_IMPL( X, L )                                     \
+	FT_STATIC_ASSERT_IMPL( X, at_line_##L )
+#define FT_STATIC_ASSERT_LINE( X, L ) FT_STATIC_ASSERT_LINE_IMPL( X, L )
+#define FT_STATIC_ASSERT( X )         FT_STATIC_ASSERT_LINE( X, __LINE__ )
+
 #define FT_DECLARE_FUNCTION_POINTER( ret, name, ... )                          \
 	typedef ret ( *name##_fun )( __VA_ARGS__ );                                \
 	extern name##_fun name##_impl
@@ -58,3 +65,5 @@ ft_safe_free( void* p )
 		free( p );
 	}
 }
+
+#define FT_MAX( a, b ) ( ( a ) > ( b ) ) ? ( a ) : ( b )
