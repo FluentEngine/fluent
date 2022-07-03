@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include <cgltf/cgltf.h>
 #include <stb/stb_image.h>
 #include <hashmap_c/hashmap_c.h>
@@ -109,7 +110,7 @@ load_image_from_cgltf_image( cgltf_image* cgltf_image, const char* filename )
                                                          &w,
                                                          &h,
                                                          &ch,
-                                                         4 );
+                                                         STBI_rgb_alpha );
 					image.width  = w;
 					image.height = h;
 					cgltf_free( ( cgltf_data* ) data );
@@ -132,9 +133,9 @@ load_image_from_cgltf_image( cgltf_image* cgltf_image, const char* filename )
 			};
 			path[ last_slash + 1 ] = '\0';
 			strcat( path, cgltf_image->uri );
-			FILE* f      = fopen( path, "r" );
-			image.data   = stbi_load_from_file( f, &w, &h, &ch, 4 );
-			image.width  = w;
+			FILE* f     = fopen( path, "rb" );
+			image.data  = stbi_load_from_file( f, &w, &h, &ch, STBI_rgb_alpha );
+			image.width = w;
 			image.height = h;
 		}
 	}
@@ -166,7 +167,7 @@ load_image_from_cgltf_image( cgltf_image* cgltf_image, const char* filename )
                                                  &w,
                                                  &h,
                                                  &ch,
-                                                 4 );
+                                                 STBI_rgb_alpha );
 			image.width  = w;
 			image.height = h;
 		}
@@ -180,7 +181,7 @@ load_image_from_cgltf_image( cgltf_image* cgltf_image, const char* filename )
                                                  &w,
                                                  &h,
                                                  &ch,
-                                                 4 );
+                                                 STBI_rgb_alpha );
 			image.width  = w;
 			image.height = h;
 		}
@@ -191,6 +192,8 @@ load_image_from_cgltf_image( cgltf_image* cgltf_image, const char* filename )
 
 		free( data );
 	}
+
+	image.mip_levels = 1;
 
 	return image;
 }
@@ -368,9 +371,25 @@ process_gltf_node( struct hashmap* node_map,
 			{
 				cgltf_material* material = primitive->material;
 
-				memcpy( mesh->material.base_color_factor,
-				        material->pbr_metallic_roughness.base_color_factor,
-				        sizeof( mesh->material.base_color_factor ) );
+				float4_dup(
+				    mesh->material.base_color_factor,
+				    material->pbr_metallic_roughness.base_color_factor );
+				float3_dup( mesh->material.emissive_factor,
+				            material->emissive_factor );
+
+				mesh->material.metallic_factor =
+				    material->pbr_metallic_roughness.metallic_factor;
+				mesh->material.roughness_factor =
+				    material->pbr_metallic_roughness.roughness_factor;
+
+				mesh->material.emissive_strength = 1.0f;
+				if ( material->has_emissive_strength )
+				{
+					mesh->material.emissive_strength =
+					    material->emissive_strength.emissive_strength;
+				}
+
+				mesh->material.alpha_cutoff = material->alpha_cutoff;
 
 				cgltf_texture* textures[ FT_TEXTURE_TYPE_COUNT ];
 				textures[ FT_TEXTURE_TYPE_BASE_COLOR ] =
@@ -565,7 +584,8 @@ generate_tangents( struct ft_model* model )
 		if ( !mesh->texcoords )
 		{
 			FT_WARN( "mesh %d does not contain texture coordinates. cannot "
-			         "generate tangents" );
+			         "generate tangents",
+			         m );
 			continue;
 		}
 
@@ -631,6 +651,24 @@ generate_tangents( struct ft_model* model )
 			float3_dup( &mesh->tangents[ i1 * 3 ], tangent );
 			float3_dup( &mesh->tangents[ i2 * 3 ], tangent );
 		}
+	}
+}
+
+FT_INLINE void
+generate_mipmaps( struct ft_model* model )
+{
+	for ( uint32_t t = 0; t < model->texture_count; ++t )
+	{
+		struct ft_texture* texture = &model->textures[ t ];
+		if ( texture->mip_levels != 1 )
+		{
+			continue;
+		}
+
+		uint32_t width      = texture->width;
+		uint32_t height     = texture->height;
+		uint32_t mip_levels = floor( log2( FT_MAX( width, height ) ) ) + 1;
+		// TODO:
 	}
 }
 
@@ -769,6 +807,11 @@ ft_load_gltf( const char* filename, enum ft_model_flags load_flags )
 			if ( load_flags & FT_MODEL_GENERATE_TANGENTS )
 			{
 				generate_tangents( &model );
+			}
+
+			if ( load_flags & FT_MODEL_GENERATE_TEXTURE_MIPMAPS )
+			{
+				generate_mipmaps( &model );
 			}
 		}
 		else

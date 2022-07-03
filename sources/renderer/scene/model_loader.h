@@ -15,18 +15,22 @@ enum ft_texture_type
 
 struct ft_texture
 {
-	uint32_t             width;
-	uint32_t             height;
-	void                *data;
-	enum ft_texture_type texture_type;
+	uint32_t width;
+	uint32_t height;
+	uint32_t mip_levels;
+	void    *data;
+	//	enum ft_texture_type texture_type;
 };
 
 struct ft_material
 {
 	int32_t textures[ FT_TEXTURE_TYPE_COUNT ];
 	float4  base_color_factor;
+	float3  emissive_factor;
 	float   metallic_factor;
 	float   roughness_factor;
+	float   emissive_strength;
+	float   alpha_cutoff;
 };
 
 enum ft_animation_interpolation
@@ -95,7 +99,8 @@ struct ft_model
 
 enum ft_model_flags
 {
-	FT_MODEL_GENERATE_TANGENTS = 1 << 0,
+	FT_MODEL_GENERATE_TANGENTS        = 1 << 0,
+	FT_MODEL_GENERATE_TEXTURE_MIPMAPS = 1 << 1,
 };
 
 FT_API struct ft_model
