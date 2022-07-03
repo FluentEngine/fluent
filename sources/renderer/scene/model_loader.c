@@ -297,14 +297,14 @@ process_gltf_node( struct hashmap* node_map,
 	uint32_t    mesh_index = 0;
 	cgltf_mesh* gltf_mesh  = node->mesh;
 
+	hashmap_set( node_map,
+	             &( struct node_map_item ) {
+	                 .node  = node,
+	                 .index = index,
+	             } );
+
 	if ( gltf_mesh != NULL )
 	{
-		hashmap_set( node_map,
-		             &( struct node_map_item ) {
-		                 .node  = node,
-		                 .index = index,
-		             } );
-
 		for ( cgltf_size p = 0; p < gltf_mesh->primitives_count; ++p )
 		{
 			struct ft_mesh* mesh = &meshes[ p ];
@@ -527,7 +527,6 @@ read_animation_channels( struct hashmap*        node_map,
 		dst_channel->sampler =
 		    dst->samplers + ( src_channel->sampler - src_samplers );
 
-		// FIXME:
 		struct node_map_item* it =
 		    hashmap_get( node_map,
 		                 &( struct node_map_item ) {
