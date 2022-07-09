@@ -21,6 +21,7 @@ struct application_state
 	float                delta_time;
 	struct ft_wsi_info   wsi_info;
 	const char*          extensions[ MAX_INSTANCE_EXTENSION_COUNT ];
+	struct ft_application_callback_data callback_data;
 };
 
 static struct application_state app_state;
@@ -68,10 +69,11 @@ ft_app_init( const struct ft_application_config* config )
 
 	app_state.window = ft_create_window( &config->window_info );
 
-	app_state.on_init     = config->on_init;
-	app_state.on_update   = config->on_update;
-	app_state.on_shutdown = config->on_shutdown;
-	app_state.on_resize   = config->on_resize;
+	app_state.on_init                 = config->on_init;
+	app_state.on_update               = config->on_update;
+	app_state.on_shutdown             = config->on_shutdown;
+	app_state.on_resize               = config->on_resize;
+	app_state.callback_data.user_data = config->user_data;
 
 	struct ft_wsi_info* wsi_info = &app_state.wsi_info;
 	wsi_info->window             = &app_state.window;
@@ -98,8 +100,6 @@ ft_app_run()
 {
 	FT_ASSERT( app_state.is_inited );
 
-	app_state.on_init();
-
 	app_state.is_running = 1;
 
 	SDL_Event e;
@@ -107,13 +107,18 @@ ft_app_run()
 	uint32_t last_frame  = 0.0f;
 	app_state.delta_time = 0.0;
 
-	static uint32_t width, height;
-	ft_window_get_size( &app_state.window, &width, &height );
+	ft_window_get_size( &app_state.window,
+	                    &app_state.callback_data.width,
+	                    &app_state.callback_data.height );
+
+	app_state.callback_data.delta_time = 0.0f;
+
+	app_state.on_init( &app_state.callback_data );
 
 	while ( app_state.is_running )
 	{
 		uint32_t current_frame = ft_get_time();
-		app_state.delta_time =
+		app_state.callback_data.delta_time =
 		    ( float ) ( current_frame - last_frame ) / 1000.0f;
 		last_frame = current_frame;
 
@@ -134,11 +139,12 @@ ft_app_run()
 				{
 					uint32_t w, h;
 					ft_window_get_size( &app_state.window, &w, &h );
-					if ( width == w && height == h )
+					if ( app_state.callback_data.width == w &&
+					     app_state.callback_data.height == h )
 					{
 						break;
 					}
-					app_state.on_resize( w, h );
+					app_state.on_resize( &app_state.callback_data );
 				}
 				break;
 			}
@@ -160,10 +166,10 @@ ft_app_run()
 			}
 			}
 		}
-		app_state.on_update( app_state.delta_time );
+		app_state.on_update( &app_state.callback_data );
 	}
 
-	app_state.on_shutdown();
+	app_state.on_shutdown( &app_state.callback_data );
 }
 
 void
