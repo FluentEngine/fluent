@@ -19,7 +19,6 @@ struct ft_texture
 	uint32_t height;
 	uint32_t mip_levels;
 	void    *data;
-	//	enum ft_texture_type texture_type;
 };
 
 struct ft_material
@@ -100,7 +99,6 @@ struct ft_model
 enum ft_model_flags
 {
 	FT_MODEL_GENERATE_TANGENTS        = 1 << 0,
-	FT_MODEL_GENERATE_TEXTURE_MIPMAPS = 1 << 1,
 };
 
 FT_API struct ft_model

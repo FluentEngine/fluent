@@ -654,24 +654,6 @@ generate_tangents( struct ft_model* model )
 	}
 }
 
-FT_INLINE void
-generate_mipmaps( struct ft_model* model )
-{
-	for ( uint32_t t = 0; t < model->texture_count; ++t )
-	{
-		struct ft_texture* texture = &model->textures[ t ];
-		if ( texture->mip_levels != 1 )
-		{
-			continue;
-		}
-
-		uint32_t width      = texture->width;
-		uint32_t height     = texture->height;
-		uint32_t mip_levels = floor( log2( FT_MAX( width, height ) ) ) + 1;
-		// TODO:
-	}
-}
-
 struct ft_model
 ft_load_gltf( const char* filename, enum ft_model_flags load_flags )
 {
@@ -807,11 +789,6 @@ ft_load_gltf( const char* filename, enum ft_model_flags load_flags )
 			if ( load_flags & FT_MODEL_GENERATE_TANGENTS )
 			{
 				generate_tangents( &model );
-			}
-
-			if ( load_flags & FT_MODEL_GENERATE_TEXTURE_MIPMAPS )
-			{
-				generate_mipmaps( &model );
 			}
 		}
 		else
