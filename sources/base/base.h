@@ -67,3 +67,12 @@ ft_safe_free( void* p )
 }
 
 #define FT_MAX( a, b ) ( ( a ) > ( b ) ) ? ( a ) : ( b )
+#define FT_MIN( a, b ) ( ( a ) < ( b ) ) ? ( a ) : ( b )
+#define FT_CLAMP( x, min, max )                                                \
+	( ( x ) < ( min ) ) ? ( min ) : ( ( max ) < ( x ) ) ? ( max ) : ( x )
+
+FT_INLINE float
+ft_flerp( float a, float b, float t )
+{
+	return a * ( 1.0f - t ) + b * t;
+}

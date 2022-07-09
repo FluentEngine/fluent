@@ -9,12 +9,6 @@
 #include "vulkan_pass_hasher.h"
 #include "vulkan_backend.h"
 
-FT_INLINE uint32_t
-clamp_uint32_t( uint32_t d, uint32_t min, uint32_t max )
-{
-	return d < min ? min : ( max < d ) ? max : d;
-}
-
 #ifdef FLUENT_DEBUG
 static VKAPI_ATTR VkBool32 VKAPI_CALL
 vulkan_debug_callback(
@@ -806,18 +800,18 @@ vk_configure_swapchain( const struct vk_device*         device,
 
 	// determine swapchain size
 	swapchain->interface.width =
-	    clamp_uint32_t( info->width,
-	                    surface_capabilities.minImageExtent.width,
-	                    surface_capabilities.maxImageExtent.width );
+	    FT_CLAMP( info->width,
+	              surface_capabilities.minImageExtent.width,
+	              surface_capabilities.maxImageExtent.width );
 	swapchain->interface.height =
-	    clamp_uint32_t( info->height,
-	                    surface_capabilities.minImageExtent.height,
-	                    surface_capabilities.maxImageExtent.height );
+	    FT_CLAMP( info->height,
+	              surface_capabilities.minImageExtent.height,
+	              surface_capabilities.maxImageExtent.height );
 
 	swapchain->interface.min_image_count =
-	    clamp_uint32_t( info->min_image_count,
-	                    surface_capabilities.minImageCount,
-	                    surface_capabilities.maxImageCount );
+	    FT_CLAMP( info->min_image_count,
+	              surface_capabilities.minImageCount,
+	              surface_capabilities.maxImageCount );
 
 	/// find best surface format
 	uint32_t surface_format_count = 0;
