@@ -127,13 +127,15 @@ ft_upload_image( struct ft_image*                   image,
 {
 	FT_ASSERT( info );
 	FT_ASSERT( info->data );
-	FT_ASSERT( loader.staging_buffer.offset + info->size <=
+	size_t upload_size =
+	    info->width * info->height * ft_format_size_bytes( image->format );
+	FT_ASSERT( loader.staging_buffer.offset + upload_size <=
 	           loader.staging_buffer.buffer->size );
 
 	memcpy( loader.staging_buffer.buffer->mapped_memory +
 	            loader.staging_buffer.offset,
 	        info->data,
-	        info->size );
+	        upload_size );
 
 	bool need_end_record = !loader.is_recording;
 	if ( need_end_record )
@@ -162,17 +164,17 @@ ft_upload_image( struct ft_image*                   image,
 	barrier.new_state = FT_RESOURCE_STATE_SHADER_READ_ONLY;
 	ft_cmd_barrier( loader.cmd, 0, NULL, 0, NULL, 1, &barrier );
 
-	loader.staging_buffer.offset += info->size;
+	loader.staging_buffer.offset += upload_size;
 
 	if ( need_end_record )
 	{
 		ft_end_command_buffer( loader.cmd );
 		ft_immediate_submit( loader.queue, loader.cmd );
-		loader.staging_buffer.offset -= info->size;
+		loader.staging_buffer.offset -= upload_size;
 	}
 	else
 	{
-		loader.last_batch_write_size += info->size;
+		loader.last_batch_write_size += upload_size;
 	}
 }
 

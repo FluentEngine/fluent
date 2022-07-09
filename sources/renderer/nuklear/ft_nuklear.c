@@ -254,9 +254,10 @@ nk_ft_device_upload_atlas( const void *image, int width, int height )
 	ft_create_image( adapter->device, &image_info, &adapter->font_image );
 
 	struct ft_upload_image_info upload_info = {
-		.size = width * height * 4,
-		.data = image,
-		.mip_level = 0,
+	    .data      = image,
+	    .width     = image_info.width,
+	    .height    = image_info.height,
+	    .mip_level = 0,
 	};
 
 	ft_upload_image( adapter->font_image, &upload_info );

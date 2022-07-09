@@ -423,8 +423,9 @@ struct ft_buffer_image_copy
 
 struct ft_upload_image_info
 {
-	uint64_t    size;
 	const void* data;
+	uint32_t    width;
+	uint32_t    height;
 	uint32_t    mip_level;
 };
 
@@ -472,6 +473,12 @@ ft_is_srgb( enum ft_format format )
 	case FT_FORMAT_R8_SRGB: return true;
 	default: return false;
 	}
+}
+
+FT_INLINE uint32_t
+ft_format_size_bytes( enum ft_format const format )
+{
+	return TinyImageFormat_BitSizeOfBlock( ( TinyImageFormat ) format ) / 8;
 }
 
 FT_API void

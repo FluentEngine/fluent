@@ -1,5 +1,6 @@
 #pragma once
 
+#include <tiny_image_format/tinyimageformat_query.h>
 #include <tiny_image_format/tinyimageformat_base.h>
 
 #define BIT( x ) 1 << x
