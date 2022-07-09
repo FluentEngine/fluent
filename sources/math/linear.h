@@ -710,7 +710,6 @@ quat_from_float4x4( quat q, float4x4 const M )
 		float m = M[ i ][ i ];
 		if ( m < r )
 			continue;
-		m = r;
 		p = &perm[ i ];
 	}
 
@@ -781,7 +780,7 @@ slerp( quat qm, const quat qa, const quat qb, double t )
 	                        qa[ 1 ] * qb[ 1 ] + qa[ 2 ] * qb[ 2 ];
 
 	// if qa=qb or qa=-qb then theta = 0 and we can return qa
-	if ( abs( cos_half_theta ) >= 1.0 )
+	if ( fabs( cos_half_theta ) >= 1.0 )
 	{
 		qm[ 3 ] = qa[ 3 ];
 		qm[ 0 ] = qa[ 0 ];
@@ -898,7 +897,7 @@ float4x4_decompose( float3         translation,
 	// Remove scale from the matrix if it is not close to zero.
 	float4x4 clone;
 	float4x4_dup( clone, mat );
-	if ( abs( det ) > 0.00001 )
+	if ( fabs( det ) > 0.00001 )
 	{
 		float4_inv_scale( clone[ 0 ], clone[ 0 ], s[ 0 ] );
 		float4_inv_scale( clone[ 1 ], clone[ 1 ], s[ 1 ] );
