@@ -418,6 +418,8 @@ struct ft_descriptor_write
 struct ft_buffer_image_copy
 {
 	uint64_t buffer_offset;
+	uint32_t width;
+	uint32_t height;
 	uint32_t mip_level;
 };
 
@@ -699,8 +701,7 @@ FT_API void
 ft_cmd_copy_buffer_to_image( const struct ft_command_buffer*    cmd,
                              const struct ft_buffer*            src,
                              struct ft_image*                   dst,
-                             uint32_t                           region_count,
-                             const struct ft_buffer_image_copy* regions );
+                             const struct ft_buffer_image_copy* copy );
 
 FT_API void
 ft_cmd_bind_descriptor_set( const struct ft_command_buffer* cmd,

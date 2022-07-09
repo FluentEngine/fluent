@@ -269,8 +269,7 @@ FT_DECLARE_FUNCTION_POINTER( void,
                              const struct ft_command_buffer*    cmd,
                              const struct ft_buffer*            src,
                              struct ft_image*                   dst,
-                             uint32_t                           region_count,
-                             const struct ft_buffer_image_copy* regions );
+                             const struct ft_buffer_image_copy* copy );
 
 FT_DECLARE_FUNCTION_POINTER( void,
                              ft_cmd_bind_descriptor_set,

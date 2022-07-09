@@ -151,13 +151,14 @@ ft_upload_image( struct ft_image*                   image,
 
 	struct ft_buffer_image_copy copy = {
 	    .buffer_offset = loader.staging_buffer.offset,
+	    .width         = info->width,
+	    .height        = info->height,
 	    .mip_level     = info->mip_level,
 	};
 
 	ft_cmd_copy_buffer_to_image( loader.cmd,
 	                             loader.staging_buffer.buffer,
 	                             image,
-	                             1,
 	                             &copy );
 
 	barrier.old_state = FT_RESOURCE_STATE_TRANSFER_DST;

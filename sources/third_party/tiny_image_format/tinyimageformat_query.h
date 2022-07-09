@@ -909,7 +909,7 @@ TinyImageFormat_DepthOfBlock( TinyImageFormat const fmt )
 	}
 }
 
-TIF_CONSTEXPR inline uint32_t
+static inline uint32_t
 TinyImageFormat_BitSizeOfBlock( TinyImageFormat const fmt )
 {
 	switch ( fmt )

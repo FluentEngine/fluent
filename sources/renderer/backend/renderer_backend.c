@@ -665,16 +665,14 @@ void
 ft_cmd_copy_buffer_to_image( const struct ft_command_buffer*    cmd,
                              const struct ft_buffer*            src,
                              struct ft_image*                   dst,
-                             uint32_t                           region_count,
-                             const struct ft_buffer_image_copy* regions )
+                             const struct ft_buffer_image_copy* copy )
 {
 	FT_ASSERT( cmd );
 	FT_ASSERT( src );
 	FT_ASSERT( dst );
-	FT_ASSERT( region_count > 0 );
-	FT_ASSERT( regions );
+	FT_ASSERT( copy );
 
-	ft_cmd_copy_buffer_to_image_impl( cmd, src, dst, region_count, regions );
+	ft_cmd_copy_buffer_to_image_impl( cmd, src, dst, copy );
 }
 
 void
