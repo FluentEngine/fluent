@@ -15,10 +15,11 @@ enum ft_texture_type
 
 struct ft_texture
 {
-	uint32_t width;
-	uint32_t height;
-	uint32_t mip_levels;
-	void    *data;
+	uint32_t             width;
+	uint32_t             height;
+	uint32_t             mip_levels;
+	void                *data;
+	enum ft_texture_type texture_type;
 };
 
 struct ft_material

@@ -290,12 +290,13 @@ read_attribute( struct ft_mesh*  mesh,
 }
 
 static uint32_t
-process_gltf_node( struct hashmap* node_map,
-                   struct hashmap* image_map,
-                   uint32_t        index,
-                   cgltf_node*     node,
-                   struct ft_mesh* meshes,
-                   const char*     filename )
+process_gltf_node( struct hashmap*    node_map,
+                   struct hashmap*    image_map,
+                   uint32_t           index,
+                   cgltf_node*        node,
+                   struct ft_mesh*    meshes,
+                   struct ft_texture* textures,
+                   const char*        filename )
 {
 	uint32_t    mesh_index = 0;
 	cgltf_mesh* gltf_mesh  = node->mesh;
@@ -388,35 +389,35 @@ process_gltf_node( struct hashmap* node_map,
 					mesh->material.emissive_strength =
 					    material->emissive_strength.emissive_strength;
 				}
-
 				mesh->material.alpha_cutoff = material->alpha_cutoff;
 
-				cgltf_texture* textures[ FT_TEXTURE_TYPE_COUNT ];
-				textures[ FT_TEXTURE_TYPE_BASE_COLOR ] =
+				cgltf_texture* gltf_textures[ FT_TEXTURE_TYPE_COUNT ];
+				gltf_textures[ FT_TEXTURE_TYPE_BASE_COLOR ] =
 				    material->pbr_metallic_roughness.base_color_texture.texture;
-				textures[ FT_TEXTURE_TYPE_NORMAL ] =
+				gltf_textures[ FT_TEXTURE_TYPE_NORMAL ] =
 				    material->normal_texture.texture;
-				textures[ FT_TEXTURE_TYPE_METAL_ROUGHNESS ] =
+				gltf_textures[ FT_TEXTURE_TYPE_METAL_ROUGHNESS ] =
 				    material->pbr_metallic_roughness.metallic_roughness_texture
 				        .texture;
-				textures[ FT_TEXTURE_TYPE_AMBIENT_OCCLUSION ] =
+				gltf_textures[ FT_TEXTURE_TYPE_AMBIENT_OCCLUSION ] =
 				    material->occlusion_texture.texture;
-				textures[ FT_TEXTURE_TYPE_EMISSIVE ] =
+				gltf_textures[ FT_TEXTURE_TYPE_EMISSIVE ] =
 				    material->emissive_texture.texture;
 
 				for ( uint32_t t = 0; t < FT_TEXTURE_TYPE_COUNT; ++t )
 				{
-					if ( textures[ t ] )
+					if ( gltf_textures[ t ] )
 					{
 						struct image_map_item* it =
 						    hashmap_get( image_map,
 						                 &( struct image_map_item ) {
-						                     .image = textures[ t ]->image,
+						                     .image = gltf_textures[ t ]->image,
 						                 } );
 
 						FT_ASSERT( it );
 
 						mesh->material.textures[ t ] = it->index;
+						textures[ it->index ].texture_type = t;
 					}
 					else
 					{
@@ -436,6 +437,7 @@ process_gltf_node( struct hashmap* node_map,
 		                                 index,
 		                                 node->children[ child_index ],
 		                                 &meshes[ mesh_index ],
+		                                 textures,
 		                                 filename );
 	}
 
@@ -589,7 +591,7 @@ generate_tangents( struct ft_model* model )
 			continue;
 		}
 
-		mesh->tangents = malloc( mesh->vertex_count * 3 * sizeof( float ) );
+		mesh->tangents = malloc( mesh->vertex_count * 4 * sizeof( float ) );
 
 		for ( uint32_t i = 0; i < mesh->index_count; i += 3 )
 		{
@@ -636,20 +638,21 @@ generate_tangents( struct ft_model* model )
 
 			float f = 1.0f / denominator;
 
-			float3 tangent = {
+			float4 tangent = {
 			    f * ( delta_uv1[ 1 ] * edge0[ 0 ] -
 			          delta_uv0[ 1 ] * edge1[ 0 ] ),
 			    f * ( delta_uv1[ 1 ] * edge0[ 1 ] -
 			          delta_uv0[ 1 ] * edge1[ 1 ] ),
 			    f * ( delta_uv1[ 1 ] * edge0[ 2 ] -
 			          delta_uv0[ 1 ] * edge1[ 2 ] ),
+			    1.0,
 			};
 
-			float3_norm( tangent, tangent );
+			float4_norm( tangent, tangent );
 
-			float3_dup( &mesh->tangents[ i0 * 3 ], tangent );
-			float3_dup( &mesh->tangents[ i1 * 3 ], tangent );
-			float3_dup( &mesh->tangents[ i2 * 3 ], tangent );
+			float4_dup( &mesh->tangents[ i0 * 4 ], tangent );
+			float4_dup( &mesh->tangents[ i1 * 4 ], tangent );
+			float4_dup( &mesh->tangents[ i2 * 4 ], tangent );
 		}
 	}
 }
@@ -731,6 +734,11 @@ ft_load_gltf( const char* filename, enum ft_model_flags load_flags )
 				for ( uint32_t m = 0; m < data->meshes_count; m++ )
 					model.mesh_count += data->meshes[ m ].primitives_count;
 
+				if ( model.mesh_count == 0 )
+				{
+					continue;
+				}
+
 				model.meshes =
 				    calloc( model.mesh_count, sizeof( struct ft_mesh ) );
 
@@ -745,6 +753,7 @@ ft_load_gltf( const char* filename, enum ft_model_flags load_flags )
 					                       n,
 					                       node,
 					                       &model.meshes[ mesh_index ],
+					                       model.textures,
 					                       filename );
 				}
 			}
