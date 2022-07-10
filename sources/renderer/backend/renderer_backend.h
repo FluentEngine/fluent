@@ -792,4 +792,7 @@ FT_API void
 ft_upload_image( struct ft_image*                   image,
                  const struct ft_upload_image_info* info );
 
+FT_API void
+ft_generate_mipmaps( struct ft_image* image, enum ft_resource_state state );
+
 #include "renderer_misc.h"

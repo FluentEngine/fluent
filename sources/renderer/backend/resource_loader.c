@@ -1,3 +1,9 @@
+#include "log/log.h"
+#include "renderer_enums_stringifier.h"
+#include "renderer_private.h"
+#ifdef VULKAN_BACKEND
+#include "vulkan/vulkan_backend.h"
+#endif
 #include "renderer_backend.h"
 
 struct StagingBuffer
@@ -194,4 +200,156 @@ ft_end_upload_batch()
 	loader.last_batch_write_size = 0;
 	ft_end_command_buffer( loader.cmd );
 	ft_immediate_submit( loader.queue, loader.cmd );
+}
+
+#ifdef VULKAN_BACKEND
+void
+vk_generate_mipmaps( struct ft_command_buffer* icmd,
+                     struct ft_image*          iimage,
+                     enum ft_resource_state    state )
+{
+	FT_FROM_HANDLE( image, iimage, vk_image );
+	FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
+
+	if (state != FT_RESOURCE_STATE_TRANSFER_DST)
+	{
+		struct ft_image_barrier barrier = {
+		    .image     = iimage,
+		    .old_state = state,
+		    .new_state = FT_RESOURCE_STATE_TRANSFER_DST,
+		};
+
+		ft_cmd_barrier( icmd, 0, NULL, 0, NULL, 1, &barrier );
+	}
+	
+	VkImageMemoryBarrier barrier = {
+	    .sType                       = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+	    .image                       = image->image,
+	    .srcQueueFamilyIndex         = VK_QUEUE_FAMILY_IGNORED,
+	    .dstQueueFamilyIndex         = VK_QUEUE_FAMILY_IGNORED,
+	    .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+	    .subresourceRange.baseArrayLayer = 0,
+	    .subresourceRange.layerCount     = 1,
+	    .subresourceRange.levelCount     = 1,
+	};
+
+	int32_t  mip_width  = iimage->width;
+	int32_t  mip_height = iimage->height;
+	uint32_t mip_levels = iimage->mip_level_count;
+
+	for ( uint32_t i = 1; i < mip_levels; i++ )
+	{
+		barrier.subresourceRange.baseMipLevel = i - 1;
+		barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		barrier.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+		vkCmdPipelineBarrier( cmd->command_buffer,
+		                      VK_PIPELINE_STAGE_TRANSFER_BIT,
+		                      VK_PIPELINE_STAGE_TRANSFER_BIT,
+		                      0,
+		                      0,
+		                      NULL,
+		                      0,
+		                      NULL,
+		                      1,
+		                      &barrier );
+
+		VkImageBlit blit = {
+		    .srcOffsets[ 0 ]               = { 0, 0, 0 },
+		    .srcOffsets[ 1 ]               = { mip_width, mip_height, 1 },
+		    .srcSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+		    .srcSubresource.mipLevel       = i - 1,
+		    .srcSubresource.baseArrayLayer = 0,
+		    .srcSubresource.layerCount     = 1,
+		    .dstOffsets[ 0 ]               = { 0, 0, 0 },
+		    .dstOffsets[ 1 ] =
+		        {
+		            mip_width > 1 ? mip_width / 2 : 1,
+		            mip_height > 1 ? mip_height / 2 : 1,
+		            1,
+		        },
+		    .dstSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+		    .dstSubresource.mipLevel       = i,
+		    .dstSubresource.baseArrayLayer = 0,
+		    .dstSubresource.layerCount     = 1,
+		};
+
+		vkCmdBlitImage( cmd->command_buffer,
+		                image->image,
+		                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		                image->image,
+		                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		                1,
+		                &blit,
+		                VK_FILTER_LINEAR );
+
+		barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		vkCmdPipelineBarrier( cmd->command_buffer,
+		                      VK_PIPELINE_STAGE_TRANSFER_BIT,
+		                      VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+		                      0,
+		                      0,
+		                      NULL,
+		                      0,
+		                      NULL,
+		                      1,
+		                      &barrier );
+
+		if ( mip_width > 1 )
+			mip_width /= 2;
+		if ( mip_height > 1 )
+			mip_height /= 2;
+	}
+
+	barrier.subresourceRange.baseMipLevel = mip_levels - 1;
+	barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+	vkCmdPipelineBarrier( cmd->command_buffer,
+	                      VK_PIPELINE_STAGE_TRANSFER_BIT,
+	                      VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+	                      0,
+	                      0,
+	                      NULL,
+	                      0,
+	                      NULL,
+	                      1,
+	                      &barrier );
+}
+#endif
+
+void
+ft_generate_mipmaps( struct ft_image* image, enum ft_resource_state state )
+{
+	bool need_end_record = !loader.is_recording;
+
+	if ( need_end_record )
+	{
+		ft_begin_command_buffer( loader.cmd );
+	}
+
+	switch ( loader.device->api )
+	{
+	case FT_RENDERER_API_VULKAN:
+		vk_generate_mipmaps( loader.cmd, image, state );
+		break;
+	default:
+		FT_WARN( "mipmap generation not implemented for %s",
+		         ft_renderer_api_to_string( loader.device->api ) );
+		break;
+	}
+
+	if ( need_end_record )
+	{
+		ft_end_command_buffer( loader.cmd );
+		ft_immediate_submit( loader.queue, loader.cmd );
+	}
 }
