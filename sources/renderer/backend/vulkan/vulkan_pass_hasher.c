@@ -253,13 +253,13 @@ vk_create_framebuffer( const struct vk_device*                 device,
 	for ( uint32_t i = 0; i < attachment_count; ++i )
 	{
 		FT_FROM_HANDLE( image, info->color_attachments[ i ].image, vk_image );
-		image_views[ i ] = image->image_view;
+		image_views[ i ] = image->sampled_view;
 	}
 
 	if ( info->depth_attachment.image != NULL )
 	{
 		FT_FROM_HANDLE( image, info->depth_attachment.image, vk_image );
-		image_views[ attachment_count++ ] = image->image_view;
+		image_views[ attachment_count++ ] = image->sampled_view;
 	}
 
 	VkFramebufferCreateInfo framebuffer_create_info = {

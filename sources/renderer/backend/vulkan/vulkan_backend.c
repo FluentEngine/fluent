@@ -869,7 +869,7 @@ vk_create_configured_swapchain( const struct vk_device* device,
 		{
 			FT_FROM_HANDLE( image, swapchain->interface.images[ i ], vk_image );
 			vkDestroyImageView( device->logical_device,
-			                    image->image_view,
+			                    image->sampled_view,
 			                    device->vulkan_allocator );
 			free( image );
 		}
@@ -959,11 +959,10 @@ vk_create_configured_swapchain( const struct vk_device* device,
 		image->interface.mip_level_count = 1;
 		image->interface.layer_count     = 1;
 		image->interface.descriptor_type = FT_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-
 		VK_ASSERT( vkCreateImageView( device->logical_device,
 		                              &image_view_create_info,
 		                              device->vulkan_allocator,
-		                              &image->image_view ) );
+		                              &image->sampled_view ) );
 	}
 }
 
@@ -1011,7 +1010,7 @@ vk_destroy_swapchain( const struct ft_device* idevice,
 		FT_FROM_HANDLE( image, swapchain->interface.images[ i ], vk_image );
 
 		vkDestroyImageView( device->logical_device,
-		                    image->image_view,
+		                    image->sampled_view,
 		                    device->vulkan_allocator );
 		free( image );
 	}
@@ -1904,7 +1903,7 @@ vk_create_image( const struct ft_device*     idevice,
 
 	if ( info->layer_count == 6 )
 	{
-		image_create_info.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+		image_create_info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 	}
 
 	VK_ASSERT( vmaCreateImage( device->memory_allocator,
@@ -1918,15 +1917,20 @@ vk_create_image( const struct ft_device*     idevice,
 	image->interface.mip_level_count = info->mip_levels;
 	image->interface.layer_count     = info->layer_count;
 
-	// TODO: fill properly
-	VkImageViewCreateInfo image_view_create_info = {
-	    .sType            = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-	    .pNext            = NULL,
-	    .flags            = 0,
-	    .image            = image->image,
-	    .viewType         = VK_IMAGE_VIEW_TYPE_2D,
-	    .format           = image_create_info.format,
-	    .subresourceRange = get_image_subresource_range( image ),
+	VkImageViewCreateInfo sampled_view_create_info = {
+	    .sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+	    .pNext    = NULL,
+	    .flags    = 0,
+	    .image    = image->image,
+	    .viewType = VK_IMAGE_VIEW_TYPE_2D,
+	    .format   = image_create_info.format,
+	    .subresourceRange =
+	        {
+	            .aspectMask     = get_aspect_mask( info->format ),
+	            .baseArrayLayer = 0,
+	            .levelCount     = info->mip_levels,
+	            .layerCount     = info->layer_count,
+	        },
 	    .components =
 	        {
 	            .r = VK_COMPONENT_SWIZZLE_IDENTITY,
@@ -1936,15 +1940,46 @@ vk_create_image( const struct ft_device*     idevice,
 	        },
 	};
 
-	if ( image->interface.layer_count == 6 )
+	if ( info->layer_count > 1 )
 	{
-		image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+		sampled_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+	}
+	
+	// TODO:
+	if ( info->layer_count == 6 )
+	{
+		sampled_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
 	}
 
 	VK_ASSERT( vkCreateImageView( device->logical_device,
-	                              &image_view_create_info,
+	                              &sampled_view_create_info,
 	                              device->vulkan_allocator,
-	                              &image->image_view ) );
+	                              &image->sampled_view ) );
+
+	if ( info->descriptor_type & FT_DESCRIPTOR_TYPE_STORAGE_IMAGE )
+	{
+		image->storage_views =
+		    malloc( sizeof( VkImageView ) * info->mip_levels );
+
+		VkImageViewCreateInfo storage_view_create_info =
+		    sampled_view_create_info;
+		storage_view_create_info.subresourceRange.levelCount = 1;
+
+		if ( storage_view_create_info.viewType == VK_IMAGE_VIEW_TYPE_CUBE )
+		{
+			storage_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+		}
+
+		for ( uint32_t mip = 0; mip < info->mip_levels; ++mip )
+		{
+			storage_view_create_info.subresourceRange.baseMipLevel = mip;
+
+			VK_ASSERT( vkCreateImageView( device->logical_device,
+			                              &storage_view_create_info,
+			                              device->vulkan_allocator,
+			                              &image->storage_views[ mip ] ) );
+		}
+	}
 }
 
 static void
@@ -1953,9 +1988,21 @@ vk_destroy_image( const struct ft_device* idevice, struct ft_image* iimage )
 	FT_FROM_HANDLE( device, idevice, vk_device );
 	FT_FROM_HANDLE( image, iimage, vk_image );
 
+	if ( image->storage_views )
+	{
+		for ( uint32_t mip = 0; mip < image->interface.mip_level_count; ++mip )
+		{
+			vkDestroyImageView( device->logical_device,
+			                    image->storage_views[ mip ],
+			                    device->vulkan_allocator );
+		}
+		free( image->storage_views );
+	}
+
 	vkDestroyImageView( device->logical_device,
-	                    image->image_view,
+	                    image->sampled_view,
 	                    device->vulkan_allocator );
+
 	vmaDestroyImage( device->memory_allocator,
 	                 image->image,
 	                 image->allocation );
@@ -2083,12 +2130,24 @@ vk_update_descriptor_set( const struct ft_device*           idevice,
 				    &descriptor_write->image_descriptors[ j ];
 
 				FT_ASSERT( descriptor->image );
+				FT_ASSERT( descriptor->mip_level <
+				           descriptor->image->mip_level_count );
 
 				image_infos[ j ].imageLayout =
 				    determine_image_layout( descriptor->resource_state );
-				image_infos[ j ].imageView =
-				    ( ( struct vk_image* ) descriptor->image->handle )
-				        ->image_view;
+
+				struct vk_image* image = descriptor->image->handle;
+				switch ( descriptor->resource_state )
+				{
+				case FT_RESOURCE_STATE_GENERAL:
+					image_infos[ j ].imageView =
+					    image->storage_views[ descriptor->mip_level ];
+					break;
+				default:
+					image_infos[ j ].imageView = image->sampled_view;
+					break;
+				}
+
 				image_infos[ j ].sampler = NULL;
 			}
 

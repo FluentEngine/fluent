@@ -399,6 +399,7 @@ struct ft_image_descriptor
 {
 	struct ft_image*       image;
 	enum ft_resource_state resource_state;
+	uint32_t               mip_level;
 };
 
 struct ft_sampler_descriptor

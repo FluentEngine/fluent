@@ -79,7 +79,8 @@ struct vk_sampler
 struct vk_image
 {
 	VkImage         image;
-	VkImageView     image_view;
+	VkImageView     sampled_view;
+	VkImageView*    storage_views;
 	VmaAllocation   allocation;
 	struct ft_image interface;
 };
