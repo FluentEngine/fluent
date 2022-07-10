@@ -2082,11 +2082,17 @@ vk_update_descriptor_set( const struct ft_device*           idevice,
 
 		FT_ASSERT( it != NULL );
 
+		if ( it == NULL )
+		{
+			FT_WARN( "descriptor with name %s not founded",
+			         descriptor_write->descriptor_name );
+			break;
+		}
+
 		const struct ft_binding* binding = &reflection->bindings[ it->value ];
 
 		VkWriteDescriptorSet* write_descriptor_set =
 		    &descriptor_writes[ write++ ];
-		//		write_descriptor_set       = {};
 		write_descriptor_set->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		write_descriptor_set->dstBinding = binding->binding;
 		write_descriptor_set->descriptorCount =

@@ -76,6 +76,11 @@ apply_animation_channel( float4x4                           r,
 		             interpolation_value );
 		break;
 	}
+	case FT_TRANSFORM_TYPE_WEIGHTS:
+	{
+		FT_WARN( "not implemented yet" );
+		break;
+	}
 	}
 }
 
