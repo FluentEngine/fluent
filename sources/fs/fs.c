@@ -45,7 +45,7 @@ ft_read_image_from_file( const char* filename,
 	int32_t h;
 	int32_t ch;
 
-	void* image = stbi_load_from_file( file, &w, &h, &ch, 4 );
+	void* image = stbi_loadf_from_file( file, &w, &h, &ch, 4 );
 	FT_ASSERT( image );
 
 	*width  = w;
