@@ -17,12 +17,9 @@ struct ft_window_info
 	enum ft_renderer_api renderer_api;
 };
 
-struct ft_window
-{
-	void* handle;
-};
+struct ft_window;
 
-FT_API struct ft_window
+FT_API struct ft_window*
 ft_create_window( const struct ft_window_info* info );
 
 FT_API void

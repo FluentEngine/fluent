@@ -2,7 +2,7 @@
 #include <SDL_vulkan.h>
 #include "window.h"
 
-struct ft_window
+struct ft_window*
 ft_create_window( const struct ft_window_info* info )
 {
 	int init_result = SDL_Init( SDL_INIT_VIDEO );
@@ -64,17 +64,14 @@ ft_create_window( const struct ft_window_info* info )
 
 	FT_ASSERT( window && "Failed to create window" );
 
-	struct ft_window result = { 0 };
-	result.handle           = window;
-
-	return result;
+	return ( struct ft_window* ) window;
 }
 
 void
 ft_destroy_window( struct ft_window* window )
 {
-	FT_ASSERT( window->handle && "Window is nullptr" );
-	SDL_DestroyWindow( window->handle );
+	FT_ASSERT( window && "Window is nullptr" );
+	SDL_DestroyWindow( ( SDL_Window* ) window );
 	SDL_Quit();
 }
 
@@ -83,7 +80,7 @@ ft_window_get_size( const struct ft_window* window,
                     uint32_t*               width,
                     uint32_t*               height )
 {
-	SDL_Window* handle = window->handle;
+	SDL_Window* handle = ( SDL_Window* ) window;
 	int32_t     w, h;
 
 	SDL_GetWindowSize( handle, &w, &h );
@@ -97,7 +94,7 @@ ft_window_get_framebuffer_size( const struct ft_window* window,
                                 uint32_t*               width,
                                 uint32_t*               height )
 {
-	SDL_Window* handle = window->handle;
+	SDL_Window* handle = ( SDL_Window* ) window;
 	int32_t     w, h;
 #if defined( METAL_BACKEND )
 	SDL_Metal_GetDrawableSize( handle, &w, &h );

@@ -13,7 +13,7 @@ struct application_state
 {
 	bool                 is_inited;
 	bool                 is_running;
-	struct ft_window     window;
+	struct ft_window*    window;
 	ft_init_callback     on_init;
 	ft_update_callback   on_update;
 	ft_shutdown_callback on_shutdown;
@@ -34,10 +34,9 @@ static void
 create_vulkan_surface( void* window, void* instance, void** p )
 {
 	VkSurfaceKHR surface;
-	SDL_Vulkan_CreateSurface(
-	    ( SDL_Window* ) ( ( struct ft_window* ) window )->handle,
-	    ( VkInstance ) instance,
-	    &surface );
+	SDL_Vulkan_CreateSurface( ( SDL_Window* ) ( window ),
+	                          ( VkInstance ) instance,
+	                          &surface );
 	*p = surface;
 }
 #endif
@@ -76,14 +75,14 @@ ft_app_init( const struct ft_application_config* config )
 	app_state.callback_data.user_data = config->user_data;
 
 	struct ft_wsi_info* wsi_info = &app_state.wsi_info;
-	wsi_info->window             = &app_state.window;
+	wsi_info->window             = app_state.window;
 #ifdef VULKAN_BACKEND
 	SDL_Vulkan_GetInstanceExtensions(
-	    ( SDL_Window* ) app_state.window.handle,
+	    ( SDL_Window* ) app_state.window,
 	    &wsi_info->vulkan_instance_extension_count,
 	    NULL );
 	SDL_Vulkan_GetInstanceExtensions(
-	    ( SDL_Window* ) app_state.window.handle,
+	    ( SDL_Window* ) app_state.window,
 	    &wsi_info->vulkan_instance_extension_count,
 	    app_state.extensions );
 	wsi_info->vulkan_instance_extensions = app_state.extensions;
@@ -107,7 +106,7 @@ ft_app_run()
 	uint32_t last_frame  = 0.0f;
 	app_state.delta_time = 0.0;
 
-	ft_window_get_size( &app_state.window,
+	ft_window_get_size( app_state.window,
 	                    &app_state.callback_data.width,
 	                    &app_state.callback_data.height );
 
@@ -138,7 +137,7 @@ ft_app_run()
 				if ( e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED )
 				{
 					uint32_t w, h;
-					ft_window_get_size( &app_state.window, &w, &h );
+					ft_window_get_size( app_state.window, &w, &h );
 					if ( app_state.callback_data.width == w &&
 					     app_state.callback_data.height == h )
 					{
@@ -177,7 +176,7 @@ ft_app_shutdown()
 {
 	FT_ASSERT( app_state.is_inited );
 	ft_log_shutdown();
-	ft_destroy_window( &app_state.window );
+	ft_destroy_window( app_state.window );
 }
 
 void
@@ -189,7 +188,7 @@ ft_app_request_exit()
 const struct ft_window*
 ft_get_app_window()
 {
-	return &app_state.window;
+	return app_state.window;
 }
 
 uint32_t
