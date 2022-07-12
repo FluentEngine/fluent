@@ -325,6 +325,11 @@ process_gltf_node( struct hashmap*    node_map,
 				cgltf_accessor*  accessor       = attribute->data;
 				cgltf_size       accessor_count = accessor->count;
 
+				if ( attribute->type == cgltf_attribute_type_color )
+				{
+					continue;
+				}
+
 				cgltf_size float_count =
 				    cgltf_accessor_unpack_floats( accessor, NULL, 0 );
 				float* accessor_data = malloc( float_count * sizeof( float ) );
@@ -389,6 +394,7 @@ process_gltf_node( struct hashmap*    node_map,
 					mesh->material.emissive_strength =
 					    material->emissive_strength.emissive_strength;
 				}
+				mesh->material.alpha_mode = material->alpha_mode;
 				mesh->material.alpha_cutoff = material->alpha_cutoff;
 
 				cgltf_texture* gltf_textures[ FT_TEXTURE_TYPE_COUNT ];

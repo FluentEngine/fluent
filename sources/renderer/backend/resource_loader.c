@@ -221,7 +221,7 @@ vk_generate_mipmaps( struct ft_command_buffer* icmd,
 
 		ft_cmd_barrier( icmd, 0, NULL, 0, NULL, 1, &barrier );
 	}
-	
+
 	VkImageMemoryBarrier barrier = {
 	    .sType                       = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 	    .image                       = image->image,
@@ -235,7 +235,7 @@ vk_generate_mipmaps( struct ft_command_buffer* icmd,
 
 	int32_t  mip_width  = iimage->width;
 	int32_t  mip_height = iimage->height;
-	uint32_t mip_levels = iimage->mip_level_count;
+	uint32_t mip_levels = iimage->mip_levels;
 
 	for ( uint32_t i = 1; i < mip_levels; i++ )
 	{

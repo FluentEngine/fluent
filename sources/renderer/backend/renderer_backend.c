@@ -65,6 +65,8 @@ ft_cmd_bind_descriptor_set_fun       ft_cmd_bind_descriptor_set_impl;
 ft_cmd_dispatch_fun                  ft_cmd_dispatch_impl;
 ft_cmd_push_constants_fun            ft_cmd_push_constants_impl;
 ft_cmd_draw_indexed_indirect_fun     ft_cmd_draw_indexed_indirect_impl;
+ft_cmd_begin_debug_marker_fun        ft_cmd_begin_debug_marker_impl;
+ft_cmd_end_debug_marker_fun          ft_cmd_end_debug_marker_impl;
 
 // defined in resource_loader.c
 void
@@ -776,6 +778,24 @@ ft_cmd_draw_indexed_indirect( const struct ft_command_buffer* cmd,
 }
 
 void
+ft_cmd_begin_debug_marker( const struct ft_command_buffer* cmd,
+                           const char*                     name,
+                           float                           color[ 4 ] )
+{
+	FT_ASSERT( cmd );
+	
+	ft_cmd_begin_debug_marker_impl( cmd, name, color );
+}
+
+void
+ft_cmd_end_debug_marker( const struct ft_command_buffer* cmd )
+{
+	FT_ASSERT( cmd );
+
+	ft_cmd_end_debug_marker_impl( cmd );
+}
+
+void
 ft_create_sampler( const struct ft_device*       device,
                    const struct ft_sampler_info* info,
                    struct ft_sampler**           sampler )
@@ -817,7 +837,7 @@ ft_create_image( const struct ft_device*     device,
 	( *image )->depth           = info->depth;
 	( *image )->format          = info->format;
 	( *image )->sample_count    = info->sample_count;
-	( *image )->mip_level_count = info->mip_levels;
+	( *image )->mip_levels      = info->mip_levels;
 	( *image )->layer_count     = info->layer_count;
 	( *image )->descriptor_type = info->descriptor_type;
 }

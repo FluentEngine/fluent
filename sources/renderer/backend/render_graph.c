@@ -457,7 +457,10 @@ ft_rg_execute( struct ft_command_buffer* cmd, struct ft_render_graph* graph )
 		                barriers->image_barriers );
 
 		ft_cmd_begin_render_pass( cmd, info );
+		float color[ 4 ] = { 0.4f, 0.2f, 0.5f, 1.0f };
+		ft_cmd_begin_debug_marker( cmd, pass->name, color );
 		pass->execute( graph->device, cmd, pass->user_data );
+		ft_cmd_end_debug_marker( cmd );
 		ft_cmd_end_render_pass( cmd );
 	}
 
@@ -512,6 +515,7 @@ ft_rg_add_color_output( struct ft_render_pass*      pass,
 	uint32_t index = rg_get_image( pass->graph, name, &color_output );
 	*color_output  = *info;
 	color_output->descriptor_type = FT_DESCRIPTOR_TYPE_COLOR_ATTACHMENT;
+	color_output->name            = name;
 	pass->color_attachments[ pass->color_attachment_count++ ] = index;
 }
 
@@ -525,6 +529,7 @@ ft_rg_add_depth_stencil_output( struct ft_render_pass*      pass,
 	*depth_stencil_output = *info;
 	depth_stencil_output->descriptor_type =
 	    FT_DESCRIPTOR_TYPE_DEPTH_STENCIL_ATTACHMENT;
+	depth_stencil_output->name     = name;
 	pass->depth_stencil_attachment = index;
 	pass->has_depth_stencil        = 1;
 }

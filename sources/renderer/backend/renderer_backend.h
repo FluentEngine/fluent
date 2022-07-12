@@ -117,6 +117,7 @@ struct ft_image_info
 	uint32_t                layer_count;
 	uint32_t                mip_levels;
 	enum ft_descriptor_type descriptor_type;
+	const char*             name;
 };
 
 struct ft_image
@@ -126,7 +127,7 @@ struct ft_image
 	uint32_t                depth;
 	enum ft_format          format;
 	uint32_t                sample_count;
-	uint32_t                mip_level_count;
+	uint32_t                mip_levels;
 	uint32_t                layer_count;
 	enum ft_descriptor_type descriptor_type;
 	ft_handle               handle;
@@ -137,6 +138,7 @@ struct ft_buffer_info
 	uint64_t                size;
 	enum ft_descriptor_type descriptor_type;
 	enum ft_memory_usage    memory_usage;
+	const char*             name;
 };
 
 struct ft_buffer
@@ -368,6 +370,7 @@ struct ft_pipeline_info
 	enum ft_format color_attachment_formats[ FT_MAX_ATTACHMENTS_COUNT ];
 	enum ft_format depth_stencil_format;
 	struct ft_blend_state_info blend_state_info;
+	const char*                name;
 };
 
 struct ft_pipeline
@@ -743,6 +746,14 @@ ft_cmd_draw_indexed_indirect( const struct ft_command_buffer* cmd,
                               uint64_t                        offset,
                               uint32_t                        draw_count,
                               uint32_t                        stride );
+
+FT_API void
+ft_cmd_begin_debug_marker( const struct ft_command_buffer* cmd,
+                           const char*                     name,
+                           float                           color[ 4 ] );
+
+FT_API void
+ft_cmd_end_debug_marker( const struct ft_command_buffer* cmd );
 
 FT_API void
 ft_create_sampler( const struct ft_device*       device,

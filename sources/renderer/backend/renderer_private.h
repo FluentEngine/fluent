@@ -323,6 +323,16 @@ FT_DECLARE_FUNCTION_POINTER( void,
                              uint32_t                        stride );
 
 FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_begin_debug_marker,
+                             const struct ft_command_buffer* cmd,
+                             const char*                     name,
+                             float                           color[ 4 ] );
+
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_cmd_end_debug_marker,
+                             const struct ft_command_buffer* cmd );
+
+FT_DECLARE_FUNCTION_POINTER( void,
                              ft_create_sampler,
                              const struct ft_device*       device,
                              const struct ft_sampler_info* info,

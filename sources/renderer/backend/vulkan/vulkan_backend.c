@@ -1,5 +1,4 @@
 #ifdef VULKAN_BACKEND
-
 #include <hashmap_c/hashmap_c.h>
 #include "log/log.h"
 #include "wsi/wsi.h"
@@ -157,6 +156,25 @@ get_instance_layers( uint32_t* count, const char** names )
 #endif
 }
 
+FT_INLINE void
+set_object_debug_name( const struct vk_device* device,
+                       const char*             name,
+                       uint64_t                object )
+{
+#ifdef FLUENT_DEBUG
+	if ( vkDebugMarkerSetObjectNameEXT )
+	{
+		VkDebugMarkerObjectNameInfoEXT info = {
+		    .sType       = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
+		    .objectType  = VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+		    .object      = object,
+		    .pObjectName = name,
+		};
+		vkDebugMarkerSetObjectNameEXT( device->logical_device, &info );
+	}
+#endif
+}
+
 FT_INLINE uint32_t
 find_queue_family_index( VkPhysicalDevice   physical_device,
                          enum ft_queue_type queue_type )
@@ -217,7 +235,7 @@ get_image_subresource_range( const struct vk_image* image )
 	VkImageSubresourceRange image_subresource_range = {
 	    .aspectMask     = get_aspect_mask( image->interface.format ),
 	    .baseMipLevel   = 0,
-	    .levelCount     = image->interface.mip_level_count,
+	    .levelCount     = image->interface.mip_levels,
 	    .baseArrayLayer = 0,
 	    .layerCount     = image->interface.layer_count,
 	};
@@ -325,38 +343,44 @@ vk_create_device( const struct ft_renderer_backend* ibackend,
 			break;
 	}
 
-	uint32_t device_extension_count = 0;
+	const char* wanted_extensions[] = {
+	    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+	    VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+	    "VK_KHR_portability_subset",
+#ifdef FLUENT_DEBUG
+	    VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
+	    VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+#endif
+	};
+
+	uint32_t supported_device_extension_count = 0;
 	vkEnumerateDeviceExtensionProperties( device->physical_device,
 	                                      NULL,
-	                                      &device_extension_count,
+	                                      &supported_device_extension_count,
 	                                      NULL );
 	FT_ALLOC_STACK_ARRAY( VkExtensionProperties,
 	                      supported_device_extensions,
-	                      device_extension_count + 2 ); // TODO:
+	                      supported_device_extension_count );
 	vkEnumerateDeviceExtensionProperties( device->physical_device,
 	                                      NULL,
-	                                      &device_extension_count,
+	                                      &supported_device_extension_count,
 	                                      supported_device_extensions );
 
-	bool portability_subset = 0;
-	for ( uint32_t i = 0; i < device_extension_count; ++i )
-	{
-		if ( !strcmp( supported_device_extensions[ i ].extensionName,
-		              "VK_KHR_portability_subset" ) )
-		{
-			portability_subset = 1;
-		}
-	}
+	const char* device_extensions[ 5 ];
+	memset( device_extensions, 0, sizeof( device_extensions ) );
 
-	device_extension_count = 2 + portability_subset;
-	FT_ALLOC_STACK_ARRAY( const char*,
-	                      device_extensions,
-	                      device_extension_count );
-	device_extensions[ 0 ] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-	device_extensions[ 1 ] = VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME;
-	if ( portability_subset )
+	uint32_t device_extension_count = 0;
+	for ( uint32_t s = 0; s < supported_device_extension_count; ++s )
 	{
-		device_extensions[ 2 ] = "VK_KHR_portability_subset";
+		for ( uint32_t w = 0; w < FT_ARRAY_SIZE( wanted_extensions ); ++w )
+		{
+			if ( strcmp( supported_device_extensions[ s ].extensionName,
+			             wanted_extensions[ w ] ) == 0 )
+			{
+				device_extensions[ device_extension_count++ ] =
+				    wanted_extensions[ w ];
+			}
+		}
 	}
 
 	// TODO: check support
@@ -956,7 +980,7 @@ vk_create_configured_swapchain( const struct vk_device* device,
 		image->interface.height          = swapchain->interface.height;
 		image->interface.format          = swapchain->interface.format;
 		image->interface.sample_count    = 1;
-		image->interface.mip_level_count = 1;
+		image->interface.mip_levels      = 1;
 		image->interface.layer_count     = 1;
 		image->interface.descriptor_type = FT_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 		VK_ASSERT( vkCreateImageView( device->logical_device,
@@ -1477,6 +1501,10 @@ vk_create_compute_pipeline( const struct ft_device*        idevice,
 	                                     &compute_pipeline_create_info,
 	                                     device->vulkan_allocator,
 	                                     &pipeline->pipeline ) );
+
+	set_object_debug_name( device,
+	                       info->name,
+	                       ( uint64_t ) pipeline->pipeline );
 }
 
 FT_INLINE void
@@ -1727,6 +1755,10 @@ vk_create_graphics_pipeline( const struct ft_device*        idevice,
 	vkDestroyRenderPass( device->logical_device,
 	                     render_pass,
 	                     device->vulkan_allocator );
+
+	set_object_debug_name( device,
+	                       info->name,
+	                       ( uint64_t ) pipeline->pipeline );
 }
 
 static void
@@ -1805,6 +1837,8 @@ vk_create_buffer( const struct ft_device*      idevice,
 	                            &buffer->buffer,
 	                            &buffer->allocation,
 	                            NULL ) );
+
+	set_object_debug_name( device, info->name, ( uint64_t ) buffer->buffer );
 }
 
 static void
@@ -1913,9 +1947,11 @@ vk_create_image( const struct ft_device*     idevice,
 	                           &image->allocation,
 	                           NULL ) );
 
-	image->interface.format          = info->format;
-	image->interface.mip_level_count = info->mip_levels;
-	image->interface.layer_count     = info->layer_count;
+	set_object_debug_name( device, info->name, ( uint64_t ) image->image );
+
+	image->interface.format      = info->format;
+	image->interface.mip_levels  = info->mip_levels;
+	image->interface.layer_count = info->layer_count;
 
 	VkImageViewCreateInfo sampled_view_create_info = {
 	    .sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -1944,7 +1980,7 @@ vk_create_image( const struct ft_device*     idevice,
 	{
 		sampled_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
 	}
-	
+
 	// TODO:
 	if ( info->layer_count == 6 )
 	{
@@ -1990,7 +2026,7 @@ vk_destroy_image( const struct ft_device* idevice, struct ft_image* iimage )
 
 	if ( image->storage_views )
 	{
-		for ( uint32_t mip = 0; mip < image->interface.mip_level_count; ++mip )
+		for ( uint32_t mip = 0; mip < image->interface.mip_levels; ++mip )
 		{
 			vkDestroyImageView( device->logical_device,
 			                    image->storage_views[ mip ],
@@ -2137,7 +2173,7 @@ vk_update_descriptor_set( const struct ft_device*           idevice,
 
 				FT_ASSERT( descriptor->image );
 				FT_ASSERT( descriptor->mip_level <
-				           descriptor->image->mip_level_count );
+				           descriptor->image->mip_levels );
 
 				image_infos[ j ].imageLayout =
 				    determine_image_layout( descriptor->resource_state );
@@ -2662,6 +2698,37 @@ vk_cmd_bind_descriptor_set( const struct ft_command_buffer* icmd,
 }
 
 void
+vk_cmd_begin_debug_marker( const struct ft_command_buffer* icmd,
+                           const char*                     name,
+                           float                           color[ 4 ] )
+{
+#ifdef VULKAN_BACKEND
+	if ( vkCmdDebugMarkerBeginEXT )
+	{
+		FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
+		VkDebugMarkerMarkerInfoEXT marker_info;
+		memset( &marker_info, 0, sizeof( marker_info ) );
+		marker_info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+		memcpy( marker_info.color, &color[ 0 ], sizeof( float ) * 4 );
+		marker_info.pMarkerName = name;
+		vkCmdDebugMarkerBeginEXT( cmd->command_buffer, &marker_info );
+	}
+#endif
+}
+
+void
+vk_cmd_end_debug_marker( const struct ft_command_buffer* icmd )
+{
+#ifdef VULKAN_BACKEND
+	if ( vkCmdDebugMarkerEndEXT )
+	{
+		FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
+		vkCmdDebugMarkerEndEXT( cmd->command_buffer );
+	}
+#endif
+}
+
+void
 vk_create_renderer_backend( const struct ft_renderer_backend_info* info,
                             struct ft_renderer_backend**           p )
 {
@@ -2724,6 +2791,8 @@ vk_create_renderer_backend( const struct ft_renderer_backend_info* info,
 	ft_cmd_dispatch_impl                  = vk_cmd_dispatch;
 	ft_cmd_push_constants_impl            = vk_cmd_push_constants;
 	ft_cmd_draw_indexed_indirect_impl     = vk_cmd_draw_indexed_indirect;
+	ft_cmd_begin_debug_marker_impl        = vk_cmd_begin_debug_marker;
+	ft_cmd_end_debug_marker_impl          = vk_cmd_end_debug_marker;
 
 	FT_INIT_INTERNAL( backend, *p, vk_renderer_backend );
 

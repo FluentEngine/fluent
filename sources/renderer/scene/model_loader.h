@@ -30,6 +30,7 @@ struct ft_material
 	float   metallic_factor;
 	float   roughness_factor;
 	float   emissive_strength;
+	int     alpha_mode;
 	float   alpha_cutoff;
 };
 
