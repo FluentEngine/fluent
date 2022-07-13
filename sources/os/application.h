@@ -2,7 +2,7 @@
 
 #include "base/base.h"
 #include "log/log.h"
-#include "window.h"
+#include "os/window/window.h"
 
 struct ft_application_callback_data
 {
@@ -21,7 +21,7 @@ typedef void ( *ft_shutdown_callback )(
 typedef void ( *ft_resize_callback )(
     const struct ft_application_callback_data* );
 
-struct ft_application_config
+struct ft_application_info
 {
 	uint32_t              argc;
 	char**                argv;
@@ -35,7 +35,7 @@ struct ft_application_config
 };
 
 FT_API void
-ft_app_init( const struct ft_application_config* state );
+ft_app_init( const struct ft_application_info* info );
 
 FT_API void
 ft_app_run( void );
@@ -48,9 +48,6 @@ ft_app_request_exit( void );
 
 FT_API const struct ft_window*
 ft_get_app_window( void );
-
-FT_API uint32_t
-ft_get_time( void );
 
 FT_API float
 ft_get_delta_time( void );

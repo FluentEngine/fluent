@@ -1,5 +1,3 @@
-#include <SDL.h>
-
 #define NK_IMPLEMENTATION
 #include "ft_nuklear.h"
 
@@ -312,8 +310,8 @@ nk_ft_new_frame()
 {
 	struct nk_context *ctx = &ft.ctx;
 
-	struct ft_wsi_info *wsi = ft.wsi;
-	void               *win = wsi->window;
+	struct ft_wsi_info     *wsi = ft.wsi;
+	const struct ft_window *win = wsi->window;
 	wsi->get_window_size( win, &ft.width, &ft.height );
 	wsi->get_framebuffer_size( win, &ft.display_width, &ft.display_height );
 
@@ -444,7 +442,7 @@ nk_ft_render( const struct ft_command_buffer *cmd, enum nk_anti_aliasing AA )
 	{
 		/* convert from command queue into draw list and draw to screen */
 		const struct nk_draw_command *draw_cmd;
-		void                         *vertices =
+		void		                 *vertices =
 		    ft_map_memory( adapter->device, adapter->vertex_buffer );
 		void *elements =
 		    ft_map_memory( adapter->device, adapter->index_buffer );

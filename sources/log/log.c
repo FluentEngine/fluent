@@ -42,7 +42,7 @@ static struct
 } s_flog;
 
 static volatile int               s_logger;
-static volatile enum ft_log_level s_logLevel = FT_INFO;
+static volatile enum ft_log_level s_logLevel = FT_LOG_LEVEL_INFO;
 static volatile long s_flushInterval = 0; /* msec, 0 is auto flush off */
 static volatile int  s_initialized   = 0; /* false */
 #if defined( _WIN32 ) || defined( _WIN64 )
@@ -248,11 +248,11 @@ getLevelChar( enum ft_log_level level )
 {
 	switch ( level )
 	{
-	case FT_TRACE: return "[TRACE]";
-	case FT_DEBUG: return "[DEBUG]";
-	case FT_INFO: return "[INFO]";
-	case FT_WARN: return "[WARN]";
-	case FT_ERROR: return "[ERROR]";
+	case FT_LOG_LEVEL_TRACE: return "[TRACE]";
+	case FT_LOG_LEVEL_DEBUG: return "[DEBUG]";
+	case FT_LOG_LEVEL_INFO: return "[INFO]";
+	case FT_LOG_LEVEL_WARN: return "[WARN]";
+	case FT_LOG_LEVEL_ERROR: return "[ERROR]";
 	default: return "";
 	}
 }

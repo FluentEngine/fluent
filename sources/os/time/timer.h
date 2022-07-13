@@ -1,21 +1,29 @@
 #pragma once
 
 #include "base/base.h"
-#include "application.h"
 
 struct ft_timer
 {
-	uint64_t start;
+    uint64_t start;
 };
+
+FT_API void
+ft_ticks_init();
+
+FT_API void
+ft_ticks_shutdown();
+
+FT_API uint64_t
+ft_get_ticks();
 
 FT_INLINE void
 ft_timer_reset( struct ft_timer* timer )
 {
-	timer->start = ft_get_time();
+	timer->start = ft_get_ticks();
 }
 
 FT_INLINE uint64_t
 ft_timer_get_ticks( struct ft_timer* timer )
 {
-	return ft_get_time() - timer->start;
+	return ft_get_ticks() - timer->start;
 }

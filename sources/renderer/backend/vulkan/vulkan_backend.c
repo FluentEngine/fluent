@@ -82,20 +82,18 @@ get_instance_extensions( const struct ft_renderer_backend_info* info,
 
 	if ( names == NULL )
 	{
-		*count = wsi->vulkan_instance_extension_count;
+		wsi->get_vulkan_instance_extensions( wsi->window, count, NULL );
 	}
 
-	uint32_t e = 0;
-	if ( wsi->vulkan_instance_extension_count != 0 && names )
+	uint32_t e = *count;
+
+	if ( ( *count ) == 0 )
 	{
-		for ( e = 0; e < wsi->vulkan_instance_extension_count; ++e )
-		{
-			names[ e ] = wsi->vulkan_instance_extensions[ e ];
-		}
+		FT_WARN( "wsi return 0 extensions, presentation not supported" );
 	}
-	else if ( names )
+	else
 	{
-		FT_WARN( "Wsi has no instance extensions. Present not supported" );
+		wsi->get_vulkan_instance_extensions( wsi->window, &e, names );
 	}
 
 	uint32_t extension_count = 0;
@@ -777,7 +775,7 @@ vk_configure_swapchain( const struct vk_device*         device,
 
 	wsi->create_vulkan_surface( wsi->window,
 	                            device->instance,
-	                            ( void** ) ( &swapchain->surface ) );
+	                            &swapchain->surface );
 
 	VkBool32 support_surface = 0;
 	vkGetPhysicalDeviceSurfaceSupportKHR( device->physical_device,

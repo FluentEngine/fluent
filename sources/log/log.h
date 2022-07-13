@@ -7,11 +7,11 @@
 
 enum ft_log_level
 {
-	FT_TRACE,
-	FT_DEBUG,
-	FT_INFO,
-	FT_WARN,
-	FT_ERROR
+	FT_LOG_LEVEL_TRACE,
+	FT_LOG_LEVEL_DEBUG,
+	FT_LOG_LEVEL_INFO,
+	FT_LOG_LEVEL_WARN,
+	FT_LOG_LEVEL_ERROR
 };
 
 FT_API void
@@ -27,10 +27,10 @@ FT_API void
 ft_log( enum ft_log_level level, const char* fmt, ... );
 
 #ifdef FLUENT_DEBUG
-#define FT_TRACE( fmt, ... ) ft_log( FT_TRACE, fmt, ##__VA_ARGS__ )
-#define FT_INFO( fmt, ... )  ft_log( FT_INFO, fmt, ##__VA_ARGS__ )
-#define FT_WARN( fmt, ... )  ft_log( FT_WARN, fmt, ##__VA_ARGS__ )
-#define FT_ERROR( fmt, ... ) ft_log( FT_ERROR, fmt, ##__VA_ARGS__ )
+#define FT_TRACE( fmt, ... ) ft_log( FT_LOG_LEVEL_TRACE, fmt, ##__VA_ARGS__ )
+#define FT_INFO( fmt, ... )  ft_log( FT_LOG_LEVEL_INFO, fmt, ##__VA_ARGS__ )
+#define FT_WARN( fmt, ... )  ft_log( FT_LOG_LEVEL_WARN, fmt, ##__VA_ARGS__ )
+#define FT_ERROR( fmt, ... ) ft_log( FT_LOG_LEVEL_ERROR, fmt, ##__VA_ARGS__ )
 #else
 #define FT_TRACE( fmt, ... )
 #define FT_INFO( fmt, ... )

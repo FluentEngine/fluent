@@ -2,21 +2,25 @@
 
 #include "base/base.h"
 
+struct ft_window;
+
 struct ft_wsi_info
 {
-	void*        window;
-	uint32_t     vulkan_instance_extension_count;
-	const char** vulkan_instance_extensions;
+	const struct ft_window* window;
 
-	void ( *get_window_size )( void*     window,
-	                           uint32_t* width,
-	                           uint32_t* height );
+	void ( *get_window_size )( const struct ft_window* window,
+	                           uint32_t*               width,
+	                           uint32_t*               height );
 
-	void ( *get_framebuffer_size )( void*     window,
-	                                uint32_t* width,
-	                                uint32_t* height );
+	void ( *get_framebuffer_size )( const struct ft_window* window,
+	                                uint32_t*               width,
+	                                uint32_t*               height );
 
-	void ( *create_vulkan_surface )( void*  window,
-	                                 void*  instance,
-	                                 void** surface );
+	void ( *get_vulkan_instance_extensions )( const struct ft_window* window,
+	                                          uint32_t*               count,
+	                                          const char**            names );
+
+	void ( *create_vulkan_surface )( const struct ft_window* window,
+	                                 VkInstance              instance,
+	                                 VkSurfaceKHR*           surface );
 };

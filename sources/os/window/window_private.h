@@ -1,0 +1,43 @@
+#pragma once
+
+#include "../../base/base.h"
+
+struct ft_event;
+struct ft_window;
+struct ft_window_info;
+
+FT_DECLARE_FUNCTION_POINTER( void, ft_destroy_window, struct ft_window* );
+
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_window_get_size,
+                             const struct ft_window*,
+                             uint32_t*,
+                             uint32_t* );
+
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_window_get_framebuffer_size,
+                             const struct ft_window*,
+                             uint32_t*,
+                             uint32_t* );
+
+FT_DECLARE_FUNCTION_POINTER( void, ft_window_show_cursor, bool );
+
+FT_DECLARE_FUNCTION_POINTER( int, ft_window_poll_event, struct ft_event* );
+
+FT_DECLARE_FUNCTION_POINTER( void, ft_get_mouse_offset, int32_t*, int32_t* );
+
+FT_DECLARE_FUNCTION_POINTER( const uint8_t*, ft_get_keyboard_state, uint32_t* );
+
+FT_DECLARE_FUNCTION_POINTER( uint32_t, ft_get_mouse_state, int32_t*, int32_t* );
+
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_window_get_vulkan_instance_extensions,
+                             const struct ft_window*,
+                             uint32_t*,
+                             const char** );
+
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_window_create_vulkan_surface,
+                             const struct ft_window*,
+                             VkInstance,
+                             VkSurfaceKHR* );

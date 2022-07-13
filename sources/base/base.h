@@ -77,3 +77,23 @@ ft_flerp( float a, float b, float t )
 {
 	return a * ( 1.0f - t ) + b * t;
 }
+
+#ifdef VULKAN_H_
+#define NO_FT_VULKAN_TYPEDEFS
+#endif
+#ifndef NO_FT_VULKAN_TYPEDEFS
+#define FT_VK_DEFINE_HANDLE( object ) typedef struct object##_T* object;
+
+#if defined( __LP64__ ) || defined( _WIN64 ) || defined( __x86_64__ ) ||       \
+    defined( _M_X64 ) || defined( __ia64 ) || defined( _M_IA64 ) ||            \
+    defined( __aarch64__ ) || defined( __powerpc64__ )
+#define FT_VK_DEFINE_NON_DISPATCHABLE_HANDLE( object )                         \
+	typedef struct object##_T* object;
+#else
+#define FT_VK_DEFINE_NON_DISPATCHABLE_HANDLE( object ) typedef uint64_t object;
+#endif
+
+FT_VK_DEFINE_HANDLE( VkInstance )
+FT_VK_DEFINE_NON_DISPATCHABLE_HANDLE( VkSurfaceKHR )
+
+#endif

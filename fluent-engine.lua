@@ -1,22 +1,25 @@
 function toboolean(str)
-    local bool = false
-    if str == "true" or str == "1" then
-        bool = true
-    end
-    return bool
+	local bool = false
+	if str == "true" or str == "1" then
+		bool = true
+	end
+	return bool
 end
 
-newoption
-{
-   trigger			= "sdl2_include_directory",
-   description		= "SDL2 include directory"
-}
+local use_sdl2 = false
+if (use_sdl2) then
+	newoption
+	{
+	trigger			= "sdl2_include_directory",
+	description		= "SDL2 include directory"
+	}
 
-newoption
-{
-	trigger			= "sdl2_library_directory",
-	description		= "SDL2 library directory"
-}
+	newoption
+	{
+		trigger			= "sdl2_library_directory",
+		description		= "SDL2 library directory"
+	}
+end
 
 newoption
 {
@@ -61,8 +64,11 @@ commons.opts = function()
 end
 
 -- try to find deps first
-sdl2_include_directory = os.findheader("SDL.h")
-sdl2_library_directory = os.findlib("SDL2")
+if (use_sdl2) then
+	sdl2_include_directory = os.findheader("SDL.h")
+	sdl2_library_directory = os.findlib("SDL2")
+end
+
 vulkan_include_directory = os.findheader("vulkan/vulkan.h")
 
 if (os.host() == "windows") then
@@ -73,19 +79,21 @@ if (os.host() == "windows") then
 	end
 end
 
-if sdl2_include_directory == nil then
-	if _OPTIONS["sdl2_include_directory"] ~= nil then
-		sdl2_include_directory = _OPTIONS["sdl2_include_directory"]
-	else
-		error("SDL2 headers not found you should manually specify directories")
+if (use_sdl2) then
+	if sdl2_include_directory == nil then
+		if _OPTIONS["sdl2_include_directory"] ~= nil then
+			sdl2_include_directory = _OPTIONS["sdl2_include_directory"]
+		else
+			error("SDL2 headers not found you should manually specify directories")
+		end
 	end
-end
 
-if sdl2_library_directory == nil then
-	if _OPTIONS["sdl2_library_directory"] ~= nil then
-		sdl2_library_directory = _OPTIONS["sdl2_library_directory"]
-	else
-		error("SDL2 library not found you should manually specify directories")
+	if sdl2_library_directory == nil then
+		if _OPTIONS["sdl2_library_directory"] ~= nil then
+			sdl2_library_directory = _OPTIONS["sdl2_library_directory"]
+		else
+			error("SDL2 library not found you should manually specify directories")
+		end
 	end
 end
 
@@ -173,56 +181,70 @@ project "ft_log"
 	}
 
 project "ft_os"
-    kind "StaticLib"
-    language "C"
+	kind "StaticLib"
+	language "C"
 
 	commons.opts()
 
 	declare_backend_defines()
 
-    includedirs
-    {
-        "sources",
-    }
+	includedirs
+	{
+		"sources",
+	}
 
 	sysincludedirs
 	{
-		sdl2_include_directory,
 		"sources/third_party"
 	}
 
-    files
-    {
-        "sources/os/application.c",
-        "sources/os/application.h",
-        "sources/os/camera.h",
-        "sources/os/camera.c",
-        "sources/os/input.c",
-        "sources/os/input.h",
-        "sources/os/key_codes.h",
-        "sources/os/mouse_codes.h",
-        "sources/os/window.c",
-        "sources/os/window.h",
-        "sources/fs/fs.c",
-        "sources/fs/fs.h"
-    }
+	if (use_sdl2) then
+		sysincludedirs
+		{
+			sdl2_include_directory
+		}
+	end
 
+	files
+	{
+		"sources/os/application.c",
+		"sources/os/application.h",
+		"sources/os/camera.h",
+		"sources/os/camera.c",
+		"sources/os/input.c",
+		"sources/os/input.h",
+		"sources/os/key_codes.h",
+		"sources/os/mouse_codes.h",
+		"sources/os/time/unix/unix_timer.c",
+		"sources/os/time/timer.h",
+		"sources/os/window/window.c",
+		"sources/os/window/window.h",
+		"sources/os/window/sdl/sdl_window.c",
+		"sources/fs/fs.c",
+		"sources/fs/fs.h"
+	}
+
+	filter { "system:macosx" }
+		files
+		{
+			"sources/os/window/cocoa/cocoa_window.m",
+		}
+	filter { }
 project "ft_renderer"
-    kind "StaticLib"
-    language "C"
+	kind "StaticLib"
+	language "C"
 
 	commons.opts()
 
 	declare_backend_defines()
 
-    includedirs
-    {
-        "sources",
-    }
+	includedirs
+	{
+		"sources",
+	}
 
 	sysincludedirs
 	{
-		sdl2_include_directory,
 		vulkan_include_directory,
 		"sources/third_party"
 	}
@@ -232,8 +254,8 @@ project "ft_renderer"
 	shader_reflection_dir = "sources/renderer/shader_reflection/"
 	scene_dir = "sources/renderer/scene/"
 
-    files
-    {
+	files
+	{
 		path.join(backend_dir, "renderer_backend.c"),
 		path.join(backend_dir, "renderer_backend.h"),
 		path.join(backend_dir, "renderer_enums.h"),
@@ -256,7 +278,7 @@ project "ft_renderer"
 		path.join(nuklear_dir, "shaders/shader_nuklear_frag_spirv.c"),
 		path.join(scene_dir, "model_loader.h"),
 		path.join(scene_dir, "model_loader.c")
-    }
+	}
 
 	if (renderer_backend_metal) then
 		files
@@ -270,24 +292,34 @@ project "ft_renderer"
 	fluent_engine = {}
 
 	fluent_engine.link = function()
-		sysincludedirs
-		{
-			sdl2_include_directory
-		}
+		if (use_sdl2) then
+			sysincludedirs
+			{
+				sdl2_include_directory
+			}
 
-		syslibdirs
-		{
-			sdl2_library_directory
-		}
+			syslibdirs
+			{
+				sdl2_library_directory
+			}
+
+			links
+			{
+				"SDL2"
+			}
+		end
 
 		links
 		{
 			"hashmap_c",
 			"cgltf",
 			"spirv_reflect",
-			"SDL2",
 			"stb"
 		}
+
+		filter { "system:macosx" }
+			links { "Cocoa.framework" }
+		filter { }
 
 		if (renderer_backend_vulkan) then
 			links
