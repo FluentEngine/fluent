@@ -199,6 +199,11 @@ project "ft_os"
 	}
 
 	if (use_sdl2) then
+		defines
+		{
+			"FT_WINDOW_SDL"
+		}
+		
 		sysincludedirs
 		{
 			sdl2_include_directory

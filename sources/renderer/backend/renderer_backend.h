@@ -427,14 +427,6 @@ struct ft_buffer_image_copy
 	uint32_t mip_level;
 };
 
-struct ft_upload_image_info
-{
-	const void* data;
-	uint32_t    width;
-	uint32_t    height;
-	uint32_t    mip_level;
-};
-
 FT_INLINE bool
 ft_format_has_depth_aspect( enum ft_format format )
 {
@@ -786,24 +778,5 @@ ft_update_descriptor_set( const struct ft_device*           device,
                           struct ft_descriptor_set*         set,
                           uint32_t                          count,
                           const struct ft_descriptor_write* writes );
-
-FT_API void
-ft_begin_upload_batch( void );
-
-FT_API void
-ft_end_upload_batch( void );
-
-FT_API void
-ft_upload_buffer( struct ft_buffer* buffer,
-                  uint64_t          offset,
-                  uint64_t          size,
-                  const void*       data );
-
-FT_API void
-ft_upload_image( struct ft_image*                   image,
-                 const struct ft_upload_image_info* info );
-
-FT_API void
-ft_generate_mipmaps( struct ft_image* image, enum ft_resource_state state );
 
 #include "renderer_misc.h"
