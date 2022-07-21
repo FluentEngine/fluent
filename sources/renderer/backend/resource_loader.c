@@ -19,6 +19,7 @@ struct ft_loader_job
 {
 	enum ft_loader_job_type type;
 	struct ft_loader_job*   next;
+	struct ft_buffer*       staging_buffer;
 	union
 	{
 		struct ft_buffer_upload_job    buffer_upload_job;
@@ -170,6 +171,20 @@ vk_generate_mipmaps( struct ft_command_buffer* icmd,
 }
 #endif
 
+FT_INLINE struct ft_buffer*
+create_staging_buffer( uint64_t size )
+{
+	struct ft_buffer* buffer;
+
+	struct ft_buffer_info info = {
+	    .memory_usage = FT_MEMORY_USAGE_CPU_TO_GPU,
+	    .size         = size,
+	};
+	ft_create_buffer( loader.device, &info, &buffer );
+
+	return buffer;
+}
+
 void
 resource_loader_init( const struct ft_device* device,
                       uint64_t                staging_buffer_size )
@@ -234,7 +249,7 @@ add_job( const struct ft_loader_job* job )
 	pthread_mutex_unlock( &loader.mutex );
 }
 
-FT_INLINE struct ft_buffer*
+FT_INLINE void
 complete_job( struct ft_command_buffer* cmd, const struct ft_loader_job* j )
 {
 	switch ( j->type )
@@ -243,40 +258,17 @@ complete_job( struct ft_command_buffer* cmd, const struct ft_loader_job* j )
 	{
 		const struct ft_buffer_upload_job* job = &j->buffer_upload_job;
 
-		struct ft_buffer_info info = {
-		    .memory_usage = FT_MEMORY_USAGE_CPU_TO_GPU,
-		    .size         = job->size,
-		};
-		struct ft_buffer* staging_buffer;
-		ft_create_buffer( loader.device, &info, &staging_buffer );
-		ft_map_memory( loader.device, staging_buffer );
-		memcpy( staging_buffer->mapped_memory, job->data, job->size );
-		ft_unmap_memory( loader.device, staging_buffer );
 		ft_cmd_copy_buffer( cmd,
-		                    staging_buffer,
+		                    j->staging_buffer,
 		                    0,
 		                    job->buffer,
 		                    job->offset,
 		                    job->size );
-
-		return staging_buffer;
+		break;
 	}
 	case FT_LOADER_JOB_TYPE_IMAGE_UPLOAD:
 	{
 		const struct ft_image_upload_job* job = &j->image_upload_job;
-
-		uint64_t upload_size = job->width * job->height *
-		                       ft_format_size_bytes( job->image->format );
-
-		struct ft_buffer_info info = {
-		    .memory_usage = FT_MEMORY_USAGE_CPU_TO_GPU,
-		    .size         = upload_size,
-		};
-		struct ft_buffer* staging_buffer;
-		ft_create_buffer( loader.device, &info, &staging_buffer );
-		ft_map_memory( loader.device, staging_buffer );
-		memcpy( staging_buffer->mapped_memory, job->data, upload_size );
-		ft_unmap_memory( loader.device, staging_buffer );
 
 		struct ft_image_barrier barrier;
 		memset( &barrier, 0, sizeof( struct ft_image_barrier ) );
@@ -292,13 +284,15 @@ complete_job( struct ft_command_buffer* cmd, const struct ft_loader_job* j )
 		    .mip_level     = job->mip_level,
 		};
 
-		ft_cmd_copy_buffer_to_image( cmd, staging_buffer, job->image, &copy );
+		ft_cmd_copy_buffer_to_image( cmd,
+		                             j->staging_buffer,
+		                             job->image,
+		                             &copy );
 
 		barrier.old_state = FT_RESOURCE_STATE_TRANSFER_DST;
 		barrier.new_state = FT_RESOURCE_STATE_SHADER_READ_ONLY;
 		ft_cmd_barrier( cmd, 0, NULL, 0, NULL, 1, &barrier );
-
-		return staging_buffer;
+		break;
 	}
 	case FT_LOADER_JOB_TYPE_GENERATE_MIPMAPS:
 	{
@@ -314,8 +308,7 @@ complete_job( struct ft_command_buffer* cmd, const struct ft_loader_job* j )
 			         ft_renderer_api_to_string( loader.device->api ) );
 			break;
 		}
-
-		return NULL;
+		break;
 	}
 	}
 }
@@ -336,34 +329,36 @@ loader_thread_fun()
 
 		FT_TRACE( "loader jobs count %d", loader.job_count );
 
-		struct ft_buffer** buffers =
-		    malloc( sizeof( struct ft_buffer* ) * loader.job_count );
-
 		ft_begin_command_buffer( loader.cmd );
 
-		uint32_t i = 0;
-		while ( loader.head )
+		struct ft_loader_job* job = loader.head;
+
+		while ( job )
 		{
-			struct ft_loader_job* job = loader.head;
+			complete_job( loader.cmd, job );
 
-			buffers[ i ] = complete_job( loader.cmd, job );
-
-			loader.head = loader.head->next;
-			free( job );
-			i++;
+			job = job->next;
 		}
 
 		ft_end_command_buffer( loader.cmd );
 		ft_immediate_submit( loader.queue, loader.cmd );
 
-		for ( uint32_t b = 0; b < loader.job_count; ++b )
+		job = loader.head;
+
+		while ( job )
 		{
-			if ( buffers[ b ] != NULL )
+			if ( job->staging_buffer )
 			{
-				ft_destroy_buffer( loader.device, buffers[ b ] );
+				ft_destroy_buffer( loader.device, job->staging_buffer );
 			}
+
+			struct ft_loader_job* tmp = job;
+			job                       = job->next;
+			free( tmp );
 		}
 
+		loader.head      = NULL;
+		loader.tail      = NULL;
 		loader.job_count = 0;
 
 		pthread_mutex_unlock( &loader.mutex );
@@ -377,9 +372,15 @@ ft_upload_buffer( const struct ft_buffer_upload_job* job )
 	FT_ASSERT( job->buffer );
 	FT_ASSERT( job->data );
 
+	struct ft_buffer* staging_buffer = create_staging_buffer( job->size );
+	ft_map_memory( loader.device, staging_buffer );
+	memcpy( staging_buffer->mapped_memory, job->data, job->size );
+	ft_unmap_memory( loader.device, staging_buffer );
+
 	add_job( &( struct ft_loader_job ) {
 	    .type              = FT_LOADER_JOB_TYPE_BUFFER_UPLOAD,
 	    .buffer_upload_job = *job,
+	    .staging_buffer    = staging_buffer,
 	} );
 }
 
@@ -390,9 +391,18 @@ ft_upload_image( const struct ft_image_upload_job* job )
 	FT_ASSERT( job->image );
 	FT_ASSERT( job->data );
 
+	uint64_t upload_size =
+	    job->width * job->height * ft_format_size_bytes( job->image->format );
+
+	struct ft_buffer* staging_buffer = create_staging_buffer( upload_size );
+	ft_map_memory( loader.device, staging_buffer );
+	memcpy( staging_buffer->mapped_memory, job->data, upload_size );
+	ft_unmap_memory( loader.device, staging_buffer );
+
 	add_job( &( struct ft_loader_job ) {
 	    .type             = FT_LOADER_JOB_TYPE_IMAGE_UPLOAD,
 	    .image_upload_job = *job,
+	    .staging_buffer   = staging_buffer,
 	} );
 }
 
