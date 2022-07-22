@@ -1,4 +1,4 @@
-#include <pthread.h>
+#include "os/thread/thread.h"
 #include "log/log.h"
 #include "renderer_enums_stringifier.h"
 #include "renderer_private.h"
@@ -37,8 +37,8 @@ struct ft_loader
 	uint32_t                  job_count;
 	struct ft_loader_job*     head;
 	struct ft_loader_job*     tail;
-	pthread_t                 thread;
-	pthread_mutex_t           mutex;
+	struct ft_thread          thread;
+	struct ft_mutex           mutex;
 	bool                      alive;
 };
 
@@ -186,8 +186,7 @@ create_staging_buffer( uint64_t size )
 }
 
 void
-resource_loader_init( const struct ft_device* device,
-                      uint64_t                staging_buffer_size )
+ft_resource_loader_init( const struct ft_device* device )
 {
 	memset( &loader, 0, sizeof( loader ) );
 
@@ -207,16 +206,15 @@ resource_loader_init( const struct ft_device* device,
 
 	loader.alive = true;
 
-	loader.mutex = ( pthread_mutex_t ) PTHREAD_MUTEX_INITIALIZER;
-	pthread_create( &loader.thread, NULL, loader_thread_fun, NULL );
+	ft_mutex_init( &loader.mutex );
+	ft_thread_create( &loader.thread, loader_thread_fun, NULL );
 }
 
 void
-resource_loader_shutdown()
+ft_resource_loader_shutdown()
 {
-	while ( loader.job_count != 0 ) {}
 	loader.alive = false;
-	pthread_join( loader.thread, NULL );
+	ft_thread_join( &loader.thread );
 	ft_destroy_command_buffers( loader.device,
 	                            loader.command_pool,
 	                            1,
@@ -231,7 +229,7 @@ add_job( const struct ft_loader_job* job )
 	struct ft_loader_job* tmp = malloc( sizeof( struct ft_loader_job ) );
 	memcpy( tmp, job, sizeof( struct ft_loader_job ) );
 
-	while ( pthread_mutex_trylock( &loader.mutex ) != 0 ) {}
+	while ( !ft_mutex_try_lock( &loader.mutex ) ) {}
 
 	if ( loader.head == NULL )
 	{
@@ -246,7 +244,7 @@ add_job( const struct ft_loader_job* job )
 
 	loader.job_count++;
 
-	pthread_mutex_unlock( &loader.mutex );
+	ft_mutex_unlock( &loader.mutex );
 }
 
 FT_INLINE void
@@ -325,7 +323,7 @@ loader_thread_fun()
 			continue;
 		}
 
-		while ( pthread_mutex_trylock( &loader.mutex ) != 0 ) {}
+		while ( !ft_mutex_try_lock( &loader.mutex ) ) {}
 
 		FT_TRACE( "loader jobs count %d", loader.job_count );
 
@@ -345,6 +343,12 @@ loader_thread_fun()
 
 		job = loader.head;
 
+		loader.head      = NULL;
+		loader.tail      = NULL;
+		loader.job_count = 0;
+
+		ft_mutex_unlock( &loader.mutex );
+
 		while ( job )
 		{
 			if ( job->staging_buffer )
@@ -356,12 +360,6 @@ loader_thread_fun()
 			job                       = job->next;
 			free( tmp );
 		}
-
-		loader.head      = NULL;
-		loader.tail      = NULL;
-		loader.job_count = 0;
-
-		pthread_mutex_unlock( &loader.mutex );
 	}
 }
 
@@ -416,7 +414,7 @@ ft_generate_mipmaps( const struct ft_generate_mipmaps_job* job )
 }
 
 void
-ft_loader_wait_idle()
+ft_resource_loader_wait_idle()
 {
 	while ( loader.job_count != 0 ) {}
 }

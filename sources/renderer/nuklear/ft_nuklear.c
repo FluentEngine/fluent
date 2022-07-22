@@ -262,7 +262,7 @@ nk_ft_device_upload_atlas( const void *image, int width, int height )
 	};
 
 	ft_upload_image( &job );
-	ft_loader_wait_idle();
+	ft_resource_loader_wait_idle();
 
 	struct ft_sampler_info sampler_info = {
 	    .mag_filter     = FT_FILTER_LINEAR,

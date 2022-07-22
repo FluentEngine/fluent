@@ -68,14 +68,6 @@ ft_cmd_draw_indexed_indirect_fun     ft_cmd_draw_indexed_indirect_impl;
 ft_cmd_begin_debug_marker_fun        ft_cmd_begin_debug_marker_impl;
 ft_cmd_end_debug_marker_fun          ft_cmd_end_debug_marker_impl;
 
-// defined in resource_loader.c
-void
-resource_loader_init( const struct ft_device* device,
-                      uint64_t                staging_buffer_size );
-
-void
-resource_loader_shutdown();
-
 void
 ft_create_renderer_backend( const struct ft_renderer_backend_info* info,
                             struct ft_renderer_backend**           p )
@@ -139,7 +131,6 @@ ft_create_device( const struct ft_renderer_backend* backend,
 	ft_create_device_impl( backend, info, p );
 	struct ft_device* device = *p;
 	device->api              = backend->api;
-	resource_loader_init( device, FT_RESOURCE_LOADER_STAGING_BUFFER_SIZE );
 }
 
 void
@@ -147,7 +138,6 @@ ft_destroy_device( struct ft_device* device )
 {
 	FT_ASSERT( device );
 
-	resource_loader_shutdown();
 	ft_destroy_device_impl( device );
 }
 

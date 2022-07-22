@@ -30,6 +30,12 @@ struct ft_generate_mipmaps_job
 };
 
 FT_API void
+ft_resource_loader_init( const struct ft_device* device );
+
+FT_API void
+ft_resource_loader_shutdown();
+
+FT_API void
 ft_upload_buffer( const struct ft_buffer_upload_job* );
 
 FT_API void
@@ -39,4 +45,4 @@ FT_API void
 ft_generate_mipmaps( const struct ft_generate_mipmaps_job* );
 
 FT_API void
-ft_loader_wait_idle( void );
+ft_resource_loader_wait_idle( void );

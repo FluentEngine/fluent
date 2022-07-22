@@ -220,6 +220,8 @@ project "ft_os"
 		"sources/os/input.h",
 		"sources/os/key_codes.h",
 		"sources/os/mouse_codes.h",
+		"sources/os/thread/thread.h",
+		"sources/os/thread/unix/thread.c",
 		"sources/os/time/unix/unix_timer.c",
 		"sources/os/time/timer.h",
 		"sources/os/window/window.c",
