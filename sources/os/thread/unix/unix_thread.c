@@ -1,24 +1,22 @@
-#if ( defined( __unix__ ) || defined( __unix ) ||                              \
-      ( defined( __APPLE__ ) && defined( __MACH__ ) ) )
-#include <pthread.h>
 #include "os/thread/thread.h"
+#if FT_PLATFORM_UNIX
+#include <pthread.h>
 
 FT_API void
 ft_thread_create( struct ft_thread* thread, ft_thread_fun fun, void* arg )
 {
 	FT_ASSERT( thread );
 
-	pthread_t* t = malloc( sizeof( pthread_t ) );
-	pthread_create( t, NULL, fun, arg );
-	thread->handle = t;
+	pthread_create( ( pthread_t* ) &thread->thread_id,
+	                NULL,
+	                ( void* ( * ) ( void* ) ) fun,
+	                arg );
 }
 
 FT_API void
 ft_thread_destroy( struct ft_thread* thread )
 {
 	FT_ASSERT( thread );
-
-	free( thread->handle );
 }
 
 FT_API void
@@ -26,8 +24,7 @@ ft_thread_join( struct ft_thread* thread )
 {
 	FT_ASSERT( thread );
 
-	pthread_t* t = thread->handle;
-	pthread_join( *t, NULL );
+	pthread_join( ( pthread_t ) thread->handle, NULL );
 }
 
 FT_API void

@@ -1,7 +1,6 @@
-#ifdef _WIN32
-
-#include <windows.h>
 #include "os/time/timer.h"
+#if FT_PLATFORM_WINDOWS
+#include <windows.h>
 
 struct
 {

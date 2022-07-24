@@ -1,7 +1,6 @@
-#if ( defined( __unix__ ) || defined( __unix ) ||                              \
-      ( defined( __APPLE__ ) && defined( __MACH__ ) ) )
-#include <time.h>
 #include "os/time/timer.h"
+#if FT_PLATFORM_UNIX
+#include <time.h>
 
 struct
 {

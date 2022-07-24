@@ -1,7 +1,7 @@
-#ifdef _WIN32
-
-#include <windows.h>
 #include "os/thread/thread.h"
+
+#if FT_PLATFORM_WINDOWS 
+#include <windows.h>
 
 FT_API void
 ft_thread_create( struct ft_thread* thread, ft_thread_fun fun, void* arg )

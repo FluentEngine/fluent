@@ -4,7 +4,8 @@
 
 struct ft_thread
 {
-	void* handle;
+	void*    handle;
+	uint64_t thread_id;
 };
 
 struct ft_mutex
