@@ -14,6 +14,13 @@
 
 typedef void* ft_handle;
 
+#define FT_PLATFORM_WINDOWS defined( _WIN32 )
+#define FT_PLATFORM_LINUX   ( defined( __linux ) || defined( __linux__ ) )
+#define FT_PLATFORM_MACOS   ( defined( __APPLE__ ) )
+#define FT_PLATFORM_UNIX                                                       \
+	( ( defined( __unix__ ) || defined( __unix ) ||                            \
+	    ( defined( __APPLE__ ) && defined( __MACH__ ) ) ) )
+
 #ifdef FLUENT_DEBUG
 #undef NDEBUG
 #endif
