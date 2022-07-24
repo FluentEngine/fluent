@@ -1,4 +1,4 @@
-#include <time.h>
+#include "os/time/timer.h"
 #include "os/thread/thread.h"
 #include "log/log.h"
 #include "renderer_enums_stringifier.h"
@@ -45,8 +45,8 @@ struct ft_loader
 
 static struct ft_loader loader;
 
-void*
-loader_thread_fun();
+uint32_t
+loader_thread_fun( void* arg );
 
 #ifdef VULKAN_BACKEND
 void
@@ -314,15 +314,16 @@ complete_job( struct ft_command_buffer* cmd, const struct ft_loader_job* j )
 	}
 }
 
-void*
-loader_thread_fun()
+uint32_t
+loader_thread_fun( void* arg )
 {
+	FT_UNUSED( arg );
+
 	while ( loader.alive )
 	{
 		if ( loader.job_count == 0 )
 		{
-			nanosleep( ( const struct timespec[] ) { { 0, 500000000L } },
-			           NULL );
+			ft_nanosleep( 500000000 );
 			continue;
 		}
 
@@ -365,7 +366,7 @@ loader_thread_fun()
 		}
 	}
 
-	return NULL;
+	return 0;
 }
 
 void

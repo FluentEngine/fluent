@@ -1,4 +1,5 @@
-// #ifdef __linux__
+#if ( defined( __unix__ ) || defined( __unix ) ||                              \
+      ( defined( __APPLE__ ) && defined( __MACH__ ) ) )
 #include <time.h>
 #include "os/time/timer.h"
 
@@ -30,4 +31,10 @@ ft_get_ticks()
 	                   CLOCKS_PER_SEC ) );
 }
 
-// #endif
+FT_API void
+ft_nanosleep( int64_t milliseconds )
+{
+	nanosleep( ( const struct timespec[] ) { { 0, milliseconds } }, NULL );
+}
+
+#endif

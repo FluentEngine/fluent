@@ -1,16 +1,15 @@
-#if defined( __linux__ ) || defined( __APPLE__ )
+#if ( defined( __unix__ ) || defined( __unix ) ||                              \
+      ( defined( __APPLE__ ) && defined( __MACH__ ) ) )
 #include <pthread.h>
 #include "os/thread/thread.h"
 
 FT_API void
-ft_thread_create( struct ft_thread* thread,
-                  void* ( *thread_fun )( void* ),
-                  void* arg )
+ft_thread_create( struct ft_thread* thread, ft_thread_fun fun, void* arg )
 {
 	FT_ASSERT( thread );
 
 	pthread_t* t = malloc( sizeof( pthread_t ) );
-	pthread_create( t, NULL, thread_fun, arg );
+	pthread_create( t, NULL, fun, arg );
 	thread->handle = t;
 }
 

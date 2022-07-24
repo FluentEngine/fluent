@@ -12,10 +12,10 @@ struct ft_mutex
 	void* handle;
 };
 
+typedef uint32_t ( *ft_thread_fun )( void* );
+
 FT_API void
-ft_thread_create( struct ft_thread* thread,
-                  void* ( *thread_fun )( void* ),
-                  void* arg );
+ft_thread_create( struct ft_thread* thread, ft_thread_fun fun, void* arg );
 
 FT_API void
 ft_thread_destroy( struct ft_thread* thread );

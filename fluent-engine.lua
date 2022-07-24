@@ -6,7 +6,7 @@ function toboolean(str)
 	return bool
 end
 
-local use_sdl2 = false
+local use_sdl2 = true
 if (use_sdl2) then
 	newoption
 	{
@@ -221,9 +221,11 @@ project "ft_os"
 		"sources/os/key_codes.h",
 		"sources/os/mouse_codes.h",
 		"sources/os/thread/thread.h",
-		"sources/os/thread/unix/thread.c",
-		"sources/os/time/unix/unix_timer.c",
+		"sources/os/thread/unix/unix_thread.c",
+		"sources/os/thread/windows/windows_thread.c",
 		"sources/os/time/timer.h",
+		"sources/os/time/unix/unix_timer.c",
+		"sources/os/time/windows/windows_timer.c",
 		"sources/os/window/window.c",
 		"sources/os/window/window.h",
 		"sources/os/window/sdl/sdl_window.c",
@@ -327,6 +329,18 @@ project "ft_renderer"
 		filter { "system:macosx" }
 			links { "Cocoa.framework" }
 		filter { }
+
+		filter { "system:windows" }
+			linkoptions
+			{
+				"imm32.lib",
+				"version.lib",
+				"setupapi.lib",
+				"winmm.lib",
+				"xinput.lib",
+				"ws2_32.lib",
+			}
+		filter {}
 
 		if (renderer_backend_vulkan) then
 			links
