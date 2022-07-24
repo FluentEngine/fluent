@@ -357,19 +357,26 @@ process_gltf_node( struct hashmap*    node_map,
 				mesh->index_count += accessor->count;
 				if ( accessor->component_type == cgltf_component_type_r_16u )
 				{
-					mesh->indices =
-					    realloc( mesh->indices,
+					mesh->indices_16 =
+					    realloc( mesh->indices_16,
 					             mesh->index_count * sizeof( uint16_t ) );
-					uint16_t* indices = mesh->indices;
 					for ( cgltf_size v = 0; v < accessor->count; ++v )
 					{
-						indices[ v ] = cgltf_accessor_read_index( accessor, v );
+						mesh->indices_16[ v ] =
+						    cgltf_accessor_read_index( accessor, v );
 					}
 				}
 				else if ( accessor->component_type ==
 				          cgltf_component_type_r_32u )
 				{
-					FT_WARN( "32 bit indices are not supported" );
+					mesh->indices_32 =
+					    realloc( mesh->indices_32,
+					             mesh->index_count * sizeof( uint32_t ) );
+					for ( cgltf_size v = 0; v < accessor->count; ++v )
+					{
+						mesh->indices_32[ v ] =
+						    cgltf_accessor_read_index( accessor, v );
+					}
 				}
 			}
 
@@ -394,7 +401,7 @@ process_gltf_node( struct hashmap*    node_map,
 					mesh->material.emissive_strength =
 					    material->emissive_strength.emissive_strength;
 				}
-				mesh->material.alpha_mode = material->alpha_mode;
+				mesh->material.alpha_mode   = material->alpha_mode;
 				mesh->material.alpha_cutoff = material->alpha_cutoff;
 
 				cgltf_texture* gltf_textures[ FT_TEXTURE_TYPE_COUNT ];
@@ -422,7 +429,7 @@ process_gltf_node( struct hashmap*    node_map,
 
 						FT_ASSERT( it );
 
-						mesh->material.textures[ t ] = it->index;
+						mesh->material.textures[ t ]       = it->index;
 						textures[ it->index ].texture_type = t;
 					}
 					else
@@ -469,8 +476,6 @@ read_animation_samplers( const cgltf_animation_sampler* src,
 	{
 		dst->times[ i ] = timeline_floats[ i ];
 	}
-
-	// TODO: sort times
 
 	const cgltf_accessor* values_accessor = src->output;
 
@@ -589,76 +594,99 @@ generate_tangents( struct ft_model* model )
 			continue;
 		}
 
+		mesh->tangents = malloc( mesh->vertex_count * 4 * sizeof( float ) );
+
 		if ( !mesh->texcoords )
 		{
 			FT_WARN( "mesh %d does not contain texture coordinates. cannot "
 			         "generate tangents",
 			         m );
-			continue;
-		}
 
-		mesh->tangents = malloc( mesh->vertex_count * 4 * sizeof( float ) );
-
-		for ( uint32_t i = 0; i < mesh->index_count; i += 3 )
-		{
-			uint16_t i0 = mesh->indices[ i ];
-			uint16_t i1 = mesh->indices[ i + 1 ];
-			uint16_t i2 = mesh->indices[ i + 2 ];
-
-			float* p0 = &mesh->positions[ i0 * 3 ];
-			float* p1 = &mesh->positions[ i1 * 3 ];
-			float* p2 = &mesh->positions[ i2 * 3 ];
-
-			float* uv0 = &mesh->texcoords[ i0 * 2 ];
-			float* uv1 = &mesh->texcoords[ i1 * 2 ];
-			float* uv2 = &mesh->texcoords[ i2 * 2 ];
-
-			float3 edge0 = {
-			    p1[ 0 ] - p0[ 0 ],
-			    p1[ 1 ] - p0[ 1 ],
-			    p1[ 2 ] - p0[ 2 ],
-			};
-
-			float3 edge1 = {
-			    p2[ 0 ] - p1[ 0 ],
-			    p2[ 1 ] - p1[ 1 ],
-			    p2[ 2 ] - p1[ 2 ],
-			};
-
-			float2 delta_uv0 = {
-			    uv1[ 0 ] - uv0[ 0 ],
-			    uv1[ 1 ] - uv0[ 1 ],
-			};
-
-			float2 delta_uv1 = {
-			    uv2[ 0 ] - uv1[ 0 ],
-			    uv2[ 1 ] - uv1[ 1 ],
-			};
-
-			float denominator = ( delta_uv0[ 0 ] * delta_uv1[ 1 ] -
-			                      delta_uv1[ 0 ] * delta_uv0[ 1 ] );
-			if ( denominator == 0 )
+			for ( uint32_t v = 0; v < mesh->vertex_count; ++v )
 			{
-				denominator = 0.0001;
+				float* tangent = mesh->tangents + v * 4;
+				tangent[ 0 ]   = 1;
+				tangent[ 1 ]   = 1;
+				tangent[ 2 ]   = 1;
+				tangent[ 3 ]   = 1;
 			}
+		}
+		else
+		{
+			for ( uint32_t i = 0; i < mesh->index_count; i += 3 )
+			{
+				uint32_t i0;
+				uint32_t i1;
+				uint32_t i2;
 
-			float f = 1.0f / denominator;
+				if ( mesh->indices_16 )
+				{
+					i0 = mesh->indices_16[ i ];
+					i1 = mesh->indices_16[ i + 1 ];
+					i2 = mesh->indices_16[ i + 2 ];
+				}
+				else
+				{
+					i0 = mesh->indices_32[ i ];
+					i1 = mesh->indices_32[ i + 1 ];
+					i2 = mesh->indices_32[ i + 2 ];
+				}
 
-			float4 tangent = {
-			    f * ( delta_uv1[ 1 ] * edge0[ 0 ] -
-			          delta_uv0[ 1 ] * edge1[ 0 ] ),
-			    f * ( delta_uv1[ 1 ] * edge0[ 1 ] -
-			          delta_uv0[ 1 ] * edge1[ 1 ] ),
-			    f * ( delta_uv1[ 1 ] * edge0[ 2 ] -
-			          delta_uv0[ 1 ] * edge1[ 2 ] ),
-			    1.0,
-			};
+				float* p0 = &mesh->positions[ i0 * 3 ];
+				float* p1 = &mesh->positions[ i1 * 3 ];
+				float* p2 = &mesh->positions[ i2 * 3 ];
 
-			float4_norm( tangent, tangent );
+				float* uv0 = &mesh->texcoords[ i0 * 2 ];
+				float* uv1 = &mesh->texcoords[ i1 * 2 ];
+				float* uv2 = &mesh->texcoords[ i2 * 2 ];
 
-			float4_dup( &mesh->tangents[ i0 * 4 ], tangent );
-			float4_dup( &mesh->tangents[ i1 * 4 ], tangent );
-			float4_dup( &mesh->tangents[ i2 * 4 ], tangent );
+				float3 edge0 = {
+				    p1[ 0 ] - p0[ 0 ],
+				    p1[ 1 ] - p0[ 1 ],
+				    p1[ 2 ] - p0[ 2 ],
+				};
+
+				float3 edge1 = {
+				    p2[ 0 ] - p1[ 0 ],
+				    p2[ 1 ] - p1[ 1 ],
+				    p2[ 2 ] - p1[ 2 ],
+				};
+
+				float2 delta_uv0 = {
+				    uv1[ 0 ] - uv0[ 0 ],
+				    uv1[ 1 ] - uv0[ 1 ],
+				};
+
+				float2 delta_uv1 = {
+				    uv2[ 0 ] - uv1[ 0 ],
+				    uv2[ 1 ] - uv1[ 1 ],
+				};
+
+				float denominator = ( delta_uv0[ 0 ] * delta_uv1[ 1 ] -
+				                      delta_uv1[ 0 ] * delta_uv0[ 1 ] );
+				if ( denominator == 0 )
+				{
+					denominator = 0.0001;
+				}
+
+				float f = 1.0f / denominator;
+
+				float4 tangent = {
+				    f * ( delta_uv1[ 1 ] * edge0[ 0 ] -
+				          delta_uv0[ 1 ] * edge1[ 0 ] ),
+				    f * ( delta_uv1[ 1 ] * edge0[ 1 ] -
+				          delta_uv0[ 1 ] * edge1[ 1 ] ),
+				    f * ( delta_uv1[ 1 ] * edge0[ 2 ] -
+				          delta_uv0[ 1 ] * edge1[ 2 ] ),
+				    1.0,
+				};
+
+				float4_norm( tangent, tangent );
+
+				float4_dup( &mesh->tangents[ i0 * 4 ], tangent );
+				float4_dup( &mesh->tangents[ i1 * 4 ], tangent );
+				float4_dup( &mesh->tangents[ i2 * 4 ], tangent );
+			}
 		}
 	}
 }
@@ -765,8 +793,13 @@ ft_load_gltf( const char* filename, enum ft_model_flags load_flags )
 			}
 
 			model.animation_count = data->animations_count;
-			model.animations =
-			    calloc( model.animation_count, sizeof( struct ft_animation ) );
+			model.animations = NULL;
+
+			if ( model.animation_count > 0 )
+			{
+				model.animations = calloc( model.animation_count,
+				                           sizeof( struct ft_animation ) );
+			}
 
 			for ( cgltf_size a = 0; a < model.animation_count; ++a )
 			{
@@ -831,7 +864,8 @@ free_mesh( struct ft_mesh* mesh )
 	ft_safe_free( mesh->normals );
 	ft_safe_free( mesh->tangents );
 	ft_safe_free( mesh->joints );
-	ft_safe_free( mesh->indices );
+	ft_safe_free( mesh->indices_16 );
+	ft_safe_free( mesh->indices_32 );
 }
 
 FT_INLINE void

@@ -83,7 +83,8 @@ struct ft_mesh
 	float             *joints;
 	float             *weights;
 	uint32_t           index_count;
-	uint16_t          *indices;
+	uint16_t          *indices_16;
+	uint32_t          *indices_32;
 	float4x4           world;
 	struct ft_material material;
 };
