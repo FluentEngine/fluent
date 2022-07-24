@@ -19,11 +19,11 @@ ft_window_create_vulkan_surface_fun ft_window_create_vulkan_surface_impl;
 struct ft_window*
 ft_create_window( const struct ft_window_info* info )
 {
-#ifdef __APPLE__
-	return cocoa_create_window( info );
-#endif
 #ifdef FT_WINDOW_SDL
 	return sdl_create_window( info );
+#endif
+#ifdef __APPLE__
+	return cocoa_create_window( info );
 #endif
 	return NULL;
 }

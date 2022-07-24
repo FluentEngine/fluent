@@ -19,8 +19,8 @@ compare_name_to_index( const void* a, const void* b, void* udata )
 	return strcmp( na->name, nb->name );
 }
 
-static size_t
-hash_name_to_index( const void* item, size_t seed0, size_t seed1 )
+static uint64_t
+hash_name_to_index( const void* item, uint64_t seed0, uint64_t seed1 )
 {
 	FT_UNUSED( item );
 	FT_UNUSED( seed0 );

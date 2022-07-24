@@ -368,9 +368,9 @@ vk_create_device( const struct ft_renderer_backend* ibackend,
 	memset( device_extensions, 0, sizeof( device_extensions ) );
 
 	uint32_t device_extension_count = 0;
-	for ( uint32_t s = 0; s < supported_device_extension_count; ++s )
+	for ( uint32_t w = 0; w < FT_ARRAY_SIZE( wanted_extensions ); ++w )
 	{
-		for ( uint32_t w = 0; w < FT_ARRAY_SIZE( wanted_extensions ); ++w )
+		for ( uint32_t s = 0; s < supported_device_extension_count; ++s )
 		{
 			if ( strcmp( supported_device_extensions[ s ].extensionName,
 			             wanted_extensions[ w ] ) == 0 )
@@ -379,6 +379,11 @@ vk_create_device( const struct ft_renderer_backend* ibackend,
 				    wanted_extensions[ w ];
 			}
 		}
+	}
+
+	if ( device_extensions[ 3 ] != device_extensions[ 4 ] )
+	{
+		device_extension_count--;
 	}
 
 	// TODO: check support

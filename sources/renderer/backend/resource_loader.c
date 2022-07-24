@@ -1,3 +1,4 @@
+#include <time.h>
 #include "os/thread/thread.h"
 #include "log/log.h"
 #include "renderer_enums_stringifier.h"
@@ -206,7 +207,7 @@ ft_resource_loader_init( const struct ft_device* device )
 
 	loader.alive = true;
 
-	ft_mutex_init( &loader.mutex );
+	ft_mutex_create( &loader.mutex );
 	ft_thread_create( &loader.thread, loader_thread_fun, NULL );
 }
 
@@ -215,6 +216,8 @@ ft_resource_loader_shutdown()
 {
 	loader.alive = false;
 	ft_thread_join( &loader.thread );
+	ft_thread_destroy( &loader.thread );
+	ft_mutex_destroy( &loader.mutex );
 	ft_destroy_command_buffers( loader.device,
 	                            loader.command_pool,
 	                            1,
@@ -361,6 +364,8 @@ loader_thread_fun()
 			free( tmp );
 		}
 	}
+
+	return NULL;
 }
 
 void
