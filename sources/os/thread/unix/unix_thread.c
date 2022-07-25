@@ -24,7 +24,7 @@ ft_thread_join( struct ft_thread* thread )
 {
 	FT_ASSERT( thread );
 
-	pthread_join( ( pthread_t ) thread->handle, NULL );
+	pthread_join( ( pthread_t ) thread->thread_id, NULL );
 }
 
 FT_API void
