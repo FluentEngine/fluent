@@ -8,7 +8,7 @@
 #include "vulkan_pass_hasher.h"
 #include "vulkan_backend.h"
 
-#ifdef FLUENT_DEBUG
+#if FT_DEBUG
 static VKAPI_ATTR VkBool32 VKAPI_CALL
 vulkan_debug_callback(
     VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
@@ -124,20 +124,21 @@ get_instance_extensions( const struct ft_renderer_backend_info* info,
 			}
 		}
 #endif
-#ifdef FLUENT_DEBUG
-		if ( strcmp( VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-		             extension_properties[ i ].extensionName ) == 0 )
+		if ( FT_DEBUG )
 		{
-			if ( names )
+			if ( strcmp( VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+			             extension_properties[ i ].extensionName ) == 0 )
 			{
-				names[ e++ ] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
-			}
-			else
-			{
-				( *count )++;
+				if ( names )
+				{
+					names[ e++ ] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+				}
+				else
+				{
+					( *count )++;
+				}
 			}
 		}
-#endif
 	}
 }
 
@@ -147,13 +148,15 @@ get_instance_layers( uint32_t* count, const char** names )
 	FT_UNUSED( names );
 
 	*count = 0;
-#ifdef FLUENT_DEBUG
-	( *count )++;
-	if ( names )
+
+	if ( FT_DEBUG )
 	{
-		names[ 0 ] = "VK_LAYER_KHRONOS_validation";
+		( *count )++;
+		if ( names )
+		{
+			names[ 0 ] = "VK_LAYER_KHRONOS_validation";
+		}
 	}
-#endif
 }
 
 FT_INLINE void
@@ -161,8 +164,7 @@ set_object_debug_name( const struct vk_device* device,
                        const char*             name,
                        uint64_t                object )
 {
-#ifdef FLUENT_DEBUG
-	if ( vkDebugMarkerSetObjectNameEXT )
+	if ( FT_DEBUG && vkDebugMarkerSetObjectNameEXT )
 	{
 		VkDebugMarkerObjectNameInfoEXT info = {
 		    .sType       = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
@@ -172,7 +174,6 @@ set_object_debug_name( const struct vk_device* device,
 		};
 		vkDebugMarkerSetObjectNameEXT( device->logical_device, &info );
 	}
-#endif
 }
 
 FT_INLINE uint32_t
@@ -264,11 +265,12 @@ vk_destroy_renderer_backend( struct ft_renderer_backend* ibackend )
 {
 	FT_FROM_HANDLE( backend, ibackend, vk_renderer_backend );
 
-#ifdef FLUENT_DEBUG
-	vkDestroyDebugUtilsMessengerEXT( backend->instance,
-	                                 backend->debug_messenger,
-	                                 backend->vulkan_allocator );
-#endif
+	if ( FT_DEBUG )
+	{
+		vkDestroyDebugUtilsMessengerEXT( backend->instance,
+		                                 backend->debug_messenger,
+		                                 backend->vulkan_allocator );
+	}
 	vkDestroyInstance( backend->instance, backend->vulkan_allocator );
 	free( backend );
 }
@@ -344,12 +346,12 @@ vk_create_device( const struct ft_renderer_backend* ibackend,
 	}
 
 	const char* wanted_extensions[] = {
-	    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-	    VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-	    "VK_KHR_portability_subset",
-#ifdef FLUENT_DEBUG
-	    VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
-	    VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+		VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+		"VK_KHR_portability_subset",
+#if FT_DEBUG
+		VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
+		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
 #endif
 	};
 
@@ -2862,9 +2864,10 @@ vk_create_renderer_backend( const struct ft_renderer_backend_info* info,
 
 	volkLoadInstance( backend->instance );
 
-#ifdef FLUENT_DEBUG
-	create_debug_messenger( backend );
-#endif
+	if ( FT_DEBUG )
+	{
+		create_debug_messenger( backend );
+	}
 
 	// pick physical device
 	backend->physical_device = VK_NULL_HANDLE;

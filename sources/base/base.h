@@ -14,18 +14,44 @@
 
 typedef void* ft_handle;
 
-#define FT_PLATFORM_WINDOWS defined( _WIN32 )
-#define FT_PLATFORM_LINUX   ( defined( __linux ) || defined( __linux__ ) )
-#define FT_PLATFORM_MACOS   ( defined( __APPLE__ ) )
-#define FT_PLATFORM_UNIX                                                       \
-	( ( defined( __unix__ ) || defined( __unix ) ||                            \
-	    ( defined( __APPLE__ ) && defined( __MACH__ ) ) ) )
+#if defined( _WIN32 )
+#define FT_PLATFORM_WINDOWS 1
+#else
+#define FT_PLATFORM_WINDOWS 0
+#endif
 
-#ifdef FLUENT_DEBUG
+#if defined( __linux ) || defined( __linux__ )
+#define FT_PLATFORM_LINUX 1
+#else
+#define FT_PLATFORM_LINUX 0
+#endif
+
+#if defined( __APPLE__ ) && defined( __MACH__ )
+#define FT_PLATFORM_APPLE 1
+#include <TargetConditionals.h>
+#if TARGET_OS_MAC
+#define FT_PLATFORM_MAC 1
+#elif TARGET_OS_IPHONE
+#define FT_PLATFORM_IPHONE 1
+#endif
+#else
+#define FT_PLATFORM_APPLE  0
+#define FT_PLATFORM_MAC    0
+#define FT_PLATFORM_IPHONE 0
+#endif
+
+#if ( defined( __unix__ ) || defined( __unix ) ||                              \
+      ( defined( __APPLE__ ) && defined( __MACH__ ) ) )
+#define FT_PLATFORM_UNIX 1
+#else
+#define FT_PLATFORM_UNIX 0
+#endif
+
+#if FT_DEBUG
 #undef NDEBUG
 #endif
 
-#ifdef FLUENT_DEBUG
+#if FT_DEBUG
 #define FT_ASSERT( x ) assert( x )
 #else
 #define FT_ASSERT( x ) ( void ) ( x )

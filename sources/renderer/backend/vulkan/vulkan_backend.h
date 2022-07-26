@@ -5,7 +5,7 @@
 #include <vk_mem_alloc/vk_mem_alloc.h>
 #include "../renderer_backend.h"
 
-#ifdef FLUENT_DEBUG
+#if FT_DEBUG
 #define VK_ASSERT( x )                                                         \
 	do {                                                                       \
 		VkResult err = x;                                                      \

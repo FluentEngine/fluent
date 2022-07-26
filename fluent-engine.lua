@@ -51,10 +51,12 @@ newoption
 local commons = {}
 commons.opts = function()
 	filter { "configurations:debug" }
-		defines( "FLUENT_DEBUG" )
+		defines( "FT_DEBUG=1" )
 		symbols "On"
 		optimize "Off"
 	filter { "configurations:release" }
+		defines( "FT_DEBUG=0" )
+		symbols "Off"
 		optimize "Speed"
 	filter {}
 
@@ -201,12 +203,17 @@ project "ft_os"
 	if (use_sdl2) then
 		defines
 		{
-			"FT_WINDOW_SDL"
+			"FT_WINDOW_SDL=1"
 		}
 		
 		sysincludedirs
 		{
 			sdl2_include_directory
+		}
+	else
+		defines
+		{
+			"FT_WINDOW_SDL=0"
 		}
 	end
 
