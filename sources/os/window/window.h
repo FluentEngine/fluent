@@ -92,9 +92,10 @@ ft_window_get_vulkan_instance_extensions( const struct ft_window* window,
                                           const char**            names );
 
 FT_API void
-ft_window_create_vulkan_surface( const struct ft_window* window,
-                                 VkInstance              instance,
-                                 VkSurfaceKHR*           surface );
+ft_window_create_vulkan_surface( const struct ft_window*             window,
+                                 VkInstance                          instance,
+                                 const struct VkAllocationCallbacks* allocator,
+                                 VkSurfaceKHR*                       surface );
 
 FT_API FT_INLINE uint32_t
 ft_window_get_framebuffer_width( const struct ft_window* window )

@@ -80,20 +80,20 @@ get_instance_extensions( const struct ft_renderer_backend_info* info,
 
 	struct ft_wsi_info* wsi = info->wsi_info;
 
-	if ( names == NULL )
-	{
-		wsi->get_vulkan_instance_extensions( wsi->window, count, NULL );
-	}
+	uint32_t wsi_extension_count = 0;
+	wsi->get_vulkan_instance_extensions( wsi->window,
+	                                     &wsi_extension_count,
+	                                     NULL );
 
-	uint32_t e = *count;
-
-	if ( ( *count ) == 0 )
+	if ( names != NULL )
 	{
-		FT_WARN( "wsi return 0 extensions, presentation not supported" );
+		wsi->get_vulkan_instance_extensions( wsi->window,
+		                                     &wsi_extension_count,
+		                                     names );
 	}
 	else
 	{
-		wsi->get_vulkan_instance_extensions( wsi->window, &e, names );
+		*count = wsi_extension_count;
 	}
 
 	uint32_t extension_count = 0;
@@ -104,6 +104,8 @@ get_instance_extensions( const struct ft_renderer_backend_info* info,
 	vkEnumerateInstanceExtensionProperties( NULL,
 	                                        &extension_count,
 	                                        extension_properties );
+
+	uint32_t e = wsi_extension_count;
 
 	for ( uint32_t i = 0; i < extension_count; ++i )
 	{
@@ -780,6 +782,7 @@ vk_configure_swapchain( const struct vk_device*         device,
 
 	wsi->create_vulkan_surface( wsi->window,
 	                            device->instance,
+	                            NULL,
 	                            &swapchain->surface );
 
 	VkBool32 support_surface = 0;

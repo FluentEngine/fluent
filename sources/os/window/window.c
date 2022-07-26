@@ -1,4 +1,5 @@
 #include "os/window/sdl/sdl_window.h"
+#include "os/window/xlib/xlib_window.h"
 #include "os/window/cocoa/cocoa_window.h"
 #include "window_private.h"
 #include "window.h"
@@ -21,6 +22,9 @@ ft_create_window( const struct ft_window_info* info )
 {
 #ifdef FT_WINDOW_SDL
 	return sdl_create_window( info );
+#endif
+#ifdef FT_PLATFORM_LINUX
+	return xlib_create_window( info );
 #endif
 #ifdef __APPLE__
 	return cocoa_create_window( info );
@@ -90,9 +94,13 @@ ft_window_get_vulkan_instance_extensions( const struct ft_window* window,
 }
 
 void
-ft_window_create_vulkan_surface( const struct ft_window* window,
-                                 VkInstance              instance,
-                                 VkSurfaceKHR*           surface )
+ft_window_create_vulkan_surface( const struct ft_window*             window,
+                                 VkInstance                          instance,
+                                 const struct VkAllocationCallbacks* allocator,
+                                 VkSurfaceKHR*                       surface )
 {
-	ft_window_create_vulkan_surface_impl( window, instance, surface );
+	ft_window_create_vulkan_surface_impl( window,
+	                                      instance,
+	                                      allocator,
+	                                      surface );
 }

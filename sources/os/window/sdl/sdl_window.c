@@ -58,10 +58,12 @@ sdl_window_get_vulkan_instance_extensions( const struct ft_window* window,
 }
 
 static void
-sdl_window_create_vulkan_surface( const struct ft_window* window,
-                                  VkInstance              instance,
-                                  VkSurfaceKHR*           surface )
+sdl_window_create_vulkan_surface( const struct ft_window*             window,
+                                  VkInstance                          instance,
+                                  const struct VkAllocationCallbacks* allocator,
+                                  VkSurfaceKHR*                       surface )
 {
+	FT_UNUSED( allocator );
 	SDL_Vulkan_CreateSurface( ( SDL_Window* ) window, instance, surface );
 }
 

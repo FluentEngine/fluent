@@ -60,7 +60,7 @@ ft_is_key_pressed( enum ft_key_code key )
 	uint32_t       count;
 	const uint8_t* kb = ft_get_keyboard_state( &count );
 	FT_ASSERT( key < count );
-	return kb[ key ];
+	return kb[ key ] > 0;
 }
 
 bool

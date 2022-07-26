@@ -229,6 +229,8 @@ project "ft_os"
 		"sources/os/window/window.c",
 		"sources/os/window/window.h",
 		"sources/os/window/sdl/sdl_window.c",
+		"sources/os/window/xlib/xlib_window.h",
+		"sources/os/window/xlib/xlib_window.c",
 		"sources/fs/fs.c",
 		"sources/fs/fs.h"
 	}
@@ -325,7 +327,9 @@ project "ft_renderer"
 			"spirv_reflect",
 			"stb"
 		}
-
+		
+		filter { "system:linux" }
+			links { "X11" }
 		filter { "system:macosx" }
 			links { "Cocoa.framework" }
 		filter { }

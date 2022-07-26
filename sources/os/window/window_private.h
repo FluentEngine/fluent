@@ -40,4 +40,5 @@ FT_DECLARE_FUNCTION_POINTER( void,
                              ft_window_create_vulkan_surface,
                              const struct ft_window*,
                              VkInstance,
+                             const struct VkAllocationCallbacks*,
                              VkSurfaceKHR* );

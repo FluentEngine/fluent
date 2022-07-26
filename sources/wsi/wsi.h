@@ -4,6 +4,8 @@
 
 struct ft_window;
 
+struct VkAllocationCallbacks;
+
 struct ft_wsi_info
 {
 	const struct ft_window* window;
@@ -22,5 +24,6 @@ struct ft_wsi_info
 
 	void ( *create_vulkan_surface )( const struct ft_window* window,
 	                                 VkInstance              instance,
-	                                 VkSurfaceKHR*           surface );
+	                                 const struct VkAllocationCallbacks*,
+	                                 VkSurfaceKHR* surface );
 };

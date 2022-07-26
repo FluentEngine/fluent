@@ -12,6 +12,10 @@ project "volk"
 		vulkan_include_directory
     }
     
+    filter { "system:linux" }
+    	defines { "VK_USE_PLATFORM_XLIB_KHR" }
+    filter {} 
+
     files 
     {
         "volk.h",
