@@ -3,42 +3,6 @@
 #include "base/base.h"
 #include "renderer/backend/renderer_enums.h"
 
-enum ft_event_type
-{
-	FT_EVENT_TYPE_QUIT,
-	FT_EVENT_TYPE_WINDOW,
-	FT_EVENT_TYPE_MOUSEWHEEL,
-};
-
-enum ft_window_event_type
-{
-	FT_WINDOW_EVENT_TYPE_RESIZE,
-};
-
-struct ft_window_event
-{
-	enum ft_window_event_type type;
-};
-
-enum ft_mouse_wheel_direction
-{
-	FT_MOUSE_WHEEL_DIRECTION_NORMAL,
-	FT_MOUSE_WHEEL_DIRECTION_FLIPPED,
-};
-
-struct ft_mouse_wheel_event
-{
-	enum ft_mouse_wheel_direction direction;
-	uint32_t                      y;
-};
-
-struct ft_event
-{
-	enum ft_event_type          type;
-	struct ft_window_event      window;
-	struct ft_mouse_wheel_event wheel;
-};
-
 struct ft_window_info
 {
 	const char*          title;
@@ -72,19 +36,10 @@ ft_window_get_framebuffer_size( const struct ft_window* window,
                                 uint32_t*               height );
 
 FT_API void
-ft_window_show_cursor( bool show );
+ft_window_show_cursor( struct ft_window*, bool show );
 
-FT_API int
-ft_window_poll_event( struct ft_event* event );
-
-FT_API void
-ft_get_mouse_offset( int32_t* x, int32_t* y );
-
-FT_API const uint8_t*
-ft_get_keyboard_state( uint32_t* key_count );
-
-FT_API uint32_t
-ft_get_mouse_state( int32_t* x, int32_t* y );
+FT_API bool
+ft_window_should_close( const struct ft_window* );
 
 FT_API void
 ft_window_get_vulkan_instance_extensions( const struct ft_window* window,
@@ -96,6 +51,15 @@ ft_window_create_vulkan_surface( const struct ft_window*             window,
                                  VkInstance                          instance,
                                  const struct VkAllocationCallbacks* allocator,
                                  VkSurfaceKHR*                       surface );
+
+FT_API void
+ft_poll_events();
+
+FT_API const uint8_t*
+             ft_get_keyboard_state( uint32_t* key_count );
+
+FT_API uint32_t
+ft_get_mouse_state( int32_t* x, int32_t* y );
 
 FT_API FT_INLINE uint32_t
 ft_window_get_framebuffer_width( const struct ft_window* window )

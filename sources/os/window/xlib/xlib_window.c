@@ -35,7 +35,7 @@ static const char* xlib_vulkan_extension_names[] = {
 };
 
 FT_INLINE enum ft_key_code
-ft_keycode_from_xlib_keysym( KeySym keysym )
+ft_keycode_from_xlib( KeySym keysym )
 {
 	switch ( keysym )
 	{
@@ -329,13 +329,6 @@ xlib_window_poll_event( struct ft_event* event )
 	return r;
 }
 
-static void
-xlib_get_mouse_offset( int32_t* x, int32_t* y )
-{
-	*x = 0;
-	*y = 0;
-}
-
 static const uint8_t*
 xlib_get_keyboard_state( uint32_t* key_count )
 {
@@ -359,7 +352,6 @@ xlib_create_window( const struct ft_window_info* info )
 	ft_destroy_window_impl              = xlib_destroy_window;
 	ft_window_show_cursor_impl          = xlib_window_show_cursor;
 	ft_window_poll_event_impl           = xlib_window_poll_event;
-	ft_get_mouse_offset_impl            = xlib_get_mouse_offset;
 	ft_get_keyboard_state_impl          = xlib_get_keyboard_state;
 	ft_get_mouse_state_impl             = xlib_get_mouse_state;
 	ft_window_get_vulkan_instance_extensions_impl =

@@ -20,15 +20,14 @@ FT_DECLARE_FUNCTION_POINTER( void,
                              uint32_t*,
                              uint32_t* );
 
-FT_DECLARE_FUNCTION_POINTER( void, ft_window_show_cursor, bool );
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_window_show_cursor,
+                             struct ft_window*,
+                             bool );
 
-FT_DECLARE_FUNCTION_POINTER( int, ft_window_poll_event, struct ft_event* );
-
-FT_DECLARE_FUNCTION_POINTER( void, ft_get_mouse_offset, int32_t*, int32_t* );
-
-FT_DECLARE_FUNCTION_POINTER( const uint8_t*, ft_get_keyboard_state, uint32_t* );
-
-FT_DECLARE_FUNCTION_POINTER( uint32_t, ft_get_mouse_state, int32_t*, int32_t* );
+FT_DECLARE_FUNCTION_POINTER( bool,
+                             ft_window_should_close,
+                             const struct ft_window* );
 
 FT_DECLARE_FUNCTION_POINTER( void,
                              ft_window_get_vulkan_instance_extensions,
@@ -42,3 +41,9 @@ FT_DECLARE_FUNCTION_POINTER( void,
                              VkInstance,
                              const struct VkAllocationCallbacks*,
                              VkSurfaceKHR* );
+
+FT_DECLARE_FUNCTION_POINTER( void, ft_poll_events );
+
+FT_DECLARE_FUNCTION_POINTER( const uint8_t*, ft_get_keyboard_state, uint32_t* );
+
+FT_DECLARE_FUNCTION_POINTER( uint32_t, ft_get_mouse_state, int32_t*, int32_t* );

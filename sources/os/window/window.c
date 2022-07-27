@@ -1,7 +1,7 @@
 #include "log/log.h"
-#include "os/window/sdl/sdl_window.h"
 #include "os/window/xlib/xlib_window.h"
 #include "os/window/cocoa/cocoa_window.h"
+#include "os/window/winapi/winapi_window.h"
 #include "window_private.h"
 #include "window.h"
 
@@ -9,26 +9,25 @@ ft_destroy_window_fun              ft_destroy_window_impl;
 ft_window_get_size_fun             ft_window_get_size_impl;
 ft_window_get_framebuffer_size_fun ft_window_get_framebuffer_size_impl;
 ft_window_show_cursor_fun          ft_window_show_cursor_impl;
-ft_window_poll_event_fun           ft_window_poll_event_impl;
-ft_get_mouse_offset_fun            ft_get_mouse_offset_impl;
-ft_get_keyboard_state_fun          ft_get_keyboard_state_impl;
-ft_get_mouse_state_fun             ft_get_mouse_state_impl;
-
+ft_window_should_close_fun         ft_window_should_close_impl;
 ft_window_get_vulkan_instance_extensions_fun
     ft_window_get_vulkan_instance_extensions_impl;
 ft_window_create_vulkan_surface_fun ft_window_create_vulkan_surface_impl;
+ft_poll_events_fun                  ft_poll_events_impl;
+ft_get_keyboard_state_fun           ft_get_keyboard_state_impl;
+ft_get_mouse_state_fun              ft_get_mouse_state_impl;
 
 struct ft_window*
 ft_create_window( const struct ft_window_info* info )
 {
-#if FT_WINDOW_SDL && 0
-	return sdl_create_window( info );
-#endif
 #if FT_PLATFORM_LINUX
 	return xlib_create_window( info );
 #endif
 #if FT_PLATFORM_APPLE
 	return cocoa_create_window( info );
+#endif
+#if FT_PLATFORM_WINDOWS
+	return winapi_create_window( info );
 #endif
 	FT_WARN( "not supported platform" );
 	return NULL;
@@ -49,7 +48,7 @@ ft_window_get_size( const struct ft_window* window,
 	ft_window_get_size_impl( window, width, height );
 }
 
-void
+ void
 ft_window_get_framebuffer_size( const struct ft_window* window,
                                 uint32_t*               width,
                                 uint32_t*               height )
@@ -58,33 +57,15 @@ ft_window_get_framebuffer_size( const struct ft_window* window,
 }
 
 void
-ft_window_show_cursor( bool show )
+ft_window_show_cursor( struct ft_window* window, bool show )
 {
-	ft_window_show_cursor_impl( show );
+	ft_window_show_cursor_impl( window, show );
 }
 
-int
-ft_window_poll_event( struct ft_event* event )
+bool
+ft_window_should_close( const struct ft_window* window )
 {
-	return ft_window_poll_event_impl( event );
-}
-
-void
-ft_get_mouse_offset( int32_t* x, int32_t* y )
-{
-	ft_get_mouse_offset_impl( x, y );
-}
-
-const uint8_t*
-ft_get_keyboard_state( uint32_t* key_count )
-{
-	return ft_get_keyboard_state_impl( key_count );
-}
-
-uint32_t
-ft_get_mouse_state( int32_t* x, int32_t* y )
-{
-	return ft_get_mouse_state_impl( x, y );
+	ft_window_should_close_impl( window );
 }
 
 void
@@ -105,4 +86,22 @@ ft_window_create_vulkan_surface( const struct ft_window*             window,
 	                                      instance,
 	                                      allocator,
 	                                      surface );
+}
+
+void
+ft_poll_events()
+{
+	ft_poll_events_impl();
+}
+
+const uint8_t*
+ft_get_keyboard_state( uint32_t* key_count )
+{
+	return ft_get_keyboard_state_impl( key_count );
+}
+
+uint32_t
+ft_get_mouse_state( int32_t* x, int32_t* y )
+{
+	return ft_get_mouse_state_impl( x, y );
 }

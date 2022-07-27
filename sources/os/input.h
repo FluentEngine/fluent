@@ -14,6 +14,9 @@ ft_get_mouse_pos_y( void );
 FT_API void
 ft_get_mouse_position( int32_t* x, int32_t* y );
 
+FT_API void
+ft_get_mouse_offset( int32_t* x, int32_t* y );
+
 FT_API int32_t
 ft_get_mouse_offset_x( void );
 

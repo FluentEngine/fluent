@@ -6,6 +6,7 @@
 struct ft_input_state
 {
 	int32_t wheel;
+	int32_t old_mouse_position[ 2 ];
 };
 
 static struct ft_input_state input_state;
@@ -14,6 +15,8 @@ void
 ft_input_update( int32_t wheel )
 {
 	input_state.wheel = wheel;
+	ft_get_mouse_position( &input_state.old_mouse_position[ 0 ],
+	                       &input_state.old_mouse_position[ 1 ] );
 }
 
 int32_t
@@ -36,6 +39,14 @@ void
 ft_get_mouse_position( int32_t* x, int32_t* y )
 {
 	ft_get_mouse_state( x, y );
+}
+
+void
+ft_get_mouse_offset( int32_t* x, int32_t* y )
+{
+	ft_get_mouse_position( x, y );
+	*x = ( *x - input_state.old_mouse_position[ 0 ] );
+	*y = ( *y - input_state.old_mouse_position[ 1 ] );
 }
 
 int32_t

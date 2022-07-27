@@ -6,21 +6,6 @@ function toboolean(str)
 	return bool
 end
 
-local use_sdl2 = true
-if (use_sdl2) then
-	newoption
-	{
-	trigger			= "sdl2_include_directory",
-	description		= "SDL2 include directory"
-	}
-
-	newoption
-	{
-		trigger			= "sdl2_library_directory",
-		description		= "SDL2 library directory"
-	}
-end
-
 newoption
 {
 	trigger			= "vulkan_include_directory",
@@ -61,14 +46,11 @@ commons.opts = function()
 	filter {}
 
 	filter "system:windows"
-		defines("NOMINMAX")
+		defines {
+			"NOMINMAX",
+			"_CRT_SECURE_NO_WARNINGS"
+		}
 	filter {}
-end
-
--- try to find deps first
-if (use_sdl2) then
-	sdl2_include_directory = os.findheader("SDL.h")
-	sdl2_library_directory = os.findlib("SDL2")
 end
 
 vulkan_include_directory = os.findheader("vulkan/vulkan.h")
@@ -78,24 +60,6 @@ if (os.host() == "windows") then
 
 	if (vk_sdk ~= nil) then
 		vulkan_include_directory = vk_sdk .. "/Include"
-	end
-end
-
-if (use_sdl2) then
-	if sdl2_include_directory == nil then
-		if _OPTIONS["sdl2_include_directory"] ~= nil then
-			sdl2_include_directory = _OPTIONS["sdl2_include_directory"]
-		else
-			error("SDL2 headers not found you should manually specify directories")
-		end
-	end
-
-	if sdl2_library_directory == nil then
-		if _OPTIONS["sdl2_library_directory"] ~= nil then
-			sdl2_library_directory = _OPTIONS["sdl2_library_directory"]
-		else
-			error("SDL2 library not found you should manually specify directories")
-		end
 	end
 end
 
@@ -197,25 +161,9 @@ project "ft_os"
 
 	sysincludedirs
 	{
-		"sources/third_party"
+		"sources/third_party",
+		vulkan_include_directory
 	}
-
-	if (use_sdl2) then
-		defines
-		{
-			"FT_WINDOW_SDL=1"
-		}
-		
-		sysincludedirs
-		{
-			sdl2_include_directory
-		}
-	else
-		defines
-		{
-			"FT_WINDOW_SDL=0"
-		}
-	end
 
 	files
 	{
@@ -235,9 +183,10 @@ project "ft_os"
 		"sources/os/time/windows/windows_timer.c",
 		"sources/os/window/window.c",
 		"sources/os/window/window.h",
-		"sources/os/window/sdl/sdl_window.c",
 		"sources/os/window/xlib/xlib_window.h",
 		"sources/os/window/xlib/xlib_window.c",
+		"sources/os/window/winapi/winapi_window.h",
+		"sources/os/window/winapi/winapi_window.c",
 		"sources/fs/fs.c",
 		"sources/fs/fs.h"
 	}
@@ -310,23 +259,6 @@ project "ft_renderer"
 	fluent_engine = {}
 
 	fluent_engine.link = function()
-		if (use_sdl2) then
-			sysincludedirs
-			{
-				sdl2_include_directory
-			}
-
-			syslibdirs
-			{
-				sdl2_library_directory
-			}
-
-			links
-			{
-				"SDL2"
-			}
-		end
-
 		links
 		{
 			"hashmap_c",

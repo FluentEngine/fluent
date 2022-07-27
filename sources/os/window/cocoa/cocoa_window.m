@@ -1,8 +1,8 @@
 #include "cocoa_window.h"
 
-#import <Cocoa/Cocoa.h>
-
 #if FT_PLATFORM_APPLE
+
+#import <Cocoa/Cocoa.h>
 
 #define VK_USE_PLATFORM_MACOS_MVK
 #include <volk/volk.h>

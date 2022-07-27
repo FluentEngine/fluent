@@ -6,15 +6,15 @@
 
 struct application_state
 {
-	bool                 is_inited;
-	bool                 is_running;
-	struct ft_window*    window;
-	ft_init_callback     on_init;
-	ft_update_callback   on_update;
-	ft_shutdown_callback on_shutdown;
-	ft_resize_callback   on_resize;
-	float                delta_time;
-	struct ft_wsi_info   wsi_info;
+	bool                                is_inited;
+	bool                                is_running;
+	struct ft_window*                   window;
+	ft_init_callback                    on_init;
+	ft_update_callback                  on_update;
+	ft_shutdown_callback                on_shutdown;
+	ft_resize_callback                  on_resize;
+	float                               delta_time;
+	struct ft_wsi_info                  wsi_info;
 	struct ft_application_callback_data callback_data;
 };
 
@@ -61,8 +61,6 @@ ft_app_run()
 
 	app_state.is_running = 1;
 
-	struct ft_event e;
-
 	uint32_t last_frame  = 0.0f;
 	app_state.delta_time = 0.0;
 
@@ -83,49 +81,11 @@ ft_app_run()
 
 		ft_input_update( 0 );
 
-		while ( ft_window_poll_event( &e ) != 0 )
-		{
-			switch ( e.type )
-			{
-			case FT_EVENT_TYPE_QUIT:
-			{
-				app_state.is_running = 0;
-				break;
-			}
-			case FT_EVENT_TYPE_WINDOW:
-			{
-				if ( e.window.type == FT_WINDOW_EVENT_TYPE_RESIZE )
-				{
-					uint32_t w, h;
-					ft_window_get_size( app_state.window, &w, &h );
-					if ( app_state.callback_data.width == w &&
-					     app_state.callback_data.height == h )
-					{
-						break;
-					}
-					app_state.on_resize( &app_state.callback_data );
-				}
-				break;
-			}
-			case FT_EVENT_TYPE_MOUSEWHEEL:
-			{
-				if ( e.wheel.direction == FT_MOUSE_WHEEL_DIRECTION_FLIPPED )
-				{
-					ft_input_update( e.wheel.y );
-				}
-				else
-				{
-					ft_input_update( e.wheel.y );
-				}
-				break;
-			}
-			default:
-			{
-				break;
-			}
-			}
-		}
+		ft_poll_events();
+
 		app_state.on_update( &app_state.callback_data );
+
+		app_state.is_running = !ft_window_should_close( app_state.window );
 	}
 
 	app_state.on_shutdown( &app_state.callback_data );
