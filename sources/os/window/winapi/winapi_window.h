@@ -4,7 +4,7 @@
 
 #if FT_PLATFORM_WINDOWS
 
-#include "os/window/window.h"
+struct ft_window;
 
 struct ft_window*
 winapi_create_window( const struct ft_window_info* info );

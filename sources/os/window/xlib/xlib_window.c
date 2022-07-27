@@ -24,9 +24,9 @@ struct
 	Atom     delete_window_atom;
 	Display* current_display;
 	uint8_t  keyboard[ FT_KEY_COUNT + 1 ];
-	uint32_t mouse;
 	int32_t  mouse_position[ 2 ];
 	XEvent   previous_event;
+	bool     should_close;
 } xlib;
 
 static const char* xlib_vulkan_extension_names[] = {
@@ -228,13 +228,18 @@ xlib_window_get_framebuffer_size( const struct ft_window* window,
                                   uint32_t*               width,
                                   uint32_t*               height )
 {
-	*width  = window->width;
-	*height = window->height;
+	xlib_window_get_size( window, width, height );
 }
 
 static void
-xlib_window_show_cursor( bool show )
+xlib_window_show_cursor( struct ft_window* window, bool show )
 {
+}
+
+static bool
+xlib_window_should_close( struct ft_window* window )
+{
+	return xlib.should_close;
 }
 
 static void
@@ -270,13 +275,11 @@ xlib_window_create_vulkan_surface( const struct ft_window*      window,
 	FT_ASSERT( result == VK_SUCCESS );
 }
 
-static int
-xlib_window_poll_event( struct ft_event* event )
+static void
+xlib_poll_events()
 {
-	int    r = 1;
 	XEvent e;
-
-	if ( XPending( xlib.current_display ) > 0 )
+	while ( XPending( xlib.current_display ) > 0 )
 	{
 		XNextEvent( xlib.current_display, &e );
 
@@ -286,9 +289,9 @@ xlib_window_poll_event( struct ft_event* event )
 		{
 			if ( e.xclient.data.l[ 0 ] == xlib.delete_window_atom )
 			{
-				event->type = FT_EVENT_TYPE_QUIT;
-				break;
+				xlib.should_close = true;
 			}
+			break;
 		}
 		case KeyPress:
 		{
@@ -297,14 +300,14 @@ xlib_window_poll_event( struct ft_event* event )
 			                 xlib.previous_event.xkey.keycode == e.xkey.keycode;
 
 			enum ft_key_code key =
-			    ft_keycode_from_xlib_keysym( XLookupKeysym( &e.xkey, 0 ) );
+			    ft_keycode_from_xlib( XLookupKeysym( &e.xkey, 0 ) );
 			xlib.keyboard[ key ] = 1 + ( uint8_t ) is_repeat;
 			break;
 		}
 		case KeyRelease:
 		{
 			enum ft_key_code key =
-			    ft_keycode_from_xlib_keysym( XLookupKeysym( &e.xkey, 0 ) );
+			    ft_keycode_from_xlib( XLookupKeysym( &e.xkey, 0 ) );
 			xlib.keyboard[ key ] = 0;
 			break;
 		}
@@ -316,17 +319,10 @@ xlib_window_poll_event( struct ft_event* event )
 		}
 		default:
 		{
-			r = 0;
 			break;
 		}
 		}
 	}
-	else
-	{
-		r = 0;
-	}
-
-	return r;
 }
 
 static const uint8_t*
@@ -351,7 +347,8 @@ xlib_create_window( const struct ft_window_info* info )
 	ft_window_get_framebuffer_size_impl = xlib_window_get_framebuffer_size;
 	ft_destroy_window_impl              = xlib_destroy_window;
 	ft_window_show_cursor_impl          = xlib_window_show_cursor;
-	ft_window_poll_event_impl           = xlib_window_poll_event;
+	ft_window_should_close_impl         = xlib_window_should_close;
+	ft_poll_events_impl                 = xlib_poll_events;
 	ft_get_keyboard_state_impl          = xlib_get_keyboard_state;
 	ft_get_mouse_state_impl             = xlib_get_mouse_state;
 	ft_window_get_vulkan_instance_extensions_impl =
