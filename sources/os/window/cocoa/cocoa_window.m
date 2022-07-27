@@ -1,13 +1,29 @@
-#include "os/window/window_private.h"
 #include "cocoa_window.h"
 
-#ifdef __APPLE__
-
 #import <Cocoa/Cocoa.h>
+
+#if FT_PLATFORM_APPLE
+
+#define VK_USE_PLATFORM_MACOS_MVK
+#include <volk/volk.h>
+#include "log/log.h"
+#include "os/window/window_private.h"
+
+struct ft_window
+{
+	NSWindow* window;
+	uint32_t  width;
+	uint32_t  height;
+};
+
+static const char* cocoa_vulkan_extension_names[] = {
+    VK_KHR_SURFACE_EXTENSION_NAME,
+    VK_MVK_MACOS_SURFACE_EXTENSION_NAME };
 
 void
 cocoa_destroy_window( struct ft_window* window )
 {
+	free( window );
 }
 
 static void
@@ -15,6 +31,8 @@ cocoa_window_get_size( const struct ft_window* window,
                        uint32_t*               width,
                        uint32_t*               height )
 {
+	*width  = window->width;
+	*height = window->height;
 }
 
 static void
@@ -22,6 +40,8 @@ cocoa_window_get_framebuffer_size( const struct ft_window* window,
                                    uint32_t*               width,
                                    uint32_t*               height )
 {
+	*width  = window->width;
+	*height = window->height;
 }
 
 static void
@@ -34,19 +54,36 @@ cocoa_window_get_vulkan_instance_extensions( const struct ft_window* window,
                                              uint32_t*               count,
                                              const char**            names )
 {
+	if ( names == NULL )
+	{
+		*count = FT_ARRAY_SIZE( cocoa_vulkan_extension_names );
+	}
+	else
+	{
+		for ( uint32_t i = 0; i < *count; ++i )
+			names[ i ] = cocoa_vulkan_extension_names[ i ];
+	}
 }
 
 static void
-cocoa_window_create_vulkan_surface( const struct ft_window* window,
-                                    VkInstance              instance,
-                                    VkSurfaceKHR*           surface )
+cocoa_window_create_vulkan_surface(
+    const struct ft_window*             window,
+    VkInstance                          instance,
+    const struct VkAllocationCallbacks* allocator,
+    VkSurfaceKHR*                       surface )
 {
 }
 
 static int
 cocoa_window_poll_event( struct ft_event* event )
 {
-	return 0;
+	NSEvent* e;
+	e = [[NSApplication sharedApplication] nextEventMatchingMask:NSEventMaskAny
+	                       untilDate:[NSDate distantPast]
+	                          inMode:NSDefaultRunLoopMode
+	                         dequeue:YES]];
+	[NSApp sendEvent:e];
+	return e != nil;
 }
 
 static void
@@ -81,7 +118,21 @@ cocoa_create_window( const struct ft_window_info* info )
 	    cocoa_window_get_vulkan_instance_extensions;
 	ft_window_create_vulkan_surface_impl = cocoa_window_create_vulkan_surface;
 
-	return NULL;
+	[NSApplication sharedApplication];
+	NSRect    rect = NSMakeRect( info->x, info->y, info->width, info->height );
+	NSWindow* window =
+	    [[NSWindow alloc] initWithContentRect:rect
+	                                styleMask:NSWindowStyleMaskBorderless
+	                                  backing:NSBackingStoreBuffered
+	                                    defer:NO];
+	[window makeKeyAndOrderFront:NSApp];
+
+	struct ft_window* r = malloc( sizeof( struct ft_window ) );
+	r->window           = window;
+	r->width            = info->width;
+	r->height           = info->height;
+
+	return r;
 }
 
 #endif

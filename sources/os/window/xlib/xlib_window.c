@@ -211,6 +211,7 @@ xlib_destroy_window( struct ft_window* window )
 {
 	XDestroyWindow( xlib.current_display, window->window );
 	XCloseDisplay( xlib.current_display );
+	free( window );
 }
 
 static void
