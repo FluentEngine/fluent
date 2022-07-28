@@ -37,7 +37,7 @@ ft_create_window( const struct ft_window_info* info )
 void
 ft_destroy_window( struct ft_window* window )
 {
-	FT_ASSERT( window && "Window is nullptr" );
+	FT_ASSERT( window );
 	ft_destroy_window_impl( window );
 }
 
@@ -59,7 +59,7 @@ ft_window_get_size( const struct ft_window* window,
 	ft_window_get_size_impl( window, width, height );
 }
 
- void
+void
 ft_window_get_framebuffer_size( const struct ft_window* window,
                                 uint32_t*               width,
                                 uint32_t*               height )

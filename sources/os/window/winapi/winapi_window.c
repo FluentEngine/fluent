@@ -17,13 +17,11 @@ struct ft_window
 	HWND     window;
 	uint32_t width;
 	uint32_t height;
+	bool     should_close;
 };
 
 struct
 {
-	// FIXME: !!!
-	bool    should_close;
-	HWND    window;
 	uint8_t keyboard[ FT_KEY_COUNT + 1 ];
 	int32_t mouse_position[ 2 ];
 } winapi;
@@ -159,13 +157,13 @@ extract_scancode( LPARAM l_param )
 FT_INLINE int32_t
 extract_mouse_pos_x( LPARAM l_param )
 {
-	return ( ( int32_t )( short ) LOWORD( l_param ) );
+	return ( ( int32_t ) ( short ) LOWORD( l_param ) );
 }
 
 FT_INLINE int32_t
 extract_mouse_pos_y( LPARAM l_param )
 {
-	return ( ( int32_t )( short ) HIWORD( l_param ) );
+	return ( ( int32_t ) ( short ) HIWORD( l_param ) );
 }
 
 static LRESULT CALLBACK
@@ -173,6 +171,14 @@ wnd_proc( HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param )
 {
 	switch ( msg )
 	{
+	case WM_CREATE:
+	{
+		CREATESTRUCT* create = ( CREATESTRUCT* ) l_param;
+		SetWindowLongPtr( hwnd,
+		                  GWLP_USERDATA,
+		                  ( LONG_PTR ) create->lpCreateParams );
+		break;
+	}
 	case WM_MOUSEMOVE:
 	{
 		winapi.mouse_position[ 0 ] = extract_mouse_pos_x( l_param );
@@ -195,8 +201,8 @@ wnd_proc( HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param )
 	}
 	case WM_CLOSE:
 	{
-		winapi.should_close = true;
-		DestroyWindow( winapi.window );
+		struct ft_window* window = GetWindowLongPtr( hwnd, GWLP_USERDATA );
+		window->should_close     = true;
 		break;
 	}
 	case WM_DESTROY:
@@ -240,7 +246,7 @@ winapi_window_show_cursor( bool show )
 static bool
 winapi_window_should_close( const struct ft_window* window )
 {
-	return winapi.should_close;
+	return window->should_close;
 }
 
 static void
@@ -316,6 +322,7 @@ winapi_create_window( const struct ft_window_info* info )
 	ft_window_create_vulkan_surface_impl = winapi_window_create_vulkan_surface;
 
 	memset( &winapi, 0, sizeof( winapi ) );
+	struct ft_window* r = malloc( sizeof( struct ft_window ) );
 
 	HINSTANCE h_instance = GetModuleHandle( NULL );
 
@@ -343,7 +350,7 @@ winapi_create_window( const struct ft_window_info* info )
 	                            NULL,
 	                            NULL,
 	                            h_instance,
-	                            NULL );
+	                            r );
 
 	free( title );
 
@@ -357,12 +364,10 @@ winapi_create_window( const struct ft_window_info* info )
 	UpdateWindow( hwnd );
 	SetFocus( hwnd );
 
-	winapi.window = hwnd;
-
-	struct ft_window* r = malloc( sizeof( struct ft_window ) );
-	r->window           = hwnd;
-	r->width            = info->width;
-	r->height           = info->height;
+	r->window       = hwnd;
+	r->width        = info->width;
+	r->height       = info->height;
+	r->should_close = false;
 
 	return r;
 }
