@@ -26,7 +26,7 @@ ft_log_set_level( enum ft_log_level level );
 FT_API void
 ft_log( enum ft_log_level level, const char* fmt, ... );
 
-#ifdef FLUENT_DEBUG
+#if FT_DEBUG
 #define FT_TRACE( fmt, ... ) ft_log( FT_LOG_LEVEL_TRACE, fmt, ##__VA_ARGS__ )
 #define FT_INFO( fmt, ... )  ft_log( FT_LOG_LEVEL_INFO, fmt, ##__VA_ARGS__ )
 #define FT_WARN( fmt, ... )  ft_log( FT_LOG_LEVEL_WARN, fmt, ##__VA_ARGS__ )
