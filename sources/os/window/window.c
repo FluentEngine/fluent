@@ -6,6 +6,7 @@
 #include "window.h"
 
 ft_destroy_window_fun              ft_destroy_window_impl;
+ft_window_set_resize_callback_fun  ft_window_set_resize_callback_impl;
 ft_window_get_size_fun             ft_window_get_size_impl;
 ft_window_get_framebuffer_size_fun ft_window_get_framebuffer_size_impl;
 ft_window_show_cursor_fun          ft_window_show_cursor_impl;
@@ -38,6 +39,16 @@ ft_destroy_window( struct ft_window* window )
 {
 	FT_ASSERT( window && "Window is nullptr" );
 	ft_destroy_window_impl( window );
+}
+
+void
+ft_window_set_resize_callback( struct ft_window*         window,
+                               ft_window_resize_callback cb )
+{
+	FT_ASSERT( window );
+	FT_ASSERT( cb );
+
+	ft_window_set_resize_callback_impl( window, cb );
 }
 
 void

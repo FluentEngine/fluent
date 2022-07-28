@@ -1,12 +1,14 @@
 #pragma once
 
 #include "../../base/base.h"
-
-struct ft_event;
-struct ft_window;
-struct ft_window_info;
+#include "window.h"
 
 FT_DECLARE_FUNCTION_POINTER( void, ft_destroy_window, struct ft_window* );
+
+FT_DECLARE_FUNCTION_POINTER( void,
+                             ft_window_set_resize_callback,
+                             struct ft_window*         window,
+                             ft_window_resize_callback cb );
 
 FT_DECLARE_FUNCTION_POINTER( void,
                              ft_window_get_size,

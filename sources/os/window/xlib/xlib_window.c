@@ -7,6 +7,7 @@
 #include <X11/Xatom.h>
 #define VK_USE_PLATFORM_XLIB_KHR
 #include <volk/volk.h>
+#include <hashmap_c/hashmap_c.h>
 #include "log/log.h"
 #include "os/key_codes.h"
 #include "os/window/window.h"
@@ -14,20 +15,56 @@
 
 struct ft_window
 {
-	Window   window;
-	uint32_t width;
-	uint32_t height;
+	Window                    window;
+	uint32_t                  width;
+	uint32_t                  height;
+	bool                      should_close;
+	ft_window_resize_callback resize_cb;
+};
+
+struct window_to_ft_window
+{
+	Window            xwindow;
+	struct ft_window* ftwindow;
 };
 
 struct
 {
-	Atom     delete_window_atom;
-	Display* current_display;
-	uint8_t  keyboard[ FT_KEY_COUNT + 1 ];
-	int32_t  mouse_position[ 2 ];
-	XEvent   previous_event;
-	bool     should_close;
-} xlib;
+	uint32_t        window_count;
+	Atom            delete_window_atom;
+	Display*        current_display;
+	uint8_t         keyboard[ FT_KEY_COUNT + 1 ];
+	int32_t         mouse_position[ 2 ];
+	XEvent          previous_event;
+	struct hashmap* window_data_map;
+} xlib = {
+    .window_count = 0,
+};
+
+static int
+compare_window_to_ft_window_fun( const void* a, const void* b, void* udata )
+{
+	FT_UNUSED( udata );
+
+	const struct window_to_ft_window* w0 = a;
+	const struct window_to_ft_window* w1 = b;
+
+	if ( w0->xwindow != w1->xwindow )
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
+static uint64_t
+hash_window_to_ft_window_fun( const void* item, uint64_t seed0, uint64_t seed1 )
+{
+	FT_UNUSED( item );
+	FT_UNUSED( seed0 );
+	FT_UNUSED( seed1 );
+	return 0;
+}
 
 static const char* xlib_vulkan_extension_names[] = {
     VK_KHR_SURFACE_EXTENSION_NAME,
@@ -177,41 +214,50 @@ ft_keycode_from_xlib( KeySym keysym )
 	}
 };
 
-FT_INLINE void
-set_size_hints( Display* display,
-                Window   window,
-                uint32_t min_width,
-                uint32_t min_height,
-                uint32_t max_width,
-                uint32_t max_height )
+FT_INLINE struct ft_window*
+ft_window_from_xlib( Window window )
 {
-	XSizeHints hints;
-	memset( &hints, 0, sizeof( hints ) );
+	struct window_to_ft_window* it =
+	    hashmap_get( xlib.window_data_map,
+	                 &( struct window_to_ft_window ) {
+	                     .xwindow = window,
+	                 } );
 
-	if ( min_width > 0 && min_height > 0 )
+	if ( it == NULL )
 	{
-		hints.flags |= PMinSize;
+		return NULL;
 	}
-
-	if ( max_width > 0 && max_height > 0 )
+	else
 	{
-		hints.flags |= PMaxSize;
+		return it->ftwindow;
 	}
-
-	hints.min_width  = min_width;
-	hints.min_height = min_height;
-	hints.max_width  = max_width;
-	hints.max_height = max_height;
-
-	XSetWMNormalHints( display, window, &hints );
 }
 
-void
+static void
 xlib_destroy_window( struct ft_window* window )
 {
+	xlib.window_count--;
+
+	hashmap_delete( xlib.window_data_map,
+	                &( struct window_to_ft_window ) {
+	                    .xwindow = window->window,
+	                } );
+
 	XDestroyWindow( xlib.current_display, window->window );
-	XCloseDisplay( xlib.current_display );
+
+	if ( xlib.window_count == 0 )
+	{
+		XCloseDisplay( xlib.current_display );
+		hashmap_free( xlib.window_data_map );
+	}
 	free( window );
+}
+
+static void
+xlib_window_set_resize_callback( struct ft_window*         window,
+                                 ft_window_resize_callback cb )
+{
+	window->resize_cb = cb;
 }
 
 static void
@@ -237,9 +283,9 @@ xlib_window_show_cursor( struct ft_window* window, bool show )
 }
 
 static bool
-xlib_window_should_close( struct ft_window* window )
+xlib_window_should_close( const struct ft_window* window )
 {
-	return xlib.should_close;
+	return window->should_close;
 }
 
 static void
@@ -289,7 +335,8 @@ xlib_poll_events()
 		{
 			if ( e.xclient.data.l[ 0 ] == xlib.delete_window_atom )
 			{
-				xlib.should_close = true;
+				struct ft_window* w = ft_window_from_xlib( e.xclient.window );
+				w->should_close     = true;
 			}
 			break;
 		}
@@ -308,6 +355,7 @@ xlib_poll_events()
 		{
 			enum ft_key_code key =
 			    ft_keycode_from_xlib( XLookupKeysym( &e.xkey, 0 ) );
+
 			xlib.keyboard[ key ] = 0;
 			break;
 		}
@@ -317,11 +365,33 @@ xlib_poll_events()
 			xlib.mouse_position[ 1 ] = e.xmotion.y;
 			break;
 		}
+		case ConfigureNotify:
+		{
+			struct ft_window* window =
+			    ft_window_from_xlib( e.xconfigure.window );
+
+			if ( window->width != e.xconfigure.width ||
+			     window->height != e.xconfigure.height )
+			{
+				window->width  = e.xconfigure.width;
+				window->height = e.xconfigure.height;
+				if ( window->resize_cb )
+				{
+					window->resize_cb( window,
+					                   window->width,
+					                   window->height,
+					                   NULL );
+				}
+			}
+			break;
+		}
 		default:
 		{
 			break;
 		}
 		}
+
+		xlib.previous_event = e;
 	}
 }
 
@@ -345,6 +415,7 @@ xlib_create_window( const struct ft_window_info* info )
 {
 	ft_window_get_size_impl             = xlib_window_get_size;
 	ft_window_get_framebuffer_size_impl = xlib_window_get_framebuffer_size;
+	ft_window_set_resize_callback_impl  = xlib_window_set_resize_callback;
 	ft_destroy_window_impl              = xlib_destroy_window;
 	ft_window_show_cursor_impl          = xlib_window_show_cursor;
 	ft_window_should_close_impl         = xlib_window_should_close;
@@ -354,8 +425,6 @@ xlib_create_window( const struct ft_window_info* info )
 	ft_window_get_vulkan_instance_extensions_impl =
 	    xlib_window_get_vulkan_instance_extensions;
 	ft_window_create_vulkan_surface_impl = xlib_window_create_vulkan_surface;
-
-	memset( &xlib, 0, sizeof( xlib ) );
 
 	Display* display = XOpenDisplay( NULL );
 
@@ -423,27 +492,61 @@ xlib_create_window( const struct ft_window_info* info )
 		FT_WARN( "couldn't register WM_DELETE_WINDOW atom" );
 	}
 
-	if ( info->resizable )
+	XSizeHints* size_hints = XAllocSizeHints();
+	FT_ASSERT( size_hints );
+
+	if ( !info->resizable )
 	{
-		set_size_hints( display, window, 200, 200, 0, 0 );
+		size_hints->min_width = size_hints->max_width = info->width;
+		size_hints->min_height = size_hints->max_height = info->height;
+		size_hints->flags |= ( PMaxSize | PMinSize );
 	}
-	else
+
+	size_hints->x = info->x;
+	size_hints->y = info->y;
+	size_hints->flags |= USPosition;
+
+	XSetWMProperties( display,
+	                  window,
+	                  NULL,
+	                  NULL,
+	                  NULL,
+	                  0,
+	                  size_hints,
+	                  NULL,
+	                  NULL );
+
+	XFree( size_hints );
+
+	if ( xlib.window_count == 0 )
 	{
-		set_size_hints( display,
-		                window,
-		                info->width,
-		                info->height,
-		                info->width,
-		                info->height );
+		xlib.window_data_map =
+		    hashmap_new( sizeof( struct window_to_ft_window ),
+		                 0,
+		                 0,
+		                 0,
+		                 hash_window_to_ft_window_fun,
+		                 compare_window_to_ft_window_fun,
+		                 NULL,
+		                 NULL );
 	}
 
 	xlib.current_display    = display;
 	xlib.delete_window_atom = wm_delete_atom;
 
-	struct ft_window* r = malloc( sizeof( struct ft_window ) );
+	struct ft_window* r = calloc( 1, sizeof( struct ft_window ) );
 	r->window           = window;
 	r->width            = info->width;
 	r->height           = info->height;
+	r->should_close     = false;
+
+	hashmap_set( xlib.window_data_map,
+	             &( struct window_to_ft_window ) {
+	                 .xwindow  = window,
+	                 .ftwindow = r,
+	             } );
+
+	xlib.window_count++;
 
 	return r;
 }

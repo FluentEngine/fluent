@@ -19,11 +19,20 @@ struct ft_window_info
 
 struct ft_window;
 
+typedef void ( *ft_window_resize_callback )( struct ft_window* window,
+                                             uint32_t          width,
+                                             uint32_t          height,
+                                             void*             user_data );
+
 FT_API struct ft_window*
 ft_create_window( const struct ft_window_info* info );
 
 FT_API void
 ft_destroy_window( struct ft_window* window );
+
+FT_API void
+ft_window_set_resize_callback( struct ft_window*         window,
+                               ft_window_resize_callback cb );
 
 FT_API void
 ft_window_get_size( const struct ft_window* window,
