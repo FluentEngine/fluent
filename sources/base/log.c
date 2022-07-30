@@ -118,14 +118,14 @@ localtime_r( const time_t* timep, struct tm* result )
 }
 #endif /* defined(_WIN32) || defined(_WIN64) */
 
-int
+bool
 ft_log_init_console_logger( FILE* output )
 {
 	output = ( output != NULL ) ? output : stdout;
 	if ( output != stdout && output != stderr )
 	{
 		assert( 0 && "output must be stdout or stderr" );
-		return 0;
+		return false;
 	}
 
 	init();
@@ -133,7 +133,7 @@ ft_log_init_console_logger( FILE* output )
 	s_clog.output = output;
 	s_logger |= kConsoleLogger;
 	unlock();
-	return 1;
+	return true;
 }
 
 static long
@@ -426,13 +426,16 @@ ft_log( enum ft_log_level level, const char* fmt, ... )
 	unlock();
 }
 
-void
+bool
 ft_log_init( enum ft_log_level log_level )
 {
-	int result = ft_log_init_console_logger( NULL );
-	FT_ASSERT( result );
+	if ( !ft_log_init_console_logger( NULL ) )
+	{
+		return false;
+	}
 	ft_log_auto_flush( 1000 );
 	ft_log_set_level( log_level );
+	return true;
 }
 
 void

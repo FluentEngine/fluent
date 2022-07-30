@@ -9,16 +9,16 @@ enum ft_log_level
 	FT_LOG_LEVEL_ERROR
 };
 
-void
+FT_API bool
 ft_log_init( enum ft_log_level log_level );
 
-void
+FT_API void
 ft_log_shutdown( void );
 
-void
+FT_API void
 ft_log_set_level( enum ft_log_level level );
 
-void
+FT_API void
 ft_log( enum ft_log_level level, const char* fmt, ... );
 
 #if FT_DEBUG

@@ -104,7 +104,7 @@ ft_create_renderer_backend( const struct ft_renderer_backend_info* info,
 	struct ft_renderer_backend* backend = *p;
 	backend->api                        = info->api;
 
-	FT_INFO( "created renderer backend"
+	FT_INFO( "create renderer backend"
 	         "\n\t %s",
 	         ft_renderer_api_to_string( backend->api ) );
 }
@@ -281,7 +281,7 @@ ft_create_swapchain( const struct ft_device*         device,
 	struct ft_swapchain* swapchain = *p;
 	FT_UNUSED( swapchain );
 
-	FT_INFO( "created swapchain"
+	FT_INFO( "create swapchain"
 	         "\n\t width: %d height: %d"
 	         "\n\t image count: %d"
 	         "\n\t format: %s"
@@ -306,7 +306,7 @@ ft_resize_swapchain( const struct ft_device* device,
 
 	ft_resize_swapchain_impl( device, swapchain, width, height );
 
-	FT_INFO( "resized swapchain"
+	FT_INFO( "resize swapchain"
 	         "\n\t width: %d height: %d"
 	         "\n\t image count: %d"
 	         "\n\t vsync: %s",
@@ -895,6 +895,7 @@ ft_get_swapchain_size( const struct ft_swapchain* swapchain,
 enum ft_format
 ft_get_swapchain_format( const struct ft_swapchain* swapchain )
 {
+	FT_ASSERT( swapchain );
 	return swapchain->format;
 }
 
@@ -903,4 +904,11 @@ ft_get_swapchain_image( const struct ft_swapchain* swapchain, uint32_t index )
 {
 	FT_ASSERT( index < swapchain->image_count );
 	return swapchain->images[ index ];
+}
+
+void*
+ft_get_buffer_mapped_memory( struct ft_buffer* buffer )
+{
+	FT_ASSERT( buffer );
+	return buffer->mapped_memory;
 }

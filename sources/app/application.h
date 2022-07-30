@@ -21,7 +21,7 @@ struct ft_application_info
 	void*                            user_data;
 };
 
-FT_API void
+FT_API bool
 ft_app_init( const struct ft_application_info* info );
 
 FT_API void

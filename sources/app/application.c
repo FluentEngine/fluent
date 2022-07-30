@@ -28,7 +28,7 @@ app_resize_callback( struct ft_window* window, uint32_t w, uint32_t h, void* p )
 	app_state.resized = true;
 }
 
-void
+bool
 ft_app_init( const struct ft_application_info* config )
 {
 	FT_ASSERT( config->argv );
@@ -37,11 +37,25 @@ ft_app_init( const struct ft_application_info* config )
 	FT_ASSERT( config->on_shutdown );
 	FT_ASSERT( config->on_resize );
 
-	ft_log_init( config->log_level );
+	if ( !ft_log_init( config->log_level ) )
+	{
+		return false;
+	}
+	FT_INFO( "init logger" );
+
+	ft_ticks_init();
+	FT_INFO( "init ticks" );
 
 	memset( &app_state, 0, sizeof( app_state ) );
 
 	app_state.window = ft_create_window( &config->window_info );
+	if ( app_state.window == NULL )
+	{
+		return false;
+	}
+
+	ft_window_set_resize_callback( app_state.window, app_resize_callback );
+	FT_INFO( "create window" );
 
 	app_state.on_init     = config->on_init;
 	app_state.on_update   = config->on_update;
@@ -57,10 +71,10 @@ ft_app_init( const struct ft_application_info* config )
 	wsi_info->get_window_size       = ft_window_get_size;
 	wsi_info->get_framebuffer_size  = ft_window_get_framebuffer_size;
 
-	ft_ticks_init();
 	app_state.is_inited = 1;
+	FT_INFO( "initialize app" );
 
-	ft_window_set_resize_callback( app_state.window, app_resize_callback );
+	return true;
 }
 
 void
@@ -108,10 +122,16 @@ ft_app_run()
 void
 ft_app_shutdown()
 {
-	FT_ASSERT( app_state.is_inited );
+	if ( app_state.window )
+	{
+		FT_INFO( "destroy window" );
+		ft_destroy_window( app_state.window );
+	}
+
+	FT_INFO( "shutdown ticks" );
 	ft_ticks_shutdown();
+	FT_INFO( "shutdown log" );
 	ft_log_shutdown();
-	ft_destroy_window( app_state.window );
 }
 
 void

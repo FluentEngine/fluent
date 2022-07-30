@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string.h>
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
@@ -11,7 +12,6 @@
 #include "wsi/wsi.h"
 #include "window/input.h"
 #include "renderer/backend/renderer_backend.h"
-#include "string.h"
 
 #ifdef __cplusplus
 extern "C"

@@ -103,13 +103,11 @@ ft_safe_free( void* p )
 #define FT_MIN( a, b ) ( ( ( a ) < ( b ) ) ? ( a ) : ( b ) )
 #define FT_CLAMP( x, min, max )                                                \
 	( ( ( x ) < ( min ) ) ? ( min ) : ( ( max ) < ( x ) ) ? ( max ) : ( x ) )
-#define FT_COUNTOF( x ) ( ( sizeof( ( x ) ) ) / sizeof( ( x[ 0 ] ) ) )
+#define FT_LERP( a, b, t )                                                     \
+	( ( ( float ) ( a ) ) * ( 1.0f - ( ( float ) ( t ) ) ) +                   \
+	  ( ( float ) ( b ) ) * ( ( float ) ( t ) ) )
 
-FT_INLINE float
-ft_flerp( float a, float b, float t )
-{
-	return a * ( 1.0f - t ) + b * t;
-}
+#define FT_COUNTOF( x ) ( ( sizeof( ( x ) ) ) / sizeof( ( x[ 0 ] ) ) )
 
 #ifdef VULKAN_H_
 #define NO_FT_VULKAN_TYPEDEFS

@@ -669,4 +669,7 @@ ft_get_swapchain_format( const struct ft_swapchain* swapchain );
 FT_API struct ft_image*
 ft_get_swapchain_image( const struct ft_swapchain* swapchain, uint32_t index );
 
+FT_API void*
+ft_get_buffer_mapped_memory( struct ft_buffer* buffer );
+
 #include "renderer_misc.h"

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "math/linear.h"
 #include "model_loader.h"
 
