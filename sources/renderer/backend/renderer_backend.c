@@ -77,7 +77,7 @@ ft_create_renderer_backend( const struct ft_renderer_backend_info* info,
 
 	switch ( info->api )
 	{
-#ifdef VULKAN_BACKEND
+#if FT_VULKAN_BACKEND
 	case FT_RENDERER_API_VULKAN:
 	{
 		vk_create_renderer_backend( info, p );
@@ -772,7 +772,7 @@ ft_cmd_begin_debug_marker( const struct ft_command_buffer* cmd,
                            float                           color[ 4 ] )
 {
 	FT_ASSERT( cmd );
-	
+
 	ft_cmd_begin_debug_marker_impl( cmd, name, color );
 }
 
@@ -875,4 +875,32 @@ ft_update_descriptor_set( const struct ft_device*           device,
 	FT_ASSERT( writes );
 
 	ft_update_descriptor_set_impl( device, set, count, writes );
+}
+
+enum ft_renderer_api
+ft_get_device_api( const struct ft_device* device )
+{
+	return device->api;
+}
+
+void
+ft_get_swapchain_size( const struct ft_swapchain* swapchain,
+                       uint32_t*                  width,
+                       uint32_t*                  height )
+{
+	*width  = swapchain->width;
+	*height = swapchain->height;
+}
+
+enum ft_format
+ft_get_swapchain_format( const struct ft_swapchain* swapchain )
+{
+	return swapchain->format;
+}
+
+struct ft_image*
+ft_get_swapchain_image( const struct ft_swapchain* swapchain, uint32_t index )
+{
+	FT_ASSERT( index < swapchain->image_count );
+	return swapchain->images[ index ];
 }

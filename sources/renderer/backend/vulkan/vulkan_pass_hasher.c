@@ -1,4 +1,7 @@
-#ifdef VULKAN_BACKEND
+
+#include "base/base.h"
+
+#if FT_VULKAN_BACKEND
 
 #include "../renderer_private.h"
 #include "vulkan_enum_translators.h"

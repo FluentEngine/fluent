@@ -1,6 +1,8 @@
 #pragma once
 
-#ifdef VULKAN_BACKEND
+#include "base/base.h"
+
+#if FT_VULKAN_BACKEND
 
 #include <hashmap_c/hashmap_c.h>
 #include "vulkan_backend.h"

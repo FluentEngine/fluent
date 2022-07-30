@@ -75,7 +75,7 @@ ft_window_show_cursor( struct ft_window* window, bool show )
 bool
 ft_window_should_close( const struct ft_window* window )
 {
-	ft_window_should_close_impl( window );
+	return ft_window_should_close_impl( window );
 }
 
 void

@@ -75,18 +75,24 @@ end
 function declare_backend_defines()
 	if (renderer_backend_vulkan)
 	then
-		defines { "VULKAN_BACKEND" }
+		defines { "FT_VULKAN_BACKEND=1" }
+	else
+		defines { "FT_VULKAN_BACKEND=0" }
 	end
 
 	if (renderer_backend_d3d12)
 	then
-		defines { "D3D12_BACKEND" }
+		defines { "FT_D3D12_BACKEND=1" }
+	else
+		defines { "FT_D3D12_BACKEND=0" }
 	end
 
 	if (renderer_backend_metal)
 	then
-		defines { "METAL_BACKEND" }
+		defines { "FT_METAL_BACKEND=1" }
 		buildoptions { "-fobjc-arc", "-fmodules" }
+	else
+		defines { "FT_METAL_BACKEND=0" }
 	end
 end
 

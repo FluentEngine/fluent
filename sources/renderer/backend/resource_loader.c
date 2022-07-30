@@ -2,7 +2,7 @@
 #include "thread/thread.h"
 #include "renderer_enums_stringifier.h"
 #include "renderer_private.h"
-#ifdef VULKAN_BACKEND
+#if FT_VULKAN_BACKEND
 #include "vulkan/vulkan_backend.h"
 #endif
 #include "renderer_backend.h"
@@ -47,7 +47,7 @@ static struct ft_loader loader;
 uint32_t
 loader_thread_fun( void* arg );
 
-#ifdef VULKAN_BACKEND
+#if FT_VULKAN_BACKEND
 void
 vk_generate_mipmaps( struct ft_command_buffer* icmd,
                      struct ft_image*          iimage,
@@ -300,9 +300,11 @@ complete_job( struct ft_command_buffer* cmd, const struct ft_loader_job* j )
 
 		switch ( loader.device->api )
 		{
+#if FT_VULKAN_BACKEND
 		case FT_RENDERER_API_VULKAN:
 			vk_generate_mipmaps( cmd, job->image, job->state );
 			break;
+#endif
 		default:
 			FT_WARN( "mipmap generation not implemented for %s",
 			         ft_renderer_api_to_string( loader.device->api ) );

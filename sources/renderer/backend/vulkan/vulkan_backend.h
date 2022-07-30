@@ -1,9 +1,11 @@
 #pragma once
 
-#ifdef VULKAN_BACKEND
+#include "base/base.h"
+
+#if FT_VULKAN_BACKEND
+
 #include <volk/volk.h>
 #include <vk_mem_alloc/vk_mem_alloc.h>
-#include "../renderer_backend.h"
 
 #if FT_DEBUG
 #define VK_ASSERT( x )                                                         \

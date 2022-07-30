@@ -1,4 +1,6 @@
-#ifdef VULKAN_BACKEND
+#include "base/base.h"
+
+#if FT_VULKAN_BACKEND
 #include <hashmap_c/hashmap_c.h>
 #include "wsi/wsi.h"
 #include "../renderer_private.h"
@@ -344,13 +346,13 @@ vk_create_device( const struct ft_renderer_backend* ibackend,
 			break;
 	}
 
-	const char* wanted_extensions[] = {
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-		VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-		"VK_KHR_portability_subset",
+	const char* wanted_extensions[] =
+	{ VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+	  VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+	  "VK_KHR_portability_subset",
 #if FT_DEBUG
-		VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
-		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+	  VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
+	  VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
 #endif
 	};
 
@@ -437,42 +439,40 @@ vk_create_device( const struct ft_renderer_backend* ibackend,
 
 	volkLoadDevice( device->logical_device );
 
-	VmaVulkanFunctions vulkan_functions = {
-		.vkGetInstanceProcAddr             = vkGetInstanceProcAddr,
-		.vkGetDeviceProcAddr               = vkGetDeviceProcAddr,
-		.vkAllocateMemory                  = vkAllocateMemory,
-		.vkBindBufferMemory                = vkBindBufferMemory,
-		.vkBindImageMemory                 = vkBindImageMemory,
-		.vkCreateBuffer                    = vkCreateBuffer,
-		.vkCreateImage                     = vkCreateImage,
-		.vkDestroyBuffer                   = vkDestroyBuffer,
-		.vkDestroyImage                    = vkDestroyImage,
-		.vkFreeMemory                      = vkFreeMemory,
-		.vkGetBufferMemoryRequirements     = vkGetBufferMemoryRequirements,
-		.vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2KHR,
-		.vkGetImageMemoryRequirements      = vkGetImageMemoryRequirements,
-		.vkGetImageMemoryRequirements2KHR  = vkGetImageMemoryRequirements2KHR,
-		.vkGetPhysicalDeviceMemoryProperties =
-		    vkGetPhysicalDeviceMemoryProperties,
-		.vkGetPhysicalDeviceProperties  = vkGetPhysicalDeviceProperties,
-		.vkMapMemory                    = vkMapMemory,
-		.vkUnmapMemory                  = vkUnmapMemory,
-		.vkFlushMappedMemoryRanges      = vkFlushMappedMemoryRanges,
-		.vkInvalidateMappedMemoryRanges = vkInvalidateMappedMemoryRanges,
-		.vkCmdCopyBuffer                = vkCmdCopyBuffer,
+	VmaVulkanFunctions vulkan_functions =
+	{.vkGetInstanceProcAddr               = vkGetInstanceProcAddr,
+	 .vkGetDeviceProcAddr                 = vkGetDeviceProcAddr,
+	 .vkAllocateMemory                    = vkAllocateMemory,
+	 .vkBindBufferMemory                  = vkBindBufferMemory,
+	 .vkBindImageMemory                   = vkBindImageMemory,
+	 .vkCreateBuffer                      = vkCreateBuffer,
+	 .vkCreateImage                       = vkCreateImage,
+	 .vkDestroyBuffer                     = vkDestroyBuffer,
+	 .vkDestroyImage                      = vkDestroyImage,
+	 .vkFreeMemory                        = vkFreeMemory,
+	 .vkGetBufferMemoryRequirements       = vkGetBufferMemoryRequirements,
+	 .vkGetBufferMemoryRequirements2KHR   = vkGetBufferMemoryRequirements2KHR,
+	 .vkGetImageMemoryRequirements        = vkGetImageMemoryRequirements,
+	 .vkGetImageMemoryRequirements2KHR    = vkGetImageMemoryRequirements2KHR,
+	 .vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties,
+	 .vkGetPhysicalDeviceProperties       = vkGetPhysicalDeviceProperties,
+	 .vkMapMemory                         = vkMapMemory,
+	 .vkUnmapMemory                       = vkUnmapMemory,
+	 .vkFlushMappedMemoryRanges           = vkFlushMappedMemoryRanges,
+	 .vkInvalidateMappedMemoryRanges      = vkInvalidateMappedMemoryRanges,
+	 .vkCmdCopyBuffer                     = vkCmdCopyBuffer,
 #if VMA_BIND_MEMORY2 || VMA_VULKAN_VERSION >= 1001000
-		.vkBindBufferMemory2KHR = vkBindBufferMemory2KHR,
-		.vkBindImageMemory2KHR  = vkBindImageMemory2KHR,
+	 .vkBindBufferMemory2KHR = vkBindBufferMemory2KHR,
+	 .vkBindImageMemory2KHR  = vkBindImageMemory2KHR,
 #endif
 #if VMA_MEMORY_BUDGET || VMA_VULKAN_VERSION >= 1001000
-		.vkGetPhysicalDeviceMemoryProperties2KHR =
-		    vkGetPhysicalDeviceMemoryProperties2KHR,
+	 .vkGetPhysicalDeviceMemoryProperties2KHR =
+		 vkGetPhysicalDeviceMemoryProperties2KHR,
 #endif
 #if VMA_VULKAN_VERSION >= 1003000
-		.vkGetDeviceBufferMemoryRequirements =
-		    vkGetDeviceBufferMemoryRequirementsKHR,
-		.vkGetDeviceImageMemoryRequirements =
-		    vkGetDeviceImageMemoryRequirements,
+	 .vkGetDeviceBufferMemoryRequirements =
+		 vkGetDeviceBufferMemoryRequirementsKHR,
+	 .vkGetDeviceImageMemoryRequirements = vkGetDeviceImageMemoryRequirements,
 #endif
 	};
 
@@ -2709,7 +2709,7 @@ vk_cmd_begin_debug_marker( const struct ft_command_buffer* icmd,
                            const char*                     name,
                            float                           color[ 4 ] )
 {
-#ifdef VULKAN_BACKEND
+#if FT_VULKAN_BACKEND
 	if ( vkCmdDebugMarkerBeginEXT )
 	{
 		FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );
@@ -2726,7 +2726,7 @@ vk_cmd_begin_debug_marker( const struct ft_command_buffer* icmd,
 void
 vk_cmd_end_debug_marker( const struct ft_command_buffer* icmd )
 {
-#ifdef VULKAN_BACKEND
+#if FT_VULKAN_BACKEND
 	if ( vkCmdDebugMarkerEndEXT )
 	{
 		FT_FROM_HANDLE( cmd, icmd, vk_command_buffer );

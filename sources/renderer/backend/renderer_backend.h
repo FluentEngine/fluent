@@ -14,14 +14,21 @@
 #define FT_MAX_BINDING_NAME_LENGTH             20
 
 struct ft_wsi_info;
-
-// Forward declares
-struct ft_window;
-struct ft_buffer;
-struct ft_image;
+struct ft_renderer_backend;
+struct ft_device;
 struct ft_queue;
-struct ft_command_buffer;
 struct ft_command_pool;
+struct ft_command_buffer;
+struct ft_semaphore;
+struct ft_fence;
+struct ft_swapchain;
+struct ft_sampler;
+struct ft_image;
+struct ft_buffer;
+struct ft_shader;
+struct ft_descriptor_set_layout;
+struct ft_pipeline;
+struct ft_descriptor_set;
 
 struct ft_renderer_backend_info
 {
@@ -29,38 +36,9 @@ struct ft_renderer_backend_info
 	struct ft_wsi_info*  wsi_info;
 };
 
-struct ft_renderer_backend
-{
-	enum ft_renderer_api api;
-	ft_handle            handle;
-};
-
 struct ft_device_info
 {
 	struct ft_renderer_backend* backend;
-};
-
-struct ft_device
-{
-	enum ft_renderer_api api;
-	ft_handle            handle;
-};
-
-struct ft_command_pool_info
-{
-	struct ft_queue* queue;
-};
-
-struct ft_command_pool
-{
-	struct ft_queue* queue;
-	ft_handle        handle;
-};
-
-struct ft_command_buffer
-{
-	struct ft_queue* queue;
-	ft_handle        handle;
 };
 
 struct ft_queue_info
@@ -68,21 +46,9 @@ struct ft_queue_info
 	enum ft_queue_type queue_type;
 };
 
-struct ft_queue
+struct ft_command_pool_info
 {
-	uint32_t           family_index;
-	enum ft_queue_type type;
-	ft_handle          handle;
-};
-
-struct ft_semaphore
-{
-	ft_handle handle;
-};
-
-struct ft_fence
-{
-	ft_handle handle;
+	struct ft_queue* queue;
 };
 
 struct ft_sampler_info
@@ -102,11 +68,6 @@ struct ft_sampler_info
 	float                        max_lod;
 };
 
-struct ft_sampler
-{
-	ft_handle handle;
-};
-
 struct ft_image_info
 {
 	uint32_t                width;
@@ -120,35 +81,12 @@ struct ft_image_info
 	const char*             name;
 };
 
-struct ft_image
-{
-	uint32_t                width;
-	uint32_t                height;
-	uint32_t                depth;
-	enum ft_format          format;
-	uint32_t                sample_count;
-	uint32_t                mip_levels;
-	uint32_t                layer_count;
-	enum ft_descriptor_type descriptor_type;
-	ft_handle               handle;
-};
-
 struct ft_buffer_info
 {
 	uint64_t                size;
 	enum ft_descriptor_type descriptor_type;
 	enum ft_memory_usage    memory_usage;
 	const char*             name;
-};
-
-struct ft_buffer
-{
-	uint64_t                size;
-	enum ft_resource_state  resource_state;
-	enum ft_descriptor_type descriptor_type;
-	enum ft_memory_usage    memory_usage;
-	void*                   mapped_memory;
-	ft_handle               handle;
 };
 
 struct ft_swapchain_info
@@ -160,19 +98,6 @@ struct ft_swapchain_info
 	bool                vsync;
 	uint32_t            min_image_count;
 	struct ft_wsi_info* wsi_info;
-};
-
-struct ft_swapchain
-{
-	uint32_t          min_image_count;
-	uint32_t          image_count;
-	uint32_t          width;
-	uint32_t          height;
-	enum ft_format    format;
-	struct ft_image** images;
-	struct ft_queue*  queue;
-	bool              vsync;
-	ft_handle         handle;
 };
 
 struct ft_queue_submit_info
@@ -266,42 +191,6 @@ struct ft_shader_info
 	struct ft_shader_module_info fragment;
 };
 
-struct ft_binding
-{
-	uint32_t                set;
-	uint32_t                binding;
-	uint32_t                descriptor_count;
-	enum ft_descriptor_type descriptor_type;
-	enum ft_shader_stage    stage;
-};
-
-typedef struct ft_binding* ft_bindings;
-
-struct ft_binding_map_item
-{
-	char     name[ FT_MAX_BINDING_NAME_LENGTH ];
-	uint32_t value;
-};
-
-struct ft_reflection_data
-{
-	uint32_t        binding_count;
-	ft_bindings     bindings;
-	struct hashmap* binding_map;
-};
-
-struct ft_shader
-{
-	struct ft_reflection_data reflect_data;
-	ft_handle                 handle;
-};
-
-struct ft_descriptor_set_layout
-{
-	struct ft_reflection_data reflection_data;
-	ft_handle                 handle;
-};
-
 struct ft_vertex_binding_info
 {
 	uint32_t                  binding;
@@ -373,22 +262,10 @@ struct ft_pipeline_info
 	const char*                name;
 };
 
-struct ft_pipeline
-{
-	enum ft_pipeline_type type;
-	ft_handle             handle;
-};
-
 struct ft_descriptor_set_info
 {
 	uint32_t                         set;
 	struct ft_descriptor_set_layout* descriptor_set_layout;
-};
-
-struct ft_descriptor_set
-{
-	struct ft_descriptor_set_layout* layout;
-	ft_handle                        handle;
 };
 
 struct ft_buffer_descriptor
@@ -778,5 +655,18 @@ ft_update_descriptor_set( const struct ft_device*           device,
                           struct ft_descriptor_set*         set,
                           uint32_t                          count,
                           const struct ft_descriptor_write* writes );
+
+// getters
+FT_API enum ft_renderer_api
+ft_get_device_api( const struct ft_device* );
+
+FT_API void
+ft_get_swapchain_size( const struct ft_swapchain*, uint32_t*, uint32_t* );
+
+FT_API enum ft_format
+ft_get_swapchain_format( const struct ft_swapchain* swapchain );
+
+FT_API struct ft_image*
+ft_get_swapchain_image( const struct ft_swapchain* swapchain, uint32_t index );
 
 #include "renderer_misc.h"

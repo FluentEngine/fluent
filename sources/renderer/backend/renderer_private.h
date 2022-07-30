@@ -10,6 +10,134 @@
 #define FT_FROM_HANDLE( name, interface, impl )                                \
 	struct impl* name = interface->handle
 
+struct ft_renderer_backend
+{
+	enum ft_renderer_api api;
+	ft_handle            handle;
+};
+
+struct ft_device
+{
+	enum ft_renderer_api api;
+	ft_handle            handle;
+};
+
+struct ft_queue
+{
+	uint32_t           family_index;
+	enum ft_queue_type type;
+	ft_handle          handle;
+};
+
+struct ft_command_pool
+{
+	struct ft_queue* queue;
+	ft_handle        handle;
+};
+
+struct ft_command_buffer
+{
+	struct ft_queue* queue;
+	ft_handle        handle;
+};
+
+struct ft_semaphore
+{
+	ft_handle handle;
+};
+
+struct ft_fence
+{
+	ft_handle handle;
+};
+
+struct ft_sampler
+{
+	ft_handle handle;
+};
+
+struct ft_image
+{
+	uint32_t                width;
+	uint32_t                height;
+	uint32_t                depth;
+	enum ft_format          format;
+	uint32_t                sample_count;
+	uint32_t                mip_levels;
+	uint32_t                layer_count;
+	enum ft_descriptor_type descriptor_type;
+	ft_handle               handle;
+};
+
+struct ft_buffer
+{
+	uint64_t                size;
+	enum ft_resource_state  resource_state;
+	enum ft_descriptor_type descriptor_type;
+	enum ft_memory_usage    memory_usage;
+	void*                   mapped_memory;
+	ft_handle               handle;
+};
+
+struct ft_swapchain
+{
+	uint32_t          min_image_count;
+	uint32_t          image_count;
+	uint32_t          width;
+	uint32_t          height;
+	enum ft_format    format;
+	struct ft_image** images;
+	struct ft_queue*  queue;
+	bool              vsync;
+	ft_handle         handle;
+};
+
+struct ft_binding
+{
+	uint32_t                set;
+	uint32_t                binding;
+	uint32_t                descriptor_count;
+	enum ft_descriptor_type descriptor_type;
+	enum ft_shader_stage    stage;
+};
+
+struct ft_binding_map_item
+{
+	char     name[ FT_MAX_BINDING_NAME_LENGTH ];
+	uint32_t value;
+};
+
+struct ft_reflection_data
+{
+	uint32_t           binding_count;
+	struct ft_binding* bindings;
+	struct hashmap*    binding_map;
+};
+
+struct ft_shader
+{
+	struct ft_reflection_data reflect_data;
+	ft_handle                 handle;
+};
+
+struct ft_descriptor_set_layout
+{
+	struct ft_reflection_data reflection_data;
+	ft_handle                 handle;
+};
+
+struct ft_pipeline
+{
+	enum ft_pipeline_type type;
+	ft_handle             handle;
+};
+
+struct ft_descriptor_set
+{
+	struct ft_descriptor_set_layout* layout;
+	ft_handle                        handle;
+};
+
 FT_DECLARE_FUNCTION_POINTER( void,
                              ft_destroy_renderer_backend,
                              struct ft_renderer_backend* backend );

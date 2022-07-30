@@ -25,20 +25,20 @@ struct nk_vulkan_adapter
 {
 	struct nk_buffer                 cmds;
 	struct nk_draw_null_texture      null;
-	struct ft_device                *device;
-	struct ft_queue                 *queue;
+	struct ft_device *               device;
+	struct ft_queue *                queue;
 	enum ft_format                   color_format;
 	enum ft_format                   depth_format;
-	struct ft_sampler               *font_tex;
-	struct ft_image                 *font_image;
-	struct ft_pipeline              *pipeline;
-	struct ft_buffer                *vertex_buffer;
-	struct ft_buffer                *index_buffer;
-	struct ft_buffer                *uniform_buffer;
-	struct ft_command_pool          *command_pool;
-	struct ft_command_buffer        *command_buffer;
+	struct ft_sampler *              font_tex;
+	struct ft_image *                font_image;
+	struct ft_pipeline *             pipeline;
+	struct ft_buffer *               vertex_buffer;
+	struct ft_buffer *               index_buffer;
+	struct ft_buffer *               uniform_buffer;
+	struct ft_command_pool *         command_pool;
+	struct ft_command_buffer *       command_buffer;
 	struct ft_descriptor_set_layout *dsl;
-	struct ft_descriptor_set        *set;
+	struct ft_descriptor_set *       set;
 };
 
 struct nk_ft_vertex
@@ -50,7 +50,7 @@ struct nk_ft_vertex
 
 static struct nk_ft
 {
-	struct ft_wsi_info      *wsi;
+	struct ft_wsi_info *     wsi;
 	uint32_t                 width, height;
 	uint32_t                 display_width, display_height;
 	struct nk_vulkan_adapter adapter;
@@ -112,9 +112,11 @@ prepare_pipeline( struct nk_vulkan_adapter *adapter )
 {
 	struct ft_shader *shader;
 
+	enum ft_renderer_api api = ft_get_device_api( adapter->device );
+
 	struct ft_shader_info shader_info = {
-	    .vertex   = get_nuklear_vert_shader( adapter->device->api ),
-	    .fragment = get_nuklear_frag_shader( adapter->device->api ),
+	    .vertex   = get_nuklear_vert_shader( api ),
+	    .fragment = get_nuklear_frag_shader( api ),
 	};
 	ft_create_shader( adapter->device, &shader_info, &shader );
 
@@ -180,7 +182,7 @@ prepare_pipeline( struct nk_vulkan_adapter *adapter )
 
 NK_API void
 nk_ft_device_create( struct ft_device *device,
-                     struct ft_queue  *graphics_queue,
+                     struct ft_queue * graphics_queue,
                      enum ft_format    color_format,
                      enum ft_format    depth_format )
 {
@@ -215,8 +217,8 @@ nk_ft_device_destroy( void )
 
 NK_API struct nk_context *
 nk_ft_init( struct ft_wsi_info *wsi,
-            struct ft_device   *device,
-            struct ft_queue    *queue,
+            struct ft_device *  device,
+            struct ft_queue *   queue,
             enum ft_format      color_format,
             enum ft_format      depth_format )
 {
@@ -314,7 +316,7 @@ nk_ft_new_frame()
 {
 	struct nk_context *ctx = &ft.ctx;
 
-	struct ft_wsi_info     *wsi = ft.wsi;
+	struct ft_wsi_info *    wsi = ft.wsi;
 	const struct ft_window *win = wsi->window;
 	wsi->get_window_size( win, &ft.width, &ft.height );
 	wsi->get_framebuffer_size( win, &ft.display_width, &ft.display_height );
@@ -446,7 +448,7 @@ nk_ft_render( const struct ft_command_buffer *cmd, enum nk_anti_aliasing AA )
 	{
 		/* convert from command queue into draw list and draw to screen */
 		const struct nk_draw_command *draw_cmd;
-		void		                 *vertices =
+		void *                        vertices =
 		    ft_map_memory( adapter->device, adapter->vertex_buffer );
 		void *elements =
 		    ft_map_memory( adapter->device, adapter->index_buffer );

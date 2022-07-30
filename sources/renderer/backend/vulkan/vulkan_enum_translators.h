@@ -1,9 +1,12 @@
 #pragma once
 
+#include "base/base.h"
+
+#if FT_VULKAN_BACKEND
+
 #include <volk/volk.h>
 #include <tiny_image_format/tinyimageformat_apis.h>
 #include <vk_mem_alloc/vk_mem_alloc.h>
-#include "base/base.h"
 
 FT_INLINE VkFormat
 to_vk_format( enum ft_format format )
@@ -526,3 +529,5 @@ determine_vk_image_usage( enum ft_descriptor_type descriptor_type )
 
 	return image_usage;
 }
+
+#endif
