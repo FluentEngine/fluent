@@ -203,7 +203,8 @@ wnd_proc( HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param )
 	}
 	case WM_CLOSE:
 	{
-		struct ft_window* window = GetWindowLongPtr( hwnd, GWLP_USERDATA );
+		struct ft_window* window =
+		    ( struct ft_window* ) GetWindowLongPtr( hwnd, GWLP_USERDATA );
 		window->should_close     = true;
 		break;
 	}
@@ -248,7 +249,7 @@ winapi_window_get_framebuffer_size( const struct ft_window* window,
 }
 
 static void
-winapi_window_show_cursor( bool show )
+winapi_window_show_cursor( struct ft_window* window, bool show )
 {
 }
 
@@ -349,10 +350,17 @@ winapi_create_window( const struct ft_window_info* info )
 	title       = malloc( size * sizeof( WCHAR ) );
 	MultiByteToWideChar( CP_ACP, 0, info->title, -1, ( LPWSTR ) title, size );
 
+	DWORD style_mask = WS_OVERLAPPEDWINDOW;
+
+	if ( !info->resizable )
+	{
+		style_mask ^= ( WS_THICKFRAME | WS_MAXIMIZEBOX );
+	}
+
 	HWND hwnd = CreateWindowEx( 0,
 	                            FT_WINDOW_CLASS,
 	                            title,
-	                            WS_OVERLAPPEDWINDOW,
+	                            style_mask,
 	                            info->x,
 	                            info->y,
 	                            info->width,
