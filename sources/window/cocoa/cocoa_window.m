@@ -56,7 +56,7 @@ cocoa_window_get_vulkan_instance_extensions( const struct ft_window* window,
 {
 	if ( names == NULL )
 	{
-		*count = FT_ARRAY_SIZE( cocoa_vulkan_extension_names );
+		*count = FT_COUNTOF( cocoa_vulkan_extension_names );
 	}
 	else
 	{

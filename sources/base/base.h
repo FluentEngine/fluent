@@ -103,7 +103,7 @@ ft_safe_free( void* p )
 #define FT_MIN( a, b ) ( ( ( a ) < ( b ) ) ? ( a ) : ( b ) )
 #define FT_CLAMP( x, min, max )                                                \
 	( ( ( x ) < ( min ) ) ? ( min ) : ( ( max ) < ( x ) ) ? ( max ) : ( x ) )
-#define FT_ARRAY_SIZE( x ) ( ( sizeof( ( x ) ) ) / sizeof( ( x[ 0 ] ) ) )
+#define FT_COUNTOF( x ) ( ( sizeof( ( x ) ) ) / sizeof( ( x[ 0 ] ) ) )
 
 FT_INLINE float
 ft_flerp( float a, float b, float t )

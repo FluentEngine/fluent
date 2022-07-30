@@ -371,7 +371,7 @@ vk_create_device( const struct ft_renderer_backend* ibackend,
 	memset( device_extensions, 0, sizeof( device_extensions ) );
 
 	uint32_t device_extension_count = 0;
-	for ( uint32_t w = 0; w < FT_ARRAY_SIZE( wanted_extensions ); ++w )
+	for ( uint32_t w = 0; w < FT_COUNTOF( wanted_extensions ); ++w )
 	{
 		for ( uint32_t s = 0; s < supported_device_extension_count; ++s )
 		{

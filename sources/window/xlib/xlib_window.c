@@ -320,7 +320,7 @@ xlib_window_get_vulkan_instance_extensions( const struct ft_window* window,
 {
 	if ( names == NULL )
 	{
-		*count = FT_ARRAY_SIZE( xlib_vulkan_extension_names );
+		*count = FT_COUNTOF( xlib_vulkan_extension_names );
 	}
 	else
 	{
