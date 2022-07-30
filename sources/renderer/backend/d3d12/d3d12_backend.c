@@ -3,12 +3,11 @@
 #define COBJMACROS
 #include <tiny_image_format/tinyimageformat_apis.h>
 #include <tiny_image_format/tinyimageformat_query.h>
-#include "log/log.h"
 #include "wsi/wsi.h"
 #include "../renderer_private.h"
 #include "d3d12_backend.h"
 
-#ifdef FLUENT_DEBUG
+#if FT_DEBUG
 #define D3D12_ASSERT( x )                                                      \
 	do {                                                                       \
 		HRESULT err = x;                                                       \
@@ -44,7 +43,7 @@ to_dxgi_image_format( enum ft_format format )
 FT_INLINE DXGI_FORMAT
 to_dxgi_format( enum ft_format format )
 {
-	return ( DXGI_FORMAT ) ( TinyImageFormat_ToDXGI_FORMAT( format ) );
+	return ( DXGI_FORMAT )( TinyImageFormat_ToDXGI_FORMAT( format ) );
 }
 
 FT_INLINE D3D12_COMMAND_LIST_TYPE
@@ -200,7 +199,7 @@ to_d3d12_filter( enum ft_filter              min_filter,
 	                          ? D3D12_FILTER_COMPARISON_MIN_MAG_MIP_POINT
 	                          : D3D12_FILTER_MIN_MAG_MIP_POINT;
 
-	return ( D3D12_FILTER ) ( base_filter + filter );
+	return ( D3D12_FILTER )( base_filter + filter );
 }
 
 FT_INLINE D3D12_TEXTURE_ADDRESS_MODE
@@ -267,55 +266,57 @@ to_d3d12_shader_visibility( enum ft_shader_stage stage )
 	}
 }
 
-void
+static void
 d3d12_destroy_renderer_backend( struct ft_renderer_backend* ibackend )
 {
 	FT_FROM_HANDLE( backend, ibackend, D3D12RendererBackend );
 
-#ifdef FLUENT_DEBUG
-	ID3D12Debug_Release( backend->debug_controller );
-#endif
+	if ( FT_DEBUG )
+	{
+		ID3D12Debug_Release( backend->debug_controller );
+	}
+
 	IDXGIFactory4_Release( backend->factory );
 }
 
-void
+static void
 d3d12_create_device( const struct ft_renderer_backend* ibackend,
                      const struct ft_device_info*      info,
                      struct ft_device**                p )
 {
 }
 
-void
+static void
 d3d12_destroy_device( struct ft_device* idevice )
 {
 }
 
-void
+static void
 d3d12_create_queue( const struct ft_device*     idevice,
                     const struct ft_queue_info* info,
                     struct ft_queue**           p )
 {
 }
 
-void
+static void
 d3d12_destroy_queue( struct ft_queue* iqueue )
 {
 }
 
-void
+static void
 d3d12_create_command_pool( const struct ft_device*            idevice,
                            const struct ft_command_pool_info* info,
                            struct ft_command_pool**           p )
 {
 }
 
-void
+static void
 d3d12_destroy_command_pool( const struct ft_device* idevice,
                             struct ft_command_pool* icommand_pool )
 {
 }
 
-void
+static void
 d3d12_create_command_buffers( const struct ft_device*       idevice,
                               const struct ft_command_pool* icommand_pool,
                               uint32_t                      count,
@@ -323,7 +324,7 @@ d3d12_create_command_buffers( const struct ft_device*       idevice,
 {
 }
 
-void
+static void
 d3d12_free_command_buffers( const struct ft_device*       idevice,
                             const struct ft_command_pool* icommand_pool,
                             uint32_t                      count,
@@ -331,7 +332,7 @@ d3d12_free_command_buffers( const struct ft_device*       idevice,
 {
 }
 
-void
+static void
 d3d12_destroy_command_buffers( const struct ft_device*       idevice,
                                const struct ft_command_pool* icommand_pool,
                                uint32_t                      count,
@@ -339,73 +340,73 @@ d3d12_destroy_command_buffers( const struct ft_device*       idevice,
 {
 }
 
-void
+static void
 d3d12_create_semaphore( const struct ft_device* idevice,
                         struct ft_semaphore**   p )
 {
 }
 
-void
+static void
 d3d12_destroy_semaphore( const struct ft_device* idevice,
                          struct ft_semaphore*    isemaphore )
 {
 }
 
-void
+static void
 d3d12_create_fence( const struct ft_device* idevice, struct ft_fence** p )
 {
 }
 
-void
+static void
 d3d12_destroy_fence( const struct ft_device* idevice, struct ft_fence* ifence )
 {
 }
 
-void
+static void
 d3d12_queue_wait_idle( const struct ft_queue* iqueue )
 {
 }
 
-void
+static void
 d3d12_queue_submit( const struct ft_queue*             iqueue,
                     const struct ft_queue_submit_info* info )
 {
 }
 
-void
+static void
 d3d12_immediate_submit( const struct ft_queue*    iqueue,
                         struct ft_command_buffer* icmd )
 {
 }
 
-void
+static void
 d3d12_queue_present( const struct ft_queue*              iqueue,
                      const struct ft_queue_present_info* info )
 {
 }
 
-void
+static void
 d3d12_wait_for_fences( const struct ft_device* idevice,
                        uint32_t                count,
                        struct ft_fence**       ifences )
 {
 }
 
-void
+static void
 d3d12_reset_fences( const struct ft_device* idevice,
                     uint32_t                count,
                     struct ft_fence**       ifences )
 {
 }
 
-void
+static void
 d3d12_create_swapchain( const struct ft_device*         idevice,
                         const struct ft_swapchain_info* info,
                         struct ft_swapchain**           p )
 {
 }
 
-void
+static void
 d3d12_resize_swapchain( const struct ft_device* idevice,
                         struct ft_swapchain*    iswapchain,
                         uint32_t                width,
@@ -413,23 +414,23 @@ d3d12_resize_swapchain( const struct ft_device* idevice,
 {
 }
 
-void
+static void
 d3d12_destroy_swapchain( const struct ft_device* idevice,
                          struct ft_swapchain*    iswapchain )
 {
 }
 
-void
+static void
 d3d12_begin_command_buffer( const struct ft_command_buffer* icmd )
 {
 }
 
-void
+static void
 d3d12_end_command_buffer( const struct ft_command_buffer* icmd )
 {
 }
 
-void
+static void
 d3d12_acquire_next_image( const struct ft_device*    idevice,
                           const struct ft_swapchain* iswapchain,
                           const struct ft_semaphore* isemaphore,
@@ -438,62 +439,69 @@ d3d12_acquire_next_image( const struct ft_device*    idevice,
 {
 }
 
-void
+static void
 d3d12_create_shader( const struct ft_device* idevice,
                      struct ft_shader_info*  info,
                      struct ft_shader**      p )
 {
 }
 
-void
+static void
 d3d12_destroy_shader( const struct ft_device* idevice,
                       struct ft_shader*       ishader )
 {
 }
 
-void
+static void
 d3d12_create_descriptor_set_layout( const struct ft_device*           idevice,
                                     struct ft_shader*                 ishader,
                                     struct ft_descriptor_set_layout** p ) {};
 
-void
+static void
 d3d12_destroy_descriptor_set_layout( const struct ft_device*          idevice,
                                      struct ft_descriptor_set_layout* ilayout )
 {
 }
 
-void
+static void
 d3d12_create_compute_pipeline( const struct ft_device*        idevice,
                                const struct ft_pipeline_info* info,
                                struct ft_pipeline**           p )
 {
 }
 
-void
+static void
 d3d12_create_graphics_pipeline( const struct ft_device*        idevice,
                                 const struct ft_pipeline_info* info,
                                 struct ft_pipeline**           p )
 {
 }
 
-void
+static void
+d3d12_create_pipeline( const struct ft_device*        idevice,
+                       const struct ft_pipeline_info* info,
+                       struct ft_pipeline**           p )
+{
+}
+
+static void
 d3d12_destroy_pipeline( const struct ft_device* idevice,
                         struct ft_pipeline*     ipipeline )
 {
 }
 
-void
+static void
 d3d12_cmd_begin_render_pass( const struct ft_command_buffer*         icmd,
                              const struct ft_render_pass_begin_info* info )
 {
 }
 
-void
+static void
 d3d12_cmd_end_render_pass( const struct ft_command_buffer* icmd )
 {
 }
 
-void
+static void
 d3d12_cmd_barrier( const struct ft_command_buffer* icmd,
                    uint32_t                        memory_barriers_count,
                    const struct ft_memory_barrier* memory_barrier,
@@ -502,7 +510,7 @@ d3d12_cmd_barrier( const struct ft_command_buffer* icmd,
                    uint32_t                        image_barriers_count,
                    const struct ft_image_barrier*  image_barriers ) {};
 
-void
+static void
 d3d12_cmd_set_scissor( const struct ft_command_buffer* icmd,
                        int32_t                         x,
                        int32_t                         y,
@@ -511,7 +519,7 @@ d3d12_cmd_set_scissor( const struct ft_command_buffer* icmd,
 {
 }
 
-void
+static void
 d3d12_cmd_set_viewport( const struct ft_command_buffer* icmd,
                         float                           x,
                         float                           y,
@@ -522,13 +530,13 @@ d3d12_cmd_set_viewport( const struct ft_command_buffer* icmd,
 {
 }
 
-void
+static void
 d3d12_cmd_bind_pipeline( const struct ft_command_buffer* icmd,
                          const struct ft_pipeline*       ipipeline )
 {
 }
 
-void
+static void
 d3d12_cmd_draw( const struct ft_command_buffer* icmd,
                 uint32_t                        vertex_count,
                 uint32_t                        instance_count,
@@ -537,7 +545,7 @@ d3d12_cmd_draw( const struct ft_command_buffer* icmd,
 {
 }
 
-void
+static void
 d3d12_cmd_draw_indexed( const struct ft_command_buffer* icmd,
                         uint32_t                        index_count,
                         uint32_t                        instance_count,
@@ -547,28 +555,22 @@ d3d12_cmd_draw_indexed( const struct ft_command_buffer* icmd,
 {
 }
 
-void
+static void
 d3d12_cmd_bind_vertex_buffer( const struct ft_command_buffer* icmd,
                               const struct ft_buffer*         ibuffer,
                               const uint64_t                  offset )
 {
 }
 
-void
-d3d12_cmd_bind_index_buffer_uint16_t( const struct ft_command_buffer* cmd,
-                                      const struct ft_buffer*         buffer,
-                                      const uint64_t                  offset )
+static void
+d3d12_cmd_bind_index_buffer( const struct ft_command_buffer* cmd,
+                             const struct ft_buffer*         buffer,
+                             const uint64_t                  offset,
+                             enum ft_index_type              index_type )
 {
 }
 
-void
-d3d12_cmd_bind_index_buffer_uint32_t( const struct ft_command_buffer* cmd,
-                                      const struct ft_buffer*         buffer,
-                                      uint64_t                        offset )
-{
-}
-
-void
+static void
 d3d12_cmd_copy_buffer( const struct ft_command_buffer* icmd,
                        const struct ft_buffer*         isrc,
                        uint64_t                        src_offset,
@@ -578,15 +580,15 @@ d3d12_cmd_copy_buffer( const struct ft_command_buffer* icmd,
 {
 }
 
-void
-d3d12_cmd_copy_buffer_to_image( const struct ft_command_buffer* icmd,
-                                const struct ft_buffer*         isrc,
-                                uint64_t                        src_offset,
-                                struct ft_image*                idst )
+static void
+d3d12_cmd_copy_buffer_to_image( const struct ft_command_buffer*    icmd,
+                                const struct ft_buffer*            isrc,
+                                struct ft_image*                   idst,
+                                const struct ft_buffer_image_copy* icopy )
 {
 }
 
-void
+static void
 d3d12_cmd_dispatch( const struct ft_command_buffer* cmd,
                     uint32_t                        group_count_x,
                     uint32_t                        group_count_y,
@@ -594,16 +596,16 @@ d3d12_cmd_dispatch( const struct ft_command_buffer* cmd,
 {
 }
 
-void
-d3d12_cmd_push_constants( const struct ft_command_buffer* cmd,
-                          const struct ft_pipeline*       pipeline,
-                          uint64_t                        offset,
-                          uint64_t                        size,
+static void
+d3d12_cmd_push_constants( const struct ft_command_buffer* icmd,
+                          const struct ft_pipeline*       ipipeline,
+                          uint32_t                        offset,
+                          uint32_t                        size,
                           const void*                     data )
 {
 }
 
-void
+static void
 d3d12_cmd_blit_image( const struct ft_command_buffer* cmd,
                       const struct ft_image*          src,
                       enum ft_resource_state          src_state,
@@ -613,14 +615,14 @@ d3d12_cmd_blit_image( const struct ft_command_buffer* cmd,
 {
 }
 
-void
+static void
 d3d12_cmd_clear_color_image( const struct ft_command_buffer* cmd,
                              struct ft_image*                image,
                              float                           color[ 4 ] )
 {
 }
 
-void
+static void
 d3d12_cmd_draw_indexed_indirect( const struct ft_command_buffer* cmd,
                                  const struct ft_buffer*         buffer,
                                  uint64_t                        offset,
@@ -629,7 +631,7 @@ d3d12_cmd_draw_indexed_indirect( const struct ft_command_buffer* cmd,
 {
 }
 
-void
+static void
 d3d12_cmd_bind_descriptor_set( const struct ft_command_buffer* cmd,
                                uint32_t                        first_set,
                                const struct ft_descriptor_set* set,
@@ -637,68 +639,69 @@ d3d12_cmd_bind_descriptor_set( const struct ft_command_buffer* cmd,
 {
 }
 
-void
+static void
 d3d12_create_buffer( const struct ft_device*      idevice,
                      const struct ft_buffer_info* info,
                      struct ft_buffer**           p )
 {
 }
 
-void
+static void
 d3d12_destroy_buffer( const struct ft_device* idevice,
                       struct ft_buffer*       ibuffer )
 {
 }
 
-void*
+static void*
 d3d12_map_memory( const struct ft_device* idevice, struct ft_buffer* ibuffer )
 {
+	return NULL;
 }
 
-void
+static void
 d3d12_unmap_memory( const struct ft_device* idevice, struct ft_buffer* ibuffer )
 {
 }
 
-void
+static void
 d3d12_create_sampler( const struct ft_device*       idevice,
                       const struct ft_sampler_info* info,
                       struct ft_sampler**           p )
 {
 }
 
-void
+static void
 d3d12_destroy_sampler( const struct ft_device* device,
                        struct ft_sampler*      isampler )
 {
 }
 
-void
+static void
 d3d12_create_image( const struct ft_device*     idevice,
                     const struct ft_image_info* info,
                     struct ft_image**           p )
 {
 }
 
-void
+static void
 d3d12_destroy_image( const struct ft_device* device, struct ft_image* iimage )
 {
 }
 
-void
+static void
 d3d12_create_descriptor_set( const struct ft_device*              idevice,
                              const struct ft_descriptor_set_info* info,
                              struct ft_descriptor_set**           p )
 {
 }
 
-void
+static void
 d3d12_destroy_descriptor_set( const struct ft_device*   idevice,
                               struct ft_descriptor_set* iset )
 {
 }
 
-void
+static void
 d3d12_update_descriptor_set( const struct ft_device*           idevice,
                              struct ft_descriptor_set*         iset,
                              uint32_t                          count,
@@ -710,79 +713,77 @@ void
 d3d12_create_renderer_backend( const struct ft_renderer_backend_info* info,
                                struct ft_renderer_backend**           p )
 {
-	destroy_renderer_backend_impl       = d3d12_destroy_renderer_backend;
-	create_device_impl                  = d3d12_create_device;
-	destroy_device_impl                 = d3d12_destroy_device;
-	create_queue_impl                   = d3d12_create_queue;
-	destroy_queue_impl                  = d3d12_destroy_queue;
-	queue_wait_idle_impl                = d3d12_queue_wait_idle;
-	queue_submit_impl                   = d3d12_queue_submit;
-	immediate_submit_impl               = d3d12_immediate_submit;
-	queue_present_impl                  = d3d12_queue_present;
-	create_semaphore_impl               = d3d12_create_semaphore;
-	destroy_semaphore_impl              = d3d12_destroy_semaphore;
-	create_fence_impl                   = d3d12_create_fence;
-	destroy_fence_impl                  = d3d12_destroy_fence;
-	wait_for_fences_impl                = d3d12_wait_for_fences;
-	reset_fences_impl                   = d3d12_reset_fences;
-	create_swapchain_impl               = d3d12_create_swapchain;
-	resize_swapchain_impl               = d3d12_resize_swapchain;
-	destroy_swapchain_impl              = d3d12_destroy_swapchain;
-	create_command_pool_impl            = d3d12_create_command_pool;
-	destroy_command_pool_impl           = d3d12_destroy_command_pool;
-	create_command_buffers_impl         = d3d12_create_command_buffers;
-	free_command_buffers_impl           = d3d12_free_command_buffers;
-	destroy_command_buffers_impl        = d3d12_destroy_command_buffers;
-	begin_command_buffer_impl           = d3d12_begin_command_buffer;
-	end_command_buffer_impl             = d3d12_end_command_buffer;
-	acquire_next_image_impl             = d3d12_acquire_next_image;
-	create_shader_impl                  = d3d12_create_shader;
-	destroy_shader_impl                 = d3d12_destroy_shader;
-	create_descriptor_set_layout_impl   = d3d12_create_descriptor_set_layout;
-	destroy_descriptor_set_layout_impl  = d3d12_destroy_descriptor_set_layout;
-	create_compute_pipeline_impl        = d3d12_create_compute_pipeline;
-	create_graphics_pipeline_impl       = d3d12_create_graphics_pipeline;
-	destroy_pipeline_impl               = d3d12_destroy_pipeline;
-	create_buffer_impl                  = d3d12_create_buffer;
-	destroy_buffer_impl                 = d3d12_destroy_buffer;
-	map_memory_impl                     = d3d12_map_memory;
-	unmap_memory_impl                   = d3d12_unmap_memory;
-	create_sampler_impl                 = d3d12_create_sampler;
-	destroy_sampler_impl                = d3d12_destroy_sampler;
-	create_image_impl                   = d3d12_create_image;
-	destroy_image_impl                  = d3d12_destroy_image;
-	create_descriptor_set_impl          = d3d12_create_descriptor_set;
-	destroy_descriptor_set_impl         = d3d12_destroy_descriptor_set;
-	update_descriptor_set_impl          = d3d12_update_descriptor_set;
-	cmd_begin_render_pass_impl          = d3d12_cmd_begin_render_pass;
-	cmd_end_render_pass_impl            = d3d12_cmd_end_render_pass;
-	cmd_barrier_impl                    = d3d12_cmd_barrier;
-	cmd_set_scissor_impl                = d3d12_cmd_set_scissor;
-	cmd_set_viewport_impl               = d3d12_cmd_set_viewport;
-	cmd_bind_pipeline_impl              = d3d12_cmd_bind_pipeline;
-	cmd_draw_impl                       = d3d12_cmd_draw;
-	cmd_draw_indexed_impl               = d3d12_cmd_draw_indexed;
-	cmd_bind_vertex_buffer_impl         = d3d12_cmd_bind_vertex_buffer;
-	cmd_bind_index_buffer_uint16_t_impl = d3d12_cmd_bind_index_buffer_uint16_t;
-	cmd_bind_index_buffer_uint32_t_impl = d3d12_cmd_bind_index_buffer_uint32_t;
-	cmd_copy_buffer_impl                = d3d12_cmd_copy_buffer;
-	cmd_copy_buffer_to_image_impl       = d3d12_cmd_copy_buffer_to_image;
-	cmd_bind_descriptor_set_impl        = d3d12_cmd_bind_descriptor_set;
-	cmd_dispatch_impl                   = d3d12_cmd_dispatch;
-	cmd_push_constants_impl             = d3d12_cmd_push_constants;
-	cmd_clear_color_image_impl          = d3d12_cmd_clear_color_image;
-	cmd_draw_indexed_indirect_impl      = d3d12_cmd_draw_indexed_indirect;
+	ft_destroy_renderer_backend_impl      = d3d12_destroy_renderer_backend;
+	ft_create_device_impl                 = d3d12_create_device;
+	ft_destroy_device_impl                = d3d12_destroy_device;
+	ft_create_queue_impl                  = d3d12_create_queue;
+	ft_destroy_queue_impl                 = d3d12_destroy_queue;
+	ft_queue_wait_idle_impl               = d3d12_queue_wait_idle;
+	ft_queue_submit_impl                  = d3d12_queue_submit;
+	ft_immediate_submit_impl              = d3d12_immediate_submit;
+	ft_queue_present_impl                 = d3d12_queue_present;
+	ft_create_semaphore_impl              = d3d12_create_semaphore;
+	ft_destroy_semaphore_impl             = d3d12_destroy_semaphore;
+	ft_create_fence_impl                  = d3d12_create_fence;
+	ft_destroy_fence_impl                 = d3d12_destroy_fence;
+	ft_wait_for_fences_impl               = d3d12_wait_for_fences;
+	ft_reset_fences_impl                  = d3d12_reset_fences;
+	ft_create_swapchain_impl              = d3d12_create_swapchain;
+	ft_resize_swapchain_impl              = d3d12_resize_swapchain;
+	ft_destroy_swapchain_impl             = d3d12_destroy_swapchain;
+	ft_create_command_pool_impl           = d3d12_create_command_pool;
+	ft_destroy_command_pool_impl          = d3d12_destroy_command_pool;
+	ft_create_command_buffers_impl        = d3d12_create_command_buffers;
+	ft_free_command_buffers_impl          = d3d12_free_command_buffers;
+	ft_destroy_command_buffers_impl       = d3d12_destroy_command_buffers;
+	ft_begin_command_buffer_impl          = d3d12_begin_command_buffer;
+	ft_end_command_buffer_impl            = d3d12_end_command_buffer;
+	ft_acquire_next_image_impl            = d3d12_acquire_next_image;
+	ft_create_shader_impl                 = d3d12_create_shader;
+	ft_destroy_shader_impl                = d3d12_destroy_shader;
+	ft_create_descriptor_set_layout_impl  = d3d12_create_descriptor_set_layout;
+	ft_destroy_descriptor_set_layout_impl = d3d12_destroy_descriptor_set_layout;
+	ft_create_pipeline_impl               = d3d12_create_pipeline;
+	ft_destroy_pipeline_impl              = d3d12_destroy_pipeline;
+	ft_create_buffer_impl                 = d3d12_create_buffer;
+	ft_destroy_buffer_impl                = d3d12_destroy_buffer;
+	ft_map_memory_impl                    = d3d12_map_memory;
+	ft_unmap_memory_impl                  = d3d12_unmap_memory;
+	ft_create_sampler_impl                = d3d12_create_sampler;
+	ft_destroy_sampler_impl               = d3d12_destroy_sampler;
+	ft_create_image_impl                  = d3d12_create_image;
+	ft_destroy_image_impl                 = d3d12_destroy_image;
+	ft_create_descriptor_set_impl         = d3d12_create_descriptor_set;
+	ft_destroy_descriptor_set_impl        = d3d12_destroy_descriptor_set;
+	ft_update_descriptor_set_impl         = d3d12_update_descriptor_set;
+	ft_cmd_begin_render_pass_impl         = d3d12_cmd_begin_render_pass;
+	ft_cmd_end_render_pass_impl           = d3d12_cmd_end_render_pass;
+	ft_cmd_barrier_impl                   = d3d12_cmd_barrier;
+	ft_cmd_set_scissor_impl               = d3d12_cmd_set_scissor;
+	ft_cmd_set_viewport_impl              = d3d12_cmd_set_viewport;
+	ft_cmd_bind_pipeline_impl             = d3d12_cmd_bind_pipeline;
+	ft_cmd_draw_impl                      = d3d12_cmd_draw;
+	ft_cmd_draw_indexed_impl              = d3d12_cmd_draw_indexed;
+	ft_cmd_bind_vertex_buffer_impl        = d3d12_cmd_bind_vertex_buffer;
+	ft_cmd_bind_index_buffer_impl         = d3d12_cmd_bind_index_buffer;
+	ft_cmd_copy_buffer_impl               = d3d12_cmd_copy_buffer;
+	ft_cmd_copy_buffer_to_image_impl      = d3d12_cmd_copy_buffer_to_image;
+	ft_cmd_bind_descriptor_set_impl       = d3d12_cmd_bind_descriptor_set;
+	ft_cmd_dispatch_impl                  = d3d12_cmd_dispatch;
+	ft_cmd_push_constants_impl            = d3d12_cmd_push_constants;
+	ft_cmd_draw_indexed_indirect_impl     = d3d12_cmd_draw_indexed_indirect;
 
 	FT_INIT_INTERNAL( backend, *p, D3D12RendererBackend );
 
 	UINT flags = 0;
 
-#ifdef FLUENT_DEBUG
-	D3D12_ASSERT( D3D12GetDebugInterface( &IID_ID3D12Debug,
-	                                      &backend->debug_controller ) );
-	ID3D12Debug_EnableDebugLayer( backend->debug_controller );
-	flags |= DXGI_CREATE_FACTORY_DEBUG;
-#endif
+	if ( FT_DEBUG )
+	{
+		D3D12_ASSERT( D3D12GetDebugInterface( &IID_ID3D12Debug,
+		                                      &backend->debug_controller ) );
+		ID3D12Debug_EnableDebugLayer( backend->debug_controller );
+		flags |= DXGI_CREATE_FACTORY_DEBUG;
+	}
 
 	D3D12_ASSERT(
 	    CreateDXGIFactory2( flags, &IID_IDXGIFactory4, &backend->factory ) );

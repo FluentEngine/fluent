@@ -1,11 +1,8 @@
-#ifdef D3D12_BACKEND
+#if D3D12_BACKEND & 0
 #include <d3d12.h>
 #include <dxcapi.h>
 #include <d3d12shader.h>
-#include "renderer/d3d12/d3d12_backend.hpp"
-
-namespace fluent
-{
+#include "d3d12_backend.h"
 
 FT_INLINE enum ft_descriptor_type
 to_descriptor_type( D3D_SHADER_INPUT_TYPE shader_input_type )
@@ -22,17 +19,16 @@ to_descriptor_type( D3D_SHADER_INPUT_TYPE shader_input_type )
 	}
 }
 
-void
-ft_dxil_reflect_stage( struct ft_reflection_data* reflection_data,
-                       ShaderStage                stage,
-                       uint32_t                   byte_code_size,
-                       const void*                byte_code )
+static void
+dxil_reflect_stage( struct ft_reflection_data* reflection_data,
+                    ShaderStage                stage,
+                    uint32_t                   byte_code_size,
+                    const void*                byte_code )
 {
 #define DXIL_FOURCC( ch0, ch1, ch2, ch3 )                                      \
-	( ( uint32_t ) ( uint8_t ) ( ch0 ) |                                       \
-	  ( uint32_t ) ( uint8_t ) ( ch1 ) << 8 |                                  \
-	  ( uint32_t ) ( uint8_t ) ( ch2 ) << 16 |                                 \
-	  ( uint32_t ) ( uint8_t ) ( ch3 ) << 24 )
+	( ( uint32_t )( uint8_t )( ch0 ) | ( uint32_t )( uint8_t )( ch1 ) << 8 |   \
+	  ( uint32_t )( uint8_t )( ch2 ) << 16 |                                   \
+	  ( uint32_t )( uint8_t )( ch3 ) << 24 )
 
 	HRESULT      result;
 	IDxcLibrary* library;
@@ -82,9 +78,9 @@ ft_dxil_reflect_stage( struct ft_reflection_data* reflection_data,
 }
 
 void
-ft_dxil_reflect( const struct ft_device*      device,
-                 const struct ft_shader_info* info,
-                 struct ft_shader*            shader )
+dxil_reflect( const struct ft_device*      device,
+              const struct ft_shader_info* info,
+              struct ft_shader*            shader )
 {
 	if ( info->vertex.bytecode )
 	{
@@ -135,5 +131,4 @@ ft_dxil_reflect( const struct ft_device*      device,
 	}
 }
 
-} // namespace fluent
 #endif
