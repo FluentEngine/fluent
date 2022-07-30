@@ -5,25 +5,27 @@
 #include <windows.h>
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <volk/volk.h>
-#include "log/log.h"
-#include "os/key_codes.h"
-#include "os/window/window.h"
-#include "os/window/window_private.h"
+#include "window/key_codes.h"
+#include "window/mouse_codes.h"
+#include "window/window.h"
+#include "window/window_private.h"
 
 #define FT_WINDOW_CLASS L"Fluent"
 
 struct ft_window
 {
-	HWND     window;
-	uint32_t width;
-	uint32_t height;
-	bool     should_close;
+	HWND                      window;
+	uint32_t                  width;
+	uint32_t                  height;
+	bool                      should_close;
+	ft_window_resize_callback resize_cb;
 };
 
 struct
 {
 	uint8_t keyboard[ FT_KEY_COUNT + 1 ];
 	int32_t mouse_position[ 2 ];
+	uint8_t mouse_buttons[ FT_BUTTON_COUNT + 1 ];
 } winapi;
 
 static const char* winapi_vulkan_extension_names[] = {
@@ -157,13 +159,13 @@ extract_scancode( LPARAM l_param )
 FT_INLINE int32_t
 extract_mouse_pos_x( LPARAM l_param )
 {
-	return ( ( int32_t ) ( short ) LOWORD( l_param ) );
+	return ( ( int32_t )( short ) LOWORD( l_param ) );
 }
 
 FT_INLINE int32_t
 extract_mouse_pos_y( LPARAM l_param )
 {
-	return ( ( int32_t ) ( short ) HIWORD( l_param ) );
+	return ( ( int32_t )( short ) HIWORD( l_param ) );
 }
 
 static LRESULT CALLBACK
@@ -219,6 +221,13 @@ winapi_destroy_window( struct ft_window* window )
 {
 	DestroyWindow( window->window );
 	free( window );
+}
+
+static void
+winapi_window_set_resize_callback( struct ft_window*         window,
+                                   ft_window_resize_callback cb )
+{
+	window->resize_cb = cb;
 }
 
 static void
@@ -298,12 +307,12 @@ winapi_get_keyboard_state( uint32_t* key_count )
 	return winapi.keyboard;
 }
 
-static uint32_t
+static const uint8_t*
 winapi_get_mouse_state( int32_t* x, int32_t* y )
 {
 	*x = winapi.mouse_position[ 0 ];
 	*y = winapi.mouse_position[ 1 ];
-	return 0;
+	return winapi.mouse_buttons;
 }
 
 struct ft_window*
@@ -312,6 +321,7 @@ winapi_create_window( const struct ft_window_info* info )
 	ft_window_get_size_impl             = winapi_window_get_size;
 	ft_window_get_framebuffer_size_impl = winapi_window_get_framebuffer_size;
 	ft_destroy_window_impl              = winapi_destroy_window;
+	ft_window_set_resize_callback_impl  = winapi_window_set_resize_callback;
 	ft_window_show_cursor_impl          = winapi_window_show_cursor;
 	ft_window_should_close_impl         = winapi_window_should_close;
 	ft_poll_events_impl                 = winapi_poll_events;
