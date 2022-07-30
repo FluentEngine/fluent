@@ -17,9 +17,16 @@ struct application_state
 	uint32_t                         width;
 	uint32_t                         height;
 	void*                            user_data;
+	bool                             resized;
 };
 
 static struct application_state app_state;
+
+static void
+app_resize_callback( struct ft_window* window, uint32_t w, uint32_t h, void* p )
+{
+	app_state.resized = true;
+}
 
 void
 ft_app_init( const struct ft_application_info* config )
@@ -31,6 +38,8 @@ ft_app_init( const struct ft_application_info* config )
 	FT_ASSERT( config->on_resize );
 
 	ft_log_init( config->log_level );
+
+	memset( &app_state, 0, sizeof( app_state ) );
 
 	app_state.window = ft_create_window( &config->window_info );
 
@@ -50,6 +59,8 @@ ft_app_init( const struct ft_application_info* config )
 
 	ft_ticks_init();
 	app_state.is_inited = 1;
+
+	ft_window_set_resize_callback( app_state.window, app_resize_callback );
 }
 
 void
@@ -74,6 +85,17 @@ ft_app_run()
 		ft_input_update();
 
 		ft_poll_events();
+
+		if ( app_state.resized )
+		{
+			app_state.resized = false;
+			ft_window_get_size( app_state.window,
+			                    &app_state.width,
+			                    &app_state.height );
+			app_state.on_resize( app_state.width,
+			                     app_state.height,
+			                     app_state.user_data );
+		}
 
 		app_state.on_update( delta_time, app_state.user_data );
 
