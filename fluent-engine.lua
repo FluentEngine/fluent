@@ -6,52 +6,28 @@ function toboolean(str)
 	return bool
 end
 
-newoption
-{
+newoption {
 	trigger			= "vulkan_include_directory",
 	description		= "Vulkan include directory",
 }
 
-newoption
-{
+newoption {
 	trigger			= "vulkan_backend",
 	description		= "enable vulkan backend",
 	default			= "true"
 }
 
-newoption
-{
+newoption {
 	trigger			= "d3d12_backend",
 	description		= "enable directx12 backend",
 	default			= "true"
 }
 
-newoption
-{
+newoption {
 	trigger			= "metal_backend",
 	description		= "enable metal backend",
 	default			= "true"
 }
-
-local commons = {}
-commons.opts = function()
-	filter { "configurations:debug" }
-		defines( "FT_DEBUG=1" )
-		symbols "On"
-		optimize "Off"
-	filter { "configurations:release" }
-		defines( "FT_DEBUG=0" )
-		symbols "Off"
-		optimize "Speed"
-	filter {}
-
-	filter "system:windows"
-		defines {
-			"NOMINMAX",
-			"_CRT_SECURE_NO_WARNINGS"
-		}
-	filter {}
-end
 
 vulkan_include_directory = os.findheader("vulkan/vulkan.h")
 
@@ -120,185 +96,167 @@ if (vulkan_include_directory == '/usr/include') then
 end
 
 if (renderer_backend_vulkan) then
-	include("sources/third_party/vk_mem_alloc/premake5.lua")
-	include("sources/third_party/volk/premake5.lua")
+	include("third_party/vk_mem_alloc/premake5.lua")
+	include("third_party/volk/premake5.lua")
 end
-include("sources/third_party/hashmap_c/premake5.lua")
-include("sources/third_party/spirv_reflect/premake5.lua")
-include("sources/third_party/cgltf/premake5.lua")
-include("sources/third_party/stb/premake5.lua")
+include("third_party/hashmap_c/premake5.lua")
+include("third_party/spirv_reflect/premake5.lua")
+include("third_party/cgltf/premake5.lua")
+include("third_party/stb/premake5.lua")
 
 
-project "ft_log"
+project "fluent-engine"
 	kind "StaticLib"
 	language "C"
 
-	commons.opts()
-
-	includedirs
-	{
-		"sources"
-	}
-
-	files
-	{
-		"sources/log/log.h",
-		"sources/log/log.c"
-	}
-
-project "ft_os"
-	kind "StaticLib"
-	language "C"
-
-	commons.opts()
+	filter { "configurations:debug" }
+		symbols "On"
+		optimize "Off"
+		defines {
+			"FT_DEBUG=1" 
+		}
+	filter { "configurations:release" }
+		symbols "Off"
+		optimize "Speed"
+		defines {
+			"FT_DEBUG=0" 
+		}
+	filter { "system:windows" }
+		defines {
+			"NOMINMAX",
+			"_CRT_SECURE_NO_WARNINGS"
+		}
+	filter {}
 
 	declare_backend_defines()
 
-	includedirs
-	{
+	includedirs {
 		"sources",
 	}
 
-	sysincludedirs
-	{
-		"sources/third_party",
+	sysincludedirs {
+		"third_party",
 		vulkan_include_directory
 	}
 
-	files
-	{
-		"sources/os/application.c",
-		"sources/os/application.h",
-		"sources/os/camera.h",
-		"sources/os/camera.c",
-		"sources/os/input.c",
-		"sources/os/input.h",
-		"sources/os/key_codes.h",
-		"sources/os/mouse_codes.h",
-		"sources/os/thread/thread.h",
-		"sources/os/thread/unix/unix_thread.c",
-		"sources/os/thread/windows/windows_thread.c",
-		"sources/os/time/timer.h",
-		"sources/os/time/unix/unix_timer.c",
-		"sources/os/time/windows/windows_timer.c",
-		"sources/os/window/window.c",
-		"sources/os/window/window.h",
-		"sources/os/window/xlib/xlib_window.h",
-		"sources/os/window/xlib/xlib_window.c",
-		"sources/os/window/winapi/winapi_window.h",
-		"sources/os/window/winapi/winapi_window.c",
+	files {
+		-- base
+		"sources/base/base.h",
+		"sources/base/log.h",
+		"sources/base/log.c",
+		-- app
+		"sources/app/application.c",
+		"sources/app/application.h",
+		-- camera
+		"sources/camera/camera.h",
+		"sources/camera/camera.c",
+		-- window
+		"sources/window/input.c",
+		"sources/window/input.h",
+		"sources/window/key_codes.h",
+		"sources/window/mouse_codes.h",
+		-- thread
+		"sources/thread/thread.h",
+		"sources/thread/unix/unix_thread.c",
+		"sources/thread/windows/windows_thread.c",
+		-- time
+		"sources/time/timer.h",
+		"sources/time/unix/unix_timer.c",
+		"sources/time/windows/windows_timer.c",
+		-- window
+		"sources/window/window.c",
+		"sources/window/window.h",
+		"sources/window/xlib/xlib_window.h",
+		"sources/window/xlib/xlib_window.c",
+		"sources/window/winapi/winapi_window.h",
+		"sources/window/winapi/winapi_window.c",
+		-- fs
 		"sources/fs/fs.c",
-		"sources/fs/fs.h"
+		"sources/fs/fs.h",
+		-- renderer
+		"sources/renderer/backend/renderer_backend.c",
+		"sources/renderer/backend/renderer_backend.h",
+		"sources/renderer/backend/renderer_enums.h",
+		"sources/renderer/backend/renderer_private.h",
+		"sources/renderer/backend/resource_loader.c",
+		"sources/renderer/backend/render_graph.h",
+		"sources/renderer/backend/render_graph.c",
+		"sources/renderer/backend/shader_reflection.h",
+		"sources/renderer/backend/vulkan/vulkan_reflection.c",
+		"sources/renderer/backend/vulkan/vulkan_backend.c",
+		"sources/renderer/backend/vulkan/vulkan_backend.h",
+		"sources/renderer/backend/d3d12/d3d12_reflection.c",
+		"sources/renderer/backend/d3d12/d3d12_backend.c",
+		"sources/renderer/backend/d3d12/d3d12_backend.h",
+		"sources/renderer/backend/vulkan/vulkan_pass_hasher.c",
+		"sources/renderer/backend/vulkan/vulkan_pass_hasher.h",
+		"sources/renderer/nuklear/ft_nuklear.h",
+		"sources/renderer/nuklear/ft_nuklear.c",
+		"sources/renderer/nuklear/shaders/shader_nuklear_vert_spirv.c",
+		"sources/renderer/nuklear/shaders/shader_nuklear_frag_spirv.c",
+		"sources/renderer/scene/model_loader.h",
+		"sources/renderer/scene/model_loader.c"
 	}
 
 	filter { "system:macosx" }
-		files
-		{
-			"sources/os/window/cocoa/cocoa_window.m",
+		files {
+			-- window
+			"sources/window/cocoa/cocoa_window.m",
+			-- renderer
+			"sources/renderer/backend/metal/metal_backend.h",
+			"sources/renderer/backend/metal/metal_backend.m",
+			"sources/renderer/backend/metal/metal_reflection.m"
 		}
 	filter { }
-project "ft_renderer"
-	kind "StaticLib"
-	language "C"
 
-	commons.opts()
+fluent_engine = {}
 
-	declare_backend_defines()
+fluent_engine.link = function()
 
-	includedirs
-	{
-		"sources",
+	links {
+		"fluent-engine"
 	}
 
-	sysincludedirs
-	{
-		vulkan_include_directory,
-		"sources/third_party"
+	links {
+		"hashmap_c",
+		"cgltf",
+		"spirv_reflect",
+		"stb"
 	}
+	
+	filter { "system:linux" }
+		links { 
+			"X11",
+			"pthread",
+			"dl",
+			"m"
+		}
+	filter { "system:macosx" }
+		links { "Cocoa.framework" }
+	filter { "system:windows" }
+		linkoptions	{
+			"imm32.lib",
+			"version.lib",
+			"setupapi.lib",
+			"winmm.lib",
+			"xinput.lib",
+			"ws2_32.lib",
+		}
+		entrypoint "mainCRTStartup"
+	filter {}
 
-	backend_dir = "sources/renderer/backend/"
-	nuklear_dir = "sources/renderer/nuklear/"
-	shader_reflection_dir = "sources/renderer/shader_reflection/"
-	scene_dir = "sources/renderer/scene/"
-
-	files
-	{
-		path.join(backend_dir, "renderer_backend.c"),
-		path.join(backend_dir, "renderer_backend.h"),
-		path.join(backend_dir, "renderer_enums.h"),
-		path.join(backend_dir, "renderer_private.h"),
-		path.join(backend_dir, "resource_loader.c"),
-		path.join(backend_dir, "render_graph.h"),
-		path.join(backend_dir, "render_graph.c"),
-		path.join(backend_dir, "shader_reflection.h"),
-		path.join(backend_dir, "vulkan/vulkan_reflection.c"),
-		path.join(backend_dir, "vulkan/vulkan_backend.c"),
-		path.join(backend_dir, "vulkan/vulkan_backend.h"),
-		path.join(backend_dir, "d3d12/d3d12_reflection.c"),
-		path.join(backend_dir, "d3d12/d3d12_backend.c"),
-		path.join(backend_dir, "d3d12/d3d12_backend.h"),
-		path.join(backend_dir, "vulkan/vulkan_pass_hasher.c"),
-		path.join(backend_dir, "vulkan/vulkan_pass_hasher.h"),
-		path.join(nuklear_dir, "ft_nuklear.h"),
-		path.join(nuklear_dir, "ft_nuklear.c"),
-		path.join(nuklear_dir, "shaders/shader_nuklear_vert_spirv.c"),
-		path.join(nuklear_dir, "shaders/shader_nuklear_frag_spirv.c"),
-		path.join(scene_dir, "model_loader.h"),
-		path.join(scene_dir, "model_loader.c")
-	}
-
-	if (renderer_backend_metal) then
-		files
-		{
-			path.join(backend_dir, "metal/metal_backend.h"),
-			path.join(backend_dir, "metal/metal_backend.m"),
-			path.join(backend_dir, "metal/metal_reflection.m")
+	if (renderer_backend_vulkan) then
+		links {
+			"vk_mem_alloc",
+			"volk",
 		}
 	end
 
-	fluent_engine = {}
-
-	fluent_engine.link = function()
-		links
-		{
-			"hashmap_c",
-			"cgltf",
-			"spirv_reflect",
-			"stb"
+	if (renderer_backend_d3d12) then
+		links {
+			"d3d12",
+			"dxgi",
+			"dxguid",
 		}
-		
-		filter { "system:linux" }
-			links { "X11" }
-		filter { "system:macosx" }
-			links { "Cocoa.framework" }
-		filter { }
-
-		filter { "system:windows" }
-			linkoptions
-			{
-				"imm32.lib",
-				"version.lib",
-				"setupapi.lib",
-				"winmm.lib",
-				"xinput.lib",
-				"ws2_32.lib",
-			}
-		filter {}
-
-		if (renderer_backend_vulkan) then
-			links
-			{
-				"vk_mem_alloc",
-				"volk",
-			}
-		end
-
-		if (renderer_backend_d3d12) then
-			links
-			{
-				"d3d12",
-				"dxgi",
-				"dxguid",
-			}
-		end
 	end
+end

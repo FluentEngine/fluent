@@ -1,5 +1,4 @@
 #include <stb/stb_image.h>
-#include "log/log.h"
 #include "fs.h"
 
 void*

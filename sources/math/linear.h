@@ -1,9 +1,7 @@
 #pragma once
 
-#include <string.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
-#include <string.h>
 #include "base/base.h"
 
 FT_INLINE float

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../base/base.h"
+#include "base/base.h"
 #include "window.h"
 
 FT_DECLARE_FUNCTION_POINTER( void, ft_destroy_window, struct ft_window* );
@@ -46,6 +46,9 @@ FT_DECLARE_FUNCTION_POINTER( void,
 
 FT_DECLARE_FUNCTION_POINTER( void, ft_poll_events );
 
-FT_DECLARE_FUNCTION_POINTER( const uint8_t*, ft_get_keyboard_state, uint32_t* );
+FT_DECLARE_FUNCTION_POINTER( const uint8_t*, ft_get_keyboard_state );
 
-FT_DECLARE_FUNCTION_POINTER( uint32_t, ft_get_mouse_state, int32_t*, int32_t* );
+FT_DECLARE_FUNCTION_POINTER( const uint8_t*,
+                             ft_get_mouse_state,
+                             int32_t*,
+                             int32_t* );

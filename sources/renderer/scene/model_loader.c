@@ -1,10 +1,7 @@
-#include <stdio.h>
-#include <string.h>
 #include <math.h>
 #include <cgltf/cgltf.h>
 #include <stb/stb_image.h>
 #include <hashmap_c/hashmap_c.h>
-#include "log/log.h"
 #include "fs/fs.h"
 #include "model_loader.h"
 

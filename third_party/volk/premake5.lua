@@ -2,13 +2,11 @@ project "volk"
 	kind "StaticLib"
 	language "C"
 
-	includedirs 
-	{
+	includedirs {
 		".",
 	}
 	
-	sysincludedirs
-	{
+	sysincludedirs {
 		vulkan_include_directory
 	}
 	
@@ -20,8 +18,7 @@ project "volk"
 		defines { "VK_USE_PLATFORM_MACOS_MVK" }
 	filter {}
 	
-	files 
-	{
+	files {
 		"volk.h",
 		"volk.c"
 	}

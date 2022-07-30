@@ -1,4 +1,4 @@
-#include "input.h"
+#include "window/input.h"
 #include "camera.h"
 
 FT_INLINE void

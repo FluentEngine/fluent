@@ -2,7 +2,6 @@
 #include <spirv_reflect/spirv_reflect.h>
 #include <hashmap_c/hashmap_c.h>
 #include "base/base.h"
-#include "log/log.h"
 #include "renderer/backend/vulkan/vulkan_backend.h"
 
 int32_t

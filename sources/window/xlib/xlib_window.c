@@ -8,10 +8,10 @@
 #define VK_USE_PLATFORM_XLIB_KHR
 #include <volk/volk.h>
 #include <hashmap_c/hashmap_c.h>
-#include "log/log.h"
-#include "os/key_codes.h"
-#include "os/window/window.h"
-#include "os/window/window_private.h"
+#include "window/key_codes.h"
+#include "window/mouse_codes.h"
+#include "window/window.h"
+#include "window/window_private.h"
 
 struct ft_window
 {
@@ -35,6 +35,7 @@ struct
 	Display*        current_display;
 	uint8_t         keyboard[ FT_KEY_COUNT + 1 ];
 	int32_t         mouse_position[ 2 ];
+	uint8_t         buttons[ FT_BUTTON_COUNT + 1 ];
 	XEvent          previous_event;
 	struct hashmap* window_data_map;
 } xlib = {
@@ -214,6 +215,30 @@ ft_keycode_from_xlib( KeySym keysym )
 	}
 };
 
+FT_INLINE enum ft_button
+ft_button_from_xlib( int button )
+{
+	switch ( button )
+	{
+	case Button1:
+	{
+		return FT_BUTTON_LEFT;
+	}
+	case Button2:
+	{
+		return FT_BUTTON_MIDDLE;
+	}
+	case Button3:
+	{
+		return FT_BUTTON_RIGHT;
+	}
+	default:
+	{
+		return FT_BUTTON_COUNT;
+	}
+	}
+}
+
 FT_INLINE struct ft_window*
 ft_window_from_xlib( Window window )
 {
@@ -385,6 +410,16 @@ xlib_poll_events()
 			}
 			break;
 		}
+		case ButtonPressMask:
+		{
+			xlib.buttons[ ft_button_from_xlib( e.xbutton.button ) ] = 1;
+			break;
+		}
+		case ButtonReleaseMask:
+		{
+			xlib.buttons[ ft_button_from_xlib( e.xbutton.button ) ] = 0;
+			break;
+		}
 		default:
 		{
 			break;
@@ -396,18 +431,17 @@ xlib_poll_events()
 }
 
 static const uint8_t*
-xlib_get_keyboard_state( uint32_t* key_count )
+xlib_get_keyboard_state()
 {
-	*key_count = FT_KEY_COUNT;
 	return xlib.keyboard;
 }
 
-static uint32_t
+const static uint8_t*
 xlib_get_mouse_state( int32_t* x, int32_t* y )
 {
 	*x = xlib.mouse_position[ 0 ];
 	*y = xlib.mouse_position[ 1 ];
-	return 0;
+	return xlib.buttons;
 }
 
 struct ft_window*
@@ -427,6 +461,8 @@ xlib_create_window( const struct ft_window_info* info )
 	ft_window_create_vulkan_surface_impl = xlib_window_create_vulkan_surface;
 
 	Display* display = XOpenDisplay( NULL );
+
+	free( NULL );
 
 	if ( display == NULL )
 	{

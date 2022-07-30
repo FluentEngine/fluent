@@ -1,4 +1,3 @@
-#include "log/log.h"
 #include "renderer_private.h"
 #include "renderer_enums_stringifier.h"
 #include "vulkan/vulkan_backend.h"

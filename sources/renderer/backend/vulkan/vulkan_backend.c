@@ -1,6 +1,5 @@
 #ifdef VULKAN_BACKEND
 #include <hashmap_c/hashmap_c.h>
-#include "log/log.h"
 #include "wsi/wsi.h"
 #include "../renderer_private.h"
 #include "../shader_reflection.h"

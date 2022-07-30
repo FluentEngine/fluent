@@ -1,9 +1,12 @@
 #pragma once
 
 #include "base/base.h"
-#include "os/window/window.h"
+#include "window/window.h"
 #include "key_codes.h"
 #include "mouse_codes.h"
+
+FT_API void
+ft_input_update();
 
 FT_API int32_t
 ft_get_mouse_pos_x( void );

@@ -9,7 +9,7 @@
 #define NK_INCLUDE_DEFAULT_FONT
 #include <nuklear/nuklear.h>
 #include "wsi/wsi.h"
-#include "os/input.h"
+#include "window/input.h"
 #include "renderer/backend/renderer_backend.h"
 #include "string.h"
 

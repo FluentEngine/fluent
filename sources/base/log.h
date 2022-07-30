@@ -1,10 +1,5 @@
 #pragma once
 
-#include "base/base.h"
-
-#include <stdio.h>
-#include <string.h>
-
 enum ft_log_level
 {
 	FT_LOG_LEVEL_TRACE,
@@ -14,16 +9,16 @@ enum ft_log_level
 	FT_LOG_LEVEL_ERROR
 };
 
-FT_API void
+void
 ft_log_init( enum ft_log_level log_level );
 
-FT_API void
+void
 ft_log_shutdown( void );
 
-FT_API void
+void
 ft_log_set_level( enum ft_log_level level );
 
-FT_API void
+void
 ft_log( enum ft_log_level level, const char* fmt, ... );
 
 #if FT_DEBUG

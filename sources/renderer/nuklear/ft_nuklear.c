@@ -377,7 +377,7 @@ nk_ft_new_frame()
 	}
 
 	int32_t x, y;
-	ft_get_mouse_position( &x, &y );
+	ft_get_mouse_state( &x, &y );
 
 	nk_input_motion( ctx, ( int ) x, ( int ) y );
 

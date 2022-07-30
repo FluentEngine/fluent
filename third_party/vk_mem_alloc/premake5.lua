@@ -3,14 +3,12 @@ project "vk_mem_alloc"
     language "C++"
 	cppdialect "C++17"
 
-	sysincludedirs 
-	{
+	sysincludedirs {
 		"../",
 		vulkan_include_directory
 	}
 	
-    files 
-    {
+    files {
         "vk_mem_alloc.h",
         "vk_mem_alloc.cpp"
     }

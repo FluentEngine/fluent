@@ -65,10 +65,10 @@ FT_API void
 ft_poll_events();
 
 FT_API const uint8_t*
-             ft_get_keyboard_state( uint32_t* key_count );
+             ft_get_keyboard_state();
 
-FT_API uint32_t
-ft_get_mouse_state( int32_t* x, int32_t* y );
+FT_API const uint8_t*
+             ft_get_mouse_state( int32_t* x, int32_t* y );
 
 FT_API FT_INLINE uint32_t
 ft_window_get_framebuffer_width( const struct ft_window* window )

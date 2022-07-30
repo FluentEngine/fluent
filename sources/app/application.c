@@ -1,27 +1,25 @@
 #include <time.h>
 #include "wsi/wsi.h"
-#include "os/time/timer.h"
+#include "time/timer.h"
 #include "application.h"
-#include "input.h"
+#include "window/input.h"
 
 struct application_state
 {
-	bool                                is_inited;
-	bool                                is_running;
-	struct ft_window*                   window;
-	ft_init_callback                    on_init;
-	ft_update_callback                  on_update;
-	ft_shutdown_callback                on_shutdown;
-	ft_resize_callback                  on_resize;
-	float                               delta_time;
-	struct ft_wsi_info                  wsi_info;
-	struct ft_application_callback_data callback_data;
+	bool                             is_inited;
+	bool                             is_running;
+	struct ft_window*                window;
+	ft_application_init_callback     on_init;
+	ft_application_update_callback   on_update;
+	ft_application_shutdown_callback on_shutdown;
+	ft_application_resize_callback   on_resize;
+	struct ft_wsi_info               wsi_info;
+	uint32_t                         width;
+	uint32_t                         height;
+	void*                            user_data;
 };
 
 static struct application_state app_state;
-
-void
-ft_input_update( int32_t wheel );
 
 void
 ft_app_init( const struct ft_application_info* config )
@@ -36,11 +34,11 @@ ft_app_init( const struct ft_application_info* config )
 
 	app_state.window = ft_create_window( &config->window_info );
 
-	app_state.on_init                 = config->on_init;
-	app_state.on_update               = config->on_update;
-	app_state.on_shutdown             = config->on_shutdown;
-	app_state.on_resize               = config->on_resize;
-	app_state.callback_data.user_data = config->user_data;
+	app_state.on_init     = config->on_init;
+	app_state.on_update   = config->on_update;
+	app_state.on_shutdown = config->on_shutdown;
+	app_state.on_resize   = config->on_resize;
+	app_state.user_data   = config->user_data;
 
 	struct ft_wsi_info* wsi_info = &app_state.wsi_info;
 	wsi_info->window             = app_state.window;
@@ -61,34 +59,28 @@ ft_app_run()
 
 	app_state.is_running = 1;
 
-	uint32_t last_frame  = 0.0f;
-	app_state.delta_time = 0.0;
+	uint32_t last_frame = 0.0f;
 
-	ft_window_get_size( app_state.window,
-	                    &app_state.callback_data.width,
-	                    &app_state.callback_data.height );
+	ft_window_get_size( app_state.window, &app_state.width, &app_state.height );
 
-	app_state.callback_data.delta_time = 0.0f;
-
-	app_state.on_init( &app_state.callback_data );
+	app_state.on_init( app_state.user_data );
 
 	while ( app_state.is_running )
 	{
 		uint32_t current_frame = ft_get_ticks();
-		app_state.callback_data.delta_time =
-		    ( float ) ( current_frame - last_frame ) / 1000.0f;
-		last_frame = current_frame;
+		float delta_time = ( float ) ( current_frame - last_frame ) / 1000.0f;
+		last_frame       = current_frame;
 
-		ft_input_update( 0 );
+		ft_input_update();
 
 		ft_poll_events();
 
-		app_state.on_update( &app_state.callback_data );
+		app_state.on_update( delta_time, app_state.user_data );
 
 		app_state.is_running = !ft_window_should_close( app_state.window );
 	}
 
-	app_state.on_shutdown( &app_state.callback_data );
+	app_state.on_shutdown( app_state.user_data );
 }
 
 void
@@ -110,12 +102,6 @@ const struct ft_window*
 ft_get_app_window()
 {
 	return app_state.window;
-}
-
-float
-ft_get_delta_time()
-{
-	return app_state.delta_time;
 }
 
 struct ft_wsi_info*

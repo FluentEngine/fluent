@@ -131,3 +131,5 @@ FT_VK_DEFINE_NON_DISPATCHABLE_HANDLE( VkSurfaceKHR );
 struct VkAllocationCallbacks;
 
 #endif
+
+#include "log.h"

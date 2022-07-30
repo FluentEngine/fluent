@@ -1,4 +1,4 @@
-#include "os/thread/thread.h"
+#include "thread/thread.h"
 
 #if FT_PLATFORM_WINDOWS 
 #include <windows.h>

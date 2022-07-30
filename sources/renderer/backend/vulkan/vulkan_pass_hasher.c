@@ -1,6 +1,5 @@
 #ifdef VULKAN_BACKEND
 
-#include "log/log.h"
 #include "../renderer_private.h"
 #include "vulkan_enum_translators.h"
 #include "vulkan_pass_hasher.h"

@@ -1,7 +1,6 @@
-#include "log/log.h"
-#include "os/window/xlib/xlib_window.h"
-#include "os/window/cocoa/cocoa_window.h"
-#include "os/window/winapi/winapi_window.h"
+#include "window/xlib/xlib_window.h"
+#include "window/cocoa/cocoa_window.h"
+#include "window/winapi/winapi_window.h"
 #include "window_private.h"
 #include "window.h"
 
@@ -106,12 +105,12 @@ ft_poll_events()
 }
 
 const uint8_t*
-ft_get_keyboard_state( uint32_t* key_count )
+ft_get_keyboard_state()
 {
-	return ft_get_keyboard_state_impl( key_count );
+	return ft_get_keyboard_state_impl();
 }
 
-uint32_t
+const uint8_t*
 ft_get_mouse_state( int32_t* x, int32_t* y )
 {
 	return ft_get_mouse_state_impl( x, y );

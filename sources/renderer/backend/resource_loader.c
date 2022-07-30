@@ -1,6 +1,5 @@
-#include "os/time/timer.h"
-#include "os/thread/thread.h"
-#include "log/log.h"
+#include "time/timer.h"
+#include "thread/thread.h"
 #include "renderer_enums_stringifier.h"
 #include "renderer_private.h"
 #ifdef VULKAN_BACKEND
