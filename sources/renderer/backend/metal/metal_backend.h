@@ -12,7 +12,7 @@
 struct MetalRendererBackend
 {
 	void*                      window;
-	struct ft_renderer_backend interface;
+	struct ft_instance interface;
 };
 
 struct MetalDevice
@@ -204,7 +204,7 @@ struct MetalDescriptorSet
 };
 
 void
-mtl_create_renderer_backend( const struct ft_renderer_backend_info*,
-                             struct ft_renderer_backend** p );
+mtl_create_renderer_backend( const struct ft_instance_info*,
+                             struct ft_instance** p );
 
 #endif

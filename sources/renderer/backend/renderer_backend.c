@@ -5,7 +5,7 @@
 #include "metal/metal_backend.h"
 #include "renderer_backend.h"
 
-ft_destroy_renderer_backend_fun      ft_destroy_renderer_backend_impl;
+ft_destroy_instance_fun              ft_destroy_instance_impl;
 ft_create_device_fun                 ft_create_device_impl;
 ft_destroy_device_fun                ft_destroy_device_impl;
 ft_create_queue_fun                  ft_create_queue_impl;
@@ -68,8 +68,8 @@ ft_cmd_begin_debug_marker_fun        ft_cmd_begin_debug_marker_impl;
 ft_cmd_end_debug_marker_fun          ft_cmd_end_debug_marker_impl;
 
 void
-ft_create_renderer_backend( const struct ft_renderer_backend_info* info,
-                            struct ft_renderer_backend**           p )
+ft_create_instance( const struct ft_instance_info* info,
+                    struct ft_instance**           p )
 {
 	FT_ASSERT( info );
 	FT_ASSERT( info->wsi_info );
@@ -80,56 +80,55 @@ ft_create_renderer_backend( const struct ft_renderer_backend_info* info,
 #if FT_VULKAN_BACKEND
 	case FT_RENDERER_API_VULKAN:
 	{
-		vk_create_renderer_backend( info, p );
+		vk_create_instance( info, p );
 		break;
 	}
 #endif
 #ifdef D3D12_BACKEND
 	case FT_RENDERER_API_D3D12:
 	{
-		d3d12_create_renderer_backend( info, p );
+		d3d12_create_instance( info, p );
 		break;
 	}
 #endif
 #ifdef METAL_BACKEND
 	case FT_RENDERER_API_METAL:
 	{
-		mtl_create_renderer_backend( info, p );
+		mtl_create_instance( info, p );
 		break;
 	}
 #endif
 	default: FT_ASSERT( 0 && "no supported api available" );
 	}
 
-	struct ft_renderer_backend* backend = *p;
-	backend->api                        = info->api;
+	struct ft_instance* instance = *p;
+	instance->api                = info->api;
 
-	FT_INFO( "create renderer backend"
+	FT_INFO( "create instance"
 	         "\n\t %s",
-	         ft_renderer_api_to_string( backend->api ) );
+	         ft_renderer_api_to_string( instance->api ) );
 }
 
 void
-ft_destroy_renderer_backend( struct ft_renderer_backend* backend )
+ft_destroy_instance( struct ft_instance* instance )
 {
-	FT_ASSERT( backend );
+	FT_ASSERT( instance );
 
-	ft_destroy_renderer_backend_impl( backend );
+	ft_destroy_instance_impl( instance );
 }
 
 void
-ft_create_device( const struct ft_renderer_backend* backend,
-                  const struct ft_device_info*      info,
-                  struct ft_device**                p )
+ft_create_device( const struct ft_instance*    instance,
+                  const struct ft_device_info* info,
+                  struct ft_device**           p )
 {
-	FT_ASSERT( backend );
+	FT_ASSERT( instance );
 	FT_ASSERT( info );
-	FT_ASSERT( info->backend );
 	FT_ASSERT( p );
 
-	ft_create_device_impl( backend, info, p );
+	ft_create_device_impl( instance, info, p );
 	struct ft_device* device = *p;
-	device->api              = backend->api;
+	device->api              = instance->api;
 }
 
 void

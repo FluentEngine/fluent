@@ -10,7 +10,7 @@
 #define FT_FROM_HANDLE( name, interface, impl )                                \
 	struct impl* name = interface->handle
 
-struct ft_renderer_backend
+struct ft_instance
 {
 	enum ft_renderer_api api;
 	ft_handle            handle;
@@ -138,15 +138,13 @@ struct ft_descriptor_set
 	ft_handle                        handle;
 };
 
-FT_DECLARE_FUNCTION_POINTER( void,
-                             ft_destroy_renderer_backend,
-                             struct ft_renderer_backend* backend );
+FT_DECLARE_FUNCTION_POINTER( void, ft_destroy_instance, struct ft_instance* );
 
 FT_DECLARE_FUNCTION_POINTER( void,
                              ft_create_device,
-                             const struct ft_renderer_backend* backend,
-                             const struct ft_device_info*      info,
-                             struct ft_device**                device );
+                             const struct ft_instance*,
+                             const struct ft_device_info*,
+                             struct ft_device** );
 
 FT_DECLARE_FUNCTION_POINTER( void,
                              ft_destroy_device,

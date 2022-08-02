@@ -14,7 +14,7 @@ struct D3D12RendererBackend
 {
 	ID3D12Debug*               debug_controller;
 	IDXGIFactory4*             factory;
-	struct ft_renderer_backend interface;
+	struct ft_instance interface;
 };
 
 struct D3D12Device
@@ -129,7 +129,7 @@ struct D3D12UiContext
 };
 
 void
-d3d12_create_renderer_backend( const struct ft_renderer_backend_info* info,
-                               struct ft_renderer_backend**           backend );
+d3d12_create_renderer_backend( const struct ft_instance_info* info,
+                               struct ft_instance**           backend );
 
 #endif

@@ -196,7 +196,7 @@ to_mtl_primitive_type( enum ft_primitive_topology topology )
 }
 
 static void
-mtl_destroy_renderer_backend( struct ft_renderer_backend* ibackend )
+mtl_destroy_renderer_backend( struct ft_instance* ibackend )
 {
 	FT_ASSERT( ibackend );
 	FT_FROM_HANDLE( backend, ibackend, MetalRendererBackend );
@@ -204,7 +204,7 @@ mtl_destroy_renderer_backend( struct ft_renderer_backend* ibackend )
 }
 
 static void
-mtl_create_device( const struct ft_renderer_backend* ibackend,
+mtl_create_device( const struct ft_instance* ibackend,
                    const struct ft_device_info*      info,
                    struct ft_device**                p )
 {
@@ -1612,8 +1612,8 @@ mtl_cmd_bind_descriptor_set( const struct ft_command_buffer* icmd,
 }
 
 void
-mtl_create_renderer_backend( const struct ft_renderer_backend_info* info,
-                             struct ft_renderer_backend**           p )
+mtl_create_renderer_backend( const struct ft_instance_info* info,
+                             struct ft_instance**           p )
 {
 	FT_UNUSED( info );
 	FT_ASSERT( p );

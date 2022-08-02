@@ -14,7 +14,7 @@
 #define FT_MAX_BINDING_NAME_LENGTH             20
 
 struct ft_wsi_info;
-struct ft_renderer_backend;
+struct ft_instance;
 struct ft_device;
 struct ft_queue;
 struct ft_command_pool;
@@ -30,7 +30,7 @@ struct ft_descriptor_set_layout;
 struct ft_pipeline;
 struct ft_descriptor_set;
 
-struct ft_renderer_backend_info
+struct ft_instance_info
 {
 	enum ft_renderer_api api;
 	struct ft_wsi_info*  wsi_info;
@@ -38,7 +38,8 @@ struct ft_renderer_backend_info
 
 struct ft_device_info
 {
-	struct ft_renderer_backend* backend;
+	// for future use
+	void* p;
 };
 
 struct ft_queue_info
@@ -357,16 +358,16 @@ ft_format_size_bytes( enum ft_format const format )
 }
 
 FT_API void
-ft_create_renderer_backend( const struct ft_renderer_backend_info* info,
-                            struct ft_renderer_backend**           backend );
+ft_create_instance( const struct ft_instance_info* info,
+                    struct ft_instance**           instance );
 
 FT_API void
-ft_destroy_renderer_backend( struct ft_renderer_backend* backend );
+ft_destroy_instance( struct ft_instance* instance );
 
 FT_API void
-ft_create_device( const struct ft_renderer_backend* backend,
-                  const struct ft_device_info*      info,
-                  struct ft_device**                device );
+ft_create_device( const struct ft_instance*    instance,
+                  const struct ft_device_info* info,
+                  struct ft_device**           device );
 
 FT_API void
 ft_destroy_device( struct ft_device* device );

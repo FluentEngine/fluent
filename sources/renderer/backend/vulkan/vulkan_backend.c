@@ -47,7 +47,7 @@ vulkan_debug_callback(
 }
 
 FT_INLINE void
-create_debug_messenger( struct vk_renderer_backend* backend )
+create_debug_messenger( struct vk_instance* instance )
 {
 	VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info = { 0 };
 	debug_messenger_create_info.sType =
@@ -64,18 +64,18 @@ create_debug_messenger( struct vk_renderer_backend* backend )
 	debug_messenger_create_info.pfnUserCallback = vulkan_debug_callback;
 	debug_messenger_create_info.pUserData       = NULL;
 
-	vkCreateDebugUtilsMessengerEXT( backend->instance,
+	vkCreateDebugUtilsMessengerEXT( instance->instance,
 	                                &debug_messenger_create_info,
-	                                backend->vulkan_allocator,
-	                                &backend->debug_messenger );
+	                                instance->vulkan_allocator,
+	                                &instance->debug_messenger );
 }
 #endif
 
 FT_INLINE void
-get_instance_extensions( const struct ft_renderer_backend_info* info,
-                         uint32_t*    instance_create_flags,
-                         uint32_t*    count,
-                         const char** names )
+get_instance_extensions( const struct ft_instance_info* info,
+                         uint32_t*                      instance_create_flags,
+                         uint32_t*                      count,
+                         const char**                   names )
 {
 	*instance_create_flags = 0;
 
@@ -262,18 +262,18 @@ get_image_subresource_layers( const struct vk_image* image )
 }
 
 static void
-vk_destroy_renderer_backend( struct ft_renderer_backend* ibackend )
+vk_destroy_instance( struct ft_instance* iinstance )
 {
-	FT_FROM_HANDLE( backend, ibackend, vk_renderer_backend );
+	FT_FROM_HANDLE( instance, iinstance, vk_instance );
 
 	if ( FT_DEBUG )
 	{
-		vkDestroyDebugUtilsMessengerEXT( backend->instance,
-		                                 backend->debug_messenger,
-		                                 backend->vulkan_allocator );
+		vkDestroyDebugUtilsMessengerEXT( instance->instance,
+		                                 instance->debug_messenger,
+		                                 instance->vulkan_allocator );
 	}
-	vkDestroyInstance( backend->instance, backend->vulkan_allocator );
-	free( backend );
+	vkDestroyInstance( instance->instance, instance->vulkan_allocator );
+	free( instance );
 }
 
 static void*
@@ -300,19 +300,19 @@ vk_unmap_memory( const struct ft_device* idevice, struct ft_buffer* ibuffer )
 }
 
 static void
-vk_create_device( const struct ft_renderer_backend* ibackend,
-                  const struct ft_device_info*      info,
-                  struct ft_device**                p )
+vk_create_device( const struct ft_instance*    iinstance,
+                  const struct ft_device_info* info,
+                  struct ft_device**           p )
 {
 	FT_UNUSED( info );
 
-	FT_FROM_HANDLE( backend, ibackend, vk_renderer_backend );
+	FT_FROM_HANDLE( instance, iinstance, vk_instance );
 
 	FT_INIT_INTERNAL( device, *p, vk_device );
 
-	device->vulkan_allocator = backend->vulkan_allocator;
-	device->instance         = backend->instance;
-	device->physical_device  = backend->physical_device;
+	device->vulkan_allocator = instance->vulkan_allocator;
+	device->instance         = instance->instance;
+	device->physical_device  = instance->physical_device;
 
 	uint32_t queue_family_count = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties( device->physical_device,
@@ -483,7 +483,7 @@ vk_create_device( const struct ft_renderer_backend* ibackend,
 	    .flags                = 0,
 	    .pAllocationCallbacks = device->vulkan_allocator,
 	    .pVulkanFunctions     = &vulkan_functions,
-	    .vulkanApiVersion     = backend->api_version,
+	    .vulkanApiVersion     = instance->api_version,
 	};
 
 	VK_ASSERT( vmaCreateAllocator( &vma_allocator_create_info,
@@ -2736,10 +2736,10 @@ vk_cmd_end_debug_marker( const struct ft_command_buffer* icmd )
 }
 
 void
-vk_create_renderer_backend( const struct ft_renderer_backend_info* info,
-                            struct ft_renderer_backend**           p )
+vk_create_instance( const struct ft_instance_info* info,
+                    struct ft_instance**           p )
 {
-	ft_destroy_renderer_backend_impl      = vk_destroy_renderer_backend;
+	ft_destroy_instance_impl              = vk_destroy_instance;
 	ft_create_device_impl                 = vk_create_device;
 	ft_destroy_device_impl                = vk_destroy_device;
 	ft_create_queue_impl                  = vk_create_queue;
@@ -2801,12 +2801,12 @@ vk_create_renderer_backend( const struct ft_renderer_backend_info* info,
 	ft_cmd_begin_debug_marker_impl        = vk_cmd_begin_debug_marker;
 	ft_cmd_end_debug_marker_impl          = vk_cmd_end_debug_marker;
 
-	FT_INIT_INTERNAL( backend, *p, vk_renderer_backend );
+	FT_INIT_INTERNAL( instance, *p, vk_instance );
 
 	// TODO: provide posibility to set allocator from user code
-	backend->vulkan_allocator = NULL;
+	instance->vulkan_allocator = NULL;
 	// TODO: same
-	backend->api_version = VK_API_VERSION_1_2;
+	instance->api_version = VK_API_VERSION_1_2;
 
 	volkInitialize();
 
@@ -2817,7 +2817,7 @@ vk_create_renderer_backend( const struct ft_renderer_backend_info* info,
 	    .applicationVersion = VK_MAKE_VERSION( 0, 0, 1 ),
 	    .pEngineName        = "Fluent-Engine",
 	    .engineVersion      = VK_MAKE_VERSION( 0, 0, 1 ),
-	    .apiVersion         = backend->api_version,
+	    .apiVersion         = instance->api_version,
 	};
 
 	uint32_t instance_create_flags = 0;
@@ -2854,30 +2854,30 @@ vk_create_renderer_backend( const struct ft_renderer_backend_info* info,
 	};
 
 	VK_ASSERT( vkCreateInstance( &instance_create_info,
-	                             backend->vulkan_allocator,
-	                             &backend->instance ) );
+	                             instance->vulkan_allocator,
+	                             &instance->instance ) );
 	if ( layers != NULL )
 	{
 		free( layers );
 	}
 
-	volkLoadInstance( backend->instance );
+	volkLoadInstance( instance->instance );
 
 	if ( FT_DEBUG )
 	{
-		create_debug_messenger( backend );
+		create_debug_messenger( instance );
 	}
 
 	// pick physical device
-	backend->physical_device = VK_NULL_HANDLE;
-	uint32_t device_count    = 0;
-	vkEnumeratePhysicalDevices( backend->instance, &device_count, NULL );
+	instance->physical_device = VK_NULL_HANDLE;
+	uint32_t device_count     = 0;
+	vkEnumeratePhysicalDevices( instance->instance, &device_count, NULL );
 	FT_ASSERT( device_count != 0 );
 	FT_ALLOC_STACK_ARRAY( VkPhysicalDevice, physical_devices, device_count );
-	vkEnumeratePhysicalDevices( backend->instance,
+	vkEnumeratePhysicalDevices( instance->instance,
 	                            &device_count,
 	                            physical_devices );
-	backend->physical_device = physical_devices[ 0 ];
+	instance->physical_device = physical_devices[ 0 ];
 
 	// select best physical device
 	for ( uint32_t i = 0; i < device_count; ++i )
@@ -2891,7 +2891,7 @@ vk_create_renderer_backend( const struct ft_renderer_backend_info* info,
 		if ( deviceProperties.deviceType ==
 		     VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU )
 		{
-			backend->physical_device = physical_devices[ i ];
+			instance->physical_device = physical_devices[ i ];
 			break;
 		}
 	}

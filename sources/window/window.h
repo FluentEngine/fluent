@@ -70,7 +70,7 @@ FT_API const uint8_t*
 FT_API const uint8_t*
              ft_get_mouse_state( int32_t* x, int32_t* y );
 
-FT_API FT_INLINE uint32_t
+FT_INLINE uint32_t
 ft_window_get_framebuffer_width( const struct ft_window* window )
 {
 	uint32_t w, h;
@@ -78,7 +78,7 @@ ft_window_get_framebuffer_width( const struct ft_window* window )
 	return w;
 }
 
-FT_API FT_INLINE uint32_t
+FT_INLINE uint32_t
 ft_window_get_framebuffer_height( const struct ft_window* window )
 {
 	uint32_t w, h;
@@ -86,7 +86,7 @@ ft_window_get_framebuffer_height( const struct ft_window* window )
 	return h;
 }
 
-FT_API FT_INLINE uint32_t
+FT_INLINE uint32_t
 ft_window_get_width( const struct ft_window* window )
 {
 	uint32_t w, h;
@@ -94,7 +94,7 @@ ft_window_get_width( const struct ft_window* window )
 	return w;
 }
 
-FT_API FT_INLINE uint32_t
+FT_INLINE uint32_t
 ft_window_get_height( const struct ft_window* window )
 {
 	uint32_t w, h;
@@ -102,7 +102,7 @@ ft_window_get_height( const struct ft_window* window )
 	return h;
 }
 
-FT_API FT_INLINE float
+FT_INLINE float
 ft_window_get_aspect( const struct ft_window* window )
 {
 	uint32_t w, h;

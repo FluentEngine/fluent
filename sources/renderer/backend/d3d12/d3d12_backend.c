@@ -267,7 +267,7 @@ to_d3d12_shader_visibility( enum ft_shader_stage stage )
 }
 
 static void
-d3d12_destroy_renderer_backend( struct ft_renderer_backend* ibackend )
+d3d12_destroy_renderer_backend( struct ft_instance* ibackend )
 {
 	FT_FROM_HANDLE( backend, ibackend, D3D12RendererBackend );
 
@@ -280,7 +280,7 @@ d3d12_destroy_renderer_backend( struct ft_renderer_backend* ibackend )
 }
 
 static void
-d3d12_create_device( const struct ft_renderer_backend* ibackend,
+d3d12_create_device( const struct ft_instance* ibackend,
                      const struct ft_device_info*      info,
                      struct ft_device**                p )
 {
@@ -710,8 +710,8 @@ d3d12_update_descriptor_set( const struct ft_device*           idevice,
 }
 
 void
-d3d12_create_renderer_backend( const struct ft_renderer_backend_info* info,
-                               struct ft_renderer_backend**           p )
+d3d12_create_renderer_backend( const struct ft_instance_info* info,
+                               struct ft_instance**           p )
 {
 	ft_destroy_renderer_backend_impl      = d3d12_destroy_renderer_backend;
 	ft_create_device_impl                 = d3d12_create_device;

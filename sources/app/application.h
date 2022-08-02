@@ -3,7 +3,7 @@
 #include "base/base.h"
 #include "window/window.h"
 
-typedef void ( *ft_application_init_callback )( void* );
+typedef bool ( *ft_application_init_callback )( uint32_t, char**, void* );
 typedef void ( *ft_application_update_callback )( float, void* );
 typedef void ( *ft_application_shutdown_callback )( void* );
 typedef void ( *ft_application_resize_callback )( uint32_t, uint32_t, void* );

@@ -71,6 +71,13 @@ ft_app_init( const struct ft_application_info* config )
 	wsi_info->get_window_size       = ft_window_get_size;
 	wsi_info->get_framebuffer_size  = ft_window_get_framebuffer_size;
 
+	ft_window_get_size( app_state.window, &app_state.width, &app_state.height );
+
+	if ( !app_state.on_init( config->argc, config->argv, app_state.user_data ) )
+	{
+		return false;
+	}
+
 	app_state.is_inited = 1;
 	FT_INFO( "initialize app" );
 
@@ -85,10 +92,6 @@ ft_app_run()
 	app_state.is_running = 1;
 
 	uint32_t last_frame = 0.0f;
-
-	ft_window_get_size( app_state.window, &app_state.width, &app_state.height );
-
-	app_state.on_init( app_state.user_data );
 
 	while ( app_state.is_running )
 	{

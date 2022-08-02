@@ -462,8 +462,6 @@ xlib_create_window( const struct ft_window_info* info )
 
 	Display* display = XOpenDisplay( NULL );
 
-	free( NULL );
-
 	if ( display == NULL )
 	{
 		FT_WARN( "failed to open display" );

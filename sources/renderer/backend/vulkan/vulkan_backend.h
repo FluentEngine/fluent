@@ -21,14 +21,14 @@
 #define VK_ASSERT( x ) x
 #endif
 
-struct vk_renderer_backend
+struct vk_instance
 {
-	VkAllocationCallbacks*     vulkan_allocator;
-	VkInstance                 instance;
-	VkDebugUtilsMessengerEXT   debug_messenger;
-	VkPhysicalDevice           physical_device;
-	uint32_t                   api_version;
-	struct ft_renderer_backend interface;
+	VkAllocationCallbacks*   vulkan_allocator;
+	VkInstance               instance;
+	VkDebugUtilsMessengerEXT debug_messenger;
+	VkPhysicalDevice         physical_device;
+	uint32_t                 api_version;
+	struct ft_instance       interface;
 };
 
 struct vk_device
@@ -131,7 +131,6 @@ struct vk_descriptor_set
 };
 
 void
-vk_create_renderer_backend( const struct ft_renderer_backend_info* info,
-                            struct ft_renderer_backend**           backend );
+vk_create_instance( const struct ft_instance_info*, struct ft_instance** );
 
 #endif
